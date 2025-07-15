@@ -3,20 +3,15 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import RosterComponent from '@/components/roster/RosterComponent';
 
-function HomePageContent() {
+function RosterPageContent() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading) {
-      if (user) {
-        // User is logged in, redirect to roster
-        router.push('/roster');
-      } else {
-        // User is not logged in, redirect to login
-        router.push('/login');
-      }
+    if (!loading && !user) {
+      router.push('/login');
     }
   }, [user, loading, router]);
 
@@ -41,13 +36,17 @@ function HomePageContent() {
     );
   }
 
-  return null; // Will redirect
+  if (!user) {
+    return null; // Will redirect to login
+  }
+
+  return <RosterComponent />;
 }
 
-export default function HomePage() {
+export default function RosterPage() {
   return (
     <AuthProvider>
-      <HomePageContent />
+      <RosterPageContent />
     </AuthProvider>
   );
 }

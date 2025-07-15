@@ -1,0 +1,595 @@
+/* src/components/roster/RosterComponent.module.css - UPDATED */
+
+.container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+  padding: 0;
+}
+
+.maxWidth {
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0.5rem;
+}
+
+.loading {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #424242;
+}
+
+/* Header Section */
+.header {
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.headerContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #1f2937;
+  margin: 0;
+  text-align: center;
+}
+
+.topControls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.dateSelector {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.dropdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.dropdown label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.select {
+  padding: 0.375rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  background: white;
+  font-size: 0.75rem;
+  min-width: 100px;
+}
+
+.select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Horizontal Scroll Controls */
+.scrollControls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.scrollButton {
+  padding: 0.5rem 1rem;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+}
+
+.scrollButton:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+/* Table Container */
+.tableContainer {
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+/* Add horizontal scrollbar styling */
+.tableContainer::-webkit-scrollbar {
+  height: 8px;
+}
+
+.tableContainer::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.tableContainer::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.tableContainer::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.rosterTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.5rem;
+  table-layout: fixed;
+  min-width: 600px;
+}
+
+/* Table Headers */
+.instructorHeader {
+  background: #3b82f6;
+  color: white;
+  padding: 0.375rem 0.25rem;
+  text-align: center;
+  font-weight: 600;
+  border: 1px solid #2563eb;
+  width: 80px;
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  font-size: 0.5rem;
+}
+
+.dateHeader {
+  background: #3b82f6;
+  color: white;
+  padding: 0.25rem 0.125rem;
+  text-align: center;
+  font-weight: 600;
+  border: 1px solid #2563eb;
+  width: 50px;
+  font-size: 0.5rem;
+}
+
+.dateHeader.weekend {
+  background: #ef4444;
+  border-color: #dc2626;
+}
+
+.dateHeaderContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.dateNumber {
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.dayOfWeek {
+  font-size: 0.625rem;
+  opacity: 0.9;
+}
+
+/* Table Body */
+.instructorRow {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.instructorRow:hover {
+  background: #f9fafb;
+}
+
+.instructorCell {
+  padding: 0.375rem 0.25rem;
+  text-align: center;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  font-weight: 500;
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  width: 80px;
+  font-size: 0.5rem;
+}
+
+.scheduleCell {
+  padding: 0.125rem;
+  border: 1px solid #e5e7eb;
+  vertical-align: top;
+  width: 50px;
+  height: 60px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.scheduleCell:hover {
+  background: #f0f9ff;
+}
+
+.readOnlyCell {
+  background: #f9fafb;
+  cursor: not-allowed;
+}
+
+.readOnlyCell:hover {
+  background: #f3f4f6;
+}
+
+/* Duties Container */
+.dutiesContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  height: 100%;
+  min-height: 50px;
+}
+
+.dutyTag {
+  padding: 0.0625rem 0.125rem;
+  text-align: center;
+  font-size: 0.5rem;
+  font-weight: 500;
+  border-radius: 0.125rem;
+  color: white;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  transition: transform 0.1s;
+  min-height: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dutyTag:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.readOnlyDuty {
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.readOnlyDuty:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Instructions */
+.instructions {
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.instructions h3 {
+  margin: 0 0 0.5rem 0;
+  color: #1f2937;
+  font-size: 1rem;
+}
+
+.instructions ul {
+  margin: 0;
+  padding-left: 1.5rem;
+  font-size: 0.875rem;
+}
+
+.instructions li {
+  margin-bottom: 0.25rem;
+}
+
+/* Action Buttons */
+.actionButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.actionButton {
+  flex: 1;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: white;
+  font-size: 0.75rem;
+}
+
+.actionButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.actionButtonGreen {
+  background: #10b981;
+}
+
+.actionButtonGreen:hover:not(:disabled) {
+  background: #059669;
+}
+
+.actionButtonOrange {
+  background: #f59e0b;
+}
+
+.actionButtonOrange:hover:not(:disabled) {
+  background: #d97706;
+}
+
+.actionButtonBlue {
+  background: #3b82f6;
+}
+
+.actionButtonBlue:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.actionButtonRed {
+  background: #ef4444;
+}
+
+.actionButtonRed:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.error {
+  color: #dc2626;
+  font-weight: 600;
+  text-align: center;
+  padding: 2rem;
+}
+
+/* Desktop Responsive Design */
+@media (min-width: 768px) {
+  .maxWidth {
+    padding: 1rem;
+  }
+
+  .headerContent {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .title {
+    font-size: 1.5rem;
+    text-align: left;
+  }
+
+  .topControls {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .actionButtons {
+    flex-direction: row;
+  }
+
+  .rosterTable {
+    font-size: 0.625rem;
+  }
+
+  .instructorHeader {
+    font-size: 0.625rem;
+    width: 90px;
+    padding: 0.5rem 0.375rem;
+  }
+
+  .dateHeader {
+    font-size: 0.625rem;
+    width: 60px;
+    padding: 0.375rem 0.25rem;
+  }
+
+  .instructorCell {
+    font-size: 0.625rem;
+    width: 90px;
+    padding: 0.5rem 0.375rem;
+  }
+
+  .scheduleCell {
+    width: 60px;
+    height: 70px;
+  }
+
+  .dutiesContainer {
+    min-height: 60px;
+  }
+
+  .dutyTag {
+    font-size: 0.625rem;
+    min-height: 14px;
+    padding: 0.125rem 0.25rem;
+  }
+}
+
+/* Large Desktop - Fit entire month */
+@media (min-width: 1200px) {
+  .maxWidth {
+    padding: 1.5rem;
+  }
+
+  .title {
+    font-size: 1.75rem;
+  }
+
+  .rosterTable {
+    font-size: 0.75rem;
+  }
+
+  .instructorHeader {
+    font-size: 0.75rem;
+    width: 100px;
+    padding: 0.75rem 0.5rem;
+  }
+
+  .dateHeader {
+    font-size: 0.75rem;
+    width: 70px;
+    padding: 0.5rem 0.25rem;
+  }
+
+  .instructorCell {
+    font-size: 0.75rem;
+    width: 100px;
+    padding: 0.75rem 0.5rem;
+  }
+
+  .scheduleCell {
+    width: 70px;
+    height: 80px;
+  }
+
+  .dutiesContainer {
+    min-height: 70px;
+  }
+
+  .dutyTag {
+    font-size: 0.75rem;
+    min-height: 16px;
+    padding: 0.25rem 0.375rem;
+  }
+
+  .dateNumber {
+    font-size: 0.875rem;
+  }
+
+  .dayOfWeek {
+    font-size: 0.625rem;
+  }
+}
+
+/* Extra Large Desktop - Maximum space utilization */
+@media (min-width: 1600px) {
+  .maxWidth {
+    max-width: 1800px;
+  }
+
+  .title {
+    font-size: 2rem;
+  }
+
+  .rosterTable {
+    font-size: 0.875rem;
+  }
+
+  .instructorHeader {
+    font-size: 0.875rem;
+    width: 120px;
+    padding: 1rem 0.75rem;
+  }
+
+  .dateHeader {
+    font-size: 0.875rem;
+    width: 80px;
+    padding: 0.75rem 0.375rem;
+  }
+
+  .instructorCell {
+    font-size: 0.875rem;
+    width: 120px;
+    padding: 1rem 0.75rem;
+  }
+
+  .scheduleCell {
+    width: 80px;
+    height: 90px;
+  }
+
+  .dutiesContainer {
+    min-height: 80px;
+  }
+
+  .dutyTag {
+    font-size: 0.875rem;
+    min-height: 18px;
+    padding: 0.375rem 0.5rem;
+  }
+
+  .dateNumber {
+    font-size: 1rem;
+  }
+
+  .dayOfWeek {
+    font-size: 0.75rem;
+  }
+}
+
+/* Mobile horizontal scroll for table */
+@media (max-width: 1024px) {
+  .tableContainer {
+    overflow-x: auto;
+  }
+
+  .rosterTable {
+    min-width: 600px;
+  }
+  
+  /* Sticky columns for mobile - updated for 3 columns */
+  .instructorHeader:first-child,
+  .instructorHeader:nth-child(2),
+  .instructorHeader:nth-child(3) {
+    position: sticky;
+    z-index: 20;
+  }
+  
+  .instructorHeader:first-child,
+  .instructorCell:first-child {
+    left: 0;
+  }
+  
+  .instructorHeader:nth-child(2),
+  .instructorCell:nth-child(2) {
+    left: 80px;
+  }
+  
+  .instructorHeader:nth-child(3),
+  .instructorCell:nth-child(3) {
+    left: 160px;
+  }
+
+  .scheduleCell {
+    height: 50px;
+  }
+
+  .dutiesContainer {
+    min-height: 40px;
+  }
+
+  .dutyTag {
+    font-size: 0.5rem;
+    min-height: 12px;
+    padding: 0.0625rem 0.125rem;
+  }
+}
