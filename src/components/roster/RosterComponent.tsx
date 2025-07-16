@@ -1,11 +1,15 @@
-// src/components/roster/RosterComponent.tsx - ENHANCED VERSION WITH CENTRALIZED TYPES
+// src/components/roster/RosterComponent.tsx - ENHANCED VERSION WITH MINIMIZED INSTRUCTIONS
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/common/Navbar";
 import DutyManager from "@/components/roster/DutyManager";
-import { User, ScheduleEntry, DUTY_COLORS as DEFAULT_DUTY_COLORS } from "@/lib/types";
+import {
+	User,
+	ScheduleEntry,
+	DUTY_COLORS as DEFAULT_DUTY_COLORS,
+} from "@/lib/types";
 import styles from "./RosterComponent.module.css";
 
 // Special accounts that can modify all schedules
@@ -23,6 +27,7 @@ const RosterComponent = () => {
 	const [selectedDuty, setSelectedDuty] = useState<string | null>(null);
 	const [isMobile, setIsMobile] = useState(false);
 	const [dutiesMinimized, setDutiesMinimized] = useState(false);
+	const [instructionsMinimized, setInstructionsMinimized] = useState(true); // Default to minimized
 	const [availableDuties, setAvailableDuties] = useState<string[]>([
 		"OD",
 		"SAG",
@@ -35,7 +40,8 @@ const RosterComponent = () => {
 		"IOSA",
 	]);
 
-	const [dutyColors, setDutyColors] = useState<Record<string, string>>(DEFAULT_DUTY_COLORS);
+	const [dutyColors, setDutyColors] =
+		useState<Record<string, string>>(DEFAULT_DUTY_COLORS);
 
 	// Year/Month selection state
 	const currentDate = new Date();
@@ -53,9 +59,7 @@ const RosterComponent = () => {
 		duty?: string
 	): boolean => {
 		// Get user identifier - try multiple fields
-		const userEmployeeId =
-			currentUser?.employee_id ||
-			currentUser?.id;
+		const userEmployeeId = currentUser?.employee_id || currentUser?.id;
 
 		console.log("Permission check:", {
 			currentUser: currentUser,
@@ -96,7 +100,9 @@ const RosterComponent = () => {
 	// Get employee identifier - prioritize employee_id over UUID
 	const getEmployeeIdentifier = (user: User): string => {
 		const identifier = user.employee_id || user.id || "";
-		console.log(`User ${user.full_name}: employee_id=${user.employee_id}, id=${user.id}, using=${identifier}`);
+		console.log(
+			`User ${user.full_name}: employee_id=${user.employee_id}, id=${user.id}, using=${identifier}`
+		);
 		return identifier;
 	};
 
@@ -356,11 +362,16 @@ const RosterComponent = () => {
 					const clonedTable = clonedContainer?.querySelector("table");
 
 					if (clonedContainer && clonedTable) {
-						(clonedContainer as HTMLElement).style.overflow = "visible";
-						(clonedContainer as HTMLElement).style.width = "max-content";
-						(clonedContainer as HTMLElement).style.maxWidth = "none";
-						(clonedTable as HTMLElement).style.width = "max-content";
-						(clonedTable as HTMLElement).style.minWidth = "max-content";
+						(clonedContainer as HTMLElement).style.overflow =
+							"visible";
+						(clonedContainer as HTMLElement).style.width =
+							"max-content";
+						(clonedContainer as HTMLElement).style.maxWidth =
+							"none";
+						(clonedTable as HTMLElement).style.width =
+							"max-content";
+						(clonedTable as HTMLElement).style.minWidth =
+							"max-content";
 
 						// Ensure all columns are visible
 						const cells = clonedTable.querySelectorAll("td, th");
@@ -431,17 +442,10 @@ const RosterComponent = () => {
 			// Add data rows
 			instructors.forEach((instructor) => {
 				const employeeId = getEmployeeIdentifier(instructor);
-				const row = [
-					employeeId,
-					instructor.full_name,
-					instructor.base,
-				];
+				const row = [employeeId, instructor.full_name, instructor.base];
 
 				dateColumns.forEach((col) => {
-					const duties = getDutiesForDate(
-						employeeId,
-						col.fullDate
-					);
+					const duties = getDutiesForDate(employeeId, col.fullDate);
 					row.push(duties.join(", ") || "");
 				});
 
@@ -485,11 +489,9 @@ const RosterComponent = () => {
 			}
 		}
 	};
-	
+
 	const handleDatabaseCleanup = async () => {
-		const userEmployeeId =
-			currentUser?.employee_id ||
-			currentUser?.id;
+		const userEmployeeId = currentUser?.employee_id || currentUser?.id;
 		if (!ADMIN_ACCOUNTS.includes(userEmployeeId || "")) {
 			alert("只有管理者可以執行資料庫清理");
 			return;
@@ -590,9 +592,7 @@ const RosterComponent = () => {
 				base: instructor?.base || "Unknown",
 				date,
 				duties: newDuties,
-				created_by:
-					currentUser?.employee_id ||
-					currentUser?.id,
+				created_by: currentUser?.employee_id || currentUser?.id,
 			};
 
 			const response = await fetch("/api/schedule", {
@@ -809,7 +809,13 @@ const RosterComponent = () => {
 		if (token && instructors.length > 0) {
 			fetchSchedulesFromAPI();
 		}
-	}, [token, selectedYear, selectedMonth, instructors.length, fetchSchedulesFromAPI]);
+	}, [
+		token,
+		selectedYear,
+		selectedMonth,
+		instructors.length,
+		fetchSchedulesFromAPI,
+	]);
 
 	if (loading) {
 		return (
@@ -929,9 +935,7 @@ const RosterComponent = () => {
 					onUpdateDutyName={updateDutyName}
 					isMobile={isMobile}
 					isAdmin={ADMIN_ACCOUNTS.includes(
-						currentUser?.employee_id ||
-							currentUser?.id ||
-							""
+						currentUser?.employee_id || currentUser?.id || ""
 					)}
 					token={token || ""}
 				/>
@@ -1005,141 +1009,166 @@ const RosterComponent = () => {
 						</thead>
 						<tbody>
 							{instructors.map((instructor) => {
-								const employeeId = getEmployeeIdentifier(instructor);
+								const employeeId =
+									getEmployeeIdentifier(instructor);
 								return (
-								<tr
-									key={instructor.id}
-									className={styles.instructorRow}
-								>
-									<td className={styles.instructorCell}>
-										{employeeId}
-									</td>
-									<td className={styles.instructorCell}>
-										{instructor.full_name}
-									</td>
-									<td className={styles.instructorCell}>
-										{instructor.base}
-									</td>
-									{dateColumns.map((col) => {
-										const duties = getDutiesForDate(
-											employeeId,
-											col.fullDate
-										);
-										const canModify = canModifyDuty(
-											employeeId,
-											col.fullDate
-										);
+									<tr
+										key={instructor.id}
+										className={styles.instructorRow}
+									>
+										<td className={styles.instructorCell}>
+											{employeeId}
+										</td>
+										<td className={styles.instructorCell}>
+											{instructor.full_name}
+										</td>
+										<td className={styles.instructorCell}>
+											{instructor.base}
+										</td>
+										{dateColumns.map((col) => {
+											const duties = getDutiesForDate(
+												employeeId,
+												col.fullDate
+											);
+											const canModify = canModifyDuty(
+												employeeId,
+												col.fullDate
+											);
 
-										return (
-											<td
-												key={col.date}
-												className={`${
-													styles.scheduleCell
-												} ${
-													!canModify
-														? styles.readOnlyCell
-														: ""
-												}`}
-												onDrop={(e) =>
-													handleDrop(
-														e,
-														employeeId,
-														col.fullDate
-													)
-												}
-												onDragOver={handleDragOver}
-												onClick={() =>
-													handleCellClick(
-														employeeId,
-														col.fullDate
-													)
-												}
-												title={
-													!canModify
-														? "你沒有權限修改此任務"
-														: ""
-												}
-											>
-												<div
-													className={
-														styles.dutiesContainer
+											return (
+												<td
+													key={col.date}
+													className={`${
+														styles.scheduleCell
+													} ${
+														!canModify
+															? styles.readOnlyCell
+															: ""
+													}`}
+													onDrop={(e) =>
+														handleDrop(
+															e,
+															employeeId,
+															col.fullDate
+														)
+													}
+													onDragOver={handleDragOver}
+													onClick={() =>
+														handleCellClick(
+															employeeId,
+															col.fullDate
+														)
+													}
+													title={
+														!canModify
+															? "你沒有權限修改此任務"
+															: ""
 													}
 												>
-													{duties.map(
-														(duty, index) => (
-															<div
-																key={index}
-																className={`${
-																	styles.dutyTag
-																} ${
-																	!canModify
-																		? styles.readOnlyDuty
-																		: ""
-																}`}
-																style={{
-																	backgroundColor:
-																		DUTY_COLORS[
+													<div
+														className={
+															styles.dutiesContainer
+														}
+													>
+														{duties.map(
+															(duty, index) => (
+																<div
+																	key={index}
+																	className={`${
+																		styles.dutyTag
+																	} ${
+																		!canModify
+																			? styles.readOnlyDuty
+																			: ""
+																	}`}
+																	style={{
+																		backgroundColor:
+																			DUTY_COLORS[
+																				duty
+																			] ||
+																			"#3b82f6",
+																	}}
+																	onClick={(
+																		e
+																	) =>
+																		handleDutyClick(
+																			e,
+																			employeeId,
+																			col.fullDate,
 																			duty
-																		] ||
-																		"#3b82f6",
-																}}
-																onClick={(e) =>
-																	handleDutyClick(
-																		e,
-																		employeeId,
-																		col.fullDate,
-																		duty
-																	)
-																}
-																title={
-																	!canModify
-																		? "管理者設定，無法修改"
-																		: isMobile
-																		? `點選刪除 ${duty}`
-																		: `點兩下刪除 ${duty}`
-																}
-															>
-																{duty}
-															</div>
-														)
-													)}
-												</div>
-											</td>
-										);
-									})}
-								</tr>
+																		)
+																	}
+																	title={
+																		!canModify
+																			? "管理者設定，無法修改"
+																			: isMobile
+																			? `點選刪除 ${duty}`
+																			: `點兩下刪除 ${duty}`
+																	}
+																>
+																	{duty}
+																</div>
+															)
+														)}
+													</div>
+												</td>
+											);
+										})}
+									</tr>
 								);
 							})}
 						</tbody>
 					</table>
 				</div>
 
-				{/* Instructions */}
-				<div className={styles.instructions}>
-					<h3>使用說明：</h3>
-					<ul>
-						<li>
-							<strong>桌面版本：</strong>拖拉上方任務到對應日期
-						</li>
-						<li>
-							<strong>手機版本：</strong>點選欲排任務，再點選日期
-						</li>
-						<li>
-							<strong>刪除任務：</strong>
-							{isMobile
-								? "點選已安排的任務"
-								: "要刪除的任務用滑鼠點選兩次"}
-						</li>
-						<li>
-							<strong>權限說明：</strong>
-							一般使用者只能修改自己的排程，管理員可修改所有排程
-						</li>
-						<li>
-							<strong>受保護任務：</strong>
-							由管理員設定的任務無法被一般使用者移除
-						</li>
-					</ul>
-				</div>
+				{/* Instructions - Minimized by Default */}
+				{instructionsMinimized ? (
+					<div className={styles.minimizedInstructionsContainer}>
+						<button
+							onClick={() => setInstructionsMinimized(false)}
+							className={styles.expandInstructionsButton}
+						>
+							📖 顯示使用說明
+						</button>
+					</div>
+				) : (
+					<div className={styles.instructions}>
+						<div className={styles.instructionsHeader}>
+							<h3>使用說明：</h3>
+							<button
+								onClick={() => setInstructionsMinimized(true)}
+								className={styles.minimizeInstructionsButton}
+								title="隱藏使用說明"
+							>
+								隱藏
+							</button>
+						</div>
+						<ul>
+							<li>
+								<strong>桌面版本：</strong>
+								拖拉上方任務到對應日期
+							</li>
+							<li>
+								<strong>手機版本：</strong>
+								點選欲排任務，再點選日期
+							</li>
+							<li>
+								<strong>刪除任務：</strong>
+								{isMobile
+									? "點選已安排的任務"
+									: "要刪除的任務用滑鼠點選兩次"}
+							</li>
+							<li>
+								<strong>權限說明：</strong>
+								一般使用者只能修改自己的排程，管理員可修改所有排程
+							</li>
+							<li>
+								<strong>受保護任務：</strong>
+								由管理員設定的任務無法被一般使用者移除
+							</li>
+						</ul>
+					</div>
+				)}
 
 				{/* Action Buttons */}
 				<div className={styles.actionButtons}>
