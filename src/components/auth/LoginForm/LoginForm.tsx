@@ -15,7 +15,6 @@ const LoginForm = () => {
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState("");
 	const [success, setSuccess] = useState("");
-	const [showForgotPassword, setShowForgotPassword] = useState(false);
 	const vantaRef = useRef<HTMLDivElement>(null);
 	const vantaEffect = useRef<any>(null);
 
@@ -123,41 +122,6 @@ const LoginForm = () => {
 		}
 	};
 
-	const handleForgotPassword = async (e: React.FormEvent) => {
-		e.preventDefault();
-		if (!formData.email) {
-			setError("Please enter your email address");
-			return;
-		}
-
-		setIsLoading(true);
-		setError("");
-		setSuccess("");
-
-		try {
-			const response = await fetch("/api/auth/forgot-password", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ email: formData.email }),
-			});
-
-			const data = await response.json();
-
-			if (response.ok) {
-				setSuccess("Password reset instructions have been sent to your email if an account exists.");
-				setShowForgotPassword(false);
-			} else {
-				setError(data.message || "Failed to send recovery email");
-			}
-		} catch (err) {
-			setError("Failed to send recovery email. Please try again.");
-		} finally {
-			setIsLoading(false);
-		}
-	};
-
 	return (
 		<div className={styles.loginContainer} ref={vantaRef}>
 			<div className={styles.loginCard}>
@@ -166,7 +130,6 @@ const LoginForm = () => {
 					<p>Sign in to continue</p>
 				</div>
 
-				{!showForgotPassword ? (
 					<form onSubmit={handleSubmit} className={styles.loginForm}>
 						{error && (
 							<div className={styles.errorMessage}>{error}</div>
@@ -217,59 +180,7 @@ const LoginForm = () => {
 						</button>
 
 					</form>
-				) : (
-					<form
-						onSubmit={handleForgotPassword}
-						className={styles.loginForm}
-					>
-						<div className={styles.forgotPasswordHeader}>
-							<h2>Reset Password</h2>
-							<p>
-								Enter your email address to receive password reset instructions
-							</p>
-						</div>
-
-						{error && (
-							<div className={styles.errorMessage}>{error}</div>
-						)}
-
-						{success && (
-							<div className={styles.successMessage}>{success}</div>
-						)}
-
-						<div className={styles.inputGroup}>
-							<label htmlFor="email">Email Address</label>
-							<input
-								type="email"
-								id="email"
-								name="email"
-								value={formData.email}
-								onChange={handleInputChange}
-								required
-								autoComplete="email"
-								disabled={isLoading}
-								className={styles.input}
-								placeholder="Enter your email address"
-							/>
-						</div>
-
-						<button
-							type="submit"
-							disabled={isLoading}
-							className={styles.submitButton}
-						>
-							{isLoading ? "Sending..." : "Send Reset Instructions"}
-						</button>
-
-						<button
-							type="button"
-							onClick={() => setShowForgotPassword(false)}
-							className={styles.backButton}
-						>
-							Back to Login
-						</button>
-					</form>
-				)}
+				
 			</div>
 		</div>
 	);

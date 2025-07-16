@@ -20,7 +20,6 @@ interface AuthContextType {
 	user: User | null;
 	token: string | null;
 	login: (identifier: string, password: string) => Promise<boolean>;
-	register: (userData: any) => Promise<boolean>;
 	logout: () => void;
 	loading: boolean;
 }
@@ -29,7 +28,6 @@ const AuthContext = createContext<AuthContextType>({
 	user: null,
 	token: null,
 	login: async () => false,
-	register: async () => false,
 	logout: () => {},
 	loading: true,
 });
@@ -137,31 +135,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 		}
 	};
 
-	const register = async (userData: any): Promise<boolean> => {
-		try {
-			const response = await fetch("/api/auth/register", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(userData),
-			});
-
-			if (response.ok) {
-				const data = await response.json();
-				setUser(data.user);
-				setToken(data.token);
-				localStorage.setItem("token", data.token); // Fixed: use "token" key
-				return true;
-			} else {
-				return false;
-			}
-		} catch (error) {
-			console.error("Registration failed:", error);
-			return false;
-		}
-	};
-
 	const logout = () => {
 		console.log("=== LOGOUT ===");
 		setUser(null);
@@ -183,7 +156,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 				user,
 				token,
 				login,
-				register,
 				logout,
 				loading,
 			}}
