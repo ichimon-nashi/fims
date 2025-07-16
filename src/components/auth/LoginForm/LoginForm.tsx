@@ -216,25 +216,6 @@ const LoginForm = () => {
 							{isLoading ? "Signing in..." : "Sign In"}
 						</button>
 
-						{/* Temporarily disable password recover & register function */}
-						{/* <div className={styles.loginFooter}>
-							<button
-								type="button"
-								onClick={() => setShowForgotPassword(true)}
-								className={styles.forgotButton}
-							>
-								Forgot Password?
-							</button>
-
-							<button
-								type="button"
-								onClick={() => router.push("/register")}
-								className={styles.registerButton}
-							>
-								Create Account
-							</button>
-						</div> */}
-
 					</form>
 				) : (
 					<form
