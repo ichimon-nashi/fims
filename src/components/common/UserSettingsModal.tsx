@@ -134,7 +134,7 @@ const UserSettingsModal = ({ onClose }: UserSettingsModalProps) => {
               <span className={styles.value}>{user?.full_name}</span>
             </div>
             <div className={styles.infoRow}>
-              <span className={styles.label}>職級:</span>
+              <span className={styles.label}>職稱:</span>
               <span className={styles.value}>{user?.rank}</span>
             </div>
             <div className={styles.infoRow}>

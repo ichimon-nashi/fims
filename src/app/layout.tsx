@@ -3,8 +3,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'FI Schedule - 教師月份休假計畫',
-  description: 'Flight Instructor duty roster management system',
+  title: '豪神教師排班系統',
+  description: 'Flight Instructor Duty Roster',
 }
 
 export default function RootLayout({

@@ -177,7 +177,7 @@ const LoginForm = () => {
 						)}
 
 						<div className={styles.inputGroup}>
-							<label htmlFor="identifier">Employee ID or Email</label>
+							<label htmlFor="identifier">Email</label>
 							<input
 								type="text"
 								id="identifier"
@@ -188,7 +188,7 @@ const LoginForm = () => {
 								autoComplete="username"
 								disabled={isLoading}
 								className={styles.input}
-								placeholder="Enter your employee ID or email"
+								placeholder="Enter your email"
 							/>
 						</div>
 
@@ -216,7 +216,8 @@ const LoginForm = () => {
 							{isLoading ? "Signing in..." : "Sign In"}
 						</button>
 
-						<div className={styles.loginFooter}>
+						{/* Temporarily disable password recover & register function */}
+						{/* <div className={styles.loginFooter}>
 							<button
 								type="button"
 								onClick={() => setShowForgotPassword(true)}
@@ -232,7 +233,8 @@ const LoginForm = () => {
 							>
 								Create Account
 							</button>
-						</div>
+						</div> */}
+
 					</form>
 				) : (
 					<form

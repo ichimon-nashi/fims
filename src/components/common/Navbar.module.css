@@ -72,7 +72,7 @@
   align-items: center;
   justify-content: center;
   min-width: 40px;
-  height: 40px;
+  max-height: 2.5rem;
 }
 
 .settingsButton:hover {
@@ -81,7 +81,7 @@
 }
 
 .logoutButton {
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 2.5rem;
   background: rgba(239, 68, 68, 0.8);
   border: 1px solid rgba(239, 68, 68, 1);
   border-radius: 0.375rem;
@@ -90,6 +90,7 @@
   transition: all 0.2s;
   font-weight: 500;
   font-size: 0.875rem;
+  max-height: 2.5rem;
 }
 
 .logoutButton:hover {
@@ -118,13 +119,14 @@
 
   .settingsButton {
     min-width: 36px;
-    height: 36px;
+    height: 2rem;
     font-size: 0.875rem;
   }
 
   .logoutButton {
     padding: 0.375rem 0.75rem;
     font-size: 0.75rem;
+    height: 2rem;
   }
 }
 

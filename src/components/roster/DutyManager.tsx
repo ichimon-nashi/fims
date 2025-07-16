@@ -176,7 +176,7 @@ const DutyManager = ({
               <button
                 onClick={() => setEditMode(!editMode)}
                 className={styles.editButton}
-                title="編輯任務列表"
+                title="編輯任務"
               >
                 ✏️
               </button>
@@ -194,9 +194,9 @@ const DutyManager = ({
           <button
             onClick={onToggleMinimize}
             className={styles.minimizeButton}
-            title="最小化任務列表"
+            title="隱藏任務列表"
           >
-            ➖
+            隱藏
           </button>
         </div>
       </div>
@@ -320,7 +320,7 @@ const DutyManager = ({
 
       {isMobile && selectedDuty && !editMode && (
         <div className={styles.selectedNotice}>
-          <p>已選擇：{selectedDuty} - 點擊日期來分配任務</p>
+          <p>已選擇：{selectedDuty} - 點選日期安排任務</p>
         </div>
       )}
     </div>
