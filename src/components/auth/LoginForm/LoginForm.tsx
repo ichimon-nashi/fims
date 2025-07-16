@@ -6,6 +6,18 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import styles from "./LoginForm.module.css";
 
+// Type declarations for external libraries
+declare global {
+	interface Window {
+		VANTA?: {
+			CLOUDS: (config: any) => {
+				destroy: () => void;
+			};
+		};
+		THREE?: any;
+	}
+}
+
 const LoginForm = () => {
 	const [formData, setFormData] = useState({
 		identifier: "", // Can be employee ID or email

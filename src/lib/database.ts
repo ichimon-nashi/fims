@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
-import { ScheduleEntry, ScheduleFilters } from "./types";
+import { User, ScheduleEntry, ScheduleFilters, ExportData } from "./types";
 
 export const getAllUsers = async (): Promise<User[]> => {
 	try {
@@ -39,7 +39,7 @@ export const getAllUsers = async (): Promise<User[]> => {
 };
 
 // User lookup functions
-export async function getUserByEmail(email: string) {
+export async function getUserByEmail(email: string): Promise<User | null> {
 	console.log("Getting user by email:", email);
 	
 	const supabase = await createClient();
@@ -64,7 +64,7 @@ export async function getUserByEmail(email: string) {
 	return data;
 }
 
-export async function getUserById(id: string) {
+export async function getUserById(id: string): Promise<User | null> {
 	console.log("Getting user by id:", id);
 	
 	const supabase = await createClient();
@@ -89,7 +89,7 @@ export async function getUserById(id: string) {
 }
 
 // Get user by employee ID
-export async function getUserByEmployeeId(employeeId: string) {
+export async function getUserByEmployeeId(employeeId: string): Promise<User | null> {
 	console.log("Getting user by employee ID:", employeeId);
 	
 	const supabase = await createClient();
@@ -124,7 +124,7 @@ export async function createUser(userData: {
 	filter: string[];
 	handicap_level: number;
 	authentication_level: number;
-}) {
+}): Promise<User> {
 	console.log("Creating user with email:", userData.email);
 	
 	const supabase = await createClient();
@@ -156,7 +156,7 @@ export async function createUser(userData: {
 }
 
 // Get FI instructors (rank = 'FI' and employee_id = '22119')
-export async function getFIInstructors() {
+export async function getFIInstructors(): Promise<User[]> {
 	console.log("Getting FI instructors");
 	
 	const supabase = await createClient();
@@ -185,7 +185,8 @@ export async function createOrUpdateScheduleEntry(scheduleData: {
 	base: string;
 	date: string;
 	duties: string[];
-}) {
+	created_by?: string;
+}): Promise<ScheduleEntry> {
 	console.log("Creating/updating schedule entry for:", scheduleData.employee_id, "on", scheduleData.date);
 	
 	const supabase = await createClient();
@@ -217,7 +218,7 @@ export async function createOrUpdateScheduleEntry(scheduleData: {
 }
 
 // Get schedule entries by filters
-export async function getScheduleEntries(filters: ScheduleFilters) {
+export async function getScheduleEntries(filters: ScheduleFilters): Promise<ScheduleEntry[]> {
 	console.log("Getting schedule entries with filters:", filters);
 	
 	const supabase = await createClient();
@@ -251,11 +252,11 @@ export async function getScheduleEntries(filters: ScheduleFilters) {
 	}
 
 	console.log("Found schedule entries:", data.length);
-	return data;
+	return data || [];
 }
 
 // Get schedule entry for specific date and employee
-export async function getScheduleEntry(employeeId: string, date: string) {
+export async function getScheduleEntry(employeeId: string, date: string): Promise<ScheduleEntry | null> {
 	console.log("Getting schedule entry for employee:", employeeId, "on date:", date);
 	
 	const supabase = await createClient();
@@ -281,7 +282,7 @@ export async function getScheduleEntry(employeeId: string, date: string) {
 }
 
 // Delete schedule entry
-export async function deleteScheduleEntry(employeeId: string, date: string) {
+export async function deleteScheduleEntry(employeeId: string, date: string): Promise<void> {
 	console.log("Deleting schedule entry for employee:", employeeId, "on date:", date);
 	
 	const supabase = await createClient();
@@ -301,7 +302,7 @@ export async function deleteScheduleEntry(employeeId: string, date: string) {
 }
 
 // Clean up old schedule records (older than 3 years)
-export async function cleanupOldScheduleRecords() {
+export async function cleanupOldScheduleRecords(): Promise<number> {
 	console.log("Cleaning up old schedule records");
 	
 	const supabase = await createClient();
@@ -325,19 +326,13 @@ export async function cleanupOldScheduleRecords() {
 }
 
 // Get schedule data for Excel export
-export async function getScheduleForExport(year: number, month?: number) {
+export async function getScheduleForExport(year: number, month?: number): Promise<ExportData[]> {
 	console.log("Getting schedule data for export, year:", year, "month:", month);
 	
 	const scheduleEntries = await getScheduleEntries({ year, month });
 	
 	// Group by employee
-	const exportData: Record<string, {
-		employee_id: string;
-		full_name: string;
-		rank: string;
-		base: string;
-		schedule: Record<string, string[]>;
-	}> = {};
+	const exportData: Record<string, ExportData> = {};
 	
 	scheduleEntries.forEach(entry => {
 		if (!exportData[entry.employee_id]) {
@@ -357,7 +352,11 @@ export async function getScheduleForExport(year: number, month?: number) {
 }
 
 // Get monthly summary for a specific employee
-export async function getMonthlyScheduleSummary(employeeId: string, year: number, month: number) {
+export async function getMonthlyScheduleSummary(employeeId: string, year: number, month: number): Promise<{
+	totalDays: number;
+	dutyCounts: Record<string, number>;
+	entries: ScheduleEntry[];
+}> {
 	console.log("Getting monthly schedule summary for:", employeeId, year, month);
 	
 	const scheduleEntries = await getScheduleEntries({ year, month, employeeId });

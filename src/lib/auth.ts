@@ -1,7 +1,7 @@
 // src/lib/auth.ts
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import { User } from "./types";
+import { User, JWTPayload } from "./types";
 
 const JWT_SECRET =
 	process.env.JWT_SECRET || "your-secret-key-change-in-production";
@@ -18,7 +18,7 @@ export const verifyPassword = async (
 	return await bcrypt.compare(password, hashedPassword);
 };
 
-export const generateToken = (user: Omit<User, "password">): string => {
+export const generateToken = (user: Omit<User, "password" | "password_hash">): string => {
 	return jwt.sign(
 		{
 			userId: user.id,
@@ -30,9 +30,9 @@ export const generateToken = (user: Omit<User, "password">): string => {
 	);
 };
 
-export const verifyToken = (token: string): any => {
+export const verifyToken = (token: string): JWTPayload => {
 	try {
-		return jwt.verify(token, JWT_SECRET);
+		return jwt.verify(token, JWT_SECRET) as JWTPayload;
 	} catch (error) {
 		throw new Error("Invalid token");
 	}
@@ -66,8 +66,11 @@ export const requireAuth = (minAuthLevel: number = 1) => {
 
 			req.user = decoded;
 			next();
-		} catch (error) {
-			return res.status(401).json({ message: "Invalid token" });
+		} catch (error: unknown) {
+			return res.status(401).json({ 
+				message: "Invalid token",
+				error: error instanceof Error ? error.message : String(error)
+			});
 		}
 	};
 };

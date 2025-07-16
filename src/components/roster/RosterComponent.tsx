@@ -89,7 +89,6 @@ const RosterComponent = () => {
 		// Get user identifier - try multiple fields
 		const userEmployeeId =
 			currentUser?.employee_id ||
-			currentUser?.employeeId ||
 			currentUser?.id;
 
 		console.log("Permission check:", {
@@ -364,7 +363,6 @@ const RosterComponent = () => {
 
 			// Create canvas with the full table visible
 			const canvas = await html2canvas(tableContainer, {
-				scale: 1.5, // Good quality without being too large
 				useCORS: true,
 				allowTaint: true,
 				backgroundColor: "#ffffff",
@@ -373,7 +371,9 @@ const RosterComponent = () => {
 				height: tableContainer.scrollHeight, // Capture full height
 				scrollX: 0,
 				scrollY: 0,
-				onclone: (clonedDoc) => {
+				// Use devicePixelRatio for better quality instead of scale
+				pixelRatio: window.devicePixelRatio * 1.5,
+				onclone: (clonedDoc: Document) => {
 					// Ensure cloned table shows full content
 					const clonedContainer = clonedDoc.querySelector(
 						'[data-testid="roster-table"]'
@@ -381,20 +381,20 @@ const RosterComponent = () => {
 					const clonedTable = clonedContainer?.querySelector("table");
 
 					if (clonedContainer && clonedTable) {
-						clonedContainer.style.overflow = "visible";
-						clonedContainer.style.width = "max-content";
-						clonedContainer.style.maxWidth = "none";
-						clonedTable.style.width = "max-content";
-						clonedTable.style.minWidth = "max-content";
+						(clonedContainer as HTMLElement).style.overflow = "visible";
+						(clonedContainer as HTMLElement).style.width = "max-content";
+						(clonedContainer as HTMLElement).style.maxWidth = "none";
+						(clonedTable as HTMLElement).style.width = "max-content";
+						(clonedTable as HTMLElement).style.minWidth = "max-content";
 
 						// Ensure all columns are visible
 						const cells = clonedTable.querySelectorAll("td, th");
-						cells.forEach((cell) => {
+						cells.forEach((cell: any) => {
 							cell.style.whiteSpace = "nowrap";
 						});
 					}
 				},
-			});
+			} as any); // Type assertion to bypass strict typing
 
 			// Restore original styles
 			tableContainer.style.overflow = originalStyles.containerOverflow;
@@ -420,7 +420,7 @@ const RosterComponent = () => {
 			document.body.removeChild(link);
 
 			console.log("Full month screenshot saved:", fileName);
-		} catch (error) {
+		} catch (error: any) {
 			console.error("Screenshot error:", error);
 			alert(`截圖失敗：${error.message || "未知錯誤"}，請聯絡豪神`);
 		}
@@ -498,7 +498,7 @@ const RosterComponent = () => {
 			XLSX.writeFile(wb, fileName);
 
 			console.log("Excel export completed successfully");
-		} catch (error) {
+		} catch (error: any) {
 			console.error("Excel export error:", error);
 
 			// Provide more specific error information
@@ -513,7 +513,6 @@ const RosterComponent = () => {
 	const handleDatabaseCleanup = async () => {
 		const userEmployeeId =
 			currentUser?.employee_id ||
-			currentUser?.employeeId ||
 			currentUser?.id;
 		if (!ADMIN_ACCOUNTS.includes(userEmployeeId || "")) {
 			alert("只有管理者可以執行資料庫清理");
@@ -617,7 +616,6 @@ const RosterComponent = () => {
 				duties: newDuties,
 				created_by:
 					currentUser?.employee_id ||
-					currentUser?.id ||
 					currentUser?.id,
 			};
 
@@ -923,7 +921,6 @@ const RosterComponent = () => {
 
 								{ADMIN_ACCOUNTS.includes(
 									currentUser?.employee_id ||
-										currentUser?.employeeId ||
 										currentUser?.id ||
 										""
 								) && (
@@ -957,7 +954,6 @@ const RosterComponent = () => {
 					isMobile={isMobile}
 					isAdmin={ADMIN_ACCOUNTS.includes(
 						currentUser?.employee_id ||
-							currentUser?.employeeId ||
 							currentUser?.id ||
 							""
 					)}
