@@ -1,7 +1,7 @@
-// src/components/roster/RosterComponent.tsx - ENHANCED VERSION
+// src/components/roster/RosterComponent.tsx - ENHANCED VERSION WITH FIXES
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/common/Navbar";
 import DutyManager from "@/components/roster/DutyManager";
@@ -212,8 +212,8 @@ const RosterComponent = () => {
 
 	const dateColumns = generateDateColumns();
 
-	// Fetch duties from database
-	const fetchDutiesFromAPI = async () => {
+	// Fetch duties from database - wrapped in useCallback
+	const fetchDutiesFromAPI = useCallback(async () => {
 		try {
 			const response = await fetch("/api/duties", {
 				headers: {
@@ -248,10 +248,10 @@ const RosterComponent = () => {
 			console.error("Error fetching duties:", error);
 			console.log("Using default duties due to error");
 		}
-	};
+	}, [token]);
 
-	// Fetch instructors
-	const fetchInstructors = async () => {
+	// Fetch instructors - wrapped in useCallback
+	const fetchInstructors = useCallback(async () => {
 		try {
 			setLoading(true);
 			const response = await fetch("/api/users", {
@@ -286,10 +286,10 @@ const RosterComponent = () => {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [token]);
 
-	// Fetch schedules from API
-	const fetchSchedulesFromAPI = async () => {
+	// Fetch schedules from API - wrapped in useCallback
+	const fetchSchedulesFromAPI = useCallback(async () => {
 		try {
 			const scheduleApiUrl = `/api/schedule?year=${selectedYear}&month=${selectedMonth}`;
 
@@ -309,7 +309,7 @@ const RosterComponent = () => {
 			console.error("Error fetching schedules:", err);
 			setScheduleData({});
 		}
-	};
+	}, [token, selectedYear, selectedMonth]);
 
 	// Refresh data
 	const handleRefresh = async () => {
@@ -509,6 +509,7 @@ const RosterComponent = () => {
 			}
 		}
 	};
+	
 	const handleDatabaseCleanup = async () => {
 		const userEmployeeId =
 			currentUser?.employee_id ||
@@ -822,18 +823,19 @@ const RosterComponent = () => {
 		});
 	};
 
+	// Fixed useEffect hooks with proper dependencies
 	useEffect(() => {
 		if (token) {
 			fetchInstructors();
-			fetchDutiesFromAPI(); // Load duties and colors from database
+			fetchDutiesFromAPI();
 		}
-	}, [token]);
+	}, [token, fetchInstructors, fetchDutiesFromAPI]);
 
 	useEffect(() => {
 		if (token && instructors.length > 0) {
 			fetchSchedulesFromAPI();
 		}
-	}, [token, selectedYear, selectedMonth, instructors]);
+	}, [token, selectedYear, selectedMonth, instructors.length, fetchSchedulesFromAPI]);
 
 	if (loading) {
 		return (
@@ -1179,16 +1181,6 @@ const RosterComponent = () => {
 					>
 						📊 匯出Excel
 					</button>
-
-					{/* {ADMIN_ACCOUNTS.includes(currentUser?.employee_id || currentUser?.employeeId || currentUser?.id || "") && (
-            <button 
-              className={`${styles.actionButton} ${styles.actionButtonRed}`}
-              onClick={handleDatabaseCleanup}
-              disabled={loading}
-            >
-              🧹 清理資料庫
-            </button>
-          )} */}
 				</div>
 			</div>
 		</div>

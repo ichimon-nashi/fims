@@ -5,7 +5,7 @@ import { verifyToken, extractTokenFromHeader, hashPassword } from "@/lib/auth";
 
 export async function GET(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> } // Changed this line
 ) {
 	try {
 		const token = extractTokenFromHeader(
@@ -20,7 +20,7 @@ export async function GET(
 		}
 
 		const decoded = verifyToken(token);
-		const { id } = await params; // Added await here
+		const { id } = await params; // This line is correct
 
 		console.log("Looking up user with ID:", id);
 
@@ -102,7 +102,7 @@ export async function GET(
 
 export async function PUT(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> } // Changed this line
 ) {
 	try {
 		const token = extractTokenFromHeader(
@@ -125,7 +125,7 @@ export async function PUT(
 			);
 		}
 
-		const { id } = await params; // Added await here
+		const { id } = await params; // This line is correct
 		const updateData = await request.json();
 
 		console.log(
@@ -203,7 +203,7 @@ export async function PUT(
 
 export async function DELETE(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> } // Changed this line
 ) {
 	try {
 		const token = extractTokenFromHeader(
@@ -226,7 +226,7 @@ export async function DELETE(
 			);
 		}
 
-		const { id } = await params; // Added await here
+		const { id } = await params; // This line is correct
 
 		const supabase = await createClient();
 		const { error } = await supabase.from("users").delete().eq("id", id);
