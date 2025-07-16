@@ -1,36 +1,12 @@
-// src/components/roster/RosterComponent.tsx - ENHANCED VERSION WITH FIXES
+// src/components/roster/RosterComponent.tsx - ENHANCED VERSION WITH CENTRALIZED TYPES
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/common/Navbar";
 import DutyManager from "@/components/roster/DutyManager";
+import { User, ScheduleEntry, DUTY_COLORS as DEFAULT_DUTY_COLORS } from "@/lib/types";
 import styles from "./RosterComponent.module.css";
-
-interface User {
-	id: string;
-	employee_id: string;
-	full_name: string;
-	rank: string;
-	base: string;
-	email: string;
-	filter: string[];
-	handicap_level: number;
-	authentication_level: number;
-}
-
-interface ScheduleEntry {
-	id?: string;
-	employee_id: string;
-	date: string;
-	duties: string[];
-	created_by?: string; // Track who created the entry
-}
-
-interface DutyPermission {
-	duty: string;
-	created_by: string;
-}
 
 // Special accounts that can modify all schedules
 const ADMIN_ACCOUNTS = ["admin", "21986", "51892"];
@@ -59,17 +35,7 @@ const RosterComponent = () => {
 		"IOSA",
 	]);
 
-	const [dutyColors, setDutyColors] = useState<Record<string, string>>({
-		OD: "#FF6B6B",
-		SAG: "#4ECDC4", 
-		教師會: "#3772ff", 
-		訓練: "#72e0ac", 
-		課: "#f9a03f", 
-		專案: "#ffc2e2", 
-		休假: "#d0ada7", 
-		查核: "#f4e285",
-		IOSA: "#b892ff", 
-	});
+	const [dutyColors, setDutyColors] = useState<Record<string, string>>(DEFAULT_DUTY_COLORS);
 
 	// Year/Month selection state
 	const currentDate = new Date();
@@ -125,6 +91,13 @@ const RosterComponent = () => {
 
 		console.log("Permission granted for self-modification");
 		return true;
+	};
+
+	// Get employee identifier - prioritize employee_id over UUID
+	const getEmployeeIdentifier = (user: User): string => {
+		const identifier = user.employee_id || user.id || "";
+		console.log(`User ${user.full_name}: employee_id=${user.employee_id}, id=${user.id}, using=${identifier}`);
+		return identifier;
 	};
 
 	// Detect mobile/tablet for different interaction modes
@@ -261,15 +234,17 @@ const RosterComponent = () => {
 
 			if (response.ok) {
 				const data = await response.json();
+				console.log("Users API response:", data);
 				const users = data.users || data;
 
 				const filteredInstructors = users.filter(
 					(user: User) =>
 						user.rank === "FI - Flight Attendant Instructor" ||
 						user.rank === "SC - Section Chief" ||
-						user.employee_id === "22119"
+						getEmployeeIdentifier(user) === "22119"
 				);
 
+				console.log("Filtered instructors:", filteredInstructors);
 				setInstructors(filteredInstructors);
 			} else {
 				const errorData = await response.json();
@@ -455,15 +430,16 @@ const RosterComponent = () => {
 
 			// Add data rows
 			instructors.forEach((instructor) => {
+				const employeeId = getEmployeeIdentifier(instructor);
 				const row = [
-					instructor.employee_id,
+					employeeId,
 					instructor.full_name,
 					instructor.base,
 				];
 
 				dateColumns.forEach((col) => {
 					const duties = getDutiesForDate(
-						instructor.employee_id,
+						employeeId,
 						col.fullDate
 					);
 					row.push(duties.join(", ") || "");
@@ -605,7 +581,7 @@ const RosterComponent = () => {
 			const newDuties = [...currentDuties, duty];
 
 			const instructor = instructors.find(
-				(i) => i.employee_id === instructorId
+				(i) => getEmployeeIdentifier(i) === instructorId
 			);
 			const scheduleEntry = {
 				employee_id: instructorId,
@@ -638,7 +614,7 @@ const RosterComponent = () => {
 							date,
 							duties: newDuties,
 							created_by: currentUser?.employee_id,
-						},
+						} as ScheduleEntry,
 					],
 				}));
 			} else {
@@ -668,7 +644,7 @@ const RosterComponent = () => {
 			);
 
 			const instructor = instructors.find(
-				(i) => i.employee_id === instructorId
+				(i) => getEmployeeIdentifier(i) === instructorId
 			);
 			const scheduleEntry = {
 				employee_id: instructorId,
@@ -699,7 +675,7 @@ const RosterComponent = () => {
 							date,
 							duties: newDuties,
 							created_by: currentUser?.employee_id,
-						},
+						} as ScheduleEntry,
 					],
 				}));
 			} else {
@@ -1028,13 +1004,15 @@ const RosterComponent = () => {
 							</tr>
 						</thead>
 						<tbody>
-							{instructors.map((instructor) => (
+							{instructors.map((instructor) => {
+								const employeeId = getEmployeeIdentifier(instructor);
+								return (
 								<tr
 									key={instructor.id}
 									className={styles.instructorRow}
 								>
 									<td className={styles.instructorCell}>
-										{instructor.employee_id}
+										{employeeId}
 									</td>
 									<td className={styles.instructorCell}>
 										{instructor.full_name}
@@ -1044,11 +1022,11 @@ const RosterComponent = () => {
 									</td>
 									{dateColumns.map((col) => {
 										const duties = getDutiesForDate(
-											instructor.employee_id,
+											employeeId,
 											col.fullDate
 										);
 										const canModify = canModifyDuty(
-											instructor.employee_id,
+											employeeId,
 											col.fullDate
 										);
 
@@ -1065,14 +1043,14 @@ const RosterComponent = () => {
 												onDrop={(e) =>
 													handleDrop(
 														e,
-														instructor.employee_id,
+														employeeId,
 														col.fullDate
 													)
 												}
 												onDragOver={handleDragOver}
 												onClick={() =>
 													handleCellClick(
-														instructor.employee_id,
+														employeeId,
 														col.fullDate
 													)
 												}
@@ -1108,7 +1086,7 @@ const RosterComponent = () => {
 																onClick={(e) =>
 																	handleDutyClick(
 																		e,
-																		instructor.employee_id,
+																		employeeId,
 																		col.fullDate,
 																		duty
 																	)
@@ -1130,7 +1108,8 @@ const RosterComponent = () => {
 										);
 									})}
 								</tr>
-							))}
+								);
+							})}
 						</tbody>
 					</table>
 				</div>

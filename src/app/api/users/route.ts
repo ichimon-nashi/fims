@@ -66,13 +66,10 @@ export async function GET(request: NextRequest) {
 				delete userWithoutPassword.authentication_level;
 			}
 
-			// Hide employee_id unless level 99 (admin only)
-			if (decoded.authLevel < 99) {
-				delete userWithoutPassword.employee_id;
-			} else {
-				// Keep both formats for high-level users
-				userWithoutPassword.employeeID = userWithoutPassword.employee_id;
-			}
+			// REMOVED: Employee ID hiding - make employee_id visible for all users
+			// This ensures the roster functionality works for all instructors
+			// Keep both formats for all users
+			userWithoutPassword.employeeID = userWithoutPassword.employee_id;
 
 			return userWithoutPassword;
 		});
