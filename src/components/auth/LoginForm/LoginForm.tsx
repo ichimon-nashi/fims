@@ -114,6 +114,17 @@ const LoginForm = () => {
 		setSuccess(""); // Clear success when user types
 	};
 
+	const showAlert = (message: string, type: 'error' | 'success' | 'warning' = 'error') => {
+		const alertType = type === 'error' ? 'error' : 
+						 type === 'success' ? 'info' : 'warning';
+		
+		const alertMessage = type === 'error' && message.includes('Access denied') 
+			? 'Access Denied\n\nYou do not have permission to access this system. Please contact your administrator if you believe this is an error.\n\nAccess is limited to:\n• Flight Instructors (FI)\n• Section Chiefs (SC)\n• Managers (MG)\n• Specific authorized personnel'
+			: message;
+
+		alert(alertMessage);
+	};
+
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setIsLoading(true);
@@ -123,12 +134,28 @@ const LoginForm = () => {
 		try {
 			const success = await login(formData.identifier, formData.password);
 			if (success) {
+				// showAlert("Login successful! Redirecting to dashboard...", 'success');
 				router.push("/roster");
 			} else {
-				setError("Invalid credentials");
+				const errorMessage = "Invalid credentials. Please check your email and password.";
+				setError(errorMessage);
+				showAlert(errorMessage, 'error');
 			}
-		} catch (err) {
-			setError("Login failed. Please try again.");
+		} catch (err: any) {
+			let errorMessage = "Login failed. Please try again.";
+			
+			// Check if it's an access denied error
+			if (err.message && err.message.includes('Access denied')) {
+				errorMessage = err.message;
+				setError("Access denied. You do not have permission to access this APP.");
+			} else if (err.message && err.message.includes('Invalid credentials')) {
+				errorMessage = "Invalid credentials. Please check your email and password.";
+				setError(errorMessage);
+			} else {
+				setError(errorMessage);
+			}
+			
+			showAlert(errorMessage, 'error');
 		} finally {
 			setIsLoading(false);
 		}

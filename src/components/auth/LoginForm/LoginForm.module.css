@@ -1,4 +1,4 @@
-/* src/components/auth/LoginForm/LoginForm.module.css - TRANSPARENT VERSION */
+/* src/components/auth/LoginForm/LoginForm.module.css */
 .loginContainer {
 	min-height: 100vh;
 	display: flex;
@@ -15,12 +15,10 @@
 }
 
 .loginCard {
-	/* Much more transparent background */
 	background: rgba(255, 255, 255, 0.15);
 	backdrop-filter: blur(10px);
 	border-radius: 16px;
 	box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-	/* Add subtle border for better definition */
 	/* border: 1px solid rgba(255, 255, 255, 0.2); */
 	overflow: hidden;
 	width: 100%;
@@ -42,13 +40,11 @@
 }
 
 .loginHeader {
-	/* More transparent header */
 	background: linear-gradient(135deg, rgba(102, 126, 234, 0.7) 0%, rgba(118, 75, 162, 0.7) 100%);
 	color: white;
 	padding: 2.5rem 2rem;
 	text-align: center;
 	backdrop-filter: blur(15px);
-	/* Add border for better separation */
 	border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -68,7 +64,6 @@
 
 .loginForm {
 	padding: 2rem;
-	/* Much more transparent form background */
 	background: rgba(255, 255, 255, 0.1);
 	backdrop-filter: blur(15px);
 }
@@ -130,7 +125,6 @@
 .input {
 	width: 100%;
 	padding: 1rem;
-	/* More transparent input background */
 	border: 2px solid rgba(255, 255, 255, 0.3);
 	border-radius: 8px;
 	font-size: 1rem;

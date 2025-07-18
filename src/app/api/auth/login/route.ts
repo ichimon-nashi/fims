@@ -1,5 +1,5 @@
 // src/app/api/auth/login/route.ts
-// Debug version - replace temporarily to see what's in the database
+// Updated version with rank-based access control
 import { NextRequest, NextResponse } from "next/server";
 import { getUserByEmail, getUserByEmployeeId } from "@/lib/database";
 import { verifyPassword, generateToken } from "@/lib/auth";
@@ -78,7 +78,22 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		console.log("Password verified, generating token...");
+		console.log("Password verified, checking access permissions...");
+		
+		// Check if user has permission to access the system
+		const hasAccess = checkUserAccess(user);
+		if (!hasAccess) {
+			console.log("User does not have required permissions:", {
+				employeeId: user.employee_id,
+				rank: user.rank
+			});
+			return NextResponse.json(
+				{ message: "Access denied. You do not have permission to access this system." },
+				{ status: 403 }
+			);
+		}
+
+		console.log("Access granted, generating token...");
 		// Remove password from user object
 		const { password_hash, ...userWithoutPassword } = user;
 
@@ -107,4 +122,44 @@ export async function POST(request: NextRequest) {
 			{ status: 500 }
 		);
 	}
+}
+
+// Helper function to check if user has access permissions
+function checkUserAccess(user: any): boolean {
+	// Admin employee IDs (unchanged admin accounts)
+	const adminEmployeeIds = ["51892", "admin", "21986"];
+	
+	// Special employee ID with access
+	const specialEmployeeId = "22119";
+	
+	// Allowed ranks
+	const allowedRanks = [
+		"FI",
+		"FI - Flight Attendant Instructor",
+		"SC", 
+		"SC - Section Chief",
+		"MG",
+		"MG - Manager"
+	];
+
+	// Check if user is an admin
+	if (adminEmployeeIds.includes(user.employee_id)) {
+		console.log("Access granted: Admin employee ID");
+		return true;
+	}
+
+	// Check if user is the special employee ID
+	if (user.employee_id === specialEmployeeId) {
+		console.log("Access granted: Special employee ID");
+		return true;
+	}
+
+	// Check if user has an allowed rank
+	if (user.rank && allowedRanks.includes(user.rank)) {
+		console.log("Access granted: Allowed rank");
+		return true;
+	}
+
+	console.log("Access denied: No qualifying permissions");
+	return false;
 }

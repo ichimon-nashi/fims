@@ -706,7 +706,6 @@ const RosterComponent = () => {
 		}
 	};
 
-	// Handle drag over
 	const handleDragOver = (e: React.DragEvent) => {
 		e.preventDefault();
 		e.dataTransfer.dropEffect = "copy";
@@ -772,7 +771,6 @@ const RosterComponent = () => {
 			prev.map((d) => (d === oldName ? newName : d))
 		);
 
-		// Update duty colors
 		setDutyColors((prev) => {
 			const newColors = { ...prev };
 			if (newColors[oldName]) {
@@ -797,7 +795,6 @@ const RosterComponent = () => {
 		});
 	};
 
-	// Fixed useEffect hooks with proper dependencies
 	useEffect(() => {
 		if (token) {
 			fetchInstructors();
