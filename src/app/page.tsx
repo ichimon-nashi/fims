@@ -1,3 +1,4 @@
+// src/app/page.tsx - Fixed to redirect to dashboard instead of roster
 'use client';
 
 import { useEffect } from 'react';
@@ -11,11 +12,11 @@ function HomePageContent() {
   useEffect(() => {
     if (!loading) {
       if (user) {
-        // User is logged in, redirect to roster
-        router.push('/roster');
+        // User is logged in, redirect to dashboard instead of roster
+        router.replace('/dashboard');
       } else {
         // User is not logged in, redirect to login
-        router.push('/login');
+        router.replace('/login');
       }
     }
   }, [user, loading, router]);
@@ -35,7 +36,7 @@ function HomePageContent() {
           fontSize: '1.5rem',
           fontWeight: 'bold'
         }}>
-          Loading...
+          豪神教師管理系統載入中...
         </div>
       </div>
     );

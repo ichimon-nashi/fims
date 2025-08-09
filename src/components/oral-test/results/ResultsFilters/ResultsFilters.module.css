@@ -1,0 +1,111 @@
+/* src/components/results/ResultsFilters/ResultsFilters.module.css */
+.resultsFilters {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1.5rem;
+	background: #f8fafc;
+	border-bottom: 1px solid #e2e8f0;
+	gap: 1rem;
+	flex-wrap: wrap;
+}
+
+.filterSection {
+	display: flex;
+	align-items: center;
+	gap: 1.5rem;
+	flex-wrap: wrap;
+}
+
+.filterLabel {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-weight: 600;
+	color: #2d3748;
+	font-size: 0.9rem;
+	white-space: nowrap;
+}
+
+.filterSelect {
+	padding: 0.5rem 0.75rem;
+	border: 2px solid #e2e8f0;
+	border-radius: 6px;
+	background: white;
+	font-size: 0.9rem;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	min-width: 120px;
+}
+
+.filterSelect:focus {
+	outline: none;
+	border-color: #667eea;
+	box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.filterSelect:hover {
+	border-color: #cbd5e0;
+}
+
+.resultsSummary {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+}
+
+.resultsCount {
+	color: #4a5568;
+	font-size: 0.9rem;
+	font-weight: 500;
+	padding: 0.5rem 1rem;
+	background: white;
+	border: 1px solid #e2e8f0;
+	border-radius: 6px;
+	white-space: nowrap;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+	.resultsFilters {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 1rem;
+	}
+
+	.filterSection {
+		justify-content: center;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.filterLabel {
+		flex-direction: column;
+		text-align: center;
+		gap: 0.5rem;
+	}
+
+	.filterSelect {
+		width: 100%;
+		min-width: 200px;
+	}
+
+	.resultsSummary {
+		justify-content: center;
+	}
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+	.resultsFilters {
+		padding: 1rem;
+	}
+	
+	.filterSection {
+		gap: 1rem;
+	}
+	
+	.filterSelect {
+		min-width: 140px;
+		font-size: 0.9rem;
+	}
+}

@@ -1,0 +1,167 @@
+/* src/components/ui/Avatar/Avatar.module.css */
+.avatar {
+	border-radius: 50%;
+	overflow: hidden;
+	position: relative;
+	flex-shrink: 0;
+	box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+	transition: all 0.3s ease;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.avatar:hover {
+	transform: scale(1.05);
+	box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+/* Size variants */
+.small {
+	width: 2.5rem;
+	height: 2.5rem;
+}
+
+.medium {
+	width: 3.75rem;
+	height: 3.75rem;
+}
+
+.large {
+	width: 5rem;
+	height: 5rem;
+}
+
+/* Avatar image styling */
+.avatarImage {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	object-position: center;
+	border: none;
+	display: block;
+}
+
+/* Letter avatar fallback styling */
+.letterAvatar {
+	background: linear-gradient(135deg, #ff7b7b 0%, #ff9a9e 100%);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: white;
+	font-weight: 700;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+	user-select: none;
+}
+
+.small.letterAvatar {
+	font-size: 0.9rem;
+}
+
+.medium.letterAvatar {
+	font-size: 1.5rem;
+}
+
+.large.letterAvatar {
+	font-size: 2rem;
+}
+
+/* Loading state shimmer effect */
+.avatar::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+	transform: translateX(-100%);
+	animation: shimmer 1.5s infinite;
+	z-index: 1;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 0.3s ease;
+	border-radius: 50%;
+}
+
+.avatar:not(.letterAvatar):hover::before {
+	opacity: 1;
+}
+
+@keyframes shimmer {
+	0% {
+		transform: translateX(-100%);
+	}
+	100% {
+		transform: translateX(100%);
+	}
+}
+
+/* Special styling for navigation drawer */
+.avatar.drawerAvatar {
+	backdrop-filter: blur(10px);
+	border: 2px solid rgba(255, 255, 255, 0.3);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.avatar.drawerAvatar:hover {
+	border-color: rgba(255, 255, 255, 0.5);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+	.avatar {
+		border: 2px solid currentColor;
+	}
+	
+	.letterAvatar {
+		text-shadow: none;
+		border: 2px solid white;
+	}
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+	.avatar {
+		transition: none;
+	}
+	
+	.avatar:hover {
+		transform: none;
+	}
+	
+	.avatar::before {
+		animation: none;
+	}
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+	.small {
+		width: 2rem;
+		height: 2rem;
+	}
+
+	.medium {
+		width: 3rem;
+		height: 3rem;
+	}
+
+	.large {
+		width: 4rem;
+		height: 4rem;
+	}
+
+	.small.letterAvatar {
+		font-size: 0.75rem;
+	}
+
+	.medium.letterAvatar {
+		font-size: 1.25rem;
+	}
+
+	.large.letterAvatar {
+		font-size: 1.75rem;
+	}
+}

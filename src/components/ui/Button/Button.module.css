@@ -1,0 +1,114 @@
+/* src/components/ui/Button/Button.module.css */
+.button {
+	border-radius: 8px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	border: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	text-decoration: none;
+	font-family: inherit;
+	box-sizing: border-box;
+}
+
+.button:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+	transform: none !important;
+}
+
+/* Variants */
+.primary {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	color: white;
+}
+
+.primary:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+
+.secondary {
+	background: white;
+	color: #667eea;
+	border: 2px solid #667eea;
+}
+
+.secondary:hover:not(:disabled) {
+	background: #667eea;
+	color: white;
+}
+
+.success {
+	background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+	color: white;
+}
+
+.success:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 25px rgba(72, 187, 120, 0.4);
+}
+
+.danger {
+	background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+	color: white;
+}
+
+.danger:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 25px rgba(229, 62, 62, 0.4);
+}
+
+.warning {
+	background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+	color: white;
+}
+
+.warning:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 25px rgba(237, 137, 54, 0.4);
+}
+
+/* Sizes */
+.small {
+	padding: 0.5rem 1rem;
+	font-size: 0.875rem;
+}
+
+.medium {
+	padding: 0.75rem 1.5rem;
+	font-size: 0.9rem;
+}
+
+.large {
+	padding: 1rem 2rem;
+	font-size: 1rem;
+}
+
+/* Loading state */
+.loadingContent {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.spinner {
+	width: 16px;
+	height: 16px;
+	border: 2px solid transparent;
+	border-top: 2px solid currentColor;
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+	0% {
+		transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
+	}
+}

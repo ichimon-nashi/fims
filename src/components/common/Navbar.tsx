@@ -1,28 +1,70 @@
-// src/components/common/Navbar.tsx
+// src/components/common/Navbar.tsx - Updated with dynamic base colors
 "use client";
 
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import UserSettingsModal from "./UserSettingsModal";
+import NavigationDrawer from "./NavigationDrawer";
 import styles from "./Navbar.module.css";
 
 const Navbar = () => {
   const { user, logout } = useAuth();
   const [showSettings, setShowSettings] = useState(false);
+  const [showDrawer, setShowDrawer] = useState(false);
 
   const handleLogout = () => {
     logout();
     window.location.href = '/login';
   };
 
+  // Get base display info for color scheme (same logic as NavigationDrawer)
+  const getBaseInfo = () => {
+    if (!user) {
+      return { name: "Unknown", icon: "✈️", colorScheme: "default" };
+    }
+    
+    if (user.employee_id === "admin") {
+      return { name: "ADMIN", icon: "🔑", colorScheme: "admin" };
+    }
+    
+    const base = user.base?.toUpperCase();
+    
+    switch (base) {
+      case "KHH":
+      case "KAOHSIUNG":
+        return { name: "KHH", icon: "✈️", colorScheme: "khh" };
+      case "TSA":
+      case "TAOYUAN":
+        return { name: "TSA", icon: "✈️", colorScheme: "tsa" };
+      case "RMQ":
+      case "TAICHUNG":
+        return { name: "RMQ", icon: "✈️", colorScheme: "rmq" };
+      default:
+        return { name: user.base || "Unknown", icon: "✈️", colorScheme: "default" };
+    }
+  };
+
+  const baseInfo = getBaseInfo();
+
   return (
     <>
-      <nav className={styles.navbar}>
+      <nav className={`${styles.navbar} ${styles[baseInfo.colorScheme]}`}>
         <div className={styles.navContainer}>
+          {/* Hamburger Menu */}
+          <button 
+            className={styles.hamburgerButton}
+            onClick={() => setShowDrawer(true)}
+            title="選單"
+          >
+            <div className={styles.hamburgerLine}></div>
+            <div className={styles.hamburgerLine}></div>
+            <div className={styles.hamburgerLine}></div>
+          </button>
+
           {/* Logo/Brand */}
           <div className={styles.brand}>
             <span className={styles.brandText}>
-              ✈️ 豪神教師排班系統
+              {baseInfo.icon} 豪神教師管理系統
             </span>
           </div>
 
@@ -33,7 +75,7 @@ const Navbar = () => {
                 {user?.full_name || user?.employee_id || "使用者"}
               </span>
               <span className={styles.userRole}>
-                {user?.rank || "教師"}
+                {user?.rank || "教師"} · {baseInfo.name}
               </span>
             </div>
 
@@ -57,6 +99,12 @@ const Navbar = () => {
           </div>
         </div>
       </nav>
+
+      {/* Navigation Drawer */}
+      <NavigationDrawer 
+        isOpen={showDrawer}
+        onClose={() => setShowDrawer(false)}
+      />
 
       {/* Settings Modal */}
       {showSettings && (

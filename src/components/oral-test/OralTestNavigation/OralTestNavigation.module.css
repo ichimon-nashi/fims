@@ -1,0 +1,130 @@
+/* src/components/oral-test/OralTestNavigation/OralTestNavigation.module.css */
+.navigation {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+  padding: 1rem;
+  margin-bottom: 2rem;
+}
+
+.navContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
+  color: #4a5568;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  white-space: nowrap;
+  position: relative;
+}
+
+.navItem:hover:not(.disabled) {
+  background: #f7fafc;
+  border-color: #667eea;
+  color: #667eea;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.navItem.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+}
+
+.navItem.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #9ca3af;
+}
+
+.navItem.disabled:hover {
+  transform: none;
+  box-shadow: none;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.label {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.lockIcon {
+  font-size: 0.8rem;
+  margin-left: 0.25rem;
+  opacity: 0.7;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .navContainer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .navItem {
+    justify-content: center;
+    padding: 1rem;
+    font-size: 0.95rem;
+  }
+  
+  .icon {
+    font-size: 1.2rem;
+  }
+  
+  .label {
+    font-size: 1rem;
+  }
+}
+
+/* Tablet responsive */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .navContainer {
+    justify-content: flex-start;
+    gap: 0.75rem;
+  }
+  
+  .navItem {
+    flex: 1;
+    justify-content: center;
+    min-width: 0;
+  }
+}
+
+/* Desktop fine-tuning */
+@media (min-width: 1025px) {
+  .navContainer {
+    gap: 1rem;
+  }
+  
+  .navItem {
+    padding: 0.875rem 1.25rem;
+  }
+  
+  .label {
+    font-size: 0.95rem;
+  }
+}

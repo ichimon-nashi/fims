@@ -109,3 +109,81 @@ export interface JWTPayload {
 	iat?: number;
 	exp?: number;
 }
+
+// Oral Test System Types
+export interface Question {
+	id: string;
+	question_number?: number;
+	question_category: string;
+	question_title: string;
+	question_chapter: string;
+	question_page: number;
+	question_line: number;
+	difficulty_level: number;
+	last_date_modified: string;
+	created_at?: string;
+	updated_at?: string;
+}
+
+export interface TestResult {
+	id: string;
+	test_date: string;
+	employee_id: string;
+	full_name: string;
+	rank: string;
+	base: string;
+	q1_id?: string;
+	q1_result?: boolean;
+	q2_id?: string;
+	q2_result?: boolean;
+	q3_id?: string;
+	q3_result?: boolean;
+	r1_id?: string;
+	r1_result?: boolean;
+	r2_id?: string;
+	r2_result?: boolean;
+	examiner_name: string;
+	examiner_id: string;
+	created_at?: string;
+}
+
+export type QuestionAttempt = {
+	questionId: string;
+	result: boolean | null;
+	timeSpent: number;
+};
+
+export type TestSession = {
+	examinee: User;
+	questions: Question[];
+	attempts: QuestionAttempt[];
+	currentQuestionIndex: number;
+	isComplete: boolean;
+	passedCount: number;
+};
+
+export interface DashboardData {
+	topIncorrectQuestions: Array<{
+		question: string;
+		question_number?: number;
+		question_title?: string;
+		category: string;
+		count: number;
+	}>;
+	examineeTesting: {
+		tested: number;
+		remaining: number;
+		total: number;
+		totalUsers?: number;
+		currentYearTested?: number;
+		currentYearRemaining?: number;
+	};
+	examinerStats: Array<{
+		examiner: string;
+		count: number;
+	}>;
+	questionsByCategory?: Array<{
+		category: string;
+		count: number;
+	}>;
+}

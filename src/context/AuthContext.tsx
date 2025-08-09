@@ -1,8 +1,9 @@
 // src/context/AuthContext.tsx
-// Fixed version with consistent localStorage key
+// Fixed version with better error handling and weather cache management
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import WeatherService from '@/services/weatherService';
 
 interface User {
 	id: string;
@@ -36,6 +37,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 	const [user, setUser] = useState<User | null>(null);
 	const [token, setToken] = useState<string | null>(null);
 	const [loading, setLoading] = useState(true);
+
+	// Get weather service instance
+	const weatherService = WeatherService.getInstance();
 
 	useEffect(() => {
 		console.log("=== AUTH CONTEXT INIT ===");
@@ -75,17 +79,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 				console.log("Token verification successful:", data.user.email);
 				setUser(data.user);
 				setToken(tokenToVerify);
-				localStorage.setItem("token", tokenToVerify); // Fixed: use "token" key
+				localStorage.setItem("token", tokenToVerify);
+				
+				// Preload weather for verified user's base
+				if (data.user.base) {
+					console.log("🌤️ Preloading weather for verified user's base:", data.user.base);
+					weatherService.preloadWeatherForBase(data.user.base);
+				}
 			} else {
 				console.log("Token verification failed");
-				// Token is invalid
-				localStorage.removeItem("token"); // Fixed: use "token" key
+				// Token is invalid - clear weather cache
+				weatherService.clearCacheForNewSession();
+				localStorage.removeItem("token");
 				setUser(null);
 				setToken(null);
 			}
 		} catch (error) {
 			console.error("Token verification error:", error);
-			localStorage.removeItem("token"); // Fixed: use "token" key
+			// Clear weather cache on error
+			weatherService.clearCacheForNewSession();
+			localStorage.removeItem("token");
 			setUser(null);
 			setToken(null);
 		} finally {
@@ -113,33 +126,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 				console.log("Login successful for:", data.user.email);
 				console.log("Received token:", data.token ? `${data.token.substring(0, 20)}...` : "null");
 				
+				// Clear old weather cache for new session
+				console.log("🗑️ Clearing weather cache for new login session");
+				weatherService.clearCacheForNewSession();
+				
 				// Set state first
 				setUser(data.user);
 				setToken(data.token);
 				
 				// Then save to localStorage with consistent key
-				localStorage.setItem("token", data.token); // Fixed: use "token" key
+				localStorage.setItem("token", data.token);
 				
 				console.log("Token saved to localStorage with key 'token'");
 				console.log("Auth state updated - hasUser:", !!data.user, "hasToken:", !!data.token);
+				
+				// Preload weather data for user's base after successful login
+				if (data.user.base) {
+					console.log("🚀 Scheduling weather preload for base:", data.user.base);
+					setTimeout(() => {
+						weatherService.preloadWeatherForBase(data.user.base);
+					}, 1000); // 1 second delay to ensure session is fully established
+				}
 				
 				return true;
 			} else {
 				const errorData = await response.json();
 				console.log("Login failed:", errorData.message);
+				
+				// Throw error with specific message for access denied
+				if (response.status === 403) {
+					throw new Error(errorData.message);
+				}
+				
 				return false;
 			}
-		} catch (error) {
+		} catch (error: any) {
 			console.error("Login error:", error);
-			return false;
+			// Re-throw the error so the login form can handle it
+			throw error;
 		}
 	};
 
 	const logout = () => {
 		console.log("=== LOGOUT ===");
+		
+		// Clear weather cache for the session
+		console.log("🗑️ Clearing weather cache on logout");
+		weatherService.clearCacheForNewSession();
+		
+		// Clear auth state
 		setUser(null);
 		setToken(null);
-		localStorage.removeItem("token"); // Fixed: use "token" key
+		localStorage.removeItem("token");
+		
+		console.log("✅ Logout completed with weather cache cleared");
+		// No automatic redirect - let the component handle it
 	};
 
 	// Debug: Log current state
@@ -147,7 +188,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 		hasUser: !!user,
 		hasToken: !!token,
 		loading,
-		userEmail: user?.email || 'none'
+		userEmail: user?.email || 'none',
+		userBase: user?.base || 'none'
 	});
 
 	return (

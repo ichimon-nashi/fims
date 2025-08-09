@@ -1,4 +1,4 @@
-// src/components/auth/LoginForm/LoginForm.tsx
+// src/components/auth/LoginForm/LoginForm.tsx - Updated to redirect to dashboard
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -134,8 +134,12 @@ const LoginForm = () => {
 		try {
 			const success = await login(formData.identifier, formData.password);
 			if (success) {
-				// showAlert("Login successful! Redirecting to dashboard...", 'success');
-				router.push("/roster");
+				// Show success message and redirect to dashboard
+				setSuccess("Login successful! Redirecting to dashboard...");
+				// Use replace instead of push to prevent back navigation to login
+				setTimeout(() => {
+					router.replace("/dashboard");
+				}, 500);
 			} else {
 				const errorMessage = "Invalid credentials. Please check your email and password.";
 				setError(errorMessage);
@@ -164,62 +168,58 @@ const LoginForm = () => {
 	return (
 		<div className={styles.loginContainer} ref={vantaRef}>
 			<div className={styles.loginCard}>
-				<div className={styles.loginHeader}>
-					<h1>豪神教師排班系統</h1>
-					<p>Sign in to continue</p>
-				</div>
+				<h1><span className={styles['brand-name']}>豪神</span>Instructor</h1>
+				<p>Sign in to continue</p>
 
-					<form onSubmit={handleSubmit} className={styles.loginForm}>
-						{error && (
-							<div className={styles.errorMessage}>{error}</div>
-						)}
+				<form onSubmit={handleSubmit} className={styles.loginForm}>
+					{error && (
+						<div className={styles.errorMessage}>{error}</div>
+					)}
 
-						{success && (
-							<div className={styles.successMessage}>{success}</div>
-						)}
+					{success && (
+						<div className={styles.successMessage}>{success}</div>
+					)}
 
-						<div className={styles.inputGroup}>
-							<label htmlFor="identifier">Email</label>
-							<input
-								type="text"
-								id="identifier"
-								name="identifier"
-								value={formData.identifier}
-								onChange={handleInputChange}
-								required
-								autoComplete="username"
-								disabled={isLoading}
-								className={styles.input}
-								placeholder="Enter your email"
-							/>
-						</div>
-
-						<div className={styles.inputGroup}>
-							<label htmlFor="password">Password</label>
-							<input
-								type="password"
-								id="password"
-								name="password"
-								value={formData.password}
-								onChange={handleInputChange}
-								required
-								autoComplete="current-password"
-								disabled={isLoading}
-								className={styles.input}
-								placeholder="Enter your password"
-							/>
-						</div>
-
-						<button
-							type="submit"
+					<div className={styles.inputGroup}>
+						<label htmlFor="identifier">Email</label>
+						<input
+							type="text"
+							id="identifier"
+							name="identifier"
+							value={formData.identifier}
+							onChange={handleInputChange}
+							required
+							autoComplete="username"
 							disabled={isLoading}
-							className={styles.submitButton}
-						>
-							{isLoading ? "Signing in..." : "Sign In"}
-						</button>
+							className={styles.input}
+							placeholder="Enter your email"
+						/>
+					</div>
 
-					</form>
-				
+					<div className={styles.inputGroup}>
+						<label htmlFor="password">Password</label>
+						<input
+							type="password"
+							id="password"
+							name="password"
+							value={formData.password}
+							onChange={handleInputChange}
+							required
+							autoComplete="current-password"
+							disabled={isLoading}
+							className={styles.input}
+							placeholder="Enter your password"
+						/>
+					</div>
+
+					<button
+						type="submit"
+						disabled={isLoading}
+						className={styles.submitButton}
+					>
+						{isLoading ? "Signing in..." : "Sign In"}
+					</button>
+				</form>
 			</div>
 		</div>
 	);

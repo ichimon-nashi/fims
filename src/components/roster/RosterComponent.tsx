@@ -305,112 +305,230 @@ const RosterComponent = () => {
 
 	// Screenshot functionality - captures entire month
 	const handleScreenshot = async () => {
-		try {
-			const html2canvasModule = await import("html2canvas");
-			const html2canvas = html2canvasModule.default || html2canvasModule;
+	try {
+		const html2canvasModule = await import("html2canvas");
+		const html2canvas = html2canvasModule.default || html2canvasModule;
 
-			console.log("Starting full month screenshot capture...");
+		console.log("Creating styled clone for screenshot...");
 
-			const tableContainer = tableContainerRef.current;
-			if (!tableContainer) {
-				alert("無法找到表格元素");
-				return;
-			}
-
-			// Store original styles
-			const originalStyles = {
-				containerOverflow: tableContainer.style.overflow,
-				containerMaxWidth: tableContainer.style.maxWidth,
-				containerWidth: tableContainer.style.width,
-				tableMinWidth:
-					tableContainer.querySelector("table")?.style.minWidth || "",
-			};
-
-			// Temporarily modify styles to show full table
-			tableContainer.style.overflow = "visible";
-			tableContainer.style.maxWidth = "none";
-			tableContainer.style.width = "max-content";
-
-			const table = tableContainer.querySelector("table");
-			if (table) {
-				table.style.minWidth = "max-content";
-				table.style.width = "max-content";
-			}
-
-			// Wait for layout changes to apply
-			await new Promise((resolve) => setTimeout(resolve, 100));
-
-			console.log("Capturing full table...");
-
-			// Create canvas with the full table visible
-			const canvas = await html2canvas(tableContainer, {
-				useCORS: true,
-				allowTaint: true,
-				backgroundColor: "#ffffff",
-				logging: false,
-				width: tableContainer.scrollWidth, // Capture full width
-				height: tableContainer.scrollHeight, // Capture full height
-				scrollX: 0,
-				scrollY: 0,
-				// Use devicePixelRatio for better quality instead of scale
-				pixelRatio: window.devicePixelRatio * 1.5,
-				onclone: (clonedDoc: Document) => {
-					// Ensure cloned table shows full content
-					const clonedContainer = clonedDoc.querySelector(
-						'[data-testid="roster-table"]'
-					);
-					const clonedTable = clonedContainer?.querySelector("table");
-
-					if (clonedContainer && clonedTable) {
-						(clonedContainer as HTMLElement).style.overflow =
-							"visible";
-						(clonedContainer as HTMLElement).style.width =
-							"max-content";
-						(clonedContainer as HTMLElement).style.maxWidth =
-							"none";
-						(clonedTable as HTMLElement).style.width =
-							"max-content";
-						(clonedTable as HTMLElement).style.minWidth =
-							"max-content";
-
-						// Ensure all columns are visible
-						const cells = clonedTable.querySelectorAll("td, th");
-						cells.forEach((cell: any) => {
-							cell.style.whiteSpace = "nowrap";
-						});
-					}
-				},
-			} as any); // Type assertion to bypass strict typing
-
-			// Restore original styles
-			tableContainer.style.overflow = originalStyles.containerOverflow;
-			tableContainer.style.maxWidth = originalStyles.containerMaxWidth;
-			tableContainer.style.width = originalStyles.containerWidth;
-
-			if (table) {
-				table.style.minWidth = originalStyles.tableMinWidth;
-				table.style.width = "";
-			}
-
-			console.log("Canvas created:", canvas.width, "x", canvas.height);
-
-			// Create download link
-			const link = document.createElement("a");
-			const fileName = `教師班表-${selectedYear}年${selectedMonth}月.png`;
-			link.download = fileName;
-			link.href = canvas.toDataURL("image/png", 0.95); // Slightly compressed for file size
-
-			// Trigger download
-			document.body.appendChild(link);
-			link.click();
-			document.body.removeChild(link);
-
-			console.log("Full month screenshot saved:", fileName);
-		} catch (error: any) {
-			console.error("Screenshot error:", error);
-			alert(`截圖失敗：${error.message || "未知錯誤"}，請聯絡豪神`);
+		const tableContainer = tableContainerRef.current;
+		if (!tableContainer) {
+			alert("無法找到表格元素");
+			return;
 		}
-	};
+
+		// Create a temporary container with inline styles
+		const tempContainer = document.createElement('div');
+		tempContainer.style.cssText = `
+			position: fixed;
+			top: -10000px;
+			left: -10000px;
+			background: #ffffff;
+			padding: 20px;
+			border-radius: 8px;
+			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+			z-index: -1;
+		`;
+
+		// Create table structure with inline styles
+		const tempTable = document.createElement('table');
+		tempTable.style.cssText = `
+			border-collapse: collapse;
+			width: 100%;
+			background: #ffffff;
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		`;
+
+		// Create thead
+		const thead = document.createElement('thead');
+		const headerRow = document.createElement('tr');
+
+		// Add header cells with inline styles
+		const headers = ['員編', '姓名', '基地'];
+		headers.forEach((header, index) => {
+			const th = document.createElement('th');
+			th.textContent = header;
+			th.style.cssText = `
+				background: #02c39a;
+				color: white;
+				padding: 12px 8px;
+				text-align: center;
+				font-weight: 600;
+				border: 0.75px solid #00a783;
+				font-size: 14px;
+				min-width: 80px;
+			`;
+			headerRow.appendChild(th);
+		});
+
+		// Add date headers
+		dateColumns.forEach((col) => {
+			const th = document.createElement('th');
+			const dayName = ["日", "一", "二", "三", "四", "五", "六"][col.dayOfWeek];
+			
+			const dateDiv = document.createElement('div');
+			dateDiv.style.cssText = `
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 2px;
+			`;
+			
+			const dateNumber = document.createElement('div');
+			dateNumber.textContent = col.date.toString();
+			dateNumber.style.cssText = `
+				font-size: 16px;
+				font-weight: bold;
+			`;
+			
+			const dayOfWeek = document.createElement('div');
+			dayOfWeek.textContent = dayName;
+			dayOfWeek.style.cssText = `
+				font-size: 12px;
+				opacity: 0.9;
+			`;
+			
+			dateDiv.appendChild(dateNumber);
+			dateDiv.appendChild(dayOfWeek);
+			th.appendChild(dateDiv);
+			
+			th.style.cssText = `
+				background: ${col.isWeekend ? '#ef6f6f' : '#5c98f9'};
+				color: white;
+				padding: 8px 4px;
+				text-align: center;
+				font-weight: 600;
+				border: 0.75px solid ${col.isWeekend ? '#dc2626' : '#2563eb'};
+				font-size: 12px;
+				min-width: 60px;
+			`;
+			headerRow.appendChild(th);
+		});
+
+		thead.appendChild(headerRow);
+		tempTable.appendChild(thead);
+
+		// Create tbody
+		const tbody = document.createElement('tbody');
+
+		instructors.forEach((instructor) => {
+			const employeeId = getEmployeeIdentifier(instructor);
+			const row = document.createElement('tr');
+			row.style.cssText = `
+				border-bottom: 1px solid #e5e7eb;
+			`;
+
+			// Instructor info cells
+			const cells = [employeeId, instructor.full_name, instructor.base];
+			cells.forEach((text, index) => {
+				const td = document.createElement('td');
+				td.textContent = text;
+				td.style.cssText = `
+					padding: 12px 8px;
+					text-align: center;
+					border: 0.75px solid #e5e7eb;
+					background: ${index === 0 ? '#f1f5f9' : '#f8fafc'};
+					font-weight: 500;
+					font-size: 14px;
+					min-width: 80px;
+				`;
+				row.appendChild(td);
+			});
+
+			// Schedule cells
+			dateColumns.forEach((col) => {
+				const td = document.createElement('td');
+				const duties = getDutiesForDate(employeeId, col.fullDate);
+				
+				td.style.cssText = `
+					padding: 4px;
+					border: 0.75px solid #e5e7eb;
+					vertical-align: top;
+					min-width: 60px;
+					height: 70px;
+					background: #ffffff;
+				`;
+
+				const dutiesContainer = document.createElement('div');
+				dutiesContainer.style.cssText = `
+					display: flex;
+					flex-direction: column;
+					gap: 2px;
+					height: 100%;
+					min-height: 60px;
+				`;
+
+				duties.forEach((duty) => {
+					const dutyTag = document.createElement('div');
+					dutyTag.textContent = duty;
+					dutyTag.style.cssText = `
+						padding: 2px 4px;
+						text-align: center;
+						font-size: 11px;
+						font-weight: 500;
+						border-radius: 2px;
+						color: white;
+						text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+						min-height: 16px;
+						display: flex;
+						align-items: center;
+						justify-content: center;
+						background: ${DUTY_COLORS[duty] || '#3b82f6'};
+						border: 1px solid rgba(0, 0, 0, 0.1);
+					`;
+					dutiesContainer.appendChild(dutyTag);
+				});
+
+				td.appendChild(dutiesContainer);
+				row.appendChild(td);
+			});
+
+			tbody.appendChild(row);
+		});
+
+		tempTable.appendChild(tbody);
+		tempContainer.appendChild(tempTable);
+		document.body.appendChild(tempContainer);
+
+		// Wait for rendering
+		await new Promise(resolve => setTimeout(resolve, 100));
+
+		console.log("Capturing styled clone...");
+
+		// Capture the temporary container
+		const canvas = await html2canvas(tempContainer, {
+			useCORS: true,
+			allowTaint: true,
+			backgroundColor: "#ffffff",
+			logging: false,
+			pixelRatio: window.devicePixelRatio * 1.5,
+			scale: 2, // Higher scale for better quality
+		});
+
+		// Remove temporary container
+		document.body.removeChild(tempContainer);
+
+		console.log("Canvas created:", canvas.width, "x", canvas.height);
+
+		// Create download link
+		const link = document.createElement("a");
+		const fileName = `教師班表-${selectedYear}年${selectedMonth}月-${new Date().toISOString().slice(0,10)}.png`;
+		link.download = fileName;
+		link.href = canvas.toDataURL("image/png", 1.0); // Maximum quality
+
+		// Trigger download
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+
+		console.log("Screenshot with styled clone saved:", fileName);
+		alert(`截圖已儲存：${fileName}`);
+		
+	} catch (error: any) {
+		console.error("Screenshot error:", error);
+		alert(`截圖失敗：${error.message || "未知錯誤"}，請聯絡豪神`);
+	}
+};
 
 	// Excel export functionality
 	const handleExcelExport = async () => {

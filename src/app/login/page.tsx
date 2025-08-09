@@ -1,17 +1,19 @@
+// src/app/login/page.tsx - Simplified without AuthProvider wrapper
 'use client';
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import LoginForm from '@/components/auth/LoginForm/LoginForm';
 
-function LoginPageContent() {
+export default function LoginPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!loading && user) {
-      router.push('/roster'); // Changed from '/dashboard'
+      // Redirect to dashboard instead of roster
+      router.replace('/dashboard');
     }
   }, [user, loading, router]);
 
@@ -37,16 +39,8 @@ function LoginPageContent() {
   }
 
   if (user) {
-    return null; // Will redirect to roster
+    return null; // Will redirect to dashboard
   }
 
   return <LoginForm />;
-}
-
-export default function LoginPage() {
-  return (
-    <AuthProvider>
-      <LoginPageContent />
-    </AuthProvider>
-  );
 }

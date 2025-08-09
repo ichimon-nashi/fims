@@ -19,21 +19,46 @@ export const verifyPassword = async (
 };
 
 export const generateToken = (user: Omit<User, "password" | "password_hash">): string => {
-	return jwt.sign(
-		{
-			userId: user.id,
-			email: user.email,
-			authLevel: user.authentication_level,
-		},
-		JWT_SECRET,
-		{ expiresIn: "8h" }
-	);
+	console.log("Generating token for user:", user.id, user.email);
+	
+	const payload: JWTPayload = {
+		userId: user.id,
+		email: user.email,
+		authLevel: user.authentication_level,
+	};
+	
+	console.log("Token payload:", payload);
+	
+	const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "8h" });
+	
+	console.log("Token generated successfully, length:", token.length);
+	return token;
 };
 
 export const verifyToken = (token: string): JWTPayload => {
 	try {
-		return jwt.verify(token, JWT_SECRET) as JWTPayload;
+		console.log("Verifying token, length:", token.length);
+		console.log("Token starts with:", token.substring(0, 20) + "...");
+		console.log("JWT_SECRET defined:", !!JWT_SECRET);
+		console.log("JWT_SECRET length:", JWT_SECRET.length);
+		
+		const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+		
+		console.log("Token verified successfully:", {
+			userId: decoded.userId,
+			email: decoded.email,
+			authLevel: decoded.authLevel,
+			exp: decoded.exp ? new Date(decoded.exp * 1000) : 'no expiration'
+		});
+		
+		return decoded;
 	} catch (error) {
+		console.error("Token verification failed:", error);
+		console.error("Error details:", {
+			name: error instanceof Error ? error.name : 'Unknown',
+			message: error instanceof Error ? error.message : String(error),
+			tokenPreview: token.substring(0, 50) + "..."
+		});
 		throw new Error("Invalid token");
 	}
 };
@@ -41,10 +66,16 @@ export const verifyToken = (token: string): JWTPayload => {
 export const extractTokenFromHeader = (
 	authHeader: string | null
 ): string | null => {
+	console.log("Extracting token from header:", authHeader ? "Bearer " + authHeader.substring(7, 27) + "..." : "null");
+	
 	if (!authHeader || !authHeader.startsWith("Bearer ")) {
+		console.log("Invalid auth header format");
 		return null;
 	}
-	return authHeader.substring(7);
+	
+	const token = authHeader.substring(7);
+	console.log("Extracted token length:", token.length);
+	return token;
 };
 
 export const requireAuth = (minAuthLevel: number = 1) => {
@@ -67,6 +98,7 @@ export const requireAuth = (minAuthLevel: number = 1) => {
 			req.user = decoded;
 			next();
 		} catch (error: unknown) {
+			console.error("Auth middleware error:", error);
 			return res.status(401).json({ 
 				message: "Invalid token",
 				error: error instanceof Error ? error.message : String(error)

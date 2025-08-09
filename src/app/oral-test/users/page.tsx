@@ -1,0 +1,71 @@
+// src/app/oral-test/users/page.tsx
+'use client';
+
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import UserManagement from '@/components/oral-test/management/UserManagement/UserManagement';
+import OralTestNavigation from '@/components/oral-test/OralTestNavigation/OralTestNavigation';
+
+export default function UsersPage() {
+  const { user } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    // Check if user has minimum access level for user management
+    if (user && user.authentication_level < 5) {
+      router.push('/oral-test/dashboard');
+    }
+  }, [user, router]);
+
+  // Show loading or redirect if insufficient permissions
+  if (!user || user.authentication_level < 5) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        height: '50vh',
+        flexDirection: 'column',
+        gap: '1rem'
+      }}>
+        <div className="loading-spinner"></div>
+        <p>Checking permissions...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container">
+      <div className="fade-in">
+        {/* Page Header */}
+        <div style={{ marginBottom: '2rem' }}>
+          <h1 style={{ 
+            fontSize: '2.5rem', 
+            fontWeight: 'bold', 
+            color: '#2d3748',
+            textAlign: 'center',
+            marginBottom: '0.5rem'
+          }}>
+            學員管理
+          </h1>
+          <p style={{
+            textAlign: 'center',
+            color: '#718096',
+            fontSize: '1.1rem'
+          }}>
+            User Management System
+          </p>
+        </div>
+
+        {/* Internal Navigation */}
+        <OralTestNavigation currentPath="/oral-test/users" />
+
+        {/* User Management Component */}
+        <div style={{ marginTop: '2rem' }}>
+          <UserManagement />
+        </div>
+      </div>
+    </div>
+  );
+}
