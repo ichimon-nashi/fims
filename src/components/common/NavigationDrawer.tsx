@@ -41,7 +41,7 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 			icon: "📋",
 			path: "/tasks",
 			description: "Kanban 任務看板",
-			badge: "8", // Number of pending tasks
+			// badge: "0", // Number of pending tasks
 		},
 		{
 			id: "oral-test",
@@ -50,12 +50,11 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 			path: "/oral-test/dashboard", // Direct to dashboard
 			description: "口試題目管理與紀錄",
 			minAuthLevel: 1, // Minimum auth level required
-			// Removed submenu - will be handled internally by oral-test app
 		},
 		{
 			id: "business-training",
 			title: "商務艙訓練",
-			icon: "✈️",
+			icon: "🍴",
 			path: "/bc-training",
 			description: "商務艙服務訓練系統",
 		},

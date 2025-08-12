@@ -4,6 +4,7 @@
   min-height: 100vh;
   background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
   padding: 1rem;
+  overflow: hidden;
 }
 
 .container {
@@ -12,6 +13,7 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  height: calc(100vh - 2rem);
 }
 
 /* Welcome Section */
@@ -23,6 +25,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .welcomeContent {
@@ -56,6 +59,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 1rem;
+  flex-shrink: 0;
 }
 
 .statCard {
@@ -67,6 +71,7 @@
   align-items: center;
   gap: 1rem;
   transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
 }
 
 .statCard:hover {
@@ -96,6 +101,7 @@
   display: flex;
   align-items: baseline;
   gap: 0.25rem;
+  min-height: 2.5rem;
 }
 
 .statUnit {
@@ -110,11 +116,42 @@
   margin-top: 0.25rem;
 }
 
+/* Loading states for stats cards */
+.statLoading {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: inherit;
+}
+
+.loadingSpinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 /* Main Grid */
 .mainGrid {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 1.5rem;
+  flex: 1;
+  min-height: 0;
+  max-height: 400px;
 }
 
 /* Quick Actions */
@@ -123,6 +160,10 @@
   border-radius: 1rem;
   padding: 1.5rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 400px;
 }
 
 .sectionTitle {
@@ -130,12 +171,15 @@
   font-weight: 600;
   color: #1f2937;
   margin: 0 0 1rem 0;
+  flex-shrink: 0;
 }
 
 .quickActionsGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1rem;
+  flex: 1;
+  align-content: start;
 }
 
 .quickActionCard {
@@ -149,6 +193,7 @@
   color: inherit;
   transition: all 0.2s;
   background: #f9fafb;
+  height: fit-content;
 }
 
 .quickActionCard:hover {
@@ -197,141 +242,147 @@
   color: #3b82f6;
 }
 
-/* Recent Activity */
-.activitySection {
+/* Weather Section */
+.weatherSection {
   background: white;
   border-radius: 1rem;
   padding: 1.5rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.activityList {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  min-height: 0;
+  max-height: 400px;
 }
 
-.activityItem {
+.weatherHeader {
   display: flex;
-  align-items: flex-start;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  flex-shrink: 0;
+}
+
+.weatherLoading {
+  display: flex;
+  align-items: center;
+}
+
+.weatherLoading .loadingSpinner {
+  width: 16px;
+  height: 16px;
+  border-width: 1.5px;
+}
+
+.weatherCard {
+  display: flex;
+  flex-direction: column;
   gap: 0.75rem;
-  padding: 0.75rem;
-  border-radius: 0.5rem;
-  background: #f9fafb;
-  transition: background 0.2s;
+  padding: 1rem;
+  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+  flex: 1;
+  justify-content: space-between;
 }
 
-.activityItem:hover {
-  background: #f3f4f6;
+.weatherLocation {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
 }
 
-.activityIcon {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: #e5e7eb;
+.locationIcon {
+  font-size: 1rem;
+}
+
+.locationName {
+  font-weight: 500;
+}
+
+.weatherMain {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
-  flex-shrink: 0;
+  gap: 1.5rem;
+  margin: 0.5rem 0;
 }
 
-.activityContent {
-  flex: 1;
+.weatherIconLarge {
+  font-size: 3.5rem;
+  line-height: 1;
 }
 
-.activityAction {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.activityDescription {
-  font-size: 0.75rem;
-  color: #6b7280;
-  margin-top: 0.125rem;
-}
-
-.activityTime {
-  font-size: 0.75rem;
-  color: #9ca3af;
-  flex-shrink: 0;
-}
-
-/* Info Widget */
-.infoWidget {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-.weatherSection,
-.noticeSection {
-  background: white;
-  border-radius: 1rem;
-  padding: 1.5rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.weatherSection h3,
-.noticeSection h3 {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0 0 1rem 0;
-}
-
-.weatherInfo {
+.weatherTemp {
   display: flex;
-  align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.weatherIcon {
-  font-size: 2rem;
+  align-items: baseline;
+  gap: 0.25rem;
 }
 
 .temperature {
-  font-size: 1.5rem;
+  font-size: 3rem;
   font-weight: 700;
   color: #1f2937;
+  line-height: 1;
 }
 
-.weatherDesc {
-  font-size: 1rem;
+.tempUnit {
+  font-size: 1.25rem;
   color: #6b7280;
+  font-weight: 400;
+}
+
+.weatherDescription {
+  text-align: center;
+  font-size: 1rem;
+  color: #4b5563;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
 }
 
 .weatherError {
-  font-size: 0.75rem;
   color: #ef4444;
-  font-style: italic;
+  font-size: 0.875rem;
+  font-weight: normal;
 }
 
 .weatherDetails {
-  margin-top: 0.5rem;
   display: flex;
+  justify-content: space-around;
   gap: 1rem;
-  font-size: 0.875rem;
-  color: #6b7280;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(107, 114, 128, 0.2);
 }
 
-.noticeText {
-  font-size: 0.875rem;
+.weatherDetail {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
   color: #6b7280;
-  line-height: 1.5;
-  padding: 1rem;
-  background: #fef3c7;
+  background: white;
+  padding: 0.4rem 0.6rem;
   border-radius: 0.5rem;
-  border-left: 4px solid #f59e0b;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.detailIcon {
+  font-size: 0.9rem;
 }
 
 /* Responsive Design */
 @media (max-width: 1024px) {
   .mainGrid {
     grid-template-columns: 1fr;
+    max-height: none;
+  }
+  
+  .quickActionsSection,
+  .weatherSection {
+    max-height: none;
   }
   
   .welcomeSection {
@@ -343,6 +394,11 @@
   .welcomeIcon {
     font-size: 3rem;
   }
+
+  .container {
+    height: auto;
+    min-height: calc(100vh - 2rem);
+  }
 }
 
 @media (max-width: 768px) {
@@ -352,6 +408,8 @@
   
   .container {
     gap: 1rem;
+    height: auto;
+    min-height: calc(100vh - 1rem);
   }
   
   .welcomeSection {
@@ -367,7 +425,7 @@
   }
   
   .statsGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
     gap: 0.75rem;
   }
   
@@ -390,16 +448,88 @@
   }
   
   .quickActionsSection,
-  .activitySection {
+  .weatherSection {
     padding: 1rem;
   }
-  
-  .infoWidget {
+
+  .weatherMain {
+    gap: 1rem;
+  }
+
+  .weatherIconLarge {
+    font-size: 2.5rem;
+  }
+
+  .temperature {
+    font-size: 2.25rem;
+  }
+
+  .tempUnit {
+    font-size: 1.125rem;
+  }
+
+  .weatherDetails {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .weatherDetail {
+    justify-content: center;
+  }
+
+  .weatherCard {
+    padding: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .statsGrid {
     grid-template-columns: 1fr;
   }
-  
-  .weatherSection,
-  .noticeSection {
+
+  .weatherMain {
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0.25rem 0;
+  }
+
+  .weatherIconLarge {
+    font-size: 2rem;
+  }
+
+  .temperature {
+    font-size: 1.75rem;
+  }
+
+  .tempUnit {
+    font-size: 1rem;
+  }
+
+  .weatherDescription {
+    font-size: 0.9rem;
+  }
+
+  .statCard {
+    flex-direction: column;
+    text-align: center;
     padding: 1rem;
+  }
+
+  .statIcon {
+    margin-bottom: 0.5rem;
+  }
+
+  .quickActionCard {
+    flex-direction: column;
+    text-align: center;
+    padding: 1rem;
+  }
+
+  .quickActionIcon {
+    margin-bottom: 0.5rem;
+  }
+
+  .quickActionArrow {
+    display: none;
   }
 }

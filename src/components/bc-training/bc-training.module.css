@@ -1,0 +1,614 @@
+/* src/components/bc-training/bc-training.module.css */
+
+.businessClassContainer {
+	min-height: 100vh;
+	background-color: #f9fafb;
+	display: flex;
+	flex-direction: column;
+	font-family: Arial, sans-serif;
+}
+
+.container {
+	min-height: 100vh;
+	background-color: #f9fafb;
+	display: flex;
+	flex-direction: column;
+	font-family: Arial, sans-serif;
+}
+
+/* Rotation Prompt for Portrait Mode */
+.rotationPrompt {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-height: 100vh;
+	background-color: #000000;
+	color: white;
+	text-align: center;
+	padding: 2rem;
+}
+
+.rotationGif {
+	max-width: 300px;
+	height: auto;
+	margin-bottom: 1rem;
+	border-radius: 8px;
+}
+
+.rotationPrompt p {
+	font-size: 1.2rem;
+	font-weight: 600;
+}
+
+.header {
+	background-color: #477df1;
+	color: white;
+	padding: 16px;
+	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+	text-align: center;
+}
+
+.headerTitle {
+	font-size: 24px;
+	font-weight: bold;
+	margin: 0;
+}
+
+/* Tray Toggle Styles */
+.headerContent {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1rem;
+}
+
+.trayTypeToggle {
+	display: flex;
+	align-items: center;
+	min-width: max-content;
+	gap: 1rem;
+	margin-bottom: 0.5rem;
+}
+
+.trayTypeLabel {
+	font-weight: 600;
+	color: white;
+	font-size: 1rem;
+	opacity: 0.9;
+}
+
+.toggleButtons {
+	display: flex;
+	border-radius: 0.5rem;
+	overflow: hidden;
+	border: 2px solid rgba(255, 255, 255, 0.3);
+	background-color: rgba(255, 255, 255, 0.1);
+}
+
+.toggleButton {
+	padding: 0.5rem 1.5rem;
+	border: none;
+	min-width: max-content;
+	margin: 0 0.5rem;
+	background-color: transparent;
+	color: rgba(255, 255, 255, 0.8);
+	font-weight: 500;
+	font-size: 0.9rem;
+	cursor: pointer;
+	transition: all 0.2s ease-in-out;
+	border-right: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.toggleButton:last-child {
+	border-right: none;
+}
+
+.toggleButton:hover {
+	background-color: rgba(255, 255, 255, 0.2);
+	color: white;
+}
+
+.toggleButton.active {
+	background-color: rgba(255, 255, 255, 0.9);
+	color: #477df1;
+	font-weight: 600;
+}
+
+.toggleButton.active:hover {
+	background-color: white;
+	color: #477df1;
+}
+
+.mainContent {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	padding: 16px;
+	height: calc(100vh - 140px);
+}
+
+.dropZoneContainer {
+	height: 60vh;
+	position: relative;
+	background-color: white;
+	border-radius: 8px;
+	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+	border: 2px dashed #d1d5db;
+	margin-bottom: 16px;
+	overflow: hidden;
+}
+
+.dropZone {
+	width: 100%;
+	height: 100%;
+	position: relative;
+	overflow: hidden;
+}
+
+.tableSurface {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 50%;
+	height: 90%;
+	background-color: #fef3c7;
+	border-radius: 8px;
+	border: 2px solid #f59e0b;
+	opacity: 0.3;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.tableSurfaceText {
+	color: #d97706;
+	font-weight: 600;
+	opacity: 0.5;
+	font-size: 5rem;
+}
+
+.correctPosition {
+	position: absolute;
+	border: 2px solid #10b981;
+	background-color: #dcfce7;
+	opacity: 0.6;
+	border-radius: 4px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 10px;
+	color: #065f46;
+	font-weight: 600;
+	text-align: center;
+	padding: 2px;
+}
+
+.placedItem {
+	position: absolute;
+	border: 2px solid #6b7280;
+	border-radius: 4px;
+	cursor: move;
+	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+	max-width: 100%;
+	max-height: 100%;
+	touch-action: none;
+	user-select: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+}
+
+.placedItem:active {
+	transform: scale(1.02);
+	border-color: #059669;
+}
+
+.itemImage {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	border-radius: 2px;
+	pointer-events: none;
+}
+
+.controlButtons {
+	display: flex;
+	gap: 16px;
+	justify-content: center;
+	margin-bottom: 16px;
+}
+
+.button {
+	padding: 8px 24px;
+	border-radius: 8px;
+	font-weight: 600;
+	border: none;
+	cursor: pointer;
+	transition: background-color 0.2s;
+}
+
+.submitButton {
+	background-color: #16a34a;
+	color: white;
+}
+
+.submitButton:hover {
+	background-color: #15803d;
+}
+
+.resetButton {
+	background-color: #dc2626;
+	color: white;
+}
+
+.resetButton:hover {
+	background-color: #b91c1c;
+}
+
+/* Note: This toggleButton style is for the show/hide correct positions button */
+.toggleButton:not(.active):not(:hover) {
+	background-color: #ca8a04;
+	color: white;
+}
+
+.toggleButton:not(.active):hover {
+	background-color: #a16207;
+}
+
+.feedback {
+	background-color: #f3f4f6;
+	border-left: 4px solid #3b82f6;
+	padding: 16px;
+	margin-bottom: 16px;
+	border-radius: 4px;
+}
+
+.feedbackTitle {
+	font-weight: 600;
+	color: #1f2937;
+	margin-bottom: 8px;
+}
+
+.feedbackText {
+	font-size: 14px;
+	color: #374151;
+	white-space: pre-wrap;
+	font-family: monospace;
+}
+
+.itemsTray {
+	background-color: #1f2937;
+	border-radius: 8px;
+	padding: 12px;
+	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+	max-height: 25vh;
+	overflow-y: auto;
+}
+
+.trayTitle {
+	color: white;
+	font-weight: 600;
+	margin-bottom: 8px;
+	text-align: center;
+	font-size: 1rem;
+}
+
+.trayItems {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	justify-content: center;
+	align-items: center;
+}
+
+.trayItem {
+	position: relative;
+	border: 1px solid #6b7280;
+	border-radius: 4px;
+	cursor: move;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: opacity 0.2s, transform 0.2s;
+	overflow: hidden;
+	background-color: rgba(255, 255, 255, 0.1);
+	touch-action: none;
+	user-select: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+}
+
+.trayItem.placed {
+	opacity: 0.3;
+	touch-action: none;
+}
+
+.trayItem:hover:not(.placed) {
+	transform: scale(1.1);
+	border-color: #10b981;
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.trayItem:active:not(.placed) {
+	transform: scale(1.05);
+	border-color: #059669;
+}
+
+.itemTooltip {
+	position: absolute;
+	bottom: -35px;
+	left: 50%;
+	transform: translateX(-50%);
+	background-color: #1f2937;
+	color: white;
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-size: 12px;
+	white-space: nowrap;
+	z-index: 10;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.itemTooltip::before {
+	content: "";
+	position: absolute;
+	top: -4px;
+	left: 50%;
+	transform: translateX(-50%);
+	border-left: 4px solid transparent;
+	border-right: 4px solid transparent;
+	border-bottom: 4px solid #1f2937;
+}
+
+.trayInstructions {
+	color: #9ca3af;
+	font-size: 14px;
+	text-align: center;
+	margin-top: 8px;
+}
+
+.instructions {
+	background-color: #eff6ff;
+	padding: 16px;
+	border-top: 1px solid #e5e7eb;
+}
+
+.instructionsContainer {
+	max-width: 1200px;
+	margin: 0 auto;
+}
+
+.instructionsTitle {
+	font-weight: 600;
+	color: #1e40af;
+	margin-bottom: 8px;
+}
+
+.instructionsGrid {
+	font-size: 14px;
+	color: #1d4ed8;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+	gap: 8px;
+}
+
+/* Responsive Design for Tablets and Mobile */
+@media screen and (max-height: 900px) and (orientation: landscape) {
+	.headerTitle {
+		font-size: 20px;
+	}
+
+	.headerSubtitle {
+		font-size: 14px;
+	}
+
+	/* Responsive tray toggle adjustments */
+	.headerContent {
+		gap: 0.75rem;
+	}
+
+	.trayTypeToggle {
+		gap: 0.75rem;
+	}
+
+	.toggleButton {
+		padding: 0.4rem 1.2rem;
+		font-size: 0.8rem;
+	}
+
+	.trayTypeLabel {
+		font-size: 0.9rem;
+	}
+
+	.mainContent {
+		padding: 12px;
+		overflow: hidden;
+	}
+
+	.dropZoneContainer {
+		height: 65vh;
+		overflow: hidden;
+	}
+
+	.dropZone {
+		overflow: hidden;
+	}
+
+	.tableSurface {
+		width: 60%;
+	}
+
+	.tableSurfaceText {
+		font-size: 3rem;
+	}
+
+	.controlButtons {
+		gap: 12px;
+		margin-bottom: 12px;
+	}
+
+	.button {
+		padding: 6px 18px;
+		font-size: 14px;
+	}
+
+	.trayItems {
+		gap: 6px;
+	}
+
+	.itemsTray {
+		padding: 10px;
+		max-height: 20vh;
+		overflow-x: hidden;
+		overflow-y: auto;
+	}
+
+	.trayTitle {
+		font-size: 0.9rem;
+		margin-bottom: 6px;
+	}
+
+	.placedItem {
+		max-width: calc(100vw - 30px);
+		max-height: calc(65vh - 20px);
+	}
+}
+
+@media screen and (max-height: 600px) and (orientation: landscape) {
+	.header {
+		padding: 8px;
+	}
+
+	.headerTitle {
+		font-size: 16px;
+	}
+
+	.headerSubtitle {
+		font-size: 11px;
+	}
+
+	/* Responsive tray toggle adjustments for small screens */
+	.headerContent {
+		gap: 0.5rem;
+	}
+
+	.trayTypeToggle {
+		flex-direction: column;
+		gap: 0.4rem;
+		text-align: center;
+	}
+
+	.toggleButton {
+		padding: 0.3rem 1rem;
+		font-size: 0.75rem;
+	}
+
+	.trayTypeLabel {
+		font-size: 0.8rem;
+	}
+
+	.mainContent {
+		padding: 6px;
+		height: calc(100vh - 100px);
+		overflow: hidden;
+	}
+
+	.dropZoneContainer {
+		height: 70vh;
+		margin-bottom: 8px;
+		overflow: hidden;
+	}
+
+	.dropZone {
+		overflow: hidden;
+	}
+
+	.tableSurface {
+		width: 50%;
+	}
+
+	.tableSurfaceText {
+		font-size: 1.5rem;
+	}
+
+	.controlButtons {
+		gap: 6px;
+		margin-bottom: 6px;
+	}
+
+	.button {
+		padding: 3px 10px;
+		font-size: 11px;
+	}
+
+	.trayItems {
+		gap: 4px;
+	}
+
+	.itemsTray {
+		padding: 6px;
+		max-height: 15vh;
+		overflow-x: hidden;
+		overflow-y: auto;
+	}
+
+	.trayTitle {
+		font-size: 0.8rem;
+		margin-bottom: 4px;
+	}
+
+	.feedback {
+		padding: 8px;
+		margin-bottom: 6px;
+	}
+
+	.feedbackText {
+		font-size: 10px;
+	}
+
+	.placedItem {
+		max-width: calc(100vw - 20px);
+		max-height: calc(70vh - 15px);
+	}
+}
+
+/* Additional mobile responsiveness for tray toggle */
+@media (max-width: 768px) {
+	.trayTypeToggle {
+		flex-direction: column;
+		gap: 0.5rem;
+		text-align: center;
+	}
+
+	.toggleButton {
+		padding: 0.4rem 1.2rem;
+		font-size: 0.8rem;
+	}
+
+	.trayTypeLabel {
+		font-size: 0.9rem;
+	}
+}
+
+@media (max-width: 480px) {
+	.trayTypeToggle {
+		gap: 0.4rem;
+	}
+
+	.toggleButton {
+		padding: 0.3rem 1rem;
+		font-size: 0.75rem;
+	}
+
+	.trayTypeLabel {
+		font-size: 0.8rem;
+	}
+}
