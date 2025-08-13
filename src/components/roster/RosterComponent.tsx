@@ -284,7 +284,9 @@ const RosterComponent: React.FC = () => {
 			if (response.ok) {
 				const data: UsersResponse | User[] = await response.json();
 				console.log("Users API response:", data);
-				const users = Array.isArray(data) ? data : (data as UsersResponse).users || [];
+				const users = Array.isArray(data)
+					? data
+					: (data as UsersResponse).users || [];
 
 				const filteredInstructors = users.filter(
 					(user: User) =>
@@ -323,7 +325,8 @@ const RosterComponent: React.FC = () => {
 			});
 
 			if (response.ok) {
-				const schedules: { [key: string]: ScheduleEntry[] } = await response.json();
+				const schedules: { [key: string]: ScheduleEntry[] } =
+					await response.json();
 				setScheduleData(schedules || {});
 			} else {
 				setScheduleData({});
@@ -346,13 +349,13 @@ const RosterComponent: React.FC = () => {
 		}
 	};
 
-	// Screenshot functionality - captures entire month
+	// Screenshot functionality
 	const handleScreenshot = async (): Promise<void> => {
 		try {
 			const html2canvasModule = await import("html2canvas");
 			const html2canvas = html2canvasModule.default || html2canvasModule;
 
-			console.log("Creating styled clone for screenshot...");
+			console.log("Creating universal screenshot...");
 
 			const tableContainer = tableContainerRef.current;
 			if (!tableContainer) {
@@ -360,165 +363,219 @@ const RosterComponent: React.FC = () => {
 				return;
 			}
 
-			// Create a temporary container with inline styles
-			const tempContainer = document.createElement('div');
-			tempContainer.style.cssText = `
-				position: fixed;
-				top: -10000px;
-				left: -10000px;
-				background: #ffffff;
-				padding: 20px;
-				border-radius: 8px;
-				box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-				z-index: -1;
-			`;
+			// Create a dedicated screenshot container with universal styling
+			const screenshotContainer = document.createElement("div");
+			screenshotContainer.id = "screenshot-container";
+			screenshotContainer.style.cssText = `
+			position: absolute;
+			top: -10000px;
+			left: 0;
+			width: fit-content;
+			height: fit-content;
+			background: #ffffff !important;
+			padding: 8px 20px 20px 8px;
+			margin: 0;
+			border: none;
+			box-shadow: none;
+			z-index: -999;
+			visibility: hidden;
+			opacity: 0;
+			overflow: visible;
+			box-sizing: content-box;
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+		`;
 
-			// Create table structure with inline styles
-			const tempTable = document.createElement('table');
-			tempTable.style.cssText = `
-				border-collapse: collapse;
-				width: 100%;
-				background: #ffffff;
-				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-			`;
+			// Create outer wrapper with balanced padding
+			const outerWrapper = document.createElement("div");
+			outerWrapper.style.cssText = `
+			background: #ffffff !important;
+			padding: 8px 16px 16px 8px;
+			margin: 0;
+			border: 4px solid #ffffff;
+			box-sizing: border-box;
+			width: fit-content;
+			height: fit-content;
+		`;
+
+			// Create table with comprehensive styling
+			const table = document.createElement("table");
+			table.style.cssText = `
+			border-collapse: collapse;
+			width: auto;
+			background: #ffffff !important;
+			font-family: inherit;
+			table-layout: auto;
+			margin: 0;
+			padding: 0;
+			border: 2px solid #e5e7eb;
+		`;
 
 			// Create thead
-			const thead = document.createElement('thead');
-			const headerRow = document.createElement('tr');
+			const thead = document.createElement("thead");
+			const headerRow = document.createElement("tr");
+			headerRow.style.background = "#ffffff";
 
-			// Add header cells with inline styles
-			const headers = ['員編', '姓名', '基地'];
-			headers.forEach((header, index) => {
-				const th = document.createElement('th');
+			// Header cells
+			const headers = ["員編", "姓名", "基地"];
+			headers.forEach((header) => {
+				const th = document.createElement("th");
 				th.textContent = header;
 				th.style.cssText = `
-					background: #02c39a;
-					color: white;
-					padding: 12px 8px;
-					text-align: center;
-					font-weight: 600;
-					border: 0.75px solid #00a783;
-					font-size: 14px;
-					min-width: 80px;
-				`;
+				background: #02c39a !important;
+				color: #ffffff !important;
+				padding: 12px 10px;
+				text-align: center;
+				font-weight: 600;
+				border: 1px solid #00a783;
+				font-size: 14px;
+				min-width: 90px;
+				white-space: nowrap;
+				box-sizing: border-box;
+			`;
 				headerRow.appendChild(th);
 			});
 
-			// Add date headers
+			// Date headers
 			dateColumns.forEach((col) => {
-				const th = document.createElement('th');
-				const dayName = ["日", "一", "二", "三", "四", "五", "六"][col.dayOfWeek];
-				
-				const dateDiv = document.createElement('div');
-				dateDiv.style.cssText = `
-					display: flex;
-					flex-direction: column;
-					align-items: center;
-					gap: 2px;
-				`;
-				
-				const dateNumber = document.createElement('div');
+				const th = document.createElement("th");
+				const dayName = ["日", "一", "二", "三", "四", "五", "六"][
+					col.dayOfWeek
+				];
+
+				// Create date content
+				const dateContent = document.createElement("div");
+				dateContent.style.cssText = `
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 2px;
+				padding: 2px;
+			`;
+
+				const dateNumber = document.createElement("div");
 				dateNumber.textContent = col.date.toString();
 				dateNumber.style.cssText = `
-					font-size: 16px;
-					font-weight: bold;
-				`;
-				
-				const dayOfWeek = document.createElement('div');
-				dayOfWeek.textContent = dayName;
-				dayOfWeek.style.cssText = `
-					font-size: 12px;
-					opacity: 0.9;
-				`;
-				
-				dateDiv.appendChild(dateNumber);
-				dateDiv.appendChild(dayOfWeek);
-				th.appendChild(dateDiv);
-				
+				font-size: 14px;
+				font-weight: bold;
+				color: inherit;
+			`;
+
+				const dayOfWeekSpan = document.createElement("div");
+				dayOfWeekSpan.textContent = dayName;
+				dayOfWeekSpan.style.cssText = `
+				font-size: 10px;
+				opacity: 0.9;
+				color: inherit;
+			`;
+
+				dateContent.appendChild(dateNumber);
+				dateContent.appendChild(dayOfWeekSpan);
+				th.appendChild(dateContent);
+
 				th.style.cssText = `
-					background: ${col.isWeekend ? '#ef6f6f' : '#5c98f9'};
-					color: white;
-					padding: 8px 4px;
-					text-align: center;
-					font-weight: 600;
-					border: 0.75px solid ${col.isWeekend ? '#dc2626' : '#2563eb'};
-					font-size: 12px;
-					min-width: 60px;
-				`;
+				background: ${col.isWeekend ? "#ef6f6f" : "#5c98f9"} !important;
+				color: #ffffff !important;
+				padding: 8px 6px;
+				text-align: center;
+				font-weight: 600;
+				border: 1px solid ${col.isWeekend ? "#dc2626" : "#2563eb"};
+				font-size: 12px;
+				min-width: 70px;
+				white-space: nowrap;
+				box-sizing: border-box;
+			`;
 				headerRow.appendChild(th);
 			});
 
 			thead.appendChild(headerRow);
-			tempTable.appendChild(thead);
+			table.appendChild(thead);
 
 			// Create tbody
-			const tbody = document.createElement('tbody');
+			const tbody = document.createElement("tbody");
+			tbody.style.background = "#ffffff";
 
-			instructors.forEach((instructor) => {
+			instructors.forEach((instructor, instructorIndex) => {
 				const employeeId = getEmployeeIdentifier(instructor);
-				const row = document.createElement('tr');
+				const row = document.createElement("tr");
 				row.style.cssText = `
-					border-bottom: 1px solid #e5e7eb;
-				`;
+				border-bottom: 1px solid #e5e7eb;
+				background: #ffffff !important;
+			`;
 
 				// Instructor info cells
-				const cells = [employeeId, instructor.full_name, instructor.base];
-				cells.forEach((text, index) => {
-					const td = document.createElement('td');
-					td.textContent = text;
+				const cells = [
+					employeeId,
+					instructor.full_name,
+					instructor.base,
+				];
+				cells.forEach((text, cellIndex) => {
+					const td = document.createElement("td");
+					td.textContent = text || "";
 					td.style.cssText = `
-						padding: 12px 8px;
-						text-align: center;
-						border: 0.75px solid #e5e7eb;
-						background: ${index === 0 ? '#f1f5f9' : '#f8fafc'};
-						font-weight: 500;
-						font-size: 14px;
-						min-width: 80px;
-					`;
+					padding: 10px 8px;
+					text-align: center;
+					border: 1px solid #e5e7eb;
+					background: ${cellIndex === 0 ? "#f1f5f9" : "#f8fafc"} !important;
+					font-weight: 500;
+					font-size: 13px;
+					min-width: 90px;
+					white-space: nowrap;
+					color: #1f2937;
+					box-sizing: border-box;
+				`;
 					row.appendChild(td);
 				});
 
 				// Schedule cells
 				dateColumns.forEach((col) => {
-					const td = document.createElement('td');
+					const td = document.createElement("td");
 					const duties = getDutiesForDate(employeeId, col.fullDate);
-					
-					td.style.cssText = `
-						padding: 4px;
-						border: 0.75px solid #e5e7eb;
-						vertical-align: top;
-						min-width: 60px;
-						height: 70px;
-						background: #ffffff;
-					`;
 
-					const dutiesContainer = document.createElement('div');
+					td.style.cssText = `
+					padding: 4px;
+					border: 1px solid #e5e7eb;
+					vertical-align: top;
+					min-width: 70px;
+					height: 80px;
+					background: #ffffff !important;
+					box-sizing: border-box;
+				`;
+
+					const dutiesContainer = document.createElement("div");
 					dutiesContainer.style.cssText = `
-						display: flex;
-						flex-direction: column;
-						gap: 2px;
-						height: 100%;
-						min-height: 60px;
-					`;
+					display: flex;
+					flex-direction: column;
+					gap: 2px;
+					height: 100%;
+					min-height: 70px;
+					align-items: center;
+					justify-content: flex-start;
+					padding: 2px;
+					box-sizing: border-box;
+				`;
 
 					duties.forEach((duty) => {
-						const dutyTag = document.createElement('div');
+						const dutyTag = document.createElement("div");
 						dutyTag.textContent = duty;
 						dutyTag.style.cssText = `
-							padding: 2px 4px;
-							text-align: center;
-							font-size: 11px;
-							font-weight: 500;
-							border-radius: 2px;
-							color: white;
-							text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
-							min-height: 16px;
-							display: flex;
-							align-items: center;
-							justify-content: center;
-							background: ${DUTY_COLORS[duty] || '#3b82f6'};
-							border: 1px solid rgba(0, 0, 0, 0.1);
-						`;
+						padding: 3px 6px;
+						text-align: center;
+						font-size: 11px;
+						font-weight: 600;
+						border-radius: 3px;
+						color: #ffffff !important;
+						text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.6);
+						min-height: 18px;
+						display: flex;
+						align-items: center;
+						justify-content: center;
+						background: ${DUTY_COLORS[duty] || "#3b82f6"} !important;
+						border: 1px solid rgba(0, 0, 0, 0.2);
+						white-space: nowrap;
+						width: 100%;
+						box-sizing: border-box;
+						max-width: 60px;
+					`;
 						dutiesContainer.appendChild(dutyTag);
 					});
 
@@ -529,47 +586,120 @@ const RosterComponent: React.FC = () => {
 				tbody.appendChild(row);
 			});
 
-			tempTable.appendChild(tbody);
-			tempContainer.appendChild(tempTable);
-			document.body.appendChild(tempContainer);
+			table.appendChild(tbody);
+			outerWrapper.appendChild(table);
+			screenshotContainer.appendChild(outerWrapper);
 
-			// Wait for rendering
-			await new Promise(resolve => setTimeout(resolve, 100));
+			// Add to DOM
+			document.body.appendChild(screenshotContainer);
 
-			console.log("Capturing styled clone...");
+			// Force layout calculation
+			await new Promise((resolve) => {
+				requestAnimationFrame(() => {
+					requestAnimationFrame(resolve);
+				});
+			});
 
-			// Capture the temporary container with type assertion for html2canvas options
-			const canvas = await html2canvas(tempContainer, {
+			// Calculate dimensions with balanced padding
+			const tableWidth = table.offsetWidth;
+			const tableHeight = table.offsetHeight;
+			const totalWidth = tableWidth + 24; // 8px left + 16px right
+			const totalHeight = tableHeight + 24; // 8px top + 16px bottom
+
+			console.log(
+				`Table dimensions: ${tableWidth}x${tableHeight}, Total: ${totalWidth}x${totalHeight}`
+			);
+
+			// Temporarily make visible for measurement and capture
+			screenshotContainer.style.visibility = "visible";
+			screenshotContainer.style.opacity = "1";
+
+			// Capture with comprehensive options
+			const canvas = await html2canvas(screenshotContainer, {
 				useCORS: true,
 				allowTaint: true,
 				backgroundColor: "#ffffff",
 				logging: false,
-				pixelRatio: window.devicePixelRatio * 1.5,
-				scale: 2, // Higher scale for better quality
+				pixelRatio: Math.min(window.devicePixelRatio || 1, 2), // Cap at 2x for performance
+				scale: 1.2, // Balanced quality/performance
+				width: totalWidth,
+				height: totalHeight,
+				windowWidth: totalWidth,
+				windowHeight: totalHeight,
+				scrollX: 0,
+				scrollY: 0,
+				removeContainer: true,
+				foreignObjectRendering: false, // More compatible
+				imageTimeout: 0,
+				onclone: (clonedDoc: Document) => {
+					// Ensure white background in cloned document
+					const clonedBody = clonedDoc.body;
+					if (clonedBody) {
+						clonedBody.style.backgroundColor = "#ffffff";
+					}
+					const clonedContainer = clonedDoc.getElementById(
+						"screenshot-container"
+					);
+					if (clonedContainer) {
+						clonedContainer.style.backgroundColor = "#ffffff";
+						clonedContainer.style.visibility = "visible";
+						clonedContainer.style.opacity = "1";
+					}
+				},
 			} as any);
 
-			// Remove temporary container
-			document.body.removeChild(tempContainer);
+			// Clean up
+			document.body.removeChild(screenshotContainer);
 
 			console.log("Canvas created:", canvas.width, "x", canvas.height);
 
-			// Create download link
-			const link = document.createElement("a");
-			const fileName = `教師班表-${selectedYear}年${selectedMonth}月-${new Date().toISOString().slice(0,10)}.png`;
-			link.download = fileName;
-			link.href = canvas.toDataURL("image/png", 1.0); // Maximum quality
+			// Verify canvas has content
+			const ctx = canvas.getContext("2d");
+			const imageData = ctx?.getImageData(
+				0,
+				0,
+				canvas.width,
+				canvas.height
+			);
+			const hasContent = imageData?.data.some(
+				(value, index) => index % 4 !== 3 && value !== 255 // Check for non-white pixels (excluding alpha)
+			);
 
-			// Trigger download
+			if (!hasContent) {
+				throw new Error("Screenshot appears to be blank");
+			}
+
+			// Create and download
+			const link = document.createElement("a");
+			const fileName = `教師班表-${selectedYear}年${selectedMonth}月-${new Date()
+				.toISOString()
+				.slice(0, 10)}.png`;
+			link.download = fileName;
+			link.href = canvas.toDataURL("image/png", 0.95); // High quality
+
 			document.body.appendChild(link);
 			link.click();
 			document.body.removeChild(link);
 
-			console.log("Screenshot with styled clone saved:", fileName);
+			console.log("Universal screenshot saved successfully:", fileName);
 			alert(`截圖已儲存：${fileName}`);
-			
 		} catch (error: any) {
 			console.error("Screenshot error:", error);
-			alert(`截圖失敗：${error.message || "未知錯誤"}，請聯絡豪神`);
+
+			// Provide specific error guidance
+			let errorMessage = "截圖失敗：";
+			if (error.message?.includes("blank")) {
+				errorMessage += "截圖內容為空白，請稍後再試";
+			} else if (error.message?.includes("html2canvas")) {
+				errorMessage += "截圖庫載入失敗，請重新整理頁面";
+			} else if (error.message?.includes("Canvas")) {
+				errorMessage +=
+					"瀏覽器不支援此功能，請使用最新版 Chrome 或 Firefox";
+			} else {
+				errorMessage += error.message || "未知錯誤";
+			}
+
+			alert(errorMessage);
 		}
 	};
 
@@ -603,7 +733,11 @@ const RosterComponent: React.FC = () => {
 			// Add data rows
 			instructors.forEach((instructor) => {
 				const employeeId = getEmployeeIdentifier(instructor);
-				const row: (string | number)[] = [employeeId, instructor.full_name, instructor.base];
+				const row: (string | number)[] = [
+					employeeId,
+					instructor.full_name,
+					instructor.base,
+				];
 
 				dateColumns.forEach((col) => {
 					const duties = getDutiesForDate(employeeId, col.fullDate);
@@ -895,7 +1029,10 @@ const RosterComponent: React.FC = () => {
 	};
 
 	// Add custom duty
-	const addCustomDuty = async (newDuty: string, color: string): Promise<void> => {
+	const addCustomDuty = async (
+		newDuty: string,
+		color: string
+	): Promise<void> => {
 		console.log("Adding custom duty:", newDuty, "with color:", color);
 
 		if (!availableDuties.includes(newDuty)) {
@@ -957,12 +1094,16 @@ const RosterComponent: React.FC = () => {
 	};
 
 	// Handle year change
-	const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
+	const handleYearChange = (
+		e: React.ChangeEvent<HTMLSelectElement>
+	): void => {
 		setSelectedYear(parseInt(e.target.value));
 	};
 
 	// Handle month change
-	const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
+	const handleMonthChange = (
+		e: React.ChangeEvent<HTMLSelectElement>
+	): void => {
 		setSelectedMonth(parseInt(e.target.value));
 	};
 
