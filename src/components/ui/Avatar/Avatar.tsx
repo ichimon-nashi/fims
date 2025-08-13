@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import styles from "./Avatar.module.css";
 
 interface AvatarProps {
@@ -84,6 +85,21 @@ const Avatar = ({
 		return colors[Math.abs(hash) % colors.length];
 	};
 
+	// Get size dimensions for Next.js Image component
+	const getSizeDimensions = (size: string) => {
+		switch (size) {
+			case "small":
+				return { width: 32, height: 32 };
+			case "large":
+				return { width: 80, height: 80 };
+			case "medium":
+			default:
+				return { width: 48, height: 48 };
+		}
+	};
+
+	const { width, height } = getSizeDimensions(size);
+
 	// Debug logging
 	console.log(`Avatar for ${employeeId}:`, {
 		employeeId,
@@ -127,28 +143,34 @@ const Avatar = ({
 	return (
 		<div className={`${styles.avatar} ${styles[size]} ${className}`}>
 			{!imageError ? (
-				<img
+				<Image
 					src={avatarUrl}
 					alt={`${fullName}的頭像`}
 					className={styles.avatarImage}
+					width={width}
+					height={height}
 					onError={handleImageError}
-					loading="lazy"
 					onLoad={() =>
 						console.log(
 							`Successfully loaded avatar for ${employeeId}`
 						)
 					}
+					priority={false}
+					unoptimized={true}
 				/>
 			) : (
-				<img
+				<Image
 					src={fallbackUrl}
 					alt={`${fullName}的預設頭像`}
 					className={styles.avatarImage}
+					width={width}
+					height={height}
 					onError={handleFallbackError}
-					loading="lazy"
 					onLoad={() =>
 						console.log(`Successfully loaded fallback avatar`)
 					}
+					priority={false}
+					unoptimized={true}
 				/>
 			)}
 		</div>

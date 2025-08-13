@@ -2,10 +2,6 @@
 
 import { User } from "@/lib/types";
 
-export interface UserDetails extends User {
-	// Extend the existing User type from your main types
-}
-
 export interface Position {
 	x: number;
 	y: number;
@@ -50,6 +46,6 @@ export interface TouchOffset {
 }
 
 export interface BusinessClassProps {
-	userDetails?: UserDetails;
+	userDetails?: User;
 	onLogout?: () => void;
 }

@@ -9,10 +9,10 @@ import styles from "./QuestionManagement.module.css";
 
 // Import XLSX dynamically to avoid SSR issues
 let XLSX: any = null;
-if (typeof window !== 'undefined') {
-  import('xlsx').then((module) => {
-    XLSX = module;
-  });
+if (typeof window !== "undefined") {
+	import("xlsx").then((xlsxModule) => {
+		XLSX = xlsxModule;
+	});
 }
 
 // Responsive button text hook
@@ -21,19 +21,24 @@ const useResponsiveButtonText = () => {
 
 	useEffect(() => {
 		const checkViewport = () => {
-			setIsCompactView(window.innerWidth >= 1024 && window.innerWidth < 1300);
+			setIsCompactView(
+				window.innerWidth >= 1024 && window.innerWidth < 1300
+			);
 		};
 
 		checkViewport();
-		window.addEventListener('resize', checkViewport);
-		return () => window.removeEventListener('resize', checkViewport);
+		window.addEventListener("resize", checkViewport);
+		return () => window.removeEventListener("resize", checkViewport);
 	}, []);
 
 	return {
 		addText: isCompactView ? "➕ Add" : "➕ Add Question",
 		exportText: isCompactView ? "📊 Export" : "📊 Export Excel",
-		importText: isCompactView ? "📁 Import" : "📁 Import Excel",
-		deleteText: (count: number) => isCompactView ? `🗑️ Delete (${count})` : `🗑️ Delete Selected (${count})`
+		importText: isCompactView ? "📄 Import" : "📄 Import Excel",
+		deleteText: (count: number) =>
+			isCompactView
+				? `🗑️ Delete (${count})`
+				: `🗑️ Delete Selected (${count})`,
 	};
 };
 
@@ -47,7 +52,7 @@ const QuestionManagement = () => {
 	);
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [selectedQuestions, setSelectedQuestions] = useState<string[]>([]);
-	
+
 	// Responsive button text
 	const buttonText = useResponsiveButtonText();
 
@@ -58,41 +63,43 @@ const QuestionManagement = () => {
 	const fetchQuestions = async () => {
 		try {
 			setLoading(true);
-			console.log('Fetching questions...');
-			
+			console.log("Fetching questions...");
+
 			const response = await fetch("/api/questions", {
 				headers: {
 					Authorization: `Bearer ${localStorage.getItem("token")}`,
 				},
 			});
 
-			console.log('Questions response status:', response.status);
+			console.log("Questions response status:", response.status);
 
 			if (response.ok) {
 				const data = await response.json();
-				console.log('Questions API response:', data);
-				
+				console.log("Questions API response:", data);
+
 				// FIXED: Sort questions by question_number for better display
-				const sortedQuestions = Array.isArray(data) 
+				const sortedQuestions = Array.isArray(data)
 					? data.sort((a: Question, b: Question) => {
-						// Sort by question_number first, then by id if question_number is null
-						if (a.question_number && b.question_number) {
-							return a.question_number - b.question_number;
-						}
-						if (a.question_number && !b.question_number) return -1;
-						if (!a.question_number && b.question_number) return 1;
-						return a.id.localeCompare(b.id);
-					})
+							// Sort by question_number first, then by id if question_number is null
+							if (a.question_number && b.question_number) {
+								return a.question_number - b.question_number;
+							}
+							if (a.question_number && !b.question_number)
+								return -1;
+							if (!a.question_number && b.question_number)
+								return 1;
+							return a.id.localeCompare(b.id);
+					  })
 					: [];
-				
+
 				setQuestions(sortedQuestions);
 			} else {
 				const errorData = await response.json();
-				console.error('Questions API error:', errorData);
+				console.error("Questions API error:", errorData);
 				setError(errorData.message || "Failed to load questions");
 			}
 		} catch (err) {
-			console.error('Questions fetch error:', err);
+			console.error("Questions fetch error:", err);
 			setError("Failed to load questions");
 		} finally {
 			setLoading(false);
@@ -103,23 +110,31 @@ const QuestionManagement = () => {
 		try {
 			// FIXED: Check for duplicate question titles
 			if (!editingQuestion) {
-				const isDuplicate = questions.some(q => 
-					q.question_title.trim().toLowerCase() === questionData.question_title?.trim().toLowerCase()
+				const isDuplicate = questions.some(
+					(q) =>
+						q.question_title.trim().toLowerCase() ===
+						questionData.question_title?.trim().toLowerCase()
 				);
-				
+
 				if (isDuplicate) {
-					setError("A question with this title already exists. Please use a different title.");
+					setError(
+						"A question with this title already exists. Please use a different title."
+					);
 					return;
 				}
 			} else {
 				// For editing, check duplicates excluding the current question
-				const isDuplicate = questions.some(q => 
-					q.id !== editingQuestion.id && 
-					q.question_title.trim().toLowerCase() === questionData.question_title?.trim().toLowerCase()
+				const isDuplicate = questions.some(
+					(q) =>
+						q.id !== editingQuestion.id &&
+						q.question_title.trim().toLowerCase() ===
+							questionData.question_title?.trim().toLowerCase()
 				);
-				
+
 				if (isDuplicate) {
-					setError("A question with this title already exists. Please use a different title.");
+					setError(
+						"A question with this title already exists. Please use a different title."
+					);
 					return;
 				}
 			}
@@ -129,7 +144,7 @@ const QuestionManagement = () => {
 				: "/api/questions";
 			const method = editingQuestion ? "PUT" : "POST";
 
-			console.log('Saving question:', { url, method, questionData });
+			console.log("Saving question:", { url, method, questionData });
 
 			const response = await fetch(url, {
 				method,
@@ -147,11 +162,11 @@ const QuestionManagement = () => {
 				setError("");
 			} else {
 				const errorData = await response.json();
-				console.error('Save question error:', errorData);
+				console.error("Save question error:", errorData);
 				setError(errorData.message || "Failed to save question");
 			}
 		} catch (err) {
-			console.error('Save question error:', err);
+			console.error("Save question error:", err);
 			setError("Failed to save question");
 		}
 	};
@@ -159,38 +174,44 @@ const QuestionManagement = () => {
 	const handleDeleteQuestions = async (questionIds: string[]) => {
 		// First check for foreign key issues
 		let hasRelatedRecords = false;
-		let relatedRecordsInfo = [];
-		
+		const relatedRecordsInfo = [];
+
 		try {
-			console.log('Checking for related test results...');
+			console.log("Checking for related test results...");
 			for (const id of questionIds) {
-				const checkResponse = await fetch('/api/debug-db', {
-					method: 'POST',
+				const checkResponse = await fetch("/api/debug-db", {
+					method: "POST",
 					headers: {
-						'Content-Type': 'application/json',
-						Authorization: `Bearer ${localStorage.getItem("token")}`,
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${localStorage.getItem(
+							"token"
+						)}`,
 					},
-					body: JSON.stringify({ questionId: id })
+					body: JSON.stringify({ questionId: id }),
 				});
-				
+
 				if (checkResponse.ok) {
 					const checkData = await checkResponse.json();
 					if (checkData.tests?.foreignKeys?.relatedRecords > 0) {
 						hasRelatedRecords = true;
 						relatedRecordsInfo.push({
 							id,
-							relatedCount: checkData.tests.foreignKeys.relatedRecords
+							relatedCount:
+								checkData.tests.foreignKeys.relatedRecords,
 						});
 					}
 				}
 			}
 		} catch (checkError) {
-			console.error('Error checking for related records:', checkError);
+			console.error("Error checking for related records:", checkError);
 		}
-		
+
 		// Show warning if there are related records
 		if (hasRelatedRecords) {
-			const totalRelated = relatedRecordsInfo.reduce((sum, item) => sum + item.relatedCount, 0);
+			const totalRelated = relatedRecordsInfo.reduce(
+				(sum, item) => sum + item.relatedCount,
+				0
+			);
 			const confirmMessage = `⚠️ WARNING: ${questionIds.length} question(s) selected for deletion have ${totalRelated} related test result(s).
 
 These questions cannot be deleted because they are referenced in existing test results.
@@ -216,44 +237,70 @@ Do you want to continue anyway? (Will likely fail)`;
 		}
 
 		try {
-			console.log('Starting deletion process for questions:', questionIds);
-			
+			console.log(
+				"Starting deletion process for questions:",
+				questionIds
+			);
+
 			// Delete questions one by one and collect results
 			const deletePromises = questionIds.map(async (id) => {
 				console.log(`Attempting to delete question: ${id}`);
-				
+
 				try {
 					const response = await fetch(`/api/questions/${id}`, {
 						method: "DELETE",
 						headers: {
-							Authorization: `Bearer ${localStorage.getItem("token")}`,
-							'Content-Type': 'application/json',
+							Authorization: `Bearer ${localStorage.getItem(
+								"token"
+							)}`,
+							"Content-Type": "application/json",
 						},
 					});
-					
-					console.log(`Delete response for ${id}:`, response.status, response.statusText);
-					
+
+					console.log(
+						`Delete response for ${id}:`,
+						response.status,
+						response.statusText
+					);
+
 					const responseText = await response.text();
-					console.log(`Delete response body for ${id}:`, responseText);
-					
+					console.log(
+						`Delete response body for ${id}:`,
+						responseText
+					);
+
 					let responseData;
 					try {
 						responseData = JSON.parse(responseText);
 					} catch (parseError) {
-						console.error(`Failed to parse response for ${id}:`, parseError);
-						throw new Error(`Invalid response format: ${responseText}`);
+						console.error(
+							`Failed to parse response for ${id}:`,
+							parseError
+						);
+						throw new Error(
+							`Invalid response format: ${responseText}`
+						);
 					}
-					
+
 					if (!response.ok) {
 						// Handle specific error cases
 						if (response.status === 409) {
-							const conflictMessage = `Cannot delete question ${id}: ${responseData.message || 'It is referenced in test results'}`;
+							const conflictMessage = `Cannot delete question ${id}: ${
+								responseData.message ||
+								"It is referenced in test results"
+							}`;
 							throw new Error(conflictMessage);
 						}
-						
-						throw new Error(`Delete failed for ${id}: ${responseData.message || responseData.error || 'Unknown error'}`);
+
+						throw new Error(
+							`Delete failed for ${id}: ${
+								responseData.message ||
+								responseData.error ||
+								"Unknown error"
+							}`
+						);
 					}
-					
+
 					console.log(`Successfully deleted question ${id}`);
 					return { id, success: true };
 				} catch (error) {
@@ -263,27 +310,41 @@ Do you want to continue anyway? (Will likely fail)`;
 			});
 
 			// Wait for all deletions to complete
-			console.log('Waiting for all deletion promises...');
+			console.log("Waiting for all deletion promises...");
 			const results = await Promise.allSettled(deletePromises);
-			
+
 			// Check if any deletions failed
-			const failed = results.filter(result => result.status === 'rejected');
-			const successful = results.filter(result => result.status === 'fulfilled');
-			
-			console.log(`Deletion results: ${successful.length} successful, ${failed.length} failed`);
-			
+			const failed = results.filter(
+				(result) => result.status === "rejected"
+			);
+			const successful = results.filter(
+				(result) => result.status === "fulfilled"
+			);
+
+			console.log(
+				`Deletion results: ${successful.length} successful, ${failed.length} failed`
+			);
+
 			if (failed.length > 0) {
-				console.error('Failed deletions:', failed.map(f => f.reason));
-				const errorMessages = failed.map(f => f.reason?.message || 'Unknown error').join('\n');
-				
-				// Show specific message for foreign key violations
-				const foreignKeyErrors = failed.filter(f => 
-					f.reason?.message?.includes('referenced in test results') ||
-					f.reason?.message?.includes('foreign key constraint')
+				console.error(
+					"Failed deletions:",
+					failed.map((f) => f.reason)
 				);
-				
+				const errorMessages = failed
+					.map((f) => f.reason?.message || "Unknown error")
+					.join("\n");
+
+				// Show specific message for foreign key violations
+				const foreignKeyErrors = failed.filter(
+					(f) =>
+						f.reason?.message?.includes(
+							"referenced in test results"
+						) ||
+						f.reason?.message?.includes("foreign key constraint")
+				);
+
 				if (foreignKeyErrors.length > 0) {
-					setError(`❌ Cannot delete ${foreignKeyErrors.length} question(s): They are referenced in existing test results.
+					setError(`⌛ Cannot delete ${foreignKeyErrors.length} question(s): They are referenced in existing test results.
 
 📋 These questions have been used in tests and cannot be deleted to preserve data integrity.
 
@@ -295,26 +356,33 @@ Do you want to continue anyway? (Will likely fail)`;
 Detailed errors:
 ${errorMessages}`);
 				} else {
-					setError(`Failed to delete ${failed.length} question(s):\n${errorMessages}`);
+					setError(
+						`Failed to delete ${failed.length} question(s):\n${errorMessages}`
+					);
 				}
 			}
-			
+
 			if (successful.length > 0) {
-				console.log('Some deletions were successful, refreshing questions list');
+				console.log(
+					"Some deletions were successful, refreshing questions list"
+				);
 			}
 
 			// Refresh the questions list regardless of partial failures
 			await fetchQuestions();
 			setSelectedQuestions([]);
-			
+
 			// Clear error if all deletions were successful
 			if (failed.length === 0) {
 				setError("");
-				console.log('All deletions completed successfully');
+				console.log("All deletions completed successfully");
 			}
 		} catch (err) {
-			console.error('Unexpected error in handleDeleteQuestions:', err);
-			setError("Unexpected error during deletion: " + (err instanceof Error ? err.message : 'Unknown error'));
+			console.error("Unexpected error in handleDeleteQuestions:", err);
+			setError(
+				"Unexpected error during deletion: " +
+					(err instanceof Error ? err.message : "Unknown error")
+			);
 		}
 	};
 
@@ -322,8 +390,8 @@ ${errorMessages}`);
 		try {
 			// Wait for XLSX to load if not already loaded
 			if (!XLSX) {
-				const module = await import('xlsx');
-				XLSX = module;
+				const xlsxModule = await import("xlsx");
+				XLSX = xlsxModule;
 			}
 
 			// Prepare data for export (exclude date columns)
@@ -335,9 +403,10 @@ ${errorMessages}`);
 				Page: question.question_page,
 				Line: question.question_line,
 				// FIXED: Include difficulty for level 10+ users in export
-				...(currentUser && currentUser.authentication_level >= 10 && {
-					"Difficulty Level": question.difficulty_level || 3,
-				}),
+				...(currentUser &&
+					currentUser.authentication_level >= 10 && {
+						"Difficulty Level": question.difficulty_level || 3,
+					}),
 			}));
 
 			// Create workbook and worksheet
@@ -371,8 +440,8 @@ ${errorMessages}`);
 		try {
 			// Wait for XLSX to load if not already loaded
 			if (!XLSX) {
-				const module = await import('xlsx');
-				XLSX = module;
+				const xlsxModule = await import("xlsx");
+				XLSX = xlsxModule;
 			}
 
 			const data = await file.arrayBuffer();
@@ -380,15 +449,25 @@ ${errorMessages}`);
 			const worksheet = workbook.Sheets[workbook.SheetNames[0]];
 			const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-			console.log('Excel data preview:', jsonData.slice(0, 2));
-			console.log('Available columns:', jsonData.length > 0 ? Object.keys(jsonData[0]) : 'No data');
+			console.log("Excel data preview:", jsonData.slice(0, 2));
+			console.log(
+				"Available columns:",
+				jsonData.length > 0 ? Object.keys(jsonData[0]) : "No data"
+			);
 
 			// Validate and transform imported data
 			const importedQuestions = jsonData.map((row: any, index) => {
 				// FIXED: Handle multiple column name formats (both display names and database field names)
-				const getFieldValue = (row: any, ...possibleNames: string[]) => {
+				const getFieldValue = (
+					row: any,
+					...possibleNames: string[]
+				) => {
 					for (const name of possibleNames) {
-						if (row[name] !== undefined && row[name] !== null && row[name] !== '') {
+						if (
+							row[name] !== undefined &&
+							row[name] !== null &&
+							row[name] !== ""
+						) {
 							return row[name];
 						}
 					}
@@ -397,25 +476,59 @@ ${errorMessages}`);
 
 				// Map Excel columns to database fields with flexible column name matching
 				const mappedData = {
-					question_category: getFieldValue(row, 
-						"Category", "question_category", "category", "CATEGORY"
+					question_category: getFieldValue(
+						row,
+						"Category",
+						"question_category",
+						"category",
+						"CATEGORY"
 					),
-					question_title: getFieldValue(row,
-						"Question Title", "question_title", "title", "Question", "QUESTION_TITLE"
+					question_title: getFieldValue(
+						row,
+						"Question Title",
+						"question_title",
+						"title",
+						"Question",
+						"QUESTION_TITLE"
 					),
-					question_chapter: getFieldValue(row,
-						"Chapter", "question_chapter", "chapter", "CHAPTER"
+					question_chapter: getFieldValue(
+						row,
+						"Chapter",
+						"question_chapter",
+						"chapter",
+						"CHAPTER"
 					),
-					question_page: parseInt(getFieldValue(row,
-						"Page", "question_page", "page", "PAGE"
-					)) || 1,
-					question_line: parseInt(getFieldValue(row,
-						"Line", "question_line", "line", "LINE"
-					)) || 1,
+					question_page:
+						parseInt(
+							getFieldValue(
+								row,
+								"Page",
+								"question_page",
+								"page",
+								"PAGE"
+							)
+						) || 1,
+					question_line:
+						parseInt(
+							getFieldValue(
+								row,
+								"Line",
+								"question_line",
+								"line",
+								"LINE"
+							)
+						) || 1,
 					// FIXED: Handle difficulty level from import if available
-					difficulty_level: parseInt(getFieldValue(row,
-						"Difficulty Level", "difficulty_level", "difficulty", "DIFFICULTY"
-					)) || 3,
+					difficulty_level:
+						parseInt(
+							getFieldValue(
+								row,
+								"Difficulty Level",
+								"difficulty_level",
+								"difficulty",
+								"DIFFICULTY"
+							)
+						) || 3,
 				};
 
 				return mappedData;
@@ -423,14 +536,14 @@ ${errorMessages}`);
 
 			// FIXED: Check for duplicate question titles in import
 			const existingTitles = new Set(
-				questions.map(q => q.question_title.trim().toLowerCase())
+				questions.map((q) => q.question_title.trim().toLowerCase())
 			);
 			const importTitles = new Set();
 			const duplicates = [];
 
 			for (const question of importedQuestions) {
 				if (!question.question_title) continue;
-				
+
 				const title = question.question_title.trim().toLowerCase();
 				if (existingTitles.has(title) || importTitles.has(title)) {
 					duplicates.push(question.question_title);
@@ -439,7 +552,13 @@ ${errorMessages}`);
 			}
 
 			if (duplicates.length > 0) {
-				setError(`Import contains duplicate questions:\n${duplicates.slice(0, 5).join('\n')}${duplicates.length > 5 ? '\n... and more' : ''}`);
+				setError(
+					`Import contains duplicate questions:\n${duplicates
+						.slice(0, 5)
+						.join("\n")}${
+						duplicates.length > 5 ? "\n... and more" : ""
+					}`
+				);
 				return;
 			}
 
@@ -447,7 +566,7 @@ ${errorMessages}`);
 			const errors: string[] = [];
 			importedQuestions.forEach((question, index) => {
 				const rowNum = index + 2; // Excel row number (accounting for header)
-				
+
 				if (!question.question_category)
 					errors.push(`Row ${rowNum}: Category is required`);
 				if (!question.question_title)
@@ -461,17 +580,30 @@ ${errorMessages}`);
 			});
 
 			if (errors.length > 0) {
-				setError(`Import validation errors:\n${errors.slice(0, 10).join("\n")}${errors.length > 10 ? `\n... and ${errors.length - 10} more errors` : ''}`);
+				setError(
+					`Import validation errors:\n${errors
+						.slice(0, 10)
+						.join("\n")}${
+						errors.length > 10
+							? `\n... and ${errors.length - 10} more errors`
+							: ""
+					}`
+				);
 				return;
 			}
 
 			// Filter out any completely empty rows
-			const validQuestions = importedQuestions.filter(q => 
-				q.question_category && q.question_title && q.question_chapter
+			const validQuestions = importedQuestions.filter(
+				(q) =>
+					q.question_category &&
+					q.question_title &&
+					q.question_chapter
 			);
 
 			if (validQuestions.length === 0) {
-				setError("No valid questions found in the Excel file. Please check the format and ensure all required fields are filled.");
+				setError(
+					"No valid questions found in the Excel file. Please check the format and ensure all required fields are filled."
+				);
 				return;
 			}
 
@@ -486,7 +618,9 @@ ${errorMessages}`);
 						method: "POST",
 						headers: {
 							"Content-Type": "application/json",
-							Authorization: `Bearer ${localStorage.getItem("token")}`,
+							Authorization: `Bearer ${localStorage.getItem(
+								"token"
+							)}`,
 						},
 						body: JSON.stringify(questionData),
 					});
@@ -496,22 +630,28 @@ ${errorMessages}`);
 					} else {
 						errorCount++;
 						const errorData = await response.json();
-						const errorMsg = errorData.message || errorData.error || "Unknown error";
+						const errorMsg =
+							errorData.message ||
+							errorData.error ||
+							"Unknown error";
 						importErrors.push(
-							`"${questionData.question_title.substring(
+							`&quot;${questionData.question_title.substring(
 								0,
 								50
-							)}...": ${errorMsg}`
+							)}...&quot;: ${errorMsg}`
 						);
 					}
 				} catch (err) {
 					errorCount++;
-					console.error(`Import error for question "${questionData.question_title}":`, err);
+					console.error(
+						`Import error for question "${questionData.question_title}":`,
+						err
+					);
 					importErrors.push(
-						`"${questionData.question_title.substring(
+						`&quot;${questionData.question_title.substring(
 							0,
 							50
-						)}...": Network/connection error`
+						)}...&quot;: Network/connection error`
 					);
 				}
 			}
@@ -533,7 +673,9 @@ ${errorMessages}`);
 			await fetchQuestions();
 		} catch (err) {
 			console.error("Import processing error:", err);
-			setError("Failed to process Excel file. Please check the format and ensure it's a valid Excel file.");
+			setError(
+				"Failed to process Excel file. Please check the format and ensure it's a valid Excel file."
+			);
 		}
 	};
 
@@ -544,7 +686,7 @@ ${errorMessages}`);
 			sortable: true,
 			filterable: true,
 			render: (value: number) => (
-				<span 
+				<span
 					className={styles.questionNumber}
 					data-status={value ? undefined : "pending"}
 				>
@@ -618,7 +760,7 @@ ${errorMessages}`);
 			label: "Last Modified",
 			sortable: true,
 			filterable: false,
-			render: (value: string) => 
+			render: (value: string) =>
 				value ? new Date(value).toLocaleDateString() : "N/A",
 		},
 	];
@@ -666,7 +808,10 @@ ${errorMessages}`);
 						<button
 							className="btn btn-danger"
 							onClick={() => {
-								console.log('Multiple delete button clicked, selected questions:', selectedQuestions);
+								console.log(
+									"Multiple delete button clicked, selected questions:",
+									selectedQuestions
+								);
 								handleDeleteQuestions(selectedQuestions);
 							}}
 						>
@@ -681,46 +826,94 @@ ${errorMessages}`);
 			<div className={styles.importHelp}>
 				<details>
 					<summary>💡 Excel Import Format Guide</summary>
-					<p>Your Excel file should contain the following columns (case-insensitive):</p>
+					<p>
+						Your Excel file should contain the following columns
+						(case-insensitive):
+					</p>
 					<ul>
 						<li>
-							<strong>Category</strong> (or "category") - Question category (required)
-							<br /><small>Example: Safety, Regulations, Protocol, etc.</small>
+							<strong>Category</strong> (or &quot;category&quot;)
+							- Question category (required)
+							<br />
+							<small>
+								Example: Safety, Regulations, Protocol, etc.
+							</small>
 						</li>
 						<li>
-							<strong>Question Title</strong> (or "question_title") - The complete question text (required) - must be unique
-							<br /><small>Example: "What is the emergency evacuation procedure?"</small>
+							<strong>Question Title</strong> (or
+							&quot;question_title&quot;) - The complete question
+							text (required) - must be unique
+							<br />
+							<small>
+								Example: &quot;What is the emergency evacuation
+								procedure?&quot;
+							</small>
 						</li>
 						<li>
-							<strong>Chapter</strong> (or "chapter") - Reference chapter (required)
-							<br /><small>Example: "Emergency Procedures" or "1"</small>
+							<strong>Chapter</strong> (or &quot;chapter&quot;) -
+							Reference chapter (required)
+							<br />
+							<small>
+								Example: &quot;Emergency Procedures&quot; or
+								&quot;1&quot;
+							</small>
 						</li>
 						<li>
-							<strong>Page</strong> (or "page") - Reference page number (required)
-							<br /><small>Example: 25</small>
+							<strong>Page</strong> (or &quot;page&quot;) -
+							Reference page number (required)
+							<br />
+							<small>Example: 25</small>
 						</li>
 						<li>
-							<strong>Line</strong> (or "line") - Reference line number (required)
-							<br /><small>Example: 10</small>
+							<strong>Line</strong> (or &quot;line&quot;) -
+							Reference line number (required)
+							<br />
+							<small>Example: 10</small>
 						</li>
-						{currentUser && currentUser.authentication_level >= 10 && (
-							<li>
-								<strong>Difficulty Level</strong> (or "difficulty_level") - Optional difficulty level (1-5, defaults to 3)
-								<br /><small>Example: 3</small>
-							</li>
-						)}
+						{currentUser &&
+							currentUser.authentication_level >= 10 && (
+								<li>
+									<strong>Difficulty Level</strong> (or
+									&quot;difficulty_level&quot;) - Optional
+									difficulty level (1-5, defaults to 3)
+									<br />
+									<small>Example: 3</small>
+								</li>
+							)}
 					</ul>
 					<p>
 						<em>
-							Note: Question numbers are auto-generated and should not be included in import files. Question titles must be unique.
+							Note: Question numbers are auto-generated and should
+							not be included in import files. Question titles
+							must be unique.
 						</em>
 					</p>
-					<div style={{ marginTop: '1rem', padding: '0.5rem', background: '#e3f2fd', borderRadius: '4px' }}>
+					<div
+						style={{
+							marginTop: "1rem",
+							padding: "0.5rem",
+							background: "#e3f2fd",
+							borderRadius: "4px",
+						}}
+					>
 						<strong>📋 Supported Column Formats:</strong>
-						<ul style={{ marginTop: '0.5rem', fontSize: '0.9rem' }}>
-							<li><strong>Display format:</strong> "Category", "Question Title", "Chapter", "Page", "Line"</li>
-							<li><strong>Database format:</strong> "category", "question_title", "chapter", "page", "line"</li>
-							<li><strong>Mixed format:</strong> Any combination of the above</li>
+						<ul style={{ marginTop: "0.5rem", fontSize: "0.9rem" }}>
+							<li>
+								<strong>Display format:</strong>{" "}
+								&quot;Category&quot;, &quot;Question
+								Title&quot;, &quot;Chapter&quot;,
+								&quot;Page&quot;, &quot;Line&quot;
+							</li>
+							<li>
+								<strong>Database format:</strong>{" "}
+								&quot;category&quot;,
+								&quot;question_title&quot;, &quot;chapter&quot;,
+								&quot;page&quot;, &quot;line&quot;
+							</li>
+							<li>
+								<strong>Mixed format:</strong> Any combination
+								of the above
+							</li>
 						</ul>
 					</div>
 				</details>
@@ -732,7 +925,10 @@ ${errorMessages}`);
 					columns={columns}
 					onEdit={(question) => setEditingQuestion(question)}
 					onDelete={(question) => {
-						console.log('Delete button clicked for question:', question.id);
+						console.log(
+							"Delete button clicked for question:",
+							question.id
+						);
 						handleDeleteQuestions([question.id]);
 					}}
 					onSelectionChange={setSelectedQuestions}
@@ -793,11 +989,12 @@ const QuestionForm = ({
 		"Training",
 		"Compliance",
 		"B738機種",
-		"ATR機種"
+		"ATR機種",
 	];
 
 	// FIXED: Determine if difficulty selector should be shown
-	const showDifficulty = currentUser && currentUser.authentication_level >= 10;
+	const showDifficulty =
+		currentUser && currentUser.authentication_level >= 10;
 
 	return (
 		<div className={styles.modal}>
@@ -884,14 +1081,17 @@ const QuestionForm = ({
 						{/* FIXED: Show difficulty selector for level 10+ users */}
 						{showDifficulty && (
 							<div className="form-group">
-								<label className="form-label">Difficulty Level *</label>
+								<label className="form-label">
+									Difficulty Level *
+								</label>
 								<select
 									className="form-select"
 									value={formData.difficulty_level}
 									onChange={(e) =>
 										setFormData((prev) => ({
 											...prev,
-											difficulty_level: parseInt(e.target.value) || 3,
+											difficulty_level:
+												parseInt(e.target.value) || 3,
 										}))
 									}
 									required
@@ -903,7 +1103,8 @@ const QuestionForm = ({
 									<option value={5}>Level 5 - Hardest</option>
 								</select>
 								<small>
-									Controls which users will see this question based on their handicap level
+									Controls which users will see this question
+									based on their handicap level
 								</small>
 							</div>
 						)}
@@ -926,7 +1127,8 @@ const QuestionForm = ({
 							style={{ resize: "vertical", minHeight: "100px" }}
 						/>
 						<small style={{ color: "#e53e3e" }}>
-							⚠️ Question title must be unique - duplicates will be rejected
+							⚠️ Question title must be unique - duplicates will
+							be rejected
 						</small>
 					</div>
 
@@ -950,4 +1152,4 @@ const QuestionForm = ({
 	);
 };
 
-export default QuestionManagement
+export default QuestionManagement;

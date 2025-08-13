@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import styles from "./DeviceCheck.module.css";
 
 const DeviceCheck = ({ children }: { children: React.ReactNode }) => {
@@ -23,10 +24,13 @@ const DeviceCheck = ({ children }: { children: React.ReactNode }) => {
 		return (
 			<div className={styles.deviceWarning}>
 				<div className={styles.warningContent}>
-					<img
+					<Image
 						src="/images/tablet-redirect.png"
 						alt="Use larger device"
 						className={styles.warningImage}
+						width={200}
+						height={200}
+						priority
 					/>
 					<h2>Device Too Small</h2>
 					<p>

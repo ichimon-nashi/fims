@@ -21,6 +21,99 @@ const TestInterface = () => {
 	const [showConfirmModal, setShowConfirmModal] = useState(false);
 	const [testComplete, setTestComplete] = useState(false);
 
+	// Complete test and save results
+	const completeTest = useCallback(
+		async (finalSession: TestSession) => {
+			if (!examiner) return;
+
+			try {
+				console.log(
+					"Completing test for examinee:",
+					finalSession.examinee
+				);
+
+				// Get results only for questions that were actually asked/answered
+				const getQuestionResult = (index: number) => {
+					const attempt = finalSession.attempts[index];
+					if (attempt) {
+						// Question was answered - use actual result (true/false)
+						return {
+							id: attempt.questionId,
+							result: attempt.result,
+						};
+					}
+					// Question wasn't asked - leave as null
+					return {
+						id: null,
+						result: null,
+					};
+				};
+
+				const q1 = getQuestionResult(0);
+				const q2 = getQuestionResult(1);
+				const q3 = getQuestionResult(2);
+				const r1 = getQuestionResult(3);
+				const r2 = getQuestionResult(4);
+
+				const testResult = {
+					test_date: new Date().toISOString().split("T")[0],
+					employee_id:
+						finalSession.examinee.employee_id ||
+						finalSession.examinee.employeeID ||
+						examineeId,
+					full_name: finalSession.examinee.full_name,
+					rank: finalSession.examinee.rank,
+					base: finalSession.examinee.base,
+					q1_id: q1.id,
+					q1_result: q1.result,
+					q2_id: q2.id,
+					q2_result: q2.result,
+					q3_id: q3.id,
+					q3_result: q3.result,
+					r1_id: r1.id,
+					r1_result: r1.result,
+					r2_id: r2.id,
+					r2_result: r2.result,
+					examiner_name: examiner.full_name,
+					examiner_id: examiner.id,
+				};
+
+				console.log("Submitting test result:", testResult);
+
+				const response = await fetch("/api/test-results", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${localStorage.getItem(
+							"token"
+						)}`,
+					},
+					body: JSON.stringify(testResult),
+				});
+
+				if (!response.ok) {
+					const errorData = await response.json();
+					console.error("Failed to save test results:", errorData);
+					throw new Error(
+						errorData.message || "Failed to save test results"
+					);
+				}
+
+				const savedResult = await response.json();
+				console.log("Test result saved successfully:", savedResult);
+
+				setTestComplete(true);
+			} catch (err) {
+				console.error("Error saving test results:", err);
+				setError(
+					"Failed to save test results: " +
+						(err instanceof Error ? err.message : "Unknown error")
+				);
+			}
+		},
+		[examiner, examineeId]
+	);
+
 	// Load examinee data
 	const loadExaminee = async () => {
 		if (!examineeId.trim()) {
@@ -32,19 +125,19 @@ const TestInterface = () => {
 		setError("");
 
 		try {
-			console.log('Loading examinee:', examineeId);
-			
+			console.log("Loading examinee:", examineeId);
+
 			const response = await fetch(`/api/users/${examineeId}`, {
 				headers: {
 					Authorization: `Bearer ${localStorage.getItem("token")}`,
 				},
 			});
 
-			console.log('Examinee response status:', response.status);
+			console.log("Examinee response status:", response.status);
 
 			if (response.ok) {
 				const userData = await response.json();
-				console.log('Examinee data received:', userData);
+				console.log("Examinee data received:", userData);
 				setExaminee(userData);
 				await initializeTestSession(userData);
 			} else if (response.status === 404) {
@@ -53,11 +146,11 @@ const TestInterface = () => {
 				);
 			} else {
 				const errorData = await response.json();
-				console.error('Examinee API error:', errorData);
+				console.error("Examinee API error:", errorData);
 				setError(errorData.message || "Failed to load examinee data");
 			}
 		} catch (err) {
-			console.error('Examinee fetch error:', err);
+			console.error("Examinee fetch error:", err);
 			setError("Failed to load examinee data");
 		} finally {
 			setIsLoading(false);
@@ -67,8 +160,8 @@ const TestInterface = () => {
 	// Initialize test session with filtered questions
 	const initializeTestSession = async (examineeData: User) => {
 		try {
-			console.log('Initializing test session for:', examineeData);
-			
+			console.log("Initializing test session for:", examineeData);
+
 			const response = await fetch("/api/questions/filtered", {
 				method: "POST",
 				headers: {
@@ -81,12 +174,12 @@ const TestInterface = () => {
 				}),
 			});
 
-			console.log('Questions response status:', response.status);
+			console.log("Questions response status:", response.status);
 
 			if (response.ok) {
 				const questions = await response.json();
-				console.log('Questions received:', questions.length);
-				console.log('Sample questions:', questions.slice(0, 3));
+				console.log("Questions received:", questions.length);
+				console.log("Sample questions:", questions.slice(0, 3));
 
 				if (questions.length < 5) {
 					setError(
@@ -98,14 +191,22 @@ const TestInterface = () => {
 				// Better shuffling algorithm - ensure unique questions
 				const availableQuestions = [...questions];
 				const selectedQuestions = [];
-				
+
 				for (let i = 0; i < 5 && availableQuestions.length > 0; i++) {
-					const randomIndex = Math.floor(Math.random() * availableQuestions.length);
+					const randomIndex = Math.floor(
+						Math.random() * availableQuestions.length
+					);
 					selectedQuestions.push(availableQuestions[randomIndex]);
 					availableQuestions.splice(randomIndex, 1); // Remove selected question
 				}
 
-				console.log('Selected questions:', selectedQuestions.map(q => ({ id: q.id, title: q.question_title.substring(0, 50) + '...' })));
+				console.log(
+					"Selected questions:",
+					selectedQuestions.map((q) => ({
+						id: q.id,
+						title: q.question_title.substring(0, 50) + "...",
+					}))
+				);
 
 				const newSession: TestSession = {
 					examinee: examineeData,
@@ -118,14 +219,17 @@ const TestInterface = () => {
 
 				setTestSession(newSession);
 				setCurrentQuestion(selectedQuestions[0]);
-				console.log('Test session initialized successfully');
+				console.log("Test session initialized successfully");
 			} else {
 				const errorData = await response.json();
-				console.error('Questions API error:', errorData);
-				setError(errorData.message || "Failed to load questions for this examinee");
+				console.error("Questions API error:", errorData);
+				setError(
+					errorData.message ||
+						"Failed to load questions for this examinee"
+				);
 			}
 		} catch (err) {
-			console.error('Test session initialization error:', err);
+			console.error("Test session initialization error:", err);
 			setError("Failed to initialize test session");
 		}
 	};
@@ -135,8 +239,13 @@ const TestInterface = () => {
 		(isCorrect: boolean) => {
 			if (!testSession || !currentQuestion) return;
 
-			console.log(`Answer submitted for question ${testSession.currentQuestionIndex + 1}:`, isCorrect);
-			console.log('Current question ID:', currentQuestion.id);
+			console.log(
+				`Answer submitted for question ${
+					testSession.currentQuestionIndex + 1
+				}:`,
+				isCorrect
+			);
+			console.log("Current question ID:", currentQuestion.id);
 
 			const newAttempt: QuestionAttempt = {
 				questionId: currentQuestion.id,
@@ -145,36 +254,37 @@ const TestInterface = () => {
 			};
 
 			const updatedAttempts = [...testSession.attempts, newAttempt];
-			const updatedPassedCount = testSession.passedCount + (isCorrect ? 1 : 0);
+			const updatedPassedCount =
+				testSession.passedCount + (isCorrect ? 1 : 0);
 			const nextIndex = testSession.currentQuestionIndex + 1;
 
-			console.log('Updated stats:', {
+			console.log("Updated stats:", {
 				questionsAsked: updatedAttempts.length,
 				passedCount: updatedPassedCount,
 				failedCount: updatedAttempts.length - updatedPassedCount,
 				nextIndex,
-				totalQuestions: testSession.questions.length
+				totalQuestions: testSession.questions.length,
 			});
 
 			// FIXED: Test ending conditions - ONLY these 3 scenarios:
 			// 1. Got 3 correct answers (PASS early)
 			// 2. Used all 5 attempts (END regardless of results)
 			// 3. Not enough questions available (handled during initialization)
-			
-			const questionsAsked = updatedAttempts.length;
-			
-			const shouldEnd = 
-				updatedPassedCount >= 3 ||    // Got 3 correct (PASS early)
-				questionsAsked >= 5;          // Used all 5 attempts (END)
 
-			console.log('End conditions check:', {
+			const questionsAsked = updatedAttempts.length;
+
+			const shouldEnd =
+				updatedPassedCount >= 3 || // Got 3 correct (PASS early)
+				questionsAsked >= 5; // Used all 5 attempts (END)
+
+			console.log("End conditions check:", {
 				shouldEnd,
 				questionsAsked,
 				passedCount: updatedPassedCount,
 				reasons: {
 					got3Correct: updatedPassedCount >= 3,
-					usedAll5Attempts: questionsAsked >= 5
-				}
+					usedAll5Attempts: questionsAsked >= 5,
+				},
 			});
 
 			const updatedSession: TestSession = {
@@ -188,100 +298,15 @@ const TestInterface = () => {
 			setTestSession(updatedSession);
 
 			if (shouldEnd) {
-				console.log('Test ending, completing...');
+				console.log("Test ending, completing...");
 				completeTest(updatedSession);
 			} else {
-				console.log('Moving to next question:', nextIndex);
+				console.log("Moving to next question:", nextIndex);
 				setCurrentQuestion(testSession.questions[nextIndex]);
 			}
 		},
-		[testSession, currentQuestion]
+		[testSession, currentQuestion, completeTest]
 	);
-
-	// Complete test and save results
-	const completeTest = async (finalSession: TestSession) => {
-		if (!examiner) return;
-
-		try {
-			console.log("Completing test for examinee:", finalSession.examinee);
-
-			// Get results only for questions that were actually asked/answered
-			const getQuestionResult = (index: number) => {
-				const attempt = finalSession.attempts[index];
-				if (attempt) {
-					// Question was answered - use actual result (true/false)
-					return {
-						id: attempt.questionId,
-						result: attempt.result,
-					};
-				}
-				// Question wasn't asked - leave as null
-				return {
-					id: null,
-					result: null,
-				};
-			};
-
-			const q1 = getQuestionResult(0);
-			const q2 = getQuestionResult(1);
-			const q3 = getQuestionResult(2);
-			const r1 = getQuestionResult(3);
-			const r2 = getQuestionResult(4);
-
-			const testResult = {
-				test_date: new Date().toISOString().split("T")[0],
-				employee_id:
-					finalSession.examinee.employee_id ||
-					finalSession.examinee.employeeID ||
-					examineeId,
-				full_name: finalSession.examinee.full_name,
-				rank: finalSession.examinee.rank,
-				base: finalSession.examinee.base,
-				q1_id: q1.id,
-				q1_result: q1.result,
-				q2_id: q2.id,
-				q2_result: q2.result,
-				q3_id: q3.id,
-				q3_result: q3.result,
-				r1_id: r1.id,
-				r1_result: r1.result,
-				r2_id: r2.id,
-				r2_result: r2.result,
-				examiner_name: examiner.full_name,
-				examiner_id: examiner.id,
-			};
-
-			console.log("Submitting test result:", testResult);
-
-			const response = await fetch("/api/test-results", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${localStorage.getItem("token")}`,
-				},
-				body: JSON.stringify(testResult),
-			});
-
-			if (!response.ok) {
-				const errorData = await response.json();
-				console.error("Failed to save test results:", errorData);
-				throw new Error(
-					errorData.message || "Failed to save test results"
-				);
-			}
-
-			const savedResult = await response.json();
-			console.log("Test result saved successfully:", savedResult);
-
-			setTestComplete(true);
-		} catch (err) {
-			console.error("Error saving test results:", err);
-			setError(
-				"Failed to save test results: " +
-					(err instanceof Error ? err.message : "Unknown error")
-			);
-		}
-	};
 
 	// Reset for next test
 	const resetTest = () => {
@@ -318,8 +343,10 @@ const TestInterface = () => {
 						{testSession?.examinee.full_name} has completed the oral
 						test.
 						<br />
-						Result: {testSession?.passedCount >= 3 ? 'PASSED' : 'FAILED'} 
-						({testSession?.passedCount}/3 correct in {testSession?.attempts.length} attempts)
+						Result:{" "}
+						{testSession?.passedCount >= 3 ? "PASSED" : "FAILED"}(
+						{testSession?.passedCount}/3 correct in{" "}
+						{testSession?.attempts.length} attempts)
 					</p>
 					<button className="btn btn-primary" onClick={resetTest}>
 						Test Next Examinee

@@ -1,7 +1,7 @@
 // src/components/oral-test/management/UserManagement/UserManagement.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { User } from "@/lib/types";
 import DataTable from "../DataTable/DataTable";
@@ -14,19 +14,24 @@ const useResponsiveButtonText = () => {
 
 	useEffect(() => {
 		const checkViewport = () => {
-			setIsCompactView(window.innerWidth >= 1024 && window.innerWidth < 1300);
+			setIsCompactView(
+				window.innerWidth >= 1024 && window.innerWidth < 1300
+			);
 		};
 
 		checkViewport();
-		window.addEventListener('resize', checkViewport);
-		return () => window.removeEventListener('resize', checkViewport);
+		window.addEventListener("resize", checkViewport);
+		return () => window.removeEventListener("resize", checkViewport);
 	}, []);
 
 	return {
 		addText: isCompactView ? "➕ Add" : "➕ Add User",
 		exportText: isCompactView ? "📊 Export" : "📊 Export Excel",
-		importText: isCompactView ? "📁 Import" : "📁 Import Excel",
-		deleteText: (count: number) => isCompactView ? `🗑️ Delete (${count})` : `🗑️ Delete Selected (${count})`
+		importText: isCompactView ? "📄 Import" : "📄 Import Excel",
+		deleteText: (count: number) =>
+			isCompactView
+				? `🗑️ Delete (${count})`
+				: `🗑️ Delete Selected (${count})`,
 	};
 };
 
@@ -38,74 +43,79 @@ const UserManagement = () => {
 	const [editingUser, setEditingUser] = useState<User | null>(null);
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-	
+
 	// Responsive button text
 	const buttonText = useResponsiveButtonText();
 
-	useEffect(() => {
-		fetchUsers();
-	}, []);
-
-	const fetchUsers = async () => {
+	const fetchUsers = useCallback(async () => {
 		try {
 			setLoading(true);
-			console.log('Fetching users...');
-			
+			console.log("Fetching users...");
+
 			const response = await fetch("/api/users", {
 				headers: {
 					Authorization: `Bearer ${localStorage.getItem("token")}`,
 				},
 			});
 
-			console.log('Users response status:', response.status);
+			console.log("Users response status:", response.status);
 
 			if (response.ok) {
 				const data = await response.json();
-				console.log('Users API response:', data);
-				
+				console.log("Users API response:", data);
+
 				// Access data.users array instead of trying to filter data directly
 				const usersArray = data.users || data; // Handle both response formats
-				
+
 				if (Array.isArray(usersArray)) {
 					// Show admin user only if current user is admin
 					const filteredUsers = usersArray.filter((user: User) => {
 						// If current user is admin, show all users (including admin)
-						if (currentUser && currentUser.employee_id === "admin") {
+						if (
+							currentUser &&
+							currentUser.employee_id === "admin"
+						) {
 							return true;
 						}
 						// Otherwise, filter out admin users
 						return user.employee_id !== "admin";
 					});
-					
+
 					// Sort users to show admin at top when logged in as admin
-					const sortedUsers = filteredUsers.sort((a: User, b: User) => {
-						// If current user is admin, put admin user at the top
-						if (currentUser?.employee_id === "admin") {
-							if (a.employee_id === "admin") return -1;
-							if (b.employee_id === "admin") return 1;
+					const sortedUsers = filteredUsers.sort(
+						(a: User, b: User) => {
+							// If current user is admin, put admin user at the top
+							if (currentUser?.employee_id === "admin") {
+								if (a.employee_id === "admin") return -1;
+								if (b.employee_id === "admin") return 1;
+							}
+							// Otherwise sort alphabetically by full name
+							return a.full_name.localeCompare(b.full_name);
 						}
-						// Otherwise sort alphabetically by full name
-						return a.full_name.localeCompare(b.full_name);
-					});
-					
-					console.log('Filtered and sorted users:', sortedUsers);
+					);
+
+					console.log("Filtered and sorted users:", sortedUsers);
 					setUsers(sortedUsers);
 				} else {
-					console.error('Invalid users data format:', usersArray);
+					console.error("Invalid users data format:", usersArray);
 					setError("Invalid users data format received");
 				}
 			} else {
 				const errorData = await response.json();
-				console.error('Users API error:', errorData);
+				console.error("Users API error:", errorData);
 				setError(errorData.message || "Failed to load users");
 			}
 		} catch (err) {
-			console.error('Users fetch error:', err);
+			console.error("Users fetch error:", err);
 			setError("Failed to load users");
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [currentUser]);
+
+	useEffect(() => {
+		fetchUsers();
+	}, [fetchUsers]);
 
 	const handleSaveUser = async (userData: Partial<User>) => {
 		try {
@@ -115,7 +125,9 @@ const UserManagement = () => {
 				if (editingUser.id !== currentUser.id) {
 					// Only level 20+ can change other users' passwords
 					if (currentUser.authentication_level < 20) {
-						setError("Access denied: You can only change your own password. Authentication level 20+ required to change other users' passwords.");
+						setError(
+							"Access denied: You can only change your own password. Authentication level 20+ required to change other users' passwords."
+						);
 						return;
 					}
 				}
@@ -164,7 +176,9 @@ const UserManagement = () => {
 
 	const handleDeleteUsers = async (userIds: string[]) => {
 		// Prevent deletion of admin user
-		const adminUser = users.find(user => user.employee_id === "admin" && userIds.includes(user.id));
+		const adminUser = users.find(
+			(user) => user.employee_id === "admin" && userIds.includes(user.id)
+		);
 		if (adminUser) {
 			setError("Cannot delete admin user");
 			return;
@@ -184,7 +198,9 @@ const UserManagement = () => {
 					fetch(`/api/users/${id}`, {
 						method: "DELETE",
 						headers: {
-							Authorization: `Bearer ${localStorage.getItem("token")}`,
+							Authorization: `Bearer ${localStorage.getItem(
+								"token"
+							)}`,
 						},
 					})
 				)
@@ -204,13 +220,13 @@ const UserManagement = () => {
 			const exportData = users.map((user) => ({
 				"Employee ID": user.employee_id,
 				"Full Name": user.full_name,
-				"Rank": getRankAbbreviation(user.rank),
+				Rank: getRankAbbreviation(user.rank),
 				Base: user.base,
 				Email: user.email,
 				"Excluded Categories": Array.isArray(user.filter)
 					? user.filter.join(", ")
 					: "",
-				"Created Date": user.created_at 
+				"Created Date": user.created_at
 					? new Date(user.created_at).toLocaleDateString("en-US")
 					: "N/A",
 				"Last Modified": user.updated_at
@@ -276,9 +292,13 @@ const UserManagement = () => {
 
 			// Prevent importing admin users (except by admin)
 			if (currentUser?.employee_id !== "admin") {
-				const hasAdminUser = importedUsers.some(user => user.employee_id === "admin");
+				const hasAdminUser = importedUsers.some(
+					(user) => user.employee_id === "admin"
+				);
 				if (hasAdminUser) {
-					setError("Cannot import admin users. Only admin can manage admin accounts.");
+					setError(
+						"Cannot import admin users. Only admin can manage admin accounts."
+					);
 					return;
 				}
 			}
@@ -314,7 +334,9 @@ const UserManagement = () => {
 						method: "POST",
 						headers: {
 							"Content-Type": "application/json",
-							Authorization: `Bearer ${localStorage.getItem("token")}`,
+							Authorization: `Bearer ${localStorage.getItem(
+								"token"
+							)}`,
 						},
 						body: JSON.stringify(userData),
 					});
@@ -324,13 +346,23 @@ const UserManagement = () => {
 					} else {
 						errorCount++;
 						const errorData = await response.json();
-						const errorMsg = errorData.message || errorData.error || "Unknown error";
-						importErrors.push(`${userData.employee_id}: ${errorMsg}`);
+						const errorMsg =
+							errorData.message ||
+							errorData.error ||
+							"Unknown error";
+						importErrors.push(
+							`${userData.employee_id}: ${errorMsg}`
+						);
 					}
 				} catch (err) {
 					errorCount++;
-					console.error(`Import error for ${userData.employee_id}:`, err);
-					importErrors.push(`${userData.employee_id}: Network/connection error`);
+					console.error(
+						`Import error for ${userData.employee_id}:`,
+						err
+					);
+					importErrors.push(
+						`${userData.employee_id}: Network/connection error`
+					);
 				}
 			}
 
@@ -410,10 +442,10 @@ const UserManagement = () => {
 	// Helper function to extract rank abbreviation
 	const getRankAbbreviation = (rank: string) => {
 		if (!rank) return "";
-		
+
 		// Special case for admin
 		if (rank.toLowerCase() === "admin") return "admin";
-		
+
 		// Extract abbreviation before the first " - " or return first part
 		const parts = rank.split(" - ");
 		return parts[0];
@@ -431,7 +463,13 @@ const UserManagement = () => {
 						filterable: true,
 						// Special styling for admin user
 						render: (value: string) => (
-							<span className={value === "admin" ? styles.adminEmployeeId : ""}>
+							<span
+								className={
+									value === "admin"
+										? styles.adminEmployeeId
+										: ""
+								}
+							>
 								{value}
 							</span>
 						),
@@ -445,10 +483,14 @@ const UserManagement = () => {
 			filterable: true,
 			// Special styling for admin user
 			render: (value: string, user: User) => (
-				<span className={user.employee_id === "admin" ? styles.adminFullName : ""}>
+				<span
+					className={
+						user.employee_id === "admin" ? styles.adminFullName : ""
+					}
+				>
 					{value}
 					{user.employee_id === "admin" && (
-						<span className={styles.adminBadge}>🔑 ADMIN</span>
+						<span className={styles.adminBadge}>🔒 ADMIN</span>
 					)}
 				</span>
 			),
@@ -553,7 +595,7 @@ const UserManagement = () => {
 				{currentUser?.employee_id === "admin" && (
 					<div className={styles.adminStatus}>
 						<span className={styles.adminIndicator}>
-							🔑 Admin Mode - Admin user visible
+							🔒 Admin Mode - Admin user visible
 						</span>
 					</div>
 				)}
@@ -606,18 +648,18 @@ const UserManagement = () => {
 							(required)
 						</li>
 						<li>
-							<strong>Full Name</strong> - User's full name
+							<strong>Full Name</strong> - User&apos;s full name
 							(required)
 						</li>
 						<li>
-							<strong>Rank</strong> - User's rank (required)
+							<strong>Rank</strong> - User&apos;s rank (required)
 						</li>
 						<li>
-							<strong>Base</strong> - User's base location
+							<strong>Base</strong> - User&apos;s base location
 							(required)
 						</li>
 						<li>
-							<strong>Email</strong> - User's email address
+							<strong>Email</strong> - User&apos;s email address
 							(required)
 						</li>
 						<li>
@@ -627,8 +669,8 @@ const UserManagement = () => {
 					</ul>
 					<p>
 						<em>
-							Default password "TempPassword123!" will be assigned
-							to imported users.
+							Default password &quot;TempPassword123!&quot; will
+							be assigned to imported users.
 						</em>
 					</p>
 				</details>
@@ -702,7 +744,7 @@ const UserForm = ({
 		"Training",
 		"Compliance",
 		"B738機種",
-		"ATR機種"
+		"ATR機種",
 	];
 
 	const handleSubmit = (e: React.FormEvent) => {
@@ -732,13 +774,13 @@ const UserForm = ({
 
 	// Updated rank options with full descriptions
 	const commonRanks = [
-		"FA - Flight Attendant", 
-		"FS - Flight Stewardess", 
-		"LF - Leading Flight Attendant", 
-		"PR - Purser", 
-		"FI - Flight Attendant Instructor", 
-		"SC - Section Chief", 
-		"MG - Manager"
+		"FA - Flight Attendant",
+		"FS - Flight Stewardess",
+		"LF - Leading Flight Attendant",
+		"PR - Purser",
+		"FI - Flight Attendant Instructor",
+		"SC - Section Chief",
+		"MG - Manager",
 	];
 
 	// Determine if password field should be shown and if it's editable
@@ -764,7 +806,9 @@ const UserForm = ({
 						{user ? "✏️ Edit User" : "➕ Add New User"}
 						{/* Show admin indicator in form */}
 						{user?.employee_id === "admin" && (
-							<span className={styles.adminFormBadge}>🔑 ADMIN ACCOUNT</span>
+							<span className={styles.adminFormBadge}>
+								🔒 ADMIN ACCOUNT
+							</span>
 						)}
 					</h2>
 					<button
@@ -780,40 +824,42 @@ const UserForm = ({
 				<form onSubmit={handleSubmit} className={styles.userForm}>
 					<div className={styles.formGrid}>
 						{/* Employee ID - show based on permissions and form type */}
-						{currentUser && 
-							(currentUser.authentication_level >= 5) && (
-							<div className={styles.formGroup}>
-								<label className={styles.formLabel}>
-									Employee ID *
-								</label>
-								<input
-									type="text"
-									className={styles.formInput}
-									value={formData.employee_id}
-									onChange={(e) =>
-										setFormData((prev) => ({
-											...prev,
-											employee_id: e.target.value,
-										}))
-									}
-									required
-									placeholder="e.g., USER001"
-									// Disable editing admin employee ID for non-admin users
-									disabled={
-										user?.employee_id === "admin" && 
-										currentUser?.employee_id !== "admin"
-									}
-								/>
-								{user?.employee_id === "admin" && (
-									<small className={styles.adminNote}>
-										⚠️ Admin account - handle with care
-									</small>
-								)}
-							</div>
-						)}
+						{currentUser &&
+							currentUser.authentication_level >= 5 && (
+								<div className={styles.formGroup}>
+									<label className={styles.formLabel}>
+										Employee ID *
+									</label>
+									<input
+										type="text"
+										className={styles.formInput}
+										value={formData.employee_id}
+										onChange={(e) =>
+											setFormData((prev) => ({
+												...prev,
+												employee_id: e.target.value,
+											}))
+										}
+										required
+										placeholder="e.g., USER001"
+										// Disable editing admin employee ID for non-admin users
+										disabled={
+											user?.employee_id === "admin" &&
+											currentUser?.employee_id !== "admin"
+										}
+									/>
+									{user?.employee_id === "admin" && (
+										<small className={styles.adminNote}>
+											⚠️ Admin account - handle with care
+										</small>
+									)}
+								</div>
+							)}
 
 						<div className={styles.formGroup}>
-							<label className={styles.formLabel}>Full Name *</label>
+							<label className={styles.formLabel}>
+								Full Name *
+							</label>
 							<input
 								type="text"
 								className={styles.formInput}
@@ -911,114 +957,124 @@ const UserForm = ({
 								/>
 								{user?.employee_id === "admin" && (
 									<small className={styles.adminNote}>
-										⚠️ Changing admin password affects system access
+										⚠️ Changing admin password affects
+										system access
 									</small>
 								)}
 							</div>
 						)}
 
 						{/* Show password field for level 20+ users editing other users */}
-						{canChangePassword() && isEditingOtherUser() && currentUser?.authentication_level >= 20 && (
-							<div className={styles.formGroup}>
-								<label className={styles.formLabel}>
-									Password 
-									<span className={styles.optional}>
-										(Leave blank to keep current)
-									</span>
-								</label>
-								<input
-									type="password"
-									className={styles.formInput}
-									value={formData.password}
-									onChange={(e) =>
-										setFormData((prev) => ({
-											...prev,
-											password: e.target.value,
-										}))
-									}
-									placeholder="Leave blank to keep current password"
-									minLength={6}
-								/>
-								{user?.employee_id === "admin" && (
-									<small className={styles.adminNote}>
-										⚠️ Changing admin password affects system access
+						{canChangePassword() &&
+							isEditingOtherUser() &&
+							currentUser?.authentication_level >= 20 && (
+								<div className={styles.formGroup}>
+									<label className={styles.formLabel}>
+										Password
+										<span className={styles.optional}>
+											(Leave blank to keep current)
+										</span>
+									</label>
+									<input
+										type="password"
+										className={styles.formInput}
+										value={formData.password}
+										onChange={(e) =>
+											setFormData((prev) => ({
+												...prev,
+												password: e.target.value,
+											}))
+										}
+										placeholder="Leave blank to keep current password"
+										minLength={6}
+									/>
+									{user?.employee_id === "admin" && (
+										<small className={styles.adminNote}>
+											⚠️ Changing admin password affects
+											system access
+										</small>
+									)}
+									<small className={styles.authNote}>
+										✅ You have level{" "}
+										{currentUser?.authentication_level}{" "}
+										access - can modify other users&apos;
+										passwords
 									</small>
-								)}
-								<small className={styles.authNote}>
-									✅ You have level {currentUser?.authentication_level} access - can modify other users' passwords
-								</small>
-							</div>
-						)}
+								</div>
+							)}
 
 						{/* Handicap Level - only for level 10+ users */}
-						{currentUser && currentUser.authentication_level >= 10 && (
-							<div className={styles.formGroup}>
-								<label className={styles.formLabel}>
-									Handicap Level
-								</label>
-								<select
-									className={styles.formSelect}
-									value={formData.handicap_level}
-									onChange={(e) =>
-										setFormData((prev) => ({
-											...prev,
-											handicap_level: parseInt(
-												e.target.value
-											),
-										}))
-									}
-								>
-									<option value={1}>
-										1 - Hardest Questions Only
-									</option>
-									<option value={2}>
-										2 - Hard Questions
-									</option>
-									<option value={3}>
-										3 - Mixed Questions (Default)
-									</option>
-									<option value={4}>
-										4 - Easy Questions
-									</option>
-									<option value={5}>
-										5 - Easiest Questions Only
-									</option>
-								</select>
-								<small>
-									Controls difficulty of test questions for
-									this user
-								</small>
-							</div>
-						)}
+						{currentUser &&
+							currentUser.authentication_level >= 10 && (
+								<div className={styles.formGroup}>
+									<label className={styles.formLabel}>
+										Handicap Level
+									</label>
+									<select
+										className={styles.formSelect}
+										value={formData.handicap_level}
+										onChange={(e) =>
+											setFormData((prev) => ({
+												...prev,
+												handicap_level: parseInt(
+													e.target.value
+												),
+											}))
+										}
+									>
+										<option value={1}>
+											1 - Hardest Questions Only
+										</option>
+										<option value={2}>
+											2 - Hard Questions
+										</option>
+										<option value={3}>
+											3 - Mixed Questions (Default)
+										</option>
+										<option value={4}>
+											4 - Easy Questions
+										</option>
+										<option value={5}>
+											5 - Easiest Questions Only
+										</option>
+									</select>
+									<small>
+										Controls difficulty of test questions
+										for this user
+									</small>
+								</div>
+							)}
 
 						{/* Auth Level - only for level 20+ users */}
-						{currentUser && currentUser.authentication_level >= 20 && (
-							<div className={styles.formGroup}>
-								<label className={styles.formLabel}>
-									Authentication Level
-								</label>
-								<AuthLevelDropdown
-									value={formData.authentication_level}
-									onChange={(level) =>
-										setFormData((prev) => ({
-											...prev,
-											authentication_level: level,
-										}))
-									}
-									maxLevel={currentUserAuthLevel}
-								/>
-								<small>
-									Controls access to different parts of the
-									application. Cannot exceed your level (
-									{currentUserAuthLevel}).
-								</small>
-								{user?.employee_id === "admin" && (
-									<small className={styles.adminNote}>
-										⚠️ Admin typically has level 99 access
+						{currentUser &&
+							currentUser.authentication_level >= 20 && (
+								<div className={styles.formGroup}>
+									<label className={styles.formLabel}>
+										Authentication Level
+									</label>
+									<AuthLevelDropdown
+										value={formData.authentication_level}
+										onChange={(level) =>
+											setFormData((prev) => ({
+												...prev,
+												authentication_level: level,
+											}))
+										}
+										maxLevel={currentUserAuthLevel}
+									/>
+									<small>
+										Controls access to different parts of
+										the application. Cannot exceed your
+										level ({currentUserAuthLevel}).
 									</small>
-								)}
-							</div>
-						)}
+									{user?.employee_id === "admin" && (
+										<small className={styles.adminNote}>
+											⚠️ Admin typically has level 99
+											access
+										</small>
+									)}
+								</div>
+							)}
 					</div>
 
 					{/* Filter Categories Section */}
@@ -1048,7 +1104,7 @@ const UserForm = ({
 						</div>
 						<small>
 							Selected categories will be excluded from this
-							user's oral tests. Leave unchecked to allow all
+							user&apos;s oral tests. Leave unchecked to allow all
 							question types.
 						</small>
 					</div>
@@ -1084,13 +1140,29 @@ const AuthLevelDropdown = ({
 	const [isOpen, setIsOpen] = useState(false);
 
 	const levels = [
-		{ value: 1, short: "Squire (見習戰士)", full: "Dashboard" },
+		{ value: 1, short: "Squire (見習戦士)", full: "Dashboard" },
 		{ value: 2, short: "Knight (騎士)", full: "Dashboard/Results" },
 		{ value: 3, short: "Archer (弓手)", full: "Dashboard/Results/Test" },
-		{ value: 4, short: "Oracle (陰陽師)", full: "Dashboard/Results/Test/Questions" },
-		{ value: 5, short: "Black Mage (黑魔道士)", full: "Dashboard/Results/Test/Questions/Users" },
-		{ value: 10, short: "Samurai (侍)", full: "+Handicap/Difficulty Level" },
-		{ value: 20, short: "Dark Knight (黑暗騎士)", full: "+Authentication Level" },
+		{
+			value: 4,
+			short: "Oracle (陰陽師)",
+			full: "Dashboard/Results/Test/Questions",
+		},
+		{
+			value: 5,
+			short: "Black Mage (黒魔道士)",
+			full: "Dashboard/Results/Test/Questions/Users",
+		},
+		{
+			value: 10,
+			short: "Samurai (侍)",
+			full: "+Handicap/Difficulty Level",
+		},
+		{
+			value: 20,
+			short: "Dark Knight (黒暗騎士)",
+			full: "+Authentication Level",
+		},
 		{ value: 99, short: "GOD", full: "Super Administrator" },
 	].filter((level) => level.value <= maxLevel);
 

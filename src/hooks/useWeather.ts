@@ -23,17 +23,19 @@ export const useWeather = (base: string) => {
 
   useEffect(() => {
     const fetchWeather = async () => {
+      // Use local variable instead of modifying parameter
+      const targetBase = base || 'TSA';
+      
       if (!base) {
         console.log('No base provided, using default TSA');
-        base = 'TSA';
       }
       
       try {
         setLoading(true);
         setError(null);
         
-        console.log('Fetching weather for base:', base);
-        const weatherData = await weatherService.current.getWeather(base);
+        console.log('Fetching weather for base:', targetBase);
+        const weatherData = await weatherService.current.getWeather(targetBase);
         
         setWeather(weatherData);
         lastFetchTime.current = Date.now();
@@ -48,7 +50,7 @@ export const useWeather = (base: string) => {
         setError(errorMessage);
         
         // Set fallback weather
-        const locationName = base === 'KHH' ? '高雄' : base === 'RMQ' ? '台中' : '松山';
+        const locationName = targetBase === 'KHH' ? '高雄' : targetBase === 'RMQ' ? '台中' : '松山';
         setWeather({
           location: locationName,
           temperature: 28,
@@ -87,10 +89,13 @@ export const useWeather = (base: string) => {
 
   // Function to manually refresh weather
   const refreshWeather = async () => {
+    // Use local variable for consistency
+    const targetBase = base || 'TSA';
+    
     try {
       setLoading(true);
       setError(null);
-      const weatherData = await weatherService.current.getWeather(base, true); // Force refresh
+      const weatherData = await weatherService.current.getWeather(targetBase, true); // Force refresh
       setWeather(weatherData);
       lastFetchTime.current = Date.now();
     } catch (err) {

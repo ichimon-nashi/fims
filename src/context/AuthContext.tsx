@@ -2,7 +2,7 @@
 // Fixed version with better error handling and weather cache management
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import WeatherService from '@/services/weatherService';
 
 interface User {
@@ -41,28 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 	// Get weather service instance
 	const weatherService = WeatherService.getInstance();
 
-	useEffect(() => {
-		console.log("=== AUTH CONTEXT INIT ===");
-		
-		// Check for existing token on mount - using consistent key "token"
-		const savedToken = localStorage.getItem("token");
-		console.log("Saved token from localStorage:", savedToken ? `${savedToken.substring(0, 20)}...` : "null");
-		
-		if (savedToken) {
-			console.log("Found saved token, verifying...");
-			verifyToken(savedToken);
-		} else {
-			console.log("No saved token found");
-			setLoading(false);
-		}
-	}, []);
-
-	// Debug: Log token changes
-	useEffect(() => {
-		console.log("Token state changed:", token ? `${token.substring(0, 20)}...` : "null");
-	}, [token]);
-
-	const verifyToken = async (tokenToVerify: string) => {
+	const verifyToken = useCallback(async (tokenToVerify: string) => {
 		try {
 			console.log("Verifying token:", tokenToVerify.substring(0, 20) + "...");
 			
@@ -104,7 +83,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [weatherService]);
+
+	useEffect(() => {
+		console.log("=== AUTH CONTEXT INIT ===");
+		
+		// Check for existing token on mount - using consistent key "token"
+		const savedToken = localStorage.getItem("token");
+		console.log("Saved token from localStorage:", savedToken ? `${savedToken.substring(0, 20)}...` : "null");
+		
+		if (savedToken) {
+			console.log("Found saved token, verifying...");
+			verifyToken(savedToken);
+		} else {
+			console.log("No saved token found");
+			setLoading(false);
+		}
+	}, [verifyToken]);
+
+	// Debug: Log token changes
+	useEffect(() => {
+		console.log("Token state changed:", token ? `${token.substring(0, 20)}...` : "null");
+	}, [token]);
 
 	const login = async (identifier: string, password: string): Promise<boolean> => {
 		try {

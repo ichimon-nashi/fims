@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import Image from "next/image";
 import Navbar from "@/components/common/Navbar";
 import styles from "./bc-training.module.css";
 import {
@@ -31,8 +32,24 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 	userDetails,
 	onLogout,
 }) => {
+	const [trayType, setTrayType] = useState<TrayType>("A");
+	const [ITEMS_CONFIG, setItemsConfig] = useState<ItemsConfig>({});
+	const [placedItems, setPlacedItems] = useState<PlacedItems>({});
+	const [correctPositions, setCorrectPositions] = useState<CorrectPositions>(
+		{}
+	);
+	const [draggedItem, setDraggedItem] = useState<string | null>(null);
+	const [feedback, setFeedback] = useState<string>("");
+	const [showCorrectPositions, setShowCorrectPositions] =
+		useState<boolean>(false);
+	const [isLandscape, setIsLandscape] = useState<boolean>(true);
+	const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+	const [touchOffset, setTouchOffset] = useState<TouchOffset>({ x: 0, y: 0 });
+	const dropZoneRef = useRef<HTMLDivElement>(null);
+	const tableSurfaceRef = useRef<HTMLDivElement>(null);
+
 	// Base item configurations with percentage-based positioning
-	const getBaseItemConfig = (trayType: TrayType = "A"): ItemsConfig => {
+	const getBaseItemConfig = useCallback((trayType: TrayType = "A"): ItemsConfig => {
 		const width = typeof window !== "undefined" ? window.innerWidth : 1920;
 		const height =
 			typeof window !== "undefined" ? window.innerHeight : 1080;
@@ -357,28 +374,10 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 		};
 
 		return itemConfigurations[trayType];
-	};
+	}, []);
 
-	const [trayType, setTrayType] = useState<TrayType>("A");
-	const [ITEMS_CONFIG, setItemsConfig] = useState<ItemsConfig>(
-		getBaseItemConfig("A")
-	);
-	const [placedItems, setPlacedItems] = useState<PlacedItems>({});
-	const [correctPositions, setCorrectPositions] = useState<CorrectPositions>(
-		{}
-	);
-	const [draggedItem, setDraggedItem] = useState<string | null>(null);
-	const [feedback, setFeedback] = useState<string>("");
-	const [showCorrectPositions, setShowCorrectPositions] =
-		useState<boolean>(false);
-	const [isLandscape, setIsLandscape] = useState<boolean>(true);
-	const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-	const [touchOffset, setTouchOffset] = useState<TouchOffset>({ x: 0, y: 0 });
-	const dropZoneRef = useRef<HTMLDivElement>(null);
-	const tableSurfaceRef = useRef<HTMLDivElement>(null);
-
-	// Calculate correct positions based on current drop zone size
-	const updateCorrectPositions = (): void => {
+	// Calculate correct positions based on current drop zone size - memoized
+	const updateCorrectPositions = useCallback((): void => {
 		if (!dropZoneRef.current) return;
 
 		const dropZoneRect = dropZoneRef.current.getBoundingClientRect();
@@ -402,7 +401,7 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 		});
 
 		setCorrectPositions(newCorrectPositions);
-	};
+	}, [ITEMS_CONFIG]);
 
 	// Check orientation on mount and resize
 	useEffect(() => {
@@ -413,10 +412,13 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 			setIsLandscape(isLandscapeMode);
 
 			// Update config when window resizes
-			setItemsConfig(getBaseItemConfig(trayType));
+			const newConfig = getBaseItemConfig(trayType);
+			setItemsConfig(newConfig);
 
 			// Delay position calculation to ensure DOM has updated
-			setTimeout(updateCorrectPositions, 100);
+			setTimeout(() => {
+				updateCorrectPositions();
+			}, 100);
 		};
 
 		checkOrientation();
@@ -433,14 +435,20 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 				);
 			};
 		}
-	}, [trayType]);
+	}, [trayType, getBaseItemConfig, updateCorrectPositions]);
+
+	// Initialize items config on mount
+	useEffect(() => {
+		const initialConfig = getBaseItemConfig(trayType);
+		setItemsConfig(initialConfig);
+	}, [trayType, getBaseItemConfig]);
 
 	// Update correct positions when drop zone is ready
 	useEffect(() => {
-		if (dropZoneRef.current) {
+		if (dropZoneRef.current && Object.keys(ITEMS_CONFIG).length > 0) {
 			updateCorrectPositions();
 		}
-	}, [dropZoneRef.current, ITEMS_CONFIG]);
+	}, [ITEMS_CONFIG, updateCorrectPositions]);
 
 	const handleDragStart = (
 		e: React.DragEvent<HTMLDivElement>,
@@ -654,14 +662,17 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 
 	const handleTrayTypeChange = (newTrayType: TrayType): void => {
 		setTrayType(newTrayType);
-		setItemsConfig(getBaseItemConfig(newTrayType));
+		const newConfig = getBaseItemConfig(newTrayType);
+		setItemsConfig(newConfig);
 		// Reset all placements when switching tray types
 		setPlacedItems({});
 		setCorrectPositions({});
 		setFeedback("");
 		setShowCorrectPositions(false);
 		// Delay position calculation to ensure DOM has updated
-		setTimeout(updateCorrectPositions, 100);
+		setTimeout(() => {
+			updateCorrectPositions();
+		}, 100);
 	};
 
 	// Show rotation prompt for portrait mode
@@ -670,10 +681,13 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 			<div className={styles.businessClassContainer}>
 				<Navbar />
 				<div className={styles.rotationPrompt}>
-					<img
-						src={rotateDevice.src}
+					<Image
+						src={rotateDevice}
 						alt="Rotate Device"
 						className={styles.rotationGif}
+						width={300}
+						height={200}
+						priority
 					/>
 					<p>請旋轉至橫向模式</p>
 					<p>Please rotate to landscape mode</p>
@@ -786,11 +800,14 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 											onTouchEnd={handleTouchEnd}
 											title={config.name}
 										>
-											<img
+											<Image
 												src={config.image}
 												alt={config.name}
 												className={styles.itemImage}
+												width={200}
+												height={200}
 												draggable={false}
+												unoptimized
 											/>
 										</div>
 									);
@@ -879,11 +896,14 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 											}
 											title={config.name}
 										>
-											<img
+											<Image
 												src={config.image}
 												alt={config.name}
 												className={styles.itemImage}
+												width={100}
+												height={100}
 												draggable={false}
+												unoptimized
 											/>
 											{hoveredItem === itemId &&
 												!isPlaced && (
