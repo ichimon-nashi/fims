@@ -1,6 +1,7 @@
 // src/components/test/ExamineeInfo/ExamineeInfo.tsx
 "use client";
 
+import React from "react";
 import { User } from "@/lib/types";
 import Avatar from "@/components/ui/Avatar/Avatar";
 import styles from "./ExamineeInfo.module.css";
@@ -10,12 +11,12 @@ interface ExamineeInfoProps {
 	hidePrivateInfo?: boolean;
 }
 
-const ExamineeInfo = ({
+const ExamineeInfo: React.FC<ExamineeInfoProps> = ({
 	examinee,
 	hidePrivateInfo = false,
-}: ExamineeInfoProps) => {
-	// Handle both employee_id and employeeID fields
-	const employeeId = examinee.employee_id || examinee.employeeID;
+}) => {
+	// Use the correct property name from User type
+	const employeeId = examinee.employee_id;
 	
 	return (
 		<div className={styles.examineeInfo}>
@@ -33,18 +34,18 @@ const ExamineeInfo = ({
 					<div className={styles.infoItem}>
 						<span className={styles.label}>Employee ID:</span>
 						<span className={styles.value}>
-							{employeeId}
+							{employeeId || "N/A"}
 						</span>
 					</div>
 
 					<div className={styles.infoItem}>
 						<span className={styles.label}>Rank:</span>
-						<span className={styles.value}>{examinee.rank}</span>
+						<span className={styles.value}>{examinee.rank || "N/A"}</span>
 					</div>
 
 					<div className={styles.infoItem}>
 						<span className={styles.label}>Base:</span>
-						<span className={styles.value}>{examinee.base}</span>
+						<span className={styles.value}>{examinee.base || "N/A"}</span>
 					</div>
 
 					{!hidePrivateInfo && (
@@ -52,7 +53,7 @@ const ExamineeInfo = ({
 							<div className={styles.infoItem}>
 								<span className={styles.label}>Email:</span>
 								<span className={styles.value}>
-									{examinee.email}
+									{examinee.email || "N/A"}
 								</span>
 							</div>
 
@@ -80,11 +81,11 @@ const ExamineeInfo = ({
 						</>
 					)}
 
-					{examinee.filter && examinee.filter.length > 0 && (
+					{examinee.filter && Array.isArray(examinee.filter) && examinee.filter.length > 0 && (
 						<div className={styles.infoItem}>
 							<span className={styles.label}>Excluded Categories:</span>
 							<div className={styles.filterTags}>
-								{examinee.filter.map((filter, index) => (
+								{examinee.filter.map((filter: string, index: number) => (
 									<span
 										key={index}
 										className={styles.filterTag}

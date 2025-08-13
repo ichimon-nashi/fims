@@ -8,6 +8,36 @@ import DataTable from "../DataTable/DataTable";
 import styles from "./UserManagement.module.css";
 import * as XLSX from "xlsx";
 
+// Define types for imported user data
+interface ImportedUserData {
+	employee_id: string;
+	full_name: string;
+	rank: string;
+	base: string;
+	email: string;
+	filter: string[];
+	authentication_level: number;
+	handicap_level: number;
+	password: string;
+}
+
+// Define type for Excel row data
+interface ExcelRowData {
+	"Employee ID"?: string;
+	"employee_id"?: string;
+	"Full Name"?: string;
+	"full_name"?: string;
+	"Rank"?: string;
+	"rank"?: string;
+	"Base"?: string;
+	"base"?: string;
+	"Email"?: string;
+	"email"?: string;
+	"Excluded Categories"?: string;
+	"filter"?: string[] | string;
+	[key: string]: any;
+}
+
 // Responsive button text hook
 const useResponsiveButtonText = () => {
 	const [isCompactView, setIsCompactView] = useState(false);
@@ -265,24 +295,26 @@ const UserManagement = () => {
 			const data = await file.arrayBuffer();
 			const workbook = XLSX.read(data);
 			const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-			const jsonData = XLSX.utils.sheet_to_json(worksheet);
+			const jsonData = XLSX.utils.sheet_to_json(worksheet) as ExcelRowData[];
 
 			// Validate and transform imported data
-			const importedUsers = jsonData.map((row: any) => {
+			const importedUsers: ImportedUserData[] = jsonData.map((row: ExcelRowData) => {
 				// Map Excel columns to database fields
 				return {
-					employee_id: row["Employee ID"] || row["employee_id"],
-					full_name: row["Full Name"] || row["full_name"],
-					rank: row["Rank"] || row["rank"],
-					base: row["Base"] || row["base"],
-					email: row["Email"] || row["email"],
+					employee_id: row["Employee ID"] || row["employee_id"] || "",
+					full_name: row["Full Name"] || row["full_name"] || "",
+					rank: row["Rank"] || row["rank"] || "",
+					base: row["Base"] || row["base"] || "",
+					email: row["Email"] || row["email"] || "",
 					filter:
 						typeof row["Excluded Categories"] === "string"
 							? row["Excluded Categories"]
 									.split(",")
 									.map((s) => s.trim())
 									.filter((s) => s)
-							: row["filter"] || [],
+							: Array.isArray(row["filter"]) 
+								? row["filter"] 
+								: [],
 					// Set default values for fields not in import
 					authentication_level: 1,
 					handicap_level: 3,
@@ -304,7 +336,7 @@ const UserManagement = () => {
 			}
 
 			// Validate required fields
-			const errors = [];
+			const errors: string[] = [];
 			importedUsers.forEach((user, index) => {
 				if (!user.employee_id)
 					errors.push(`Row ${index + 2}: Employee ID is required`);
@@ -326,7 +358,7 @@ const UserManagement = () => {
 			// Batch create users
 			let successCount = 0;
 			let errorCount = 0;
-			const importErrors = [];
+			const importErrors: string[] = [];
 
 			for (const userData of importedUsers) {
 				try {
@@ -388,7 +420,7 @@ const UserManagement = () => {
 	};
 
 	// Helper function to get authentication level CSS class
-	const getAuthClass = (level: number) => {
+	const getAuthClass = (level: number): string => {
 		// Map specific authentication levels to CSS classes
 		switch (level) {
 			case 1:
@@ -421,7 +453,7 @@ const UserManagement = () => {
 	};
 
 	// Helper function to get handicap level CSS class
-	const getHandicapClass = (level: number) => {
+	const getHandicapClass = (level: number): string => {
 		// Map handicap levels to CSS classes
 		switch (level) {
 			case 1:
@@ -440,7 +472,7 @@ const UserManagement = () => {
 	};
 
 	// Helper function to extract rank abbreviation
-	const getRankAbbreviation = (rank: string) => {
+	const getRankAbbreviation = (rank: string): string => {
 		if (!rank) return "";
 
 		// Special case for admin
@@ -753,7 +785,7 @@ const UserForm = ({
 
 		// Remove password if empty (for updates)
 		if (!submitData.password && user) {
-			delete submitData.password;
+			delete (submitData as any).password;
 		}
 
 		onSave(submitData);
@@ -784,7 +816,7 @@ const UserForm = ({
 	];
 
 	// Determine if password field should be shown and if it's editable
-	const canChangePassword = () => {
+	const canChangePassword = (): boolean => {
 		if (!user) return true; // New user, always show password
 		if (!currentUser) return false;
 		if (currentUser.authentication_level >= 20) return true; // Level 20+ can change any password
@@ -793,7 +825,7 @@ const UserForm = ({
 	};
 
 	// Determine if this is editing another user's account
-	const isEditingOtherUser = () => {
+	const isEditingOtherUser = (): boolean => {
 		if (!user || !currentUser) return false;
 		return user.id !== currentUser.id;
 	};
@@ -967,7 +999,8 @@ const UserForm = ({
 						{/* Show password field for level 20+ users editing other users */}
 						{canChangePassword() &&
 							isEditingOtherUser() &&
-							currentUser?.authentication_level >= 20 && (
+							currentUser &&
+							currentUser.authentication_level >= 20 && (
 								<div className={styles.formGroup}>
 									<label className={styles.formLabel}>
 										Password
@@ -1115,7 +1148,7 @@ const UserForm = ({
 							className="btn btn-secondary"
 							onClick={onCancel}
 						>
-							❌ Cancel
+							⌫ Cancel
 						</button>
 						<button type="submit" className="btn btn-primary">
 							{user ? "💾 Update User" : "✅ Create User"}
@@ -1126,6 +1159,13 @@ const UserForm = ({
 		</div>
 	);
 };
+
+// Define interface for authentication level option
+interface AuthLevelOption {
+	value: number;
+	short: string;
+	full: string;
+}
 
 // Custom Authentication Level Dropdown Component
 const AuthLevelDropdown = ({
@@ -1139,8 +1179,8 @@ const AuthLevelDropdown = ({
 }) => {
 	const [isOpen, setIsOpen] = useState(false);
 
-	const levels = [
-		{ value: 1, short: "Squire (見習戦士)", full: "Dashboard" },
+	const levels: AuthLevelOption[] = [
+		{ value: 1, short: "Squire (見習戰士)", full: "Dashboard" },
 		{ value: 2, short: "Knight (騎士)", full: "Dashboard/Results" },
 		{ value: 3, short: "Archer (弓手)", full: "Dashboard/Results/Test" },
 		{
@@ -1150,7 +1190,7 @@ const AuthLevelDropdown = ({
 		},
 		{
 			value: 5,
-			short: "Black Mage (黒魔道士)",
+			short: "Black Mage (黑魔道士)",
 			full: "Dashboard/Results/Test/Questions/Users",
 		},
 		{
@@ -1160,7 +1200,7 @@ const AuthLevelDropdown = ({
 		},
 		{
 			value: 20,
-			short: "Dark Knight (黒暗騎士)",
+			short: "Dark Knight (黑暗騎士)",
 			full: "+Authentication Level",
 		},
 		{ value: 99, short: "GOD", full: "Super Administrator" },
@@ -1169,7 +1209,7 @@ const AuthLevelDropdown = ({
 	const selectedLevel = levels.find((l) => l.value === value);
 
 	// Helper function to get level CSS class for dropdown
-	const getLevelClass = (level: number) => {
+	const getLevelClass = (level: number): string => {
 		// Map specific authentication levels to CSS classes
 		switch (level) {
 			case 1:

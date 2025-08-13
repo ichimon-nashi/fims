@@ -1,14 +1,41 @@
 // src/components/test/TestInterface/TestInterface.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { User, Question, TestSession, QuestionAttempt } from "@/lib/types";
 import Timer from "@/components/ui/Timer/Timer";
 import ExamineeInfo from "../ExamineeInfo/ExamineeInfo";
 import styles from "./TestInterface.module.css";
 
-const TestInterface = () => {
+// Define interface for test result submission
+interface TestResultSubmission {
+	test_date: string;
+	employee_id: string;
+	full_name: string;
+	rank: string;
+	base: string;
+	q1_id: string | null;
+	q1_result: boolean | null;
+	q2_id: string | null;
+	q2_result: boolean | null;
+	q3_id: string | null;
+	q3_result: boolean | null;
+	r1_id: string | null;
+	r1_result: boolean | null;
+	r2_id: string | null;
+	r2_result: boolean | null;
+	examiner_name: string;
+	examiner_id: string;
+}
+
+// Define interface for question result
+interface QuestionResult {
+	id: string | null;
+	result: boolean | null;
+}
+
+const TestInterface: React.FC = () => {
 	const { user: examiner } = useAuth();
 	const [examineeId, setExamineeId] = useState("");
 	const [examinee, setExaminee] = useState<User | null>(null);
@@ -33,7 +60,7 @@ const TestInterface = () => {
 				);
 
 				// Get results only for questions that were actually asked/answered
-				const getQuestionResult = (index: number) => {
+				const getQuestionResult = (index: number): QuestionResult => {
 					const attempt = finalSession.attempts[index];
 					if (attempt) {
 						// Question was answered - use actual result (true/false)
@@ -55,15 +82,15 @@ const TestInterface = () => {
 				const r1 = getQuestionResult(3);
 				const r2 = getQuestionResult(4);
 
-				const testResult = {
+				const testResult: TestResultSubmission = {
 					test_date: new Date().toISOString().split("T")[0],
 					employee_id:
 						finalSession.examinee.employee_id ||
-						finalSession.examinee.employeeID ||
-						examineeId,
-					full_name: finalSession.examinee.full_name,
-					rank: finalSession.examinee.rank,
-					base: finalSession.examinee.base,
+						examineeId ||
+						"",
+					full_name: finalSession.examinee.full_name || "",
+					rank: finalSession.examinee.rank || "",
+					base: finalSession.examinee.base || "",
 					q1_id: q1.id,
 					q1_result: q1.result,
 					q2_id: q2.id,
@@ -74,8 +101,8 @@ const TestInterface = () => {
 					r1_result: r1.result,
 					r2_id: r2.id,
 					r2_result: r2.result,
-					examiner_name: examiner.full_name,
-					examiner_id: examiner.id,
+					examiner_name: examiner.full_name || "",
+					examiner_id: examiner.id || "",
 				};
 
 				console.log("Submitting test result:", testResult);
@@ -115,7 +142,7 @@ const TestInterface = () => {
 	);
 
 	// Load examinee data
-	const loadExaminee = async () => {
+	const loadExaminee = async (): Promise<void> => {
 		if (!examineeId.trim()) {
 			setError("Please enter an examinee ID");
 			return;
@@ -136,7 +163,7 @@ const TestInterface = () => {
 			console.log("Examinee response status:", response.status);
 
 			if (response.ok) {
-				const userData = await response.json();
+				const userData: User = await response.json();
 				console.log("Examinee data received:", userData);
 				setExaminee(userData);
 				await initializeTestSession(userData);
@@ -158,7 +185,7 @@ const TestInterface = () => {
 	};
 
 	// Initialize test session with filtered questions
-	const initializeTestSession = async (examineeData: User) => {
+	const initializeTestSession = async (examineeData: User): Promise<void> => {
 		try {
 			console.log("Initializing test session for:", examineeData);
 
@@ -177,7 +204,7 @@ const TestInterface = () => {
 			console.log("Questions response status:", response.status);
 
 			if (response.ok) {
-				const questions = await response.json();
+				const questions: Question[] = await response.json();
 				console.log("Questions received:", questions.length);
 				console.log("Sample questions:", questions.slice(0, 3));
 
@@ -190,7 +217,7 @@ const TestInterface = () => {
 
 				// Better shuffling algorithm - ensure unique questions
 				const availableQuestions = [...questions];
-				const selectedQuestions = [];
+				const selectedQuestions: Question[] = [];
 
 				for (let i = 0; i < 5 && availableQuestions.length > 0; i++) {
 					const randomIndex = Math.floor(
@@ -202,7 +229,7 @@ const TestInterface = () => {
 
 				console.log(
 					"Selected questions:",
-					selectedQuestions.map((q) => ({
+					selectedQuestions.map((q: Question) => ({
 						id: q.id,
 						title: q.question_title.substring(0, 50) + "...",
 					}))
@@ -236,7 +263,7 @@ const TestInterface = () => {
 
 	// Handle answer submission
 	const submitAnswer = useCallback(
-		(isCorrect: boolean) => {
+		(isCorrect: boolean): void => {
 			if (!testSession || !currentQuestion) return;
 
 			console.log(
@@ -309,7 +336,7 @@ const TestInterface = () => {
 	);
 
 	// Reset for next test
-	const resetTest = () => {
+	const resetTest = (): void => {
 		setExamineeId("");
 		setExaminee(null);
 		setTestSession(null);
@@ -319,19 +346,26 @@ const TestInterface = () => {
 	};
 
 	// Get question label (Q1, Q2, Q3, R1, R2)
-	const getQuestionLabel = (index: number) => {
+	const getQuestionLabel = (index: number): string => {
 		if (index < 3) return `Q${index + 1}`;
 		return `R${index - 2}`;
 	};
 
 	// Handle timer events
-	const handleTimeUp = useCallback(() => {
+	const handleTimeUp = useCallback((): void => {
 		submitAnswer(false); // Auto-submit as incorrect when time is up
 	}, [submitAnswer]);
 
-	const handleTimeWarning = useCallback((timeLeft: number) => {
+	const handleTimeWarning = useCallback((timeLeft: number): void => {
 		// Visual/audio warning handled by Timer component
 	}, []);
+
+	// Handle key press for examinee ID input
+	const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
+		if (e.key === "Enter") {
+			loadExaminee();
+		}
+	};
 
 	if (testComplete) {
 		return (
@@ -344,9 +378,9 @@ const TestInterface = () => {
 						test.
 						<br />
 						Result:{" "}
-						{testSession?.passedCount >= 3 ? "PASSED" : "FAILED"}(
-						{testSession?.passedCount}/3 correct in{" "}
-						{testSession?.attempts.length} attempts)
+						{(testSession?.passedCount || 0) >= 3 ? "PASSED" : "FAILED"} (
+						{testSession?.passedCount || 0}/3 correct in{" "}
+						{testSession?.attempts.length || 0} attempts)
 					</p>
 					<button className="btn btn-primary" onClick={resetTest}>
 						Test Next Examinee
@@ -372,9 +406,7 @@ const TestInterface = () => {
 								placeholder="Enter examinee employee ID"
 								className="form-input"
 								disabled={isLoading}
-								onKeyPress={(e) =>
-									e.key === "Enter" && loadExaminee()
-								}
+								onKeyPress={handleKeyPress}
 							/>
 						</div>
 

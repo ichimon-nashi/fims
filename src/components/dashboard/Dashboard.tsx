@@ -4,7 +4,7 @@
 import { useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/common/Navbar";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useWeather } from "@/hooks/useWeather";
 import styles from "./Dashboard.module.css";
 
@@ -37,7 +37,7 @@ const Dashboard = () => {
   }, [user, token, loading, router]);
 
   // Fetch dashboard statistics
-  const fetchDashboardStats = async () => {
+  const fetchDashboardStats = useCallback(async () => {
     if (!token || !user) return;
 
     try {
@@ -88,13 +88,13 @@ const Dashboard = () => {
     } finally {
       setStatsLoading(false);
     }
-  };
+  }, [token, user]);
 
   useEffect(() => {
     if (token && user) {
       fetchDashboardStats();
     }
-  }, [token, user]);
+  }, [token, user, fetchDashboardStats]);
 
   // Show loading while checking auth
   if (loading) {

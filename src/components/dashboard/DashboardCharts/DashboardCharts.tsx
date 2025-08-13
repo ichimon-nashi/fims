@@ -45,16 +45,38 @@ interface DashboardChartsProps {
 	data: DashboardData;
 }
 
-const COLORS = ["#667eea", "#764ba2", "#48bb78", "#ed8936", "#e53e3e", "#38b2ac", "#9f7aea", "#f56565"];
+interface TooltipProps {
+	active?: boolean;
+	payload?: any[];
+	label?: string;
+}
+
+const COLORS = [
+	"#667eea",
+	"#764ba2",
+	"#48bb78",
+	"#ed8936",
+	"#e53e3e",
+	"#38b2ac",
+	"#9f7aea",
+	"#f56565",
+];
 
 const DashboardCharts = ({ data }: DashboardChartsProps) => {
-	const { topIncorrectQuestions, examineeTesting, examinerStats, questionsByCategory } = data;
+	const {
+		topIncorrectQuestions,
+		examineeTesting,
+		examinerStats,
+		questionsByCategory,
+	} = data;
 
 	// Use the correct data from the API response
 	// The API should provide the actual counts, not calculated ones
 	const totalUsers = examineeTesting.totalUsers || examineeTesting.total;
-	const currentYearTested = examineeTesting.currentYearTested || examineeTesting.tested;
-	const currentYearRemaining = examineeTesting.currentYearRemaining || examineeTesting.remaining;
+	const currentYearTested =
+		examineeTesting.currentYearTested || examineeTesting.tested;
+	const currentYearRemaining =
+		examineeTesting.currentYearRemaining || examineeTesting.remaining;
 
 	// Calculate completion percentage (cap at 100%)
 	const completionPercentage =
@@ -78,22 +100,23 @@ const DashboardCharts = ({ data }: DashboardChartsProps) => {
 	}));
 
 	// Generate empty data message for questions by category if not provided or empty
-	const categoryData = questionsByCategory && questionsByCategory.length > 0 
-		? questionsByCategory 
-		: [];
+	const categoryData =
+		questionsByCategory && questionsByCategory.length > 0
+			? questionsByCategory
+			: [];
 
 	// Check if we have any data to display
 	const hasData = {
 		questions: topIncorrectQuestions.length > 0,
 		testing: totalUsers > 0 || currentYearTested > 0,
 		examiners: examinerStats.length > 0,
-		categories: categoryData.length > 0
+		categories: categoryData.length > 0,
 	};
 
 	const hasAnyData = Object.values(hasData).some(Boolean);
 
 	// Custom tooltip for questions chart
-	const QuestionTooltip = ({ active, payload, label }: any) => {
+	const QuestionTooltip = ({ active, payload, label }: TooltipProps) => {
 		if (active && payload && payload.length) {
 			const data = payload[0].payload;
 			return (
@@ -117,7 +140,7 @@ const DashboardCharts = ({ data }: DashboardChartsProps) => {
 	};
 
 	// Custom tooltip for examiner chart
-	const ExaminerTooltip = ({ active, payload, label }: any) => {
+	const ExaminerTooltip = ({ active, payload, label }: TooltipProps) => {
 		if (active && payload && payload.length) {
 			return (
 				<div className={styles.customTooltip}>
@@ -132,7 +155,7 @@ const DashboardCharts = ({ data }: DashboardChartsProps) => {
 	};
 
 	// Custom tooltip for category chart
-	const CategoryTooltip = ({ active, payload, label }: any) => {
+	const CategoryTooltip = ({ active, payload, label }: TooltipProps) => {
 		if (active && payload && payload.length) {
 			return (
 				<div className={styles.customTooltip}>
@@ -154,7 +177,10 @@ const DashboardCharts = ({ data }: DashboardChartsProps) => {
 					<div className={styles.noDataIcon}>📊</div>
 					<div className={styles.noDataContent}>
 						<h3>No Dashboard Data Available</h3>
-						<p>Unable to retrieve data from the database. Please check your connection or contact support.</p>
+						<p>
+							Unable to retrieve data from the database. Please
+							check your connection or contact support.
+						</p>
 					</div>
 				</div>
 			)}
@@ -167,7 +193,11 @@ const DashboardCharts = ({ data }: DashboardChartsProps) => {
 						<h3>Total Users</h3>
 						<p className={styles.statsNumber}>
 							{totalUsers}
-							{!hasData.testing && <span className={styles.noDataBadge}>No Data</span>}
+							{!hasData.testing && (
+								<span className={styles.noDataBadge}>
+									No Data
+								</span>
+							)}
 						</p>
 					</div>
 				</div>
@@ -178,7 +208,11 @@ const DashboardCharts = ({ data }: DashboardChartsProps) => {
 						<h3>Tested This Year</h3>
 						<p className={styles.statsNumber}>
 							{currentYearTested}
-							{!hasData.testing && <span className={styles.noDataBadge}>No Data</span>}
+							{!hasData.testing && (
+								<span className={styles.noDataBadge}>
+									No Data
+								</span>
+							)}
 						</p>
 					</div>
 				</div>
@@ -189,7 +223,11 @@ const DashboardCharts = ({ data }: DashboardChartsProps) => {
 						<h3>Remaining</h3>
 						<p className={styles.statsNumber}>
 							{currentYearRemaining}
-							{!hasData.testing && <span className={styles.noDataBadge}>No Data</span>}
+							{!hasData.testing && (
+								<span className={styles.noDataBadge}>
+									No Data
+								</span>
+							)}
 						</p>
 					</div>
 				</div>
@@ -200,7 +238,11 @@ const DashboardCharts = ({ data }: DashboardChartsProps) => {
 						<h3>Completion</h3>
 						<p className={styles.statsNumber}>
 							{completionPercentage}%
-							{!hasData.testing && <span className={styles.noDataBadge}>No Data</span>}
+							{!hasData.testing && (
+								<span className={styles.noDataBadge}>
+									No Data
+								</span>
+							)}
 						</p>
 					</div>
 				</div>
@@ -290,7 +332,7 @@ const DashboardCharts = ({ data }: DashboardChartsProps) => {
 										labelLine={false}
 										label={({ name, value, percent }) =>
 											`${name}: ${value} (${(
-												percent * 100
+												(percent || 0) * 100
 											).toFixed(0)}%)`
 										}
 										outerRadius={70}
@@ -327,9 +369,7 @@ const DashboardCharts = ({ data }: DashboardChartsProps) => {
 
 				{/* Questions by Category Chart */}
 				<div className={styles.chartCard}>
-					<h2 className={styles.chartTitle}>
-						Questions by Category
-					</h2>
+					<h2 className={styles.chartTitle}>Questions by Category</h2>
 					<div className={styles.chartContainer}>
 						{hasData.categories ? (
 							<ResponsiveContainer width="100%" height={250}>

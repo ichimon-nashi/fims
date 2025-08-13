@@ -1,8 +1,38 @@
 // src/app/api/weather/route.ts - Enhanced with comprehensive caching and rate limiting
 import { NextRequest, NextResponse } from 'next/server';
 
+// Define types for better type safety
+interface WeatherData {
+  location: string;
+  temperature: number;
+  description: string;
+  icon: string;
+  humidity: number;
+  windSpeed: number;
+  pressure: number;
+  isMockData?: boolean;
+  timestamp: number;
+  error?: string;
+  fromCache?: boolean;
+  cacheAge?: number;
+  isStale?: boolean;
+  processingTime?: number;
+  source?: string;
+  stats?: {
+    totalApiCalls: number;
+    cacheHits: number;
+    cacheHitRatio: number;
+  };
+}
+
+interface Location {
+  name: string;
+  lat: number;
+  lon: number;
+}
+
 // Base location mapping
-const BASE_LOCATIONS = {
+const BASE_LOCATIONS: Record<string, Location> = {
   'TSA': {
     name: '松山',
     lat: 25.0676,
@@ -21,7 +51,7 @@ const BASE_LOCATIONS = {
 };
 
 // Server-side cache to prevent rapid API calls
-const apiCache = new Map<string, { data: any; timestamp: number; sessionId?: string }>();
+const apiCache = new Map<string, { data: WeatherData; timestamp: number; sessionId?: string }>();
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes server-side cache
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 const MAX_REQUESTS_PER_MINUTE = 8; // Conservative limit for free tier
@@ -68,7 +98,7 @@ function getClientIP(request: NextRequest): string {
 }
 
 function getWeatherIcon(condition: string): string {
-  const iconMap: { [key: string]: string } = {
+  const iconMap: Record<string, string> = {
     'clear': '☀️',
     'clouds': '☁️',
     'rain': '🌧️',
@@ -87,9 +117,9 @@ function getWeatherIcon(condition: string): string {
   return iconMap[condition.toLowerCase()] || '☀️';
 }
 
-function generateMockWeatherData(location: any) {
+function generateMockWeatherData(location: Location): WeatherData {
   const conditions = [
-    { desc: '晴朗', icon: '☀️' },
+    { desc: '晴天', icon: '☀️' },
     { desc: '多雲', icon: '⛅' },
     { desc: '陰天', icon: '☁️' },
     { desc: '小雨', icon: '🌦️' },
@@ -142,7 +172,7 @@ export async function GET(request: NextRequest) {
     console.log(`🌤️ Weather API request: base=${base}, IP=${clientIP}, session=${sessionId.slice(-8)}, force=${forceRefresh}`);
     
     // Get location info
-    const location = BASE_LOCATIONS[base as keyof typeof BASE_LOCATIONS] || BASE_LOCATIONS.TSA;
+    const location = BASE_LOCATIONS[base] || BASE_LOCATIONS.TSA;
     const cacheKey = `weather_${base}`;
     
     // Check server-side cache first (unless force refresh)
@@ -184,7 +214,7 @@ export async function GET(request: NextRequest) {
 
     const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${location.lat}&lon=${location.lon}&appid=${API_KEY}&units=metric&lang=zh_tw`;
     
-    console.log('🌐 Fetching from OpenWeatherMap API...');
+    console.log('🌍 Fetching from OpenWeatherMap API...');
     totalApiCalls++;
     
     // Add timeout to prevent hanging requests
@@ -205,7 +235,7 @@ export async function GET(request: NextRequest) {
         console.error('🚫 OpenWeather API rate limit exceeded');
         throw new Error('OpenWeather API rate limit exceeded');
       } else if (response.status === 401) {
-        console.error('🔑 OpenWeather API authentication failed');
+        console.error('🔒 OpenWeather API authentication failed');
         throw new Error('Weather service authentication failed');
       } else {
         console.error(`💥 OpenWeather API error: ${response.status}`);
@@ -216,7 +246,7 @@ export async function GET(request: NextRequest) {
     const weatherData = await response.json();
     const processingTime = Date.now() - startTime;
     
-    const result = {
+    const result: WeatherData = {
       location: location.name,
       temperature: Math.round(weatherData.main.temp),
       description: weatherData.weather[0].description,
@@ -249,7 +279,7 @@ export async function GET(request: NextRequest) {
     console.error('💥 Weather API error:', error);
     
     const base = new URL(request.url).searchParams.get('base')?.toUpperCase() || 'TSA';
-    const location = BASE_LOCATIONS[base as keyof typeof BASE_LOCATIONS] || BASE_LOCATIONS.TSA;
+    const location = BASE_LOCATIONS[base] || BASE_LOCATIONS.TSA;
     
     // Try to return cached data even if expired
     const cacheKey = `weather_${base}`;
@@ -270,8 +300,10 @@ export async function GET(request: NextRequest) {
     }
     
     // Final fallback with realistic data
-    const fallbackData = generateMockWeatherData(location);
-    fallbackData.error = error instanceof Error ? error.message : 'Unable to fetch live weather data';
+    const fallbackData: WeatherData = {
+      ...generateMockWeatherData(location),
+      error: error instanceof Error ? error.message : 'Unable to fetch live weather data'
+    };
     
     // Cache fallback data for short time to prevent rapid retries
     apiCache.set(cacheKey, { 

@@ -3,9 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { verifyToken, extractTokenFromHeader } from "@/lib/auth";
 
+interface RouteParams {
+	params: Promise<{ id: string }>;
+}
+
 export async function PUT(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: RouteParams
 ) {
 	try {
 		console.log("=== UPDATE QUESTION API DEBUG ===");
@@ -179,7 +183,7 @@ export async function PUT(
 
 export async function DELETE(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: RouteParams
 ) {
 	try {
 		console.log("=== DELETE QUESTION API DEBUG ===");

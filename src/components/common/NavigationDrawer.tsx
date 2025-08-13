@@ -11,6 +11,17 @@ interface NavigationDrawerProps {
 	onClose: () => void;
 }
 
+// Define interface for navigation items
+interface NavigationItem {
+	id: string;
+	title: string;
+	icon: string;
+	path: string;
+	description: string;
+	minAuthLevel?: number;
+	badge?: string;
+}
+
 const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 	const router = useRouter();
 	const pathname = usePathname();
@@ -20,7 +31,7 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 	console.log("NavigationDrawer - User data:", user);
 	console.log("NavigationDrawer - User authentication_level:", user?.authentication_level);
 
-	const navigationItems = [
+	const navigationItems: NavigationItem[] = [
 		{
 			id: "dashboard",
 			title: "儀表板",
@@ -78,7 +89,7 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 	};
 
 	// Check if user has access to a navigation item
-	const hasAccess = (item: any) => {
+	const hasAccess = (item: NavigationItem) => {
 		if (!user) return false;
 		if (!item.minAuthLevel) return true;
 		return user.authentication_level >= item.minAuthLevel;
@@ -93,7 +104,7 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 
 		if (user.employee_id === "admin") {
 			console.log("Admin user detected");
-			return { name: "ADMIN", icon: "🔑", colorScheme: "admin" };
+			return { name: "ADMIN", icon: "🔒", colorScheme: "admin" };
 		}
 
 		const base = user.base?.toUpperCase();
@@ -125,9 +136,9 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 	const baseInfo = getBaseInfo();
 	console.log("BaseInfo result:", baseInfo);
 
-	// Extract employee ID - handle different possible field names
-	const employeeId = user?.employee_id || user?.employeeID || "";
-	const fullName = user?.full_name || user?.name || "";
+	// Extract employee ID and full name using correct User type properties
+	const employeeId = user?.employee_id || "";
+	const fullName = user?.full_name || "";
 
 	console.log("Avatar props:", { employeeId, fullName });
 

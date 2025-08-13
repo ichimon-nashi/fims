@@ -1,14 +1,27 @@
 // src/app/api/dashboard/schedule-stats/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { verifyToken } from "@/lib/auth";
+import { verifyToken, extractTokenFromHeader } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
 
 export async function GET(request: NextRequest) {
 	try {
-		const authResult = await verifyToken(request);
-		if (!authResult.success) {
+		// Extract token from Authorization header
+		const token = extractTokenFromHeader(
+			request.headers.get("authorization")
+		);
+
+		if (!token) {
 			return NextResponse.json(
-				{ error: "Unauthorized" },
+				{ error: "No token provided" },
+				{ status: 401 }
+			);
+		}
+
+		// Verify the token
+		const decoded = verifyToken(token);
+		if (!decoded) {
+			return NextResponse.json(
+				{ error: "Invalid or expired token" },
 				{ status: 401 }
 			);
 		}

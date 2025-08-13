@@ -1,7 +1,7 @@
-// src/components/results/ResultsTable/ResultsTable.tsx
+// src/components/oral-test/results/ResultsTable/ResultsTable.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { TestResult } from "@/lib/types";
 import DataTable from "../../management/DataTable/DataTable";
@@ -49,6 +49,12 @@ interface EnhancedTestResult extends TestResult {
 	};
 }
 
+// Type for API response
+interface TestResultsResponse {
+	results?: EnhancedTestResult[];
+	[key: string]: any;
+}
+
 const ResultsTable = () => {
 	const { user } = useAuth();
 	const [results, setResults] = useState<EnhancedTestResult[]>([]);
@@ -75,13 +81,13 @@ const ResultsTable = () => {
 			console.log("Test results response status:", response.status);
 
 			if (response.ok) {
-				const data = await response.json();
+				const data: TestResultsResponse | EnhancedTestResult[] = await response.json();
 				console.log("Test results data received:", data);
 
-				// FIXED: Handle potential response format issues
-				const resultsArray = Array.isArray(data)
+				// FIXED: Handle potential response format issues with proper typing
+				const resultsArray: EnhancedTestResult[] = Array.isArray(data)
 					? data
-					: data.results || [];
+					: (data as TestResultsResponse).results || [];
 
 				console.log(
 					"Frontend - All results fetched:",
@@ -89,11 +95,11 @@ const ResultsTable = () => {
 					"records"
 				);
 
-				// Debug: Show sample dates
+				// Debug: Show sample dates with proper typing
 				if (resultsArray.length > 0) {
 					console.log(
 						"Sample dates:",
-						resultsArray.slice(0, 3).map((r) => r.test_date)
+						resultsArray.slice(0, 3).map((r: EnhancedTestResult) => r.test_date)
 					);
 				}
 
@@ -166,7 +172,7 @@ const ResultsTable = () => {
 
 		const monthsWithData = new Set<number>();
 
-		const resultsForYear = allResults.filter((result) => {
+		const resultsForYear = allResults.filter((result: EnhancedTestResult) => {
 			const resultYear = new Date(result.test_date).getFullYear();
 			console.log("Result date:", result.test_date, "Year:", resultYear);
 			return resultYear === selectedYear;
@@ -174,7 +180,7 @@ const ResultsTable = () => {
 
 		console.log("Results for selected year:", resultsForYear.length);
 
-		resultsForYear.forEach((result) => {
+		resultsForYear.forEach((result: EnhancedTestResult) => {
 			const month = new Date(result.test_date).getMonth() + 1; // 1-12
 			console.log("Adding month:", month);
 			monthsWithData.add(month);
@@ -193,14 +199,14 @@ const ResultsTable = () => {
 
 	const filterResultsByYearAndMonth = useCallback(() => {
 		let filteredResults = allResults.filter(
-			(result) =>
+			(result: EnhancedTestResult) =>
 				new Date(result.test_date).getFullYear() === selectedYear
 		);
 
 		// Apply month filter if a specific month is selected
 		if (selectedMonth !== 0) {
 			filteredResults = filteredResults.filter(
-				(result) =>
+				(result: EnhancedTestResult) =>
 					new Date(result.test_date).getMonth() + 1 === selectedMonth
 			);
 		}
@@ -417,18 +423,18 @@ const ResultsTable = () => {
 
 			// Create TBODY (data rows)
 			const tbody = document.createElement("tbody");
-			results.forEach((result) => {
+			results.forEach((result: EnhancedTestResult) => {
 				const row = document.createElement("tr");
 				const score = calculateScore(result);
 
 				// Helper function to format question result
 				const formatQuestionResult = (
 					questionKey: "q1" | "q2" | "q3" | "r1" | "r2"
-				) => {
+				): string => {
 					const questionData = result.questions?.[questionKey];
 					const resultValue = result[`${questionKey}_result`];
 
-					if (resultValue === null) return "—";
+					if (resultValue === null || resultValue === undefined) return "—";
 
 					const questionNumber = questionData?.number || "N/A";
 					const resultIcon = resultValue ? "✅" : "❌";
@@ -438,7 +444,7 @@ const ResultsTable = () => {
 
 				const cells = [
 					new Date(result.test_date).toLocaleDateString(),
-					result.employeeID || result.employee_id || "N/A",
+					result.employee_id || "N/A",
 					result.full_name,
 					result.rank,
 					result.base,
@@ -484,7 +490,7 @@ const ResultsTable = () => {
 				width: 1200,
 				scrollX: 0,
 				scrollY: 0,
-			});
+			} as any);
 
 			// Clean up
 			document.body.removeChild(tempContainer);
@@ -493,7 +499,7 @@ const ResultsTable = () => {
 			const link = document.createElement("a");
 			const periodSuffix =
 				selectedMonth === 0
-					? selectedYear
+					? selectedYear.toString()
 					: `${selectedYear}-${selectedMonth
 							.toString()
 							.padStart(2, "0")}`;
@@ -532,42 +538,42 @@ const ResultsTable = () => {
 				"Examiner",
 			];
 
-			const csvData = results.map((result) => {
+			const csvData = results.map((result: EnhancedTestResult) => {
 				const score = calculateScore(result);
 				const scorePercentage = Math.round((score / 3) * 100);
 
 				return [
 					result.test_date,
-					result.employeeID || result.employee_id,
+					result.employee_id,
 					result.full_name,
 					result.rank,
 					result.base,
 					result.questions?.q1?.number || "N/A",
-					result.q1_result === null
+					result.q1_result === null || result.q1_result === undefined
 						? "N/A"
 						: result.q1_result
 						? "V"
 						: "X",
 					result.questions?.q2?.number || "N/A",
-					result.q2_result === null
+					result.q2_result === null || result.q2_result === undefined
 						? "N/A"
 						: result.q2_result
 						? "V"
 						: "X",
 					result.questions?.q3?.number || "N/A",
-					result.q3_result === null
+					result.q3_result === null || result.q3_result === undefined
 						? "N/A"
 						: result.q3_result
 						? "V"
 						: "X",
 					result.questions?.r1?.number || "N/A",
-					result.r1_result === null
+					result.r1_result === null || result.r1_result === undefined
 						? "N/A"
 						: result.r1_result
 						? "V"
 						: "X",
 					result.questions?.r2?.number || "N/A",
-					result.r2_result === null
+					result.r2_result === null || result.r2_result === undefined
 						? "N/A"
 						: result.r2_result
 						? "V"
@@ -589,7 +595,7 @@ const ResultsTable = () => {
 			link.href = URL.createObjectURL(blob);
 			const periodSuffix =
 				selectedMonth === 0
-					? selectedYear
+					? selectedYear.toString()
 					: `${selectedYear}-${selectedMonth
 							.toString()
 							.padStart(2, "0")}`;
@@ -602,37 +608,38 @@ const ResultsTable = () => {
 		}
 	};
 
-	const getResultIcon = (result: boolean | null) => {
-		if (result === null) return "—";
+	const getResultIcon = (result: boolean | null | undefined): string => {
+		if (result === null || result === undefined) return "—";
 		return result ? "✅" : "❌";
 	};
 
-	const getScoreColor = (score: number) => {
+	const getScoreColor = (score: number): string => {
 		if (score >= 3) return styles.scorePass;
 		if (score >= 2) return styles.scoreWarning;
 		return styles.scoreFail;
 	};
 
-	const calculateScore = (result: EnhancedTestResult) => {
-		// Only count correct answers (ignore null values)
-		return [
+	const calculateScore = (result: EnhancedTestResult): number => {
+		// Only count correct answers (ignore null/undefined values)
+		const resultValues = [
 			result.q1_result,
 			result.q2_result,
 			result.q3_result,
 			result.r1_result,
 			result.r2_result,
-		].filter((r) => r === true).length;
+		];
+		return resultValues.filter((r) => r === true).length;
 	};
 
 	// Simplified question render function with question number and result only
 	const renderQuestionResult = (
 		questionKey: "q1" | "q2" | "q3" | "r1" | "r2",
 		result: EnhancedTestResult
-	) => {
+	): React.ReactElement | string => {
 		const questionData = result.questions?.[questionKey];
 		const resultValue = result[`${questionKey}_result`];
 
-		if (!questionData && resultValue === null) {
+		if (!questionData && (resultValue === null || resultValue === undefined)) {
 			return "—";
 		}
 
@@ -657,12 +664,12 @@ const ResultsTable = () => {
 			render: (value: string) => new Date(value).toLocaleDateString(),
 		},
 		{
-			key: "employeeID",
+			key: "employee_id",
 			label: "Employee ID",
 			sortable: true,
 			filterable: true,
 			render: (value: string, row: EnhancedTestResult) =>
-				value || row.employee_id || "N/A",
+				value || "N/A",
 		},
 		{
 			key: "full_name",
@@ -687,7 +694,7 @@ const ResultsTable = () => {
 			label: "Q1",
 			sortable: false,
 			filterable: false,
-			render: (value: boolean | null, row: EnhancedTestResult) =>
+			render: (value: boolean | null | undefined, row: EnhancedTestResult) =>
 				renderQuestionResult("q1", row),
 		},
 		{
@@ -695,7 +702,7 @@ const ResultsTable = () => {
 			label: "Q2",
 			sortable: false,
 			filterable: false,
-			render: (value: boolean | null, row: EnhancedTestResult) =>
+			render: (value: boolean | null | undefined, row: EnhancedTestResult) =>
 				renderQuestionResult("q2", row),
 		},
 		{
@@ -703,7 +710,7 @@ const ResultsTable = () => {
 			label: "Q3",
 			sortable: false,
 			filterable: false,
-			render: (value: boolean | null, row: EnhancedTestResult) =>
+			render: (value: boolean | null | undefined, row: EnhancedTestResult) =>
 				renderQuestionResult("q3", row),
 		},
 		{
@@ -711,7 +718,7 @@ const ResultsTable = () => {
 			label: "R1",
 			sortable: false,
 			filterable: false,
-			render: (value: boolean | null, row: EnhancedTestResult) =>
+			render: (value: boolean | null | undefined, row: EnhancedTestResult) =>
 				renderQuestionResult("r1", row),
 		},
 		{
@@ -719,7 +726,7 @@ const ResultsTable = () => {
 			label: "R2",
 			sortable: false,
 			filterable: false,
-			render: (value: boolean | null, row: EnhancedTestResult) =>
+			render: (value: boolean | null | undefined, row: EnhancedTestResult) =>
 				renderQuestionResult("r2", row),
 		},
 		{
@@ -813,7 +820,7 @@ const ResultsTable = () => {
 						<h3>Passed (3/3)</h3>
 						<p>
 							{
-								results.filter((r) => calculateScore(r) >= 3)
+								results.filter((r: EnhancedTestResult) => calculateScore(r) >= 3)
 									.length
 							}
 						</p>
@@ -826,7 +833,7 @@ const ResultsTable = () => {
 						<h3>Failed (&lt;3)</h3>
 						<p>
 							{
-								results.filter((r) => calculateScore(r) < 3)
+								results.filter((r: EnhancedTestResult) => calculateScore(r) < 3)
 									.length
 							}
 						</p>
@@ -841,7 +848,7 @@ const ResultsTable = () => {
 							{results.length > 0
 								? Math.round(
 										(results.filter(
-											(r) => calculateScore(r) >= 3
+											(r: EnhancedTestResult) => calculateScore(r) >= 3
 										).length /
 											results.length) *
 											100

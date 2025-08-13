@@ -7,6 +7,41 @@ import { Question } from "@/lib/types";
 import DataTable from "../DataTable/DataTable";
 import styles from "./QuestionManagement.module.css";
 
+// Define types for imported question data
+interface ImportedQuestion {
+	question_category: string;
+	question_title: string;
+	question_chapter: string;
+	question_page: number;
+	question_line: number;
+	difficulty_level: number;
+}
+
+// Define type for Excel row data
+interface ExcelRowData {
+	[key: string]: any;
+}
+
+// Define type for current user
+interface CurrentUser {
+	authentication_level: number;
+	employee_id?: string;
+	[key: string]: any;
+}
+
+// Define type for related records info
+interface RelatedRecordInfo {
+	id: string;
+	relatedCount: number;
+}
+
+// Define type for promise result
+interface PromiseResult {
+	status: 'fulfilled' | 'rejected';
+	value?: any;
+	reason?: { message?: string };
+}
+
 // Import XLSX dynamically to avoid SSR issues
 let XLSX: any = null;
 if (typeof window !== "undefined") {
@@ -174,7 +209,7 @@ const QuestionManagement = () => {
 	const handleDeleteQuestions = async (questionIds: string[]) => {
 		// First check for foreign key issues
 		let hasRelatedRecords = false;
-		const relatedRecordsInfo = [];
+		const relatedRecordsInfo: RelatedRecordInfo[] = [];
 
 		try {
 			console.log("Checking for related test results...");
@@ -243,7 +278,7 @@ Do you want to continue anyway? (Will likely fail)`;
 			);
 
 			// Delete questions one by one and collect results
-			const deletePromises = questionIds.map(async (id) => {
+			const deletePromises = questionIds.map(async (id: string) => {
 				console.log(`Attempting to delete question: ${id}`);
 
 				try {
@@ -315,10 +350,10 @@ Do you want to continue anyway? (Will likely fail)`;
 
 			// Check if any deletions failed
 			const failed = results.filter(
-				(result) => result.status === "rejected"
+				(result): result is PromiseRejectedResult => result.status === "rejected"
 			);
 			const successful = results.filter(
-				(result) => result.status === "fulfilled"
+				(result): result is PromiseFulfilledResult<any> => result.status === "fulfilled"
 			);
 
 			console.log(
@@ -456,12 +491,12 @@ ${errorMessages}`);
 			);
 
 			// Validate and transform imported data
-			const importedQuestions = jsonData.map((row: any, index) => {
+			const importedQuestions = jsonData.map((row: ExcelRowData, index: number): ImportedQuestion => {
 				// FIXED: Handle multiple column name formats (both display names and database field names)
 				const getFieldValue = (
-					row: any,
+					row: ExcelRowData,
 					...possibleNames: string[]
-				) => {
+				): any => {
 					for (const name of possibleNames) {
 						if (
 							row[name] !== undefined &&
@@ -475,7 +510,7 @@ ${errorMessages}`);
 				};
 
 				// Map Excel columns to database fields with flexible column name matching
-				const mappedData = {
+				const mappedData: ImportedQuestion = {
 					question_category: getFieldValue(
 						row,
 						"Category",
@@ -538,8 +573,8 @@ ${errorMessages}`);
 			const existingTitles = new Set(
 				questions.map((q) => q.question_title.trim().toLowerCase())
 			);
-			const importTitles = new Set();
-			const duplicates = [];
+			const importTitles = new Set<string>();
+			const duplicates: string[] = [];
 
 			for (const question of importedQuestions) {
 				if (!question.question_title) continue;
@@ -564,20 +599,22 @@ ${errorMessages}`);
 
 			// Validate required fields
 			const errors: string[] = [];
-			importedQuestions.forEach((question, index) => {
-				const rowNum = index + 2; // Excel row number (accounting for header)
+			importedQuestions.forEach(
+				(question: ImportedQuestion, index: number) => {
+					const rowNum = index + 2; // Excel row number (accounting for header)
 
-				if (!question.question_category)
-					errors.push(`Row ${rowNum}: Category is required`);
-				if (!question.question_title)
-					errors.push(`Row ${rowNum}: Question Title is required`);
-				if (!question.question_chapter)
-					errors.push(`Row ${rowNum}: Chapter is required`);
-				if (!question.question_page || question.question_page < 1)
-					errors.push(`Row ${rowNum}: Valid Page number is required`);
-				if (!question.question_line || question.question_line < 1)
-					errors.push(`Row ${rowNum}: Valid Line number is required`);
-			});
+					if (!question.question_category)
+						errors.push(`Row ${rowNum}: Category is required`);
+					if (!question.question_title)
+						errors.push(`Row ${rowNum}: Question Title is required`);
+					if (!question.question_chapter)
+						errors.push(`Row ${rowNum}: Chapter is required`);
+					if (!question.question_page || question.question_page < 1)
+						errors.push(`Row ${rowNum}: Valid Page number is required`);
+					if (!question.question_line || question.question_line < 1)
+						errors.push(`Row ${rowNum}: Valid Line number is required`);
+				}
+			);
 
 			if (errors.length > 0) {
 				setError(
@@ -594,7 +631,7 @@ ${errorMessages}`);
 
 			// Filter out any completely empty rows
 			const validQuestions = importedQuestions.filter(
-				(q) =>
+				(q: ImportedQuestion) =>
 					q.question_category &&
 					q.question_title &&
 					q.question_chapter
@@ -923,8 +960,8 @@ ${errorMessages}`);
 				<DataTable
 					data={questions}
 					columns={columns}
-					onEdit={(question) => setEditingQuestion(question)}
-					onDelete={(question) => {
+					onEdit={(question: Question) => setEditingQuestion(question)}
+					onDelete={(question: Question) => {
 						console.log(
 							"Delete button clicked for question:",
 							question.id
@@ -956,7 +993,7 @@ interface QuestionFormProps {
 	question: Question | null;
 	onSave: (questionData: Partial<Question>) => void;
 	onCancel: () => void;
-	currentUser: any;
+	currentUser: CurrentUser | null;
 }
 
 const QuestionForm = ({

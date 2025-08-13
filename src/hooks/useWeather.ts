@@ -1,5 +1,5 @@
 // src/hooks/useWeather.ts - Updated with session-based caching
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import WeatherService from '@/services/weatherService';
 
 interface WeatherData {
@@ -21,50 +21,50 @@ export const useWeather = (base: string) => {
   const weatherService = useRef(WeatherService.getInstance());
   const lastFetchTime = useRef<number>(0);
 
-  useEffect(() => {
-    const fetchWeather = async () => {
-      // Use local variable instead of modifying parameter
-      const targetBase = base || 'TSA';
+  const fetchWeather = useCallback(async () => {
+    // Use local variable instead of modifying parameter
+    const targetBase = base || 'TSA';
+    
+    if (!base) {
+      console.log('No base provided, using default TSA');
+    }
+    
+    try {
+      setLoading(true);
+      setError(null);
       
-      if (!base) {
-        console.log('No base provided, using default TSA');
+      console.log('Fetching weather for base:', targetBase);
+      const weatherData = await weatherService.current.getWeather(targetBase);
+      
+      setWeather(weatherData);
+      lastFetchTime.current = Date.now();
+      
+      if (weatherData.isMockData) {
+        setError('Using fallback weather data');
       }
       
-      try {
-        setLoading(true);
-        setError(null);
-        
-        console.log('Fetching weather for base:', targetBase);
-        const weatherData = await weatherService.current.getWeather(targetBase);
-        
-        setWeather(weatherData);
-        lastFetchTime.current = Date.now();
-        
-        if (weatherData.isMockData) {
-          setError('Using fallback weather data');
-        }
-        
-      } catch (err) {
-        console.error('Weather fetch error:', err);
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        setError(errorMessage);
-        
-        // Set fallback weather
-        const locationName = targetBase === 'KHH' ? '高雄' : targetBase === 'RMQ' ? '台中' : '松山';
-        setWeather({
-          location: locationName,
-          temperature: 28,
-          description: '晴朗',
-          icon: '☀️',
-          humidity: 65,
-          error: 'Unable to fetch live weather data',
-          isMockData: true
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+    } catch (err) {
+      console.error('Weather fetch error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(errorMessage);
+      
+      // Set fallback weather
+      const locationName = targetBase === 'KHH' ? '高雄' : targetBase === 'RMQ' ? '台中' : '松山';
+      setWeather({
+        location: locationName,
+        temperature: 28,
+        description: '晴朗',
+        icon: '☀️',
+        humidity: 65,
+        error: 'Unable to fetch live weather data',
+        isMockData: true
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [base]);
 
+  useEffect(() => {
     // Only fetch if we don't have recent data
     const timeSinceLastFetch = Date.now() - lastFetchTime.current;
     const shouldFetch = !weather || timeSinceLastFetch > 10 * 60 * 1000; // 10 minutes
@@ -85,10 +85,10 @@ export const useWeather = (base: string) => {
     }, 30 * 60 * 1000);
     
     return () => clearInterval(interval);
-  }, [base]); // Only depend on base, not weather state
+  }, [base, weather, fetchWeather]); // Include all dependencies
 
   // Function to manually refresh weather
-  const refreshWeather = async () => {
+  const refreshWeather = useCallback(async () => {
     // Use local variable for consistency
     const targetBase = base || 'TSA';
     
@@ -104,7 +104,7 @@ export const useWeather = (base: string) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [base]);
 
   return { weather, loading, error, refreshWeather };
 };

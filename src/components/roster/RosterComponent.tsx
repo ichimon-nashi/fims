@@ -1,7 +1,7 @@
 // src/components/roster/RosterComponent.tsx - ENHANCED VERSION WITH MINIMIZED INSTRUCTIONS
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/common/Navbar";
 import DutyManager from "@/components/roster/DutyManager";
@@ -15,7 +15,50 @@ import styles from "./RosterComponent.module.css";
 // Special accounts that can modify all schedules
 const ADMIN_ACCOUNTS = ["admin", "21986", "51892"];
 
-const RosterComponent = () => {
+// Define interfaces for better type safety
+interface DateColumn {
+	date: number;
+	fullDate: string;
+	isWeekend: boolean;
+	dayOfWeek: number;
+}
+
+interface Month {
+	value: number;
+	label: string;
+}
+
+interface DutyResponse {
+	duties?: Array<{ name: string; color: string }>;
+}
+
+interface UsersResponse {
+	users?: User[];
+}
+
+interface CleanupPreview {
+	preview: {
+		toBeDeleted: {
+			emptyDuties: number;
+			oldRecords: number;
+			futureRecords: number;
+			total: number;
+		};
+		willRemain: number;
+		currentYearRange: string;
+	};
+}
+
+interface CleanupResult {
+	summary: {
+		emptyDutiesDeleted: number;
+		oldRecordsDeleted: number;
+		remainingRecords: number;
+		dateRange: string;
+	};
+}
+
+const RosterComponent: React.FC = () => {
 	const { token, user: currentUser } = useAuth();
 	const tableContainerRef = useRef<HTMLDivElement>(null);
 	const [instructors, setInstructors] = useState<User[]>([]);
@@ -108,7 +151,7 @@ const RosterComponent = () => {
 
 	// Detect mobile/tablet for different interaction modes
 	useEffect(() => {
-		const checkMobile = () => {
+		const checkMobile = (): void => {
 			setIsMobile(window.innerWidth < 1024);
 		};
 
@@ -118,7 +161,7 @@ const RosterComponent = () => {
 	}, []);
 
 	// Horizontal scroll handlers
-	const scrollLeft = () => {
+	const scrollLeft = (): void => {
 		if (tableContainerRef.current) {
 			tableContainerRef.current.scrollBy({
 				left: -200,
@@ -127,7 +170,7 @@ const RosterComponent = () => {
 		}
 	};
 
-	const scrollRight = () => {
+	const scrollRight = (): void => {
 		if (tableContainerRef.current) {
 			tableContainerRef.current.scrollBy({
 				left: 200,
@@ -137,8 +180,8 @@ const RosterComponent = () => {
 	};
 
 	// Generate year options (starting from 2025, current year ± 1)
-	const generateYearOptions = () => {
-		const years = [];
+	const generateYearOptions = (): number[] => {
+		const years: number[] = [];
 		const currentYear = currentDate.getFullYear();
 		const startYear = Math.max(2025, currentYear - 1); // Don't go below 2025
 		const endYear = currentYear + 1;
@@ -150,7 +193,7 @@ const RosterComponent = () => {
 	};
 
 	// Month options
-	const months = [
+	const months: Month[] = [
 		{ value: 1, label: "一月 (January)" },
 		{ value: 2, label: "二月 (February)" },
 		{ value: 3, label: "三月 (March)" },
@@ -166,9 +209,9 @@ const RosterComponent = () => {
 	];
 
 	// Generate date columns for the selected month
-	const generateDateColumns = () => {
+	const generateDateColumns = (): DateColumn[] => {
 		const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
-		const columns = [];
+		const columns: DateColumn[] = [];
 
 		for (let day = 1; day <= daysInMonth; day++) {
 			const date = new Date(selectedYear, selectedMonth - 1, day);
@@ -191,7 +234,7 @@ const RosterComponent = () => {
 	const dateColumns = generateDateColumns();
 
 	// Fetch duties from database - wrapped in useCallback
-	const fetchDutiesFromAPI = useCallback(async () => {
+	const fetchDutiesFromAPI = useCallback(async (): Promise<void> => {
 		try {
 			const response = await fetch("/api/duties", {
 				headers: {
@@ -200,13 +243,13 @@ const RosterComponent = () => {
 			});
 
 			if (response.ok) {
-				const data = await response.json();
+				const data: DutyResponse = await response.json();
 				console.log("Duties API response:", data);
 
 				if (data.duties && Array.isArray(data.duties)) {
-					const dutyNames = data.duties.map((d: any) => d.name);
+					const dutyNames = data.duties.map((d) => d.name);
 					const dutyColorsMap = data.duties.reduce(
-						(acc: Record<string, string>, d: any) => {
+						(acc: Record<string, string>, d) => {
 							acc[d.name] = d.color;
 							return acc;
 						},
@@ -229,7 +272,7 @@ const RosterComponent = () => {
 	}, [token]);
 
 	// Fetch instructors - wrapped in useCallback
-	const fetchInstructors = useCallback(async () => {
+	const fetchInstructors = useCallback(async (): Promise<void> => {
 		try {
 			setLoading(true);
 			const response = await fetch("/api/users", {
@@ -239,9 +282,9 @@ const RosterComponent = () => {
 			});
 
 			if (response.ok) {
-				const data = await response.json();
+				const data: UsersResponse | User[] = await response.json();
 				console.log("Users API response:", data);
-				const users = data.users || data;
+				const users = Array.isArray(data) ? data : (data as UsersResponse).users || [];
 
 				const filteredInstructors = users.filter(
 					(user: User) =>
@@ -269,7 +312,7 @@ const RosterComponent = () => {
 	}, [token]);
 
 	// Fetch schedules from API - wrapped in useCallback
-	const fetchSchedulesFromAPI = useCallback(async () => {
+	const fetchSchedulesFromAPI = useCallback(async (): Promise<void> => {
 		try {
 			const scheduleApiUrl = `/api/schedule?year=${selectedYear}&month=${selectedMonth}`;
 
@@ -280,7 +323,7 @@ const RosterComponent = () => {
 			});
 
 			if (response.ok) {
-				const schedules = await response.json();
+				const schedules: { [key: string]: ScheduleEntry[] } = await response.json();
 				setScheduleData(schedules || {});
 			} else {
 				setScheduleData({});
@@ -292,7 +335,7 @@ const RosterComponent = () => {
 	}, [token, selectedYear, selectedMonth]);
 
 	// Refresh data
-	const handleRefresh = async () => {
+	const handleRefresh = async (): Promise<void> => {
 		setLoading(true);
 		try {
 			await Promise.all([fetchInstructors(), fetchSchedulesFromAPI()]);
@@ -304,234 +347,234 @@ const RosterComponent = () => {
 	};
 
 	// Screenshot functionality - captures entire month
-	const handleScreenshot = async () => {
-	try {
-		const html2canvasModule = await import("html2canvas");
-		const html2canvas = html2canvasModule.default || html2canvasModule;
+	const handleScreenshot = async (): Promise<void> => {
+		try {
+			const html2canvasModule = await import("html2canvas");
+			const html2canvas = html2canvasModule.default || html2canvasModule;
 
-		console.log("Creating styled clone for screenshot...");
+			console.log("Creating styled clone for screenshot...");
 
-		const tableContainer = tableContainerRef.current;
-		if (!tableContainer) {
-			alert("無法找到表格元素");
-			return;
-		}
+			const tableContainer = tableContainerRef.current;
+			if (!tableContainer) {
+				alert("無法找到表格元素");
+				return;
+			}
 
-		// Create a temporary container with inline styles
-		const tempContainer = document.createElement('div');
-		tempContainer.style.cssText = `
-			position: fixed;
-			top: -10000px;
-			left: -10000px;
-			background: #ffffff;
-			padding: 20px;
-			border-radius: 8px;
-			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-			z-index: -1;
-		`;
-
-		// Create table structure with inline styles
-		const tempTable = document.createElement('table');
-		tempTable.style.cssText = `
-			border-collapse: collapse;
-			width: 100%;
-			background: #ffffff;
-			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-		`;
-
-		// Create thead
-		const thead = document.createElement('thead');
-		const headerRow = document.createElement('tr');
-
-		// Add header cells with inline styles
-		const headers = ['員編', '姓名', '基地'];
-		headers.forEach((header, index) => {
-			const th = document.createElement('th');
-			th.textContent = header;
-			th.style.cssText = `
-				background: #02c39a;
-				color: white;
-				padding: 12px 8px;
-				text-align: center;
-				font-weight: 600;
-				border: 0.75px solid #00a783;
-				font-size: 14px;
-				min-width: 80px;
-			`;
-			headerRow.appendChild(th);
-		});
-
-		// Add date headers
-		dateColumns.forEach((col) => {
-			const th = document.createElement('th');
-			const dayName = ["日", "一", "二", "三", "四", "五", "六"][col.dayOfWeek];
-			
-			const dateDiv = document.createElement('div');
-			dateDiv.style.cssText = `
-				display: flex;
-				flex-direction: column;
-				align-items: center;
-				gap: 2px;
-			`;
-			
-			const dateNumber = document.createElement('div');
-			dateNumber.textContent = col.date.toString();
-			dateNumber.style.cssText = `
-				font-size: 16px;
-				font-weight: bold;
-			`;
-			
-			const dayOfWeek = document.createElement('div');
-			dayOfWeek.textContent = dayName;
-			dayOfWeek.style.cssText = `
-				font-size: 12px;
-				opacity: 0.9;
-			`;
-			
-			dateDiv.appendChild(dateNumber);
-			dateDiv.appendChild(dayOfWeek);
-			th.appendChild(dateDiv);
-			
-			th.style.cssText = `
-				background: ${col.isWeekend ? '#ef6f6f' : '#5c98f9'};
-				color: white;
-				padding: 8px 4px;
-				text-align: center;
-				font-weight: 600;
-				border: 0.75px solid ${col.isWeekend ? '#dc2626' : '#2563eb'};
-				font-size: 12px;
-				min-width: 60px;
-			`;
-			headerRow.appendChild(th);
-		});
-
-		thead.appendChild(headerRow);
-		tempTable.appendChild(thead);
-
-		// Create tbody
-		const tbody = document.createElement('tbody');
-
-		instructors.forEach((instructor) => {
-			const employeeId = getEmployeeIdentifier(instructor);
-			const row = document.createElement('tr');
-			row.style.cssText = `
-				border-bottom: 1px solid #e5e7eb;
+			// Create a temporary container with inline styles
+			const tempContainer = document.createElement('div');
+			tempContainer.style.cssText = `
+				position: fixed;
+				top: -10000px;
+				left: -10000px;
+				background: #ffffff;
+				padding: 20px;
+				border-radius: 8px;
+				box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+				z-index: -1;
 			`;
 
-			// Instructor info cells
-			const cells = [employeeId, instructor.full_name, instructor.base];
-			cells.forEach((text, index) => {
-				const td = document.createElement('td');
-				td.textContent = text;
-				td.style.cssText = `
+			// Create table structure with inline styles
+			const tempTable = document.createElement('table');
+			tempTable.style.cssText = `
+				border-collapse: collapse;
+				width: 100%;
+				background: #ffffff;
+				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+			`;
+
+			// Create thead
+			const thead = document.createElement('thead');
+			const headerRow = document.createElement('tr');
+
+			// Add header cells with inline styles
+			const headers = ['員編', '姓名', '基地'];
+			headers.forEach((header, index) => {
+				const th = document.createElement('th');
+				th.textContent = header;
+				th.style.cssText = `
+					background: #02c39a;
+					color: white;
 					padding: 12px 8px;
 					text-align: center;
-					border: 0.75px solid #e5e7eb;
-					background: ${index === 0 ? '#f1f5f9' : '#f8fafc'};
-					font-weight: 500;
+					font-weight: 600;
+					border: 0.75px solid #00a783;
 					font-size: 14px;
 					min-width: 80px;
 				`;
-				row.appendChild(td);
+				headerRow.appendChild(th);
 			});
 
-			// Schedule cells
+			// Add date headers
 			dateColumns.forEach((col) => {
-				const td = document.createElement('td');
-				const duties = getDutiesForDate(employeeId, col.fullDate);
+				const th = document.createElement('th');
+				const dayName = ["日", "一", "二", "三", "四", "五", "六"][col.dayOfWeek];
 				
-				td.style.cssText = `
-					padding: 4px;
-					border: 0.75px solid #e5e7eb;
-					vertical-align: top;
-					min-width: 60px;
-					height: 70px;
-					background: #ffffff;
-				`;
-
-				const dutiesContainer = document.createElement('div');
-				dutiesContainer.style.cssText = `
+				const dateDiv = document.createElement('div');
+				dateDiv.style.cssText = `
 					display: flex;
 					flex-direction: column;
+					align-items: center;
 					gap: 2px;
-					height: 100%;
-					min-height: 60px;
 				`;
-
-				duties.forEach((duty) => {
-					const dutyTag = document.createElement('div');
-					dutyTag.textContent = duty;
-					dutyTag.style.cssText = `
-						padding: 2px 4px;
-						text-align: center;
-						font-size: 11px;
-						font-weight: 500;
-						border-radius: 2px;
-						color: white;
-						text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
-						min-height: 16px;
-						display: flex;
-						align-items: center;
-						justify-content: center;
-						background: ${DUTY_COLORS[duty] || '#3b82f6'};
-						border: 1px solid rgba(0, 0, 0, 0.1);
-					`;
-					dutiesContainer.appendChild(dutyTag);
-				});
-
-				td.appendChild(dutiesContainer);
-				row.appendChild(td);
+				
+				const dateNumber = document.createElement('div');
+				dateNumber.textContent = col.date.toString();
+				dateNumber.style.cssText = `
+					font-size: 16px;
+					font-weight: bold;
+				`;
+				
+				const dayOfWeek = document.createElement('div');
+				dayOfWeek.textContent = dayName;
+				dayOfWeek.style.cssText = `
+					font-size: 12px;
+					opacity: 0.9;
+				`;
+				
+				dateDiv.appendChild(dateNumber);
+				dateDiv.appendChild(dayOfWeek);
+				th.appendChild(dateDiv);
+				
+				th.style.cssText = `
+					background: ${col.isWeekend ? '#ef6f6f' : '#5c98f9'};
+					color: white;
+					padding: 8px 4px;
+					text-align: center;
+					font-weight: 600;
+					border: 0.75px solid ${col.isWeekend ? '#dc2626' : '#2563eb'};
+					font-size: 12px;
+					min-width: 60px;
+				`;
+				headerRow.appendChild(th);
 			});
 
-			tbody.appendChild(row);
-		});
+			thead.appendChild(headerRow);
+			tempTable.appendChild(thead);
 
-		tempTable.appendChild(tbody);
-		tempContainer.appendChild(tempTable);
-		document.body.appendChild(tempContainer);
+			// Create tbody
+			const tbody = document.createElement('tbody');
 
-		// Wait for rendering
-		await new Promise(resolve => setTimeout(resolve, 100));
+			instructors.forEach((instructor) => {
+				const employeeId = getEmployeeIdentifier(instructor);
+				const row = document.createElement('tr');
+				row.style.cssText = `
+					border-bottom: 1px solid #e5e7eb;
+				`;
 
-		console.log("Capturing styled clone...");
+				// Instructor info cells
+				const cells = [employeeId, instructor.full_name, instructor.base];
+				cells.forEach((text, index) => {
+					const td = document.createElement('td');
+					td.textContent = text;
+					td.style.cssText = `
+						padding: 12px 8px;
+						text-align: center;
+						border: 0.75px solid #e5e7eb;
+						background: ${index === 0 ? '#f1f5f9' : '#f8fafc'};
+						font-weight: 500;
+						font-size: 14px;
+						min-width: 80px;
+					`;
+					row.appendChild(td);
+				});
 
-		// Capture the temporary container
-		const canvas = await html2canvas(tempContainer, {
-			useCORS: true,
-			allowTaint: true,
-			backgroundColor: "#ffffff",
-			logging: false,
-			pixelRatio: window.devicePixelRatio * 1.5,
-			scale: 2, // Higher scale for better quality
-		});
+				// Schedule cells
+				dateColumns.forEach((col) => {
+					const td = document.createElement('td');
+					const duties = getDutiesForDate(employeeId, col.fullDate);
+					
+					td.style.cssText = `
+						padding: 4px;
+						border: 0.75px solid #e5e7eb;
+						vertical-align: top;
+						min-width: 60px;
+						height: 70px;
+						background: #ffffff;
+					`;
 
-		// Remove temporary container
-		document.body.removeChild(tempContainer);
+					const dutiesContainer = document.createElement('div');
+					dutiesContainer.style.cssText = `
+						display: flex;
+						flex-direction: column;
+						gap: 2px;
+						height: 100%;
+						min-height: 60px;
+					`;
 
-		console.log("Canvas created:", canvas.width, "x", canvas.height);
+					duties.forEach((duty) => {
+						const dutyTag = document.createElement('div');
+						dutyTag.textContent = duty;
+						dutyTag.style.cssText = `
+							padding: 2px 4px;
+							text-align: center;
+							font-size: 11px;
+							font-weight: 500;
+							border-radius: 2px;
+							color: white;
+							text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+							min-height: 16px;
+							display: flex;
+							align-items: center;
+							justify-content: center;
+							background: ${DUTY_COLORS[duty] || '#3b82f6'};
+							border: 1px solid rgba(0, 0, 0, 0.1);
+						`;
+						dutiesContainer.appendChild(dutyTag);
+					});
 
-		// Create download link
-		const link = document.createElement("a");
-		const fileName = `教師班表-${selectedYear}年${selectedMonth}月-${new Date().toISOString().slice(0,10)}.png`;
-		link.download = fileName;
-		link.href = canvas.toDataURL("image/png", 1.0); // Maximum quality
+					td.appendChild(dutiesContainer);
+					row.appendChild(td);
+				});
 
-		// Trigger download
-		document.body.appendChild(link);
-		link.click();
-		document.body.removeChild(link);
+				tbody.appendChild(row);
+			});
 
-		console.log("Screenshot with styled clone saved:", fileName);
-		alert(`截圖已儲存：${fileName}`);
-		
-	} catch (error: any) {
-		console.error("Screenshot error:", error);
-		alert(`截圖失敗：${error.message || "未知錯誤"}，請聯絡豪神`);
-	}
-};
+			tempTable.appendChild(tbody);
+			tempContainer.appendChild(tempTable);
+			document.body.appendChild(tempContainer);
+
+			// Wait for rendering
+			await new Promise(resolve => setTimeout(resolve, 100));
+
+			console.log("Capturing styled clone...");
+
+			// Capture the temporary container with type assertion for html2canvas options
+			const canvas = await html2canvas(tempContainer, {
+				useCORS: true,
+				allowTaint: true,
+				backgroundColor: "#ffffff",
+				logging: false,
+				pixelRatio: window.devicePixelRatio * 1.5,
+				scale: 2, // Higher scale for better quality
+			} as any);
+
+			// Remove temporary container
+			document.body.removeChild(tempContainer);
+
+			console.log("Canvas created:", canvas.width, "x", canvas.height);
+
+			// Create download link
+			const link = document.createElement("a");
+			const fileName = `教師班表-${selectedYear}年${selectedMonth}月-${new Date().toISOString().slice(0,10)}.png`;
+			link.download = fileName;
+			link.href = canvas.toDataURL("image/png", 1.0); // Maximum quality
+
+			// Trigger download
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+
+			console.log("Screenshot with styled clone saved:", fileName);
+			alert(`截圖已儲存：${fileName}`);
+			
+		} catch (error: any) {
+			console.error("Screenshot error:", error);
+			alert(`截圖失敗：${error.message || "未知錯誤"}，請聯絡豪神`);
+		}
+	};
 
 	// Excel export functionality
-	const handleExcelExport = async () => {
+	const handleExcelExport = async (): Promise<void> => {
 		try {
 			// Use SheetJS library for Excel export - handle different export formats
 			const XLSXModule = await import("xlsx");
@@ -545,10 +588,10 @@ const RosterComponent = () => {
 			}
 
 			// Prepare data for Excel
-			const excelData = [];
+			const excelData: (string | number)[][] = [];
 
 			// Add header row
-			const headerRow = ["員編", "姓名", "基地"];
+			const headerRow: (string | number)[] = ["員編", "姓名", "基地"];
 			dateColumns.forEach((col) => {
 				const dayName = ["日", "一", "二", "三", "四", "五", "六"][
 					col.dayOfWeek
@@ -560,7 +603,7 @@ const RosterComponent = () => {
 			// Add data rows
 			instructors.forEach((instructor) => {
 				const employeeId = getEmployeeIdentifier(instructor);
-				const row = [employeeId, instructor.full_name, instructor.base];
+				const row: (string | number)[] = [employeeId, instructor.full_name, instructor.base];
 
 				dateColumns.forEach((col) => {
 					const duties = getDutiesForDate(employeeId, col.fullDate);
@@ -608,7 +651,7 @@ const RosterComponent = () => {
 		}
 	};
 
-	const handleDatabaseCleanup = async () => {
+	const handleDatabaseCleanup = async (): Promise<void> => {
 		const userEmployeeId = currentUser?.employee_id || currentUser?.id;
 		if (!ADMIN_ACCOUNTS.includes(userEmployeeId || "")) {
 			alert("只有管理者可以執行資料庫清理");
@@ -634,7 +677,7 @@ const RosterComponent = () => {
 			});
 
 			if (previewResponse.ok) {
-				const preview = await previewResponse.json();
+				const preview: CleanupPreview = await previewResponse.json();
 				const { toBeDeleted, willRemain, currentYearRange } =
 					preview.preview;
 
@@ -654,7 +697,7 @@ const RosterComponent = () => {
 			});
 
 			if (response.ok) {
-				const result = await response.json();
+				const result: CleanupResult = await response.json();
 				alert(
 					`清理完成！\n\n• 刪除空任務：${result.summary.emptyDutiesDeleted} 個\n• 刪除過期記錄：${result.summary.oldRecordsDeleted} 個\n• 剩餘記錄：${result.summary.remainingRecords} 個\n• 日期範圍：${result.summary.dateRange}`
 				);
@@ -685,7 +728,7 @@ const RosterComponent = () => {
 		instructorId: string,
 		date: string,
 		duty: string
-	) => {
+	): Promise<void> => {
 		if (!canModifyDuty(instructorId, date)) {
 			alert("你沒有權限修改此任務");
 			return;
@@ -749,7 +792,7 @@ const RosterComponent = () => {
 		instructorId: string,
 		date: string,
 		dutyToRemove: string
-	) => {
+	): Promise<void> => {
 		if (!canModifyDuty(instructorId, date, dutyToRemove)) {
 			alert("你沒有權限移除此任務（只能由管理者調整）");
 			return;
@@ -806,7 +849,7 @@ const RosterComponent = () => {
 	};
 
 	// Handle drag start (desktop)
-	const handleDragStart = (e: React.DragEvent, duty: string) => {
+	const handleDragStart = (e: React.DragEvent, duty: string): void => {
 		e.dataTransfer.setData("duty", duty);
 		e.dataTransfer.effectAllowed = "copy";
 	};
@@ -816,7 +859,7 @@ const RosterComponent = () => {
 		e: React.DragEvent,
 		instructorId: string,
 		date: string
-	) => {
+	): void => {
 		e.preventDefault();
 		const duty = e.dataTransfer.getData("duty");
 		if (duty) {
@@ -824,13 +867,13 @@ const RosterComponent = () => {
 		}
 	};
 
-	const handleDragOver = (e: React.DragEvent) => {
+	const handleDragOver = (e: React.DragEvent): void => {
 		e.preventDefault();
 		e.dataTransfer.dropEffect = "copy";
 	};
 
 	// Handle mobile click
-	const handleCellClick = (instructorId: string, date: string) => {
+	const handleCellClick = (instructorId: string, date: string): void => {
 		if (isMobile && selectedDuty) {
 			addDutyToDate(instructorId, date, selectedDuty);
 			setSelectedDuty(null);
@@ -843,7 +886,7 @@ const RosterComponent = () => {
 		instructorId: string,
 		date: string,
 		duty: string
-	) => {
+	): void => {
 		e.stopPropagation();
 
 		if (isMobile || e.detail === 2) {
@@ -852,7 +895,7 @@ const RosterComponent = () => {
 	};
 
 	// Add custom duty
-	const addCustomDuty = async (newDuty: string, color: string) => {
+	const addCustomDuty = async (newDuty: string, color: string): Promise<void> => {
 		console.log("Adding custom duty:", newDuty, "with color:", color);
 
 		if (!availableDuties.includes(newDuty)) {
@@ -872,7 +915,7 @@ const RosterComponent = () => {
 	};
 
 	// Update duty list
-	const updateDuties = (duties: { name: string; color: string }[]) => {
+	const updateDuties = (duties: { name: string; color: string }[]): void => {
 		const dutyNames = duties.map((d) => d.name);
 		const colors = duties.reduce((acc, d) => {
 			acc[d.name] = d.color;
@@ -884,7 +927,7 @@ const RosterComponent = () => {
 	};
 
 	// Update single duty name
-	const updateDutyName = (oldName: string, newName: string) => {
+	const updateDutyName = (oldName: string, newName: string): void => {
 		setAvailableDuties((prev) =>
 			prev.map((d) => (d === oldName ? newName : d))
 		);
@@ -911,6 +954,16 @@ const RosterComponent = () => {
 			});
 			return newData;
 		});
+	};
+
+	// Handle year change
+	const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
+		setSelectedYear(parseInt(e.target.value));
+	};
+
+	// Handle month change
+	const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
+		setSelectedMonth(parseInt(e.target.value));
 	};
 
 	useEffect(() => {
@@ -968,11 +1021,7 @@ const RosterComponent = () => {
 									<select
 										id="year"
 										value={selectedYear}
-										onChange={(e) =>
-											setSelectedYear(
-												parseInt(e.target.value)
-											)
-										}
+										onChange={handleYearChange}
 										className={styles.select}
 									>
 										{generateYearOptions().map((year) => (
@@ -988,11 +1037,7 @@ const RosterComponent = () => {
 									<select
 										id="month"
 										value={selectedMonth}
-										onChange={(e) =>
-											setSelectedMonth(
-												parseInt(e.target.value)
-											)
-										}
+										onChange={handleMonthChange}
 										className={styles.select}
 									>
 										{months.map((month) => (

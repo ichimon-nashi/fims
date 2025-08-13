@@ -1,30 +1,16 @@
 // src/app/oral-test/layout.tsx
-"use client";
+import { Metadata } from 'next';
+import ClientOralTestLayout from './ClientOralTestLayout';
 
-import { AuthProvider } from '@/context/AuthContext';
-import { useEffect } from 'react';
-import DeviceCheck from '@/components/layout/DeviceCheck/DeviceCheck';
-import Navbar from '@/components/common/Navbar'; // Fixed import path
+export const metadata: Metadata = {
+  title: '口試系統 - 豪神教師管理系統',
+  description: '口試題目管理與紀錄',
+};
 
 export default function OralTestLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  useEffect(() => {
-    // Add any oral-test specific initialization here
-    console.log('Oral Test module loaded');
-  }, []);
-
-  return (
-    <AuthProvider>
-      <div className="min-h-screen bg-gray-50">
-        <DeviceCheck />
-        <Navbar />
-        <main className="flex-1">
-          {children}
-        </main>
-      </div>
-    </AuthProvider>
-  );
+  return <ClientOralTestLayout>{children}</ClientOralTestLayout>;
 }
