@@ -129,8 +129,8 @@ function checkUserAccess(user: any): boolean {
 	// Admin employee IDs (unchanged admin accounts)
 	const adminEmployeeIds = ["51892", "admin", "21986"];
 	
-	// Special employee ID with access
-	const specialEmployeeId = "22119";
+	// Special employee IDs with access - ADD YOUR NEW IDs HERE
+	const specialEmployeeIds = ["22119", "59976", "21701", "39426", "36639"];
 	
 	// Allowed ranks
 	const allowedRanks = [
@@ -148,8 +148,8 @@ function checkUserAccess(user: any): boolean {
 		return true;
 	}
 
-	// Check if user is the special employee ID
-	if (user.employee_id === specialEmployeeId) {
+	// Check if user is in the special employee IDs list (FIXED)
+	if (specialEmployeeIds.includes(user.employee_id)) {
 		console.log("Access granted: Special employee ID");
 		return true;
 	}
