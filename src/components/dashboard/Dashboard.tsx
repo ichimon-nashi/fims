@@ -174,7 +174,7 @@ const Dashboard = () => {
       title: "口試系統",
       description: "口試題目與管理",
       icon: "🎯",
-      href: "/oral-test",
+      href: "/oral-test/dashboard",
       color: "#f59e0b"
     },
     {

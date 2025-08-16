@@ -118,7 +118,7 @@ export interface Question {
 	question_title: string;
 	question_chapter: string;
 	question_page: number;
-	question_line: number;
+	question_line: string; // CHANGED: from number to string to support values like "1.5.20"
 	difficulty_level: number;
 	last_date_modified: string;
 	created_at?: string;

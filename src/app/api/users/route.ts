@@ -1,7 +1,7 @@
 // src/app/api/users/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { verifyToken, extractTokenFromHeader } from "@/lib/auth";
+import { verifyToken, extractTokenFromHeader, hashPassword } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
 	try {
@@ -146,7 +146,17 @@ export async function POST(request: NextRequest) {
 		}
 
 		// Set default values for new user
-		const newUser = {
+		const newUser: {
+			employee_id: string;
+			email: string;
+			full_name: string;
+			rank: string;
+			base: string;
+			filter: string[];
+			handicap_level: number;
+			authentication_level: number;
+			password_hash?: string;
+		} = {
 			employee_id: userData.employee_id,
 			email: userData.email,
 			full_name: userData.full_name,
@@ -155,8 +165,15 @@ export async function POST(request: NextRequest) {
 			filter: userData.filter || [],
 			handicap_level: userData.handicap_level || 0,
 			authentication_level: userData.authentication_level || 1,
-			password_hash: userData.password_hash, // Should be hashed before sending
 		};
+
+		// Hash password if provided - THIS IS THE FIX
+		if (userData.password) {
+			newUser.password_hash = await hashPassword(userData.password);
+		} else if (userData.password_hash) {
+			// Support for already hashed passwords (e.g., imports)
+			newUser.password_hash = userData.password_hash;
+		}
 
 		// Restrict certain field modifications based on auth level
 		if (newUser.authentication_level && decoded.authLevel < 20) {

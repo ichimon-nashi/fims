@@ -1,34 +1,106 @@
 /* src/app/globals.css */
 * {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-  /* outline: 0.1px dashed red; */
+	box-sizing: border-box;
+	padding: 0;
+	margin: 0;
+	/* outline: 0.1px dashed red; */
 }
 
 html,
 body {
-  max-width: 100vw;
-  overflow-x: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+	max-width: 100vw;
+	overflow-x: hidden;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+		"Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans",
+		"Helvetica Neue", sans-serif;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 }
 
 a {
-  color: inherit;
-  text-decoration: none;
+	color: inherit;
+	text-decoration: none;
 }
 
 button {
-  cursor: pointer;
-  border: none;
-  background: none;
-  font-family: inherit;
+	cursor: pointer;
+	border: none;
+	background: none;
+	font-family: inherit;
 }
 
-input, textarea {
-  font-family: inherit;
+.btn {
+	padding: 0.75rem 1.5rem;
+	border-radius: 8px;
+	font-weight: 600;
+	font-size: 0.9rem;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	border: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	text-decoration: none;
+}
+
+.btn:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.btn-primary {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+	background: white;
+	color: #667eea;
+	border: 2px solid #667eea;
+}
+
+.btn-secondary:hover:not(:disabled) {
+	background: #667eea;
+	color: white;
+}
+
+.btn-success {
+	background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+	color: white;
+}
+
+.btn-success:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 25px rgba(72, 187, 120, 0.4);
+}
+
+.btn-danger {
+	background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+	color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 25px rgba(229, 62, 62, 0.4);
+}
+
+.btn-warning {
+	background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+	color: white;
+}
+
+.btn-warning:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 25px rgba(237, 137, 54, 0.4);
+}
+
+input,
+textarea {
+	font-family: inherit;
 }

@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// Validate page and line numbers
+		// Validate page number
 		if (questionData.question_page < 1) {
 			return NextResponse.json(
 				{ message: "Page number must be at least 1" },
@@ -149,9 +149,10 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		if (questionData.question_line < 1) {
+		// CHANGED: Validate line reference (now string, just check if not empty)
+		if (!questionData.question_line || questionData.question_line.toString().trim() === "") {
 			return NextResponse.json(
-				{ message: "Line number must be at least 1" },
+				{ message: "Line reference is required and cannot be empty" },
 				{ status: 400 }
 			);
 		}
@@ -206,7 +207,7 @@ export async function POST(request: NextRequest) {
 			question_title: questionData.question_title.trim(),
 			question_chapter: questionData.question_chapter.toString().trim(),
 			question_page: parseInt(questionData.question_page),
-			question_line: parseInt(questionData.question_line),
+			question_line: questionData.question_line.toString().trim(), // CHANGED: Keep as string
 			difficulty_level: difficultyLevel,
 			question_number: nextQuestionNumber,
 			last_date_modified: new Date().toISOString(),

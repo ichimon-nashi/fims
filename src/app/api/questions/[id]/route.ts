@@ -65,7 +65,7 @@ export async function PUT(
 			);
 		}
 
-		// Validate page and line numbers if provided
+		// Validate page number if provided
 		if (updateData.question_page && updateData.question_page < 1) {
 			return NextResponse.json(
 				{ message: "Page number must be at least 1" },
@@ -73,11 +73,15 @@ export async function PUT(
 			);
 		}
 
-		if (updateData.question_line && updateData.question_line < 1) {
-			return NextResponse.json(
-				{ message: "Line number must be at least 1" },
-				{ status: 400 }
-			);
+		// CHANGED: Validate line reference if provided (now string)
+		if (updateData.question_line !== undefined && updateData.question_line !== null) {
+			const lineStr = updateData.question_line.toString().trim();
+			if (lineStr === "") {
+				return NextResponse.json(
+					{ message: "Line reference cannot be empty" },
+					{ status: 400 }
+				);
+			}
 		}
 
 		// Trim string fields
@@ -91,12 +95,13 @@ export async function PUT(
 			updateData.question_chapter = updateData.question_chapter.trim();
 		}
 
-		// Convert numeric fields
+		// Convert numeric fields and handle line as string
 		if (updateData.question_page) {
 			updateData.question_page = parseInt(updateData.question_page);
 		}
-		if (updateData.question_line) {
-			updateData.question_line = parseInt(updateData.question_line);
+		// CHANGED: Keep question_line as string
+		if (updateData.question_line !== undefined) {
+			updateData.question_line = updateData.question_line.toString().trim();
 		}
 
 		// Create Supabase client

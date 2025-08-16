@@ -1,7 +1,7 @@
 // src/components/oral-test/management/DataTable/DataTable.tsx
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import styles from "./DataTable.module.css";
 
 interface Column {
@@ -23,6 +23,10 @@ interface DataTableProps {
 	searchable?: boolean;
 	paginated?: boolean;
 	pageSize?: number;
+	// NEW: External pagination control props
+	currentPage?: number;
+	onPageChange?: (page: number) => void;
+	preservePagination?: boolean;
 }
 
 const DataTable = ({
@@ -36,13 +40,22 @@ const DataTable = ({
 	searchable = true,
 	paginated = true,
 	pageSize = 10,
+	// NEW: External pagination props with defaults
+	currentPage: externalCurrentPage,
+	onPageChange,
+	preservePagination = false,
 }: DataTableProps) => {
 	const [searchTerm, setSearchTerm] = useState("");
 	const [sortConfig, setSortConfig] = useState<{
 		key: string;
 		direction: "asc" | "desc";
 	} | null>(null);
-	const [currentPage, setCurrentPage] = useState(1);
+	
+	// Use external currentPage if provided, otherwise use internal state
+	const [internalCurrentPage, setInternalCurrentPage] = useState(1);
+	const currentPage = preservePagination && externalCurrentPage !== undefined 
+		? externalCurrentPage 
+		: internalCurrentPage;
 
 	// Filter and search data
 	const filteredData = useMemo(() => {
@@ -94,6 +107,25 @@ const DataTable = ({
 
 	const totalPages = Math.ceil(sortedData.length / pageSize);
 
+	// NEW: Auto-adjust page if current page is beyond available pages
+	useEffect(() => {
+		if (totalPages > 0 && currentPage > totalPages) {
+			const newPage = Math.max(1, totalPages);
+			if (preservePagination && onPageChange) {
+				onPageChange(newPage);
+			} else {
+				setInternalCurrentPage(newPage);
+			}
+		}
+	}, [totalPages, currentPage, preservePagination, onPageChange]);
+
+	// NEW: Reset search when data changes significantly (optional)
+	useEffect(() => {
+		if (searchTerm && filteredData.length === 0 && data.length > 0) {
+			setSearchTerm("");
+		}
+	}, [data.length, filteredData.length, searchTerm]);
+
 	const handleSort = (columnKey: string) => {
 		const column = columns.find((col) => col.key === columnKey);
 		if (!column?.sortable) return;
@@ -105,6 +137,15 @@ const DataTable = ({
 					? "desc"
 					: "asc",
 		}));
+	};
+
+	// NEW: Modified page change handler
+	const handlePageChange = (newPage: number) => {
+		if (preservePagination && onPageChange) {
+			onPageChange(newPage);
+		} else {
+			setInternalCurrentPage(newPage);
+		}
 	};
 
 	const handleSelectAll = (checked: boolean) => {
@@ -295,14 +336,14 @@ const DataTable = ({
 					<div className={styles.paginationControls}>
 						<button
 							className={styles.pageButton}
-							onClick={() => setCurrentPage(1)}
+							onClick={() => handlePageChange(1)}
 							disabled={currentPage === 1}
 						>
-							⏮
+							⮜
 						</button>
 						<button
 							className={styles.pageButton}
-							onClick={() => setCurrentPage(currentPage - 1)}
+							onClick={() => handlePageChange(currentPage - 1)}
 							disabled={currentPage === 1}
 						>
 							◀
@@ -330,7 +371,7 @@ const DataTable = ({
 												? styles.active
 												: ""
 										}`}
-										onClick={() => setCurrentPage(pageNum)}
+										onClick={() => handlePageChange(pageNum)}
 									>
 										{pageNum}
 									</button>
@@ -340,17 +381,17 @@ const DataTable = ({
 
 						<button
 							className={styles.pageButton}
-							onClick={() => setCurrentPage(currentPage + 1)}
+							onClick={() => handlePageChange(currentPage + 1)}
 							disabled={currentPage === totalPages}
 						>
 							▶
 						</button>
 						<button
 							className={styles.pageButton}
-							onClick={() => setCurrentPage(totalPages)}
+							onClick={() => handlePageChange(totalPages)}
 							disabled={currentPage === totalPages}
 						>
-							⏭
+							⮞
 						</button>
 					</div>
 				</div>

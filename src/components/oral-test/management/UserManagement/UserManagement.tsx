@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { User } from "@/lib/types";
+import { USER_FILTER_CATEGORIES } from "@/lib/constants";
 import DataTable from "../DataTable/DataTable";
 import styles from "./UserManagement.module.css";
 import * as XLSX from "xlsx";
@@ -73,6 +74,9 @@ const UserManagement = () => {
 	const [editingUser, setEditingUser] = useState<User | null>(null);
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+	
+	// NEW: Add current page state for pagination preservation
+	const [currentPage, setCurrentPage] = useState(1);
 
 	// Responsive button text
 	const buttonText = useResponsiveButtonText();
@@ -195,6 +199,7 @@ const UserManagement = () => {
 				setEditingUser(null);
 				setShowAddForm(false);
 				setError("");
+				// NOTE: currentPage state is preserved automatically
 			} else {
 				const errorData = await response.json();
 				setError(errorData.message || "Failed to save user");
@@ -701,7 +706,7 @@ const UserManagement = () => {
 					</ul>
 					<p>
 						<em>
-							Default password &quot;TempPassword123!&quot; will
+							Default password "TempPassword123!" will
 							be assigned to imported users.
 						</em>
 					</p>
@@ -717,6 +722,10 @@ const UserManagement = () => {
 					onSelectionChange={setSelectedUsers}
 					selectedItems={selectedUsers}
 					rowKey="id"
+					// NEW: Enable pagination preservation
+					preservePagination={true}
+					currentPage={currentPage}
+					onPageChange={setCurrentPage}
 				/>
 			</div>
 
@@ -765,20 +774,10 @@ const UserForm = ({
 		authentication_level: user?.authentication_level || 1,
 	});
 
-	// Available filter categories
-	const availableCategories = [
-		"Safety",
-		"Regulations",
-		"Protocol",
-		"Operations",
-		"Emergency",
-		"Equipment",
-		"Training",
-		"Compliance",
-		"B738機種",
-		"ATR機種",
-	];
+	// UPDATED: Use dynamic categories instead of hardcoded ones
+	const availableCategories = USER_FILTER_CATEGORIES;
 
+	// Rest of the component remains exactly the same...
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		const submitData = { ...formData };
@@ -917,7 +916,10 @@ const UserForm = ({
 							>
 								<option value="">Select Rank</option>
 								{commonRanks.map((rank) => (
-									<option key={rank} value={rank}>
+									<option 
+										key={rank} 
+										value={rank}
+									>
 										{rank}
 									</option>
 								))}
@@ -1180,7 +1182,7 @@ const AuthLevelDropdown = ({
 	const [isOpen, setIsOpen] = useState(false);
 
 	const levels: AuthLevelOption[] = [
-		{ value: 1, short: "Squire (見習戰士)", full: "Dashboard" },
+		{ value: 1, short: "Squire (見習戦士)", full: "Dashboard" },
 		{ value: 2, short: "Knight (騎士)", full: "Dashboard/Results" },
 		{ value: 3, short: "Archer (弓手)", full: "Dashboard/Results/Test" },
 		{
@@ -1190,7 +1192,7 @@ const AuthLevelDropdown = ({
 		},
 		{
 			value: 5,
-			short: "Black Mage (黑魔道士)",
+			short: "Black Mage (黒魔道士)",
 			full: "Dashboard/Results/Test/Questions/Users",
 		},
 		{
@@ -1200,7 +1202,7 @@ const AuthLevelDropdown = ({
 		},
 		{
 			value: 20,
-			short: "Dark Knight (黑暗騎士)",
+			short: "Dark Knight (黒暗騎士)",
 			full: "+Authentication Level",
 		},
 		{ value: 99, short: "GOD", full: "Super Administrator" },
