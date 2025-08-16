@@ -292,7 +292,8 @@ const RosterComponent: React.FC = () => {
 					(user: User) =>
 						user.rank === "FI - Flight Attendant Instructor" ||
 						user.rank === "SC - Section Chief" ||
-						getEmployeeIdentifier(user) === "22119"
+						getEmployeeIdentifier(user) === "22119" ||
+						getEmployeeIdentifier(user) === "36639"
 				);
 
 				console.log("Filtered instructors:", filteredInstructors);
