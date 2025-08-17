@@ -1,42 +1,54 @@
-// src/components/oral-test/management/UserManagement/UserManagement.tsx
+// src/components/oral-test/management/QuestionManagement/QuestionManagement.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { User } from "@/lib/types";
-import { USER_FILTER_CATEGORIES } from "@/lib/constants";
+import { Question } from "@/lib/types";
+import QUESTION_CATEGORIES from "@/lib/constants";
 import DataTable from "../DataTable/DataTable";
-import styles from "./UserManagement.module.css";
-import * as XLSX from "xlsx";
+import styles from "./QuestionManagement.module.css";
 
-// Define types for imported user data
-interface ImportedUserData {
-	employee_id: string;
-	full_name: string;
-	rank: string;
-	base: string;
-	email: string;
-	filter: string[];
-	authentication_level: number;
-	handicap_level: number;
-	password: string;
+// Define types for imported question data
+interface ImportedQuestion {
+	question_category: string;
+	question_title: string;
+	question_chapter: string;
+	question_page: number;
+	question_line: string;
+	difficulty_level: number;
 }
 
 // Define type for Excel row data
 interface ExcelRowData {
-	"Employee ID"?: string;
-	"employee_id"?: string;
-	"Full Name"?: string;
-	"full_name"?: string;
-	"Rank"?: string;
-	"rank"?: string;
-	"Base"?: string;
-	"base"?: string;
-	"Email"?: string;
-	"email"?: string;
-	"Excluded Categories"?: string;
-	"filter"?: string[] | string;
 	[key: string]: any;
+}
+
+// Define type for current user
+interface CurrentUser {
+	authentication_level: number;
+	employee_id?: string;
+	[key: string]: any;
+}
+
+// Define type for related records info
+interface RelatedRecordInfo {
+	id: string;
+	relatedCount: number;
+}
+
+// Define type for promise result
+interface PromiseResult {
+	status: 'fulfilled' | 'rejected';
+	value?: any;
+	reason?: { message?: string };
+}
+
+// Import XLSX dynamically to avoid SSR issues
+let XLSX: any = null;
+if (typeof window !== "undefined") {
+	import("xlsx").then((xlsxModule) => {
+		XLSX = xlsxModule;
+	});
 }
 
 // Responsive button text hook
@@ -56,7 +68,7 @@ const useResponsiveButtonText = () => {
 	}, []);
 
 	return {
-		addText: isCompactView ? "➕ Add" : "➕ Add User",
+		addText: isCompactView ? "➕ Add" : "➕ Add Question",
 		exportText: isCompactView ? "📊 Export" : "📊 Export Excel",
 		importText: isCompactView ? "📄 Import" : "📄 Import Excel",
 		deleteText: (count: number) =>
@@ -66,14 +78,16 @@ const useResponsiveButtonText = () => {
 	};
 };
 
-const UserManagement = () => {
+const QuestionManagement = () => {
 	const { user: currentUser } = useAuth();
-	const [users, setUsers] = useState<User[]>([]);
+	const [questions, setQuestions] = useState<Question[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
-	const [editingUser, setEditingUser] = useState<User | null>(null);
+	const [editingQuestion, setEditingQuestion] = useState<Question | null>(
+		null
+	);
 	const [showAddForm, setShowAddForm] = useState(false);
-	const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+	const [selectedQuestions, setSelectedQuestions] = useState<string[]>([]);
 	
 	// NEW: Add current page state for pagination preservation
 	const [currentPage, setCurrentPage] = useState(1);
@@ -81,109 +95,95 @@ const UserManagement = () => {
 	// Responsive button text
 	const buttonText = useResponsiveButtonText();
 
-	const fetchUsers = useCallback(async () => {
+	useEffect(() => {
+		fetchQuestions();
+	}, []);
+
+	const fetchQuestions = async () => {
 		try {
 			setLoading(true);
-			console.log("Fetching users...");
+			console.log("Fetching questions...");
 
-			const response = await fetch("/api/users", {
+			const response = await fetch("/api/questions", {
 				headers: {
 					Authorization: `Bearer ${localStorage.getItem("token")}`,
 				},
 			});
 
-			console.log("Users response status:", response.status);
+			console.log("Questions response status:", response.status);
 
 			if (response.ok) {
 				const data = await response.json();
-				console.log("Users API response:", data);
+				console.log("Questions API response:", data);
 
-				// Access data.users array instead of trying to filter data directly
-				const usersArray = data.users || data; // Handle both response formats
-
-				if (Array.isArray(usersArray)) {
-					// Show admin user only if current user is admin
-					const filteredUsers = usersArray.filter((user: User) => {
-						// If current user is admin, show all users (including admin)
-						if (
-							currentUser &&
-							currentUser.employee_id === "admin"
-						) {
-							return true;
-						}
-						// Otherwise, filter out admin users
-						return user.employee_id !== "admin";
-					});
-
-					// Sort users to show admin at top when logged in as admin
-					const sortedUsers = filteredUsers.sort(
-						(a: User, b: User) => {
-							// If current user is admin, put admin user at the top
-							if (currentUser?.employee_id === "admin") {
-								if (a.employee_id === "admin") return -1;
-								if (b.employee_id === "admin") return 1;
+				// FIXED: Sort questions by question_number for better display
+				const sortedQuestions = Array.isArray(data)
+					? data.sort((a: Question, b: Question) => {
+							// Sort by question_number first, then by id if question_number is null
+							if (a.question_number && b.question_number) {
+								return a.question_number - b.question_number;
 							}
-							// Otherwise sort alphabetically by full name
-							return a.full_name.localeCompare(b.full_name);
-						}
-					);
+							if (a.question_number && !b.question_number)
+								return -1;
+							if (!a.question_number && b.question_number)
+								return 1;
+							return a.id.localeCompare(b.id);
+					  })
+					: [];
 
-					console.log("Filtered and sorted users:", sortedUsers);
-					setUsers(sortedUsers);
-				} else {
-					console.error("Invalid users data format:", usersArray);
-					setError("Invalid users data format received");
-				}
+				setQuestions(sortedQuestions);
 			} else {
 				const errorData = await response.json();
-				console.error("Users API error:", errorData);
-				setError(errorData.message || "Failed to load users");
+				console.error("Questions API error:", errorData);
+				setError(errorData.message || "Failed to load questions");
 			}
 		} catch (err) {
-			console.error("Users fetch error:", err);
-			setError("Failed to load users");
+			console.error("Questions fetch error:", err);
+			setError("Failed to load questions");
 		} finally {
 			setLoading(false);
 		}
-	}, [currentUser]);
+	};
 
-	useEffect(() => {
-		fetchUsers();
-	}, [fetchUsers]);
-
-	const handleSaveUser = async (userData: Partial<User>) => {
+	const handleSaveQuestion = async (questionData: Partial<Question>) => {
 		try {
-			// More strict password change validation
-			if (editingUser && userData.password && currentUser) {
-				// If editing another user (not yourself)
-				if (editingUser.id !== currentUser.id) {
-					// Only level 20+ can change other users' passwords
-					if (currentUser.authentication_level < 20) {
-						setError(
-							"Access denied: You can only change your own password. Authentication level 20+ required to change other users' passwords."
-						);
-						return;
-					}
-				}
-			}
+			// FIXED: Check for duplicate question titles
+			if (!editingQuestion) {
+				const isDuplicate = questions.some(
+					(q) =>
+						q.question_title.trim().toLowerCase() ===
+						questionData.question_title?.trim().toLowerCase()
+				);
 
-			// Prevent users from setting authentication_level higher than their own
-			if (userData.authentication_level && currentUser) {
-				if (
-					userData.authentication_level >
-					currentUser.authentication_level
-				) {
+				if (isDuplicate) {
 					setError(
-						"Cannot set authentication level higher than your own"
+						"A question with this title already exists. Please use a different title."
+					);
+					return;
+				}
+			} else {
+				// For editing, check duplicates excluding the current question
+				const isDuplicate = questions.some(
+					(q) =>
+						q.id !== editingQuestion.id &&
+						q.question_title.trim().toLowerCase() ===
+							questionData.question_title?.trim().toLowerCase()
+				);
+
+				if (isDuplicate) {
+					setError(
+						"A question with this title already exists. Please use a different title."
 					);
 					return;
 				}
 			}
 
-			const url = editingUser
-				? `/api/users/${editingUser.id}`
-				: "/api/users";
-			const method = editingUser ? "PUT" : "POST";
+			const url = editingQuestion
+				? `/api/questions/${editingQuestion.id}`
+				: "/api/questions";
+			const method = editingQuestion ? "PUT" : "POST";
+
+			console.log("Saving question:", { url, method, questionData });
 
 			const response = await fetch(url, {
 				method,
@@ -191,101 +191,282 @@ const UserManagement = () => {
 					"Content-Type": "application/json",
 					Authorization: `Bearer ${localStorage.getItem("token")}`,
 				},
-				body: JSON.stringify(userData),
+				body: JSON.stringify(questionData),
 			});
 
 			if (response.ok) {
-				await fetchUsers();
-				setEditingUser(null);
+				await fetchQuestions();
+				setEditingQuestion(null);
 				setShowAddForm(false);
 				setError("");
 				// NOTE: currentPage state is preserved automatically
 			} else {
 				const errorData = await response.json();
-				setError(errorData.message || "Failed to save user");
+				console.error("Save question error:", errorData);
+				setError(errorData.message || "Failed to save question");
 			}
 		} catch (err) {
-			setError("Failed to save user");
+			console.error("Save question error:", err);
+			setError("Failed to save question");
 		}
 	};
 
-	const handleDeleteUsers = async (userIds: string[]) => {
-		// Prevent deletion of admin user
-		const adminUser = users.find(
-			(user) => user.employee_id === "admin" && userIds.includes(user.id)
-		);
-		if (adminUser) {
-			setError("Cannot delete admin user");
-			return;
+	const handleDeleteQuestions = async (questionIds: string[]) => {
+		// First check for foreign key issues
+		let hasRelatedRecords = false;
+		const relatedRecordsInfo: RelatedRecordInfo[] = [];
+
+		try {
+			console.log("Checking for related test results...");
+			for (const id of questionIds) {
+				const checkResponse = await fetch("/api/debug-db", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${localStorage.getItem(
+							"token"
+						)}`,
+					},
+					body: JSON.stringify({ questionId: id }),
+				});
+
+				if (checkResponse.ok) {
+					const checkData = await checkResponse.json();
+					if (checkData.tests?.foreignKeys?.relatedRecords > 0) {
+						hasRelatedRecords = true;
+						relatedRecordsInfo.push({
+							id,
+							relatedCount:
+								checkData.tests.foreignKeys.relatedRecords,
+						});
+					}
+				}
+			}
+		} catch (checkError) {
+			console.error("Error checking for related records:", checkError);
 		}
 
-		if (
-			!confirm(
-				`Are you sure you want to delete ${userIds.length} user(s)?`
-			)
-		) {
-			return;
+		// Show warning if there are related records
+		if (hasRelatedRecords) {
+			const totalRelated = relatedRecordsInfo.reduce(
+				(sum, item) => sum + item.relatedCount,
+				0
+			);
+			const confirmMessage = `⚠️ WARNING: ${questionIds.length} question(s) selected for deletion have ${totalRelated} related test result(s).
+
+These questions cannot be deleted because they are referenced in existing test results.
+
+Options:
+• Cancel deletion (recommended)
+• Contact administrator to remove test results first
+
+Do you want to continue anyway? (Will likely fail)`;
+
+			if (!confirm(confirmMessage)) {
+				return;
+			}
+		} else {
+			// Standard confirmation for questions without related records
+			if (
+				!confirm(
+					`Are you sure you want to delete ${questionIds.length} question(s)? This action cannot be undone.`
+				)
+			) {
+				return;
+			}
 		}
 
 		try {
-			await Promise.all(
-				userIds.map((id) =>
-					fetch(`/api/users/${id}`, {
+			console.log(
+				"Starting deletion process for questions:",
+				questionIds
+			);
+
+			// Delete questions one by one and collect results
+			const deletePromises = questionIds.map(async (id: string) => {
+				console.log(`Attempting to delete question: ${id}`);
+
+				try {
+					const response = await fetch(`/api/questions/${id}`, {
 						method: "DELETE",
 						headers: {
 							Authorization: `Bearer ${localStorage.getItem(
 								"token"
 							)}`,
+							"Content-Type": "application/json",
 						},
-					})
-				)
+					});
+
+					console.log(
+						`Delete response for ${id}:`,
+						response.status,
+						response.statusText
+					);
+
+					const responseText = await response.text();
+					console.log(
+						`Delete response body for ${id}:`,
+						responseText
+					);
+
+					let responseData;
+					try {
+						responseData = JSON.parse(responseText);
+					} catch (parseError) {
+						console.error(
+							`Failed to parse response for ${id}:`,
+							parseError
+						);
+						throw new Error(
+							`Invalid response format: ${responseText}`
+						);
+					}
+
+					if (!response.ok) {
+						// Handle specific error cases
+						if (response.status === 409) {
+							const conflictMessage = `Cannot delete question ${id}: ${
+								responseData.message ||
+								"It is referenced in test results"
+							}`;
+							throw new Error(conflictMessage);
+						}
+
+						throw new Error(
+							`Delete failed for ${id}: ${
+								responseData.message ||
+								responseData.error ||
+								"Unknown error"
+							}`
+						);
+					}
+
+					console.log(`Successfully deleted question ${id}`);
+					return { id, success: true };
+				} catch (error) {
+					console.error(`Error deleting question ${id}:`, error);
+					throw error;
+				}
+			});
+
+			// Wait for all deletions to complete
+			console.log("Waiting for all deletion promises...");
+			const results = await Promise.allSettled(deletePromises);
+
+			// Check if any deletions failed
+			const failed = results.filter(
+				(result): result is PromiseRejectedResult => result.status === "rejected"
+			);
+			const successful = results.filter(
+				(result): result is PromiseFulfilledResult<any> => result.status === "fulfilled"
 			);
 
-			await fetchUsers();
-			setSelectedUsers([]);
-			setError("");
+			console.log(
+				`Deletion results: ${successful.length} successful, ${failed.length} failed`
+			);
+
+			if (failed.length > 0) {
+				console.error(
+					"Failed deletions:",
+					failed.map((f) => f.reason)
+				);
+				const errorMessages = failed
+					.map((f) => f.reason?.message || "Unknown error")
+					.join("\n");
+
+				// Show specific message for foreign key violations
+				const foreignKeyErrors = failed.filter(
+					(f) =>
+						f.reason?.message?.includes(
+							"referenced in test results"
+						) ||
+						f.reason?.message?.includes("foreign key constraint")
+				);
+
+				if (foreignKeyErrors.length > 0) {
+					setError(`⏰ Cannot delete ${foreignKeyErrors.length} question(s): They are referenced in existing test results.
+
+📋 These questions have been used in tests and cannot be deleted to preserve data integrity.
+
+💡 Solutions:
+• Use different questions for future tests
+• Contact your administrator to remove old test results
+• Archive these questions instead of deleting them
+
+Detailed errors:
+${errorMessages}`);
+				} else {
+					setError(
+						`Failed to delete ${failed.length} question(s):\n${errorMessages}`
+					);
+				}
+			}
+
+			if (successful.length > 0) {
+				console.log(
+					"Some deletions were successful, refreshing questions list"
+				);
+			}
+
+			// Refresh the questions list regardless of partial failures
+			await fetchQuestions();
+			setSelectedQuestions([]);
+
+			// Clear error if all deletions were successful
+			if (failed.length === 0) {
+				setError("");
+				console.log("All deletions completed successfully");
+			}
 		} catch (err) {
-			setError("Failed to delete users");
+			console.error("Unexpected error in handleDeleteQuestions:", err);
+			setError(
+				"Unexpected error during deletion: " +
+					(err instanceof Error ? err.message : "Unknown error")
+			);
 		}
 	};
 
-	const handleExportExcel = () => {
+	const handleExportExcel = async () => {
 		try {
-			// Prepare data for export (exclude sensitive fields)
-			const exportData = users.map((user) => ({
-				"Employee ID": user.employee_id,
-				"Full Name": user.full_name,
-				Rank: getRankAbbreviation(user.rank),
-				Base: user.base,
-				Email: user.email,
-				"Excluded Categories": Array.isArray(user.filter)
-					? user.filter.join(", ")
-					: "",
-				"Created Date": user.created_at
-					? new Date(user.created_at).toLocaleDateString("en-US")
-					: "N/A",
-				"Last Modified": user.updated_at
-					? new Date(user.updated_at).toLocaleDateString("en-US")
-					: user.created_at
-					? new Date(user.created_at).toLocaleDateString("en-US")
-					: "N/A",
+			// Wait for XLSX to load if not already loaded
+			if (!XLSX) {
+				const xlsxModule = await import("xlsx");
+				XLSX = xlsxModule;
+			}
+
+			// Prepare data for export (exclude date columns)
+			const exportData = questions.map((question) => ({
+				"Question Number": question.question_number || "N/A",
+				Category: question.question_category,
+				"Question Title": question.question_title,
+				Chapter: question.question_chapter,
+				Page: question.question_page,
+				Line: question.question_line,
+				// FIXED: Include difficulty for level 10+ users in export
+				...(currentUser &&
+					currentUser.authentication_level >= 10 && {
+						"Difficulty Level": question.difficulty_level || 3,
+					}),
 			}));
 
 			// Create workbook and worksheet
 			const ws = XLSX.utils.json_to_sheet(exportData);
 			const wb = XLSX.utils.book_new();
-			XLSX.utils.book_append_sheet(wb, ws, "Users");
+			XLSX.utils.book_append_sheet(wb, ws, "Questions");
 
 			// Auto-size columns
-			const maxWidth = 50;
-			const colWidths = Object.keys(exportData[0] || {}).map((key) => ({
-				wch: Math.min(Math.max(key.length, 10), maxWidth),
-			}));
+			const maxWidth = 60;
+			const colWidths = Object.keys(exportData[0] || {}).map((key) => {
+				if (key === "Question Title") {
+					return { wch: maxWidth }; // Max width for question title
+				}
+				return { wch: Math.min(Math.max(key.length, 12), 30) };
+			});
 			ws["!cols"] = colWidths;
 
 			// Generate filename with current date
 			const today = new Date().toISOString().split("T")[0];
-			const filename = `users_export_${today}.xlsx`;
+			const filename = `questions_export_${today}.xlsx`;
 
 			// Save file
 			XLSX.writeFile(wb, filename);
@@ -297,77 +478,183 @@ const UserManagement = () => {
 
 	const handleImportExcel = async (file: File) => {
 		try {
+			// Wait for XLSX to load if not already loaded
+			if (!XLSX) {
+				const xlsxModule = await import("xlsx");
+				XLSX = xlsxModule;
+			}
+
 			const data = await file.arrayBuffer();
 			const workbook = XLSX.read(data);
 			const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-			const jsonData = XLSX.utils.sheet_to_json(worksheet) as ExcelRowData[];
+			const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+			console.log("Excel data preview:", jsonData.slice(0, 2));
+			console.log(
+				"Available columns:",
+				jsonData.length > 0 ? Object.keys(jsonData[0]) : "No data"
+			);
 
 			// Validate and transform imported data
-			const importedUsers: ImportedUserData[] = jsonData.map((row: ExcelRowData) => {
-				// Map Excel columns to database fields
-				return {
-					employee_id: row["Employee ID"] || row["employee_id"] || "",
-					full_name: row["Full Name"] || row["full_name"] || "",
-					rank: row["Rank"] || row["rank"] || "",
-					base: row["Base"] || row["base"] || "",
-					email: row["Email"] || row["email"] || "",
-					filter:
-						typeof row["Excluded Categories"] === "string"
-							? row["Excluded Categories"]
-									.split(",")
-									.map((s) => s.trim())
-									.filter((s) => s)
-							: Array.isArray(row["filter"]) 
-								? row["filter"] 
-								: [],
-					// Set default values for fields not in import
-					authentication_level: 1,
-					handicap_level: 3,
-					password: "TempPassword123!", // Temporary password - users should change
+			const importedQuestions = jsonData.map((row: ExcelRowData, index: number): ImportedQuestion => {
+				// FIXED: Handle multiple column name formats (both display names and database field names)
+				const getFieldValue = (
+					row: ExcelRowData,
+					...possibleNames: string[]
+				): any => {
+					for (const name of possibleNames) {
+						if (
+							row[name] !== undefined &&
+							row[name] !== null &&
+							row[name] !== ""
+						) {
+							return row[name];
+						}
+					}
+					return undefined;
 				};
+
+				// Map Excel columns to database fields with flexible column name matching
+				const mappedData: ImportedQuestion = {
+					question_category: getFieldValue(
+						row,
+						"Category",
+						"question_category",
+						"category",
+						"CATEGORY"
+					),
+					question_title: getFieldValue(
+						row,
+						"Question Title",
+						"question_title",
+						"title",
+						"Question",
+						"QUESTION_TITLE"
+					),
+					question_chapter: getFieldValue(
+						row,
+						"Chapter",
+						"question_chapter",
+						"chapter",
+						"CHAPTER"
+					),
+					question_page:
+						parseInt(
+							getFieldValue(
+								row,
+								"Page",
+								"question_page",
+								"page",
+								"PAGE"
+							)
+						) || 1,
+					question_line:
+						getFieldValue(
+							row,
+							"Line",
+							"question_line",
+							"line",
+							"LINE"
+						)?.toString() || "1",
+					// FIXED: Handle difficulty level from import if available
+					difficulty_level:
+						parseInt(
+							getFieldValue(
+								row,
+								"Difficulty Level",
+								"difficulty_level",
+								"difficulty",
+								"DIFFICULTY"
+							)
+						) || 3,
+				};
+
+				return mappedData;
 			});
 
-			// Prevent importing admin users (except by admin)
-			if (currentUser?.employee_id !== "admin") {
-				const hasAdminUser = importedUsers.some(
-					(user) => user.employee_id === "admin"
-				);
-				if (hasAdminUser) {
-					setError(
-						"Cannot import admin users. Only admin can manage admin accounts."
-					);
-					return;
+			// FIXED: Check for duplicate question titles in import
+			const existingTitles = new Set(
+				questions.map((q) => q.question_title.trim().toLowerCase())
+			);
+			const importTitles = new Set<string>();
+			const duplicates: string[] = [];
+
+			for (const question of importedQuestions) {
+				if (!question.question_title) continue;
+
+				const title = question.question_title.trim().toLowerCase();
+				if (existingTitles.has(title) || importTitles.has(title)) {
+					duplicates.push(question.question_title);
 				}
+				importTitles.add(title);
+			}
+
+			if (duplicates.length > 0) {
+				setError(
+					`Import contains duplicate questions:\n${duplicates
+						.slice(0, 5)
+						.join("\n")}${
+						duplicates.length > 5 ? "\n... and more" : ""
+					}`
+				);
+				return;
 			}
 
 			// Validate required fields
 			const errors: string[] = [];
-			importedUsers.forEach((user, index) => {
-				if (!user.employee_id)
-					errors.push(`Row ${index + 2}: Employee ID is required`);
-				if (!user.full_name)
-					errors.push(`Row ${index + 2}: Full Name is required`);
-				if (!user.rank)
-					errors.push(`Row ${index + 2}: Rank is required`);
-				if (!user.base)
-					errors.push(`Row ${index + 2}: Base is required`);
-				if (!user.email)
-					errors.push(`Row ${index + 2}: Email is required`);
-			});
+			importedQuestions.forEach(
+				(question: ImportedQuestion, index: number) => {
+					const rowNum = index + 2; // Excel row number (accounting for header)
+
+					if (!question.question_category)
+						errors.push(`Row ${rowNum}: Category is required`);
+					if (!question.question_title)
+						errors.push(`Row ${rowNum}: Question Title is required`);
+					if (!question.question_chapter)
+						errors.push(`Row ${rowNum}: Chapter is required`);
+					if (!question.question_page || question.question_page < 1)
+						errors.push(`Row ${rowNum}: Valid Page number is required`);
+					if (!question.question_line || question.question_line.trim() === "")
+						errors.push(`Row ${rowNum}: Line reference is required`);
+				}
+			);
 
 			if (errors.length > 0) {
-				setError(`Import validation errors:\n${errors.join("\n")}`);
+				setError(
+					`Import validation errors:\n${errors
+						.slice(0, 10)
+						.join("\n")}${
+						errors.length > 10
+							? `\n... and ${errors.length - 10} more errors`
+							: ""
+					}`
+				);
 				return;
 			}
 
-			// Batch create users
+			// Filter out any completely empty rows
+			const validQuestions = importedQuestions.filter(
+				(q: ImportedQuestion) =>
+					q.question_category &&
+					q.question_title &&
+					q.question_chapter
+			);
+
+			if (validQuestions.length === 0) {
+				setError(
+					"No valid questions found in the Excel file. Please check the format and ensure all required fields are filled."
+				);
+				return;
+			}
+
+			// Batch create questions
 			let successCount = 0;
 			let errorCount = 0;
 			const importErrors: string[] = [];
 
-			for (const userData of importedUsers) {
+			for (const questionData of validQuestions) {
 				try {
-					const response = await fetch("/api/users", {
+					const response = await fetch("/api/questions", {
 						method: "POST",
 						headers: {
 							"Content-Type": "application/json",
@@ -375,7 +662,7 @@ const UserManagement = () => {
 								"token"
 							)}`,
 						},
-						body: JSON.stringify(userData),
+						body: JSON.stringify(questionData),
 					});
 
 					if (response.ok) {
@@ -388,23 +675,29 @@ const UserManagement = () => {
 							errorData.error ||
 							"Unknown error";
 						importErrors.push(
-							`${userData.employee_id}: ${errorMsg}`
+							`"${questionData.question_title.substring(
+								0,
+								50
+							)}...": ${errorMsg}`
 						);
 					}
 				} catch (err) {
 					errorCount++;
 					console.error(
-						`Import error for ${userData.employee_id}:`,
+						`Import error for question "${questionData.question_title}":`,
 						err
 					);
 					importErrors.push(
-						`${userData.employee_id}: Network/connection error`
+						`"${questionData.question_title.substring(
+							0,
+							50
+						)}...": Network/connection error`
 					);
 				}
 			}
 
 			// Show import results
-			let message = `Import completed: ${successCount} users created successfully`;
+			let message = `Import completed: ${successCount} questions created successfully`;
 			if (errorCount > 0) {
 				message += `, ${errorCount} errors:\n${importErrors.join(
 					"\n"
@@ -417,201 +710,98 @@ const UserManagement = () => {
 				alert(message);
 			}
 
-			await fetchUsers();
+			await fetchQuestions();
 		} catch (err) {
 			console.error("Import processing error:", err);
-			setError("Failed to process Excel file. Please check the format.");
+			setError(
+				"Failed to process Excel file. Please check the format and ensure it's a valid Excel file."
+			);
 		}
 	};
 
-	// Helper function to get authentication level CSS class
-	const getAuthClass = (level: number): string => {
-		// Map specific authentication levels to CSS classes
-		switch (level) {
-			case 1:
-				return "auth1";
-			case 2:
-				return "auth2";
-			case 3:
-				return "auth3";
-			case 4:
-				return "auth4";
-			case 5:
-				return "auth5";
-			case 10:
-				return "auth10";
-			case 20:
-				return "auth20";
-			case 99:
-				return "auth99";
-			default:
-				// For any other levels, map to closest
-				if (level >= 99) return "auth99";
-				if (level >= 20) return "auth20";
-				if (level >= 10) return "auth10";
-				if (level >= 5) return "auth5";
-				if (level >= 4) return "auth4";
-				if (level >= 3) return "auth3";
-				if (level >= 2) return "auth2";
-				return "auth1";
-		}
-	};
-
-	// Helper function to get handicap level CSS class
-	const getHandicapClass = (level: number): string => {
-		// Map handicap levels to CSS classes
-		switch (level) {
-			case 1:
-				return "handicap1";
-			case 2:
-				return "handicap2";
-			case 3:
-				return "handicap3";
-			case 4:
-				return "handicap4";
-			case 5:
-				return "handicap5";
-			default:
-				return "handicap3"; // Default to level 3
-		}
-	};
-
-	// Helper function to extract rank abbreviation
-	const getRankAbbreviation = (rank: string): string => {
-		if (!rank) return "";
-
-		// Special case for admin
-		if (rank.toLowerCase() === "admin") return "admin";
-
-		// Extract abbreviation before the first " - " or return first part
-		const parts = rank.split(" - ");
-		return parts[0];
-	};
-
-	// Build columns based on user permissions
 	const columns = [
-		// Employee ID - Always show Employee ID column for level 5+ users
-		...(currentUser && currentUser.authentication_level >= 5
-			? [
-					{
-						key: "employee_id",
-						label: "ID",
-						sortable: true,
-						filterable: true,
-						// Special styling for admin user
-						render: (value: string) => (
-							<span
-								className={
-									value === "admin"
-										? styles.adminEmployeeId
-										: ""
-								}
-							>
-								{value}
-							</span>
-						),
-					},
-			  ]
-			: []),
 		{
-			key: "full_name",
-			label: "Name",
+			key: "question_number",
+			label: "Question #",
 			sortable: true,
 			filterable: true,
-			// Special styling for admin user
-			render: (value: string, user: User) => (
+			render: (value: number) => (
 				<span
-					className={
-						user.employee_id === "admin" ? styles.adminFullName : ""
-					}
+					className={styles.questionNumber}
+					data-status={value ? undefined : "pending"}
 				>
-					{value}
-					{user.employee_id === "admin" && (
-						<span className={styles.adminBadge}>🔒 ADMIN</span>
-					)}
+					{value ? `#${value}` : "PENDING"}
 				</span>
 			),
 		},
 		{
-			key: "rank",
-			label: "Rank",
+			key: "question_category",
+			label: "Category",
 			sortable: true,
 			filterable: true,
-			// Show only rank abbreviation in table
+		},
+		{
+			key: "question_title",
+			label: "Question",
+			sortable: true,
+			filterable: true,
 			render: (value: string) => (
-				<span>{getRankAbbreviation(value)}</span>
+				<div
+					style={{
+						maxWidth: "300px",
+						whiteSpace: "normal",
+						wordWrap: "break-word",
+					}}
+				>
+					{value}
+				</div>
 			),
 		},
 		{
-			key: "base",
-			label: "Base",
+			key: "question_chapter",
+			label: "Chapter",
 			sortable: true,
 			filterable: true,
 		},
 		{
-			key: "email",
-			label: "Email",
+			key: "question_page",
+			label: "Page",
 			sortable: true,
-			filterable: true,
+			filterable: false,
 		},
-		// Handicap Level - only visible to level 10+
+		{
+			key: "question_line",
+			label: "Line",
+			sortable: true,
+			filterable: false,
+		},
+		// Difficulty Level - only visible to level 10+
 		...(currentUser && currentUser.authentication_level >= 10
 			? [
 					{
-						key: "handicap_level",
-						label: "Handicap",
+						key: "difficulty_level",
+						label: "Difficulty",
 						sortable: true,
 						filterable: false,
 						render: (value: number) => (
 							<span
-								className={`${styles.handicapBadge} ${
-									styles[getHandicapClass(value)]
+								className={`${styles.difficultyBadge} ${
+									styles[`difficulty${value || 3}`]
 								}`}
 							>
-								Level {value}
-							</span>
-						),
-					},
-			  ]
-			: []),
-		// Auth Level - only visible to level 20+
-		...(currentUser && currentUser.authentication_level >= 20
-			? [
-					{
-						key: "authentication_level",
-						label: "Auth Level",
-						sortable: true,
-						filterable: false,
-						render: (value: number) => (
-							<span
-								className={`${styles.authBadge} ${
-									styles[getAuthClass(value)]
-								}`}
-							>
-								Level {value}
+								Level {value || 3}
 							</span>
 						),
 					},
 			  ]
 			: []),
 		{
-			key: "filter",
-			label: "Excluded Categories",
-			sortable: false,
+			key: "last_date_modified",
+			label: "Last Modified",
+			sortable: true,
 			filterable: false,
-			render: (value: string[]) => (
-				<div className={styles.filterTags}>
-					{value && value.length > 0 ? (
-						value.map((filter, index) => (
-							<span key={index} className={styles.filterTag}>
-								{filter}
-							</span>
-						))
-					) : (
-						<span className={styles.noFilters}>None</span>
-					)}
-				</div>
-			),
+			render: (value: string) =>
+				value ? new Date(value).toLocaleDateString() : "N/A",
 		},
 	];
 
@@ -619,23 +809,15 @@ const UserManagement = () => {
 		return (
 			<div className={styles.loading}>
 				<div className="loading-spinner"></div>
-				<p>Loading users...</p>
+				<p>Loading questions...</p>
 			</div>
 		);
 	}
 
 	return (
-		<div className={styles.userManagement}>
+		<div className={styles.questionManagement}>
 			<div className={styles.header}>
-				<h1>User Management</h1>
-				{/* Show admin status if current user is admin */}
-				{currentUser?.employee_id === "admin" && (
-					<div className={styles.adminStatus}>
-						<span className={styles.adminIndicator}>
-							🔒 Admin Mode - Admin user visible
-						</span>
-					</div>
-				)}
+				<h1>Question Management</h1>
 				<div className={styles.actions}>
 					<button
 						className="btn btn-primary"
@@ -662,12 +844,18 @@ const UserManagement = () => {
 					<label htmlFor="import-excel" className="btn btn-secondary">
 						{buttonText.importText}
 					</label>
-					{selectedUsers.length > 0 && (
+					{selectedQuestions.length > 0 && (
 						<button
 							className="btn btn-danger"
-							onClick={() => handleDeleteUsers(selectedUsers)}
+							onClick={() => {
+								console.log(
+									"Multiple delete button clicked, selected questions:",
+									selectedQuestions
+								);
+								handleDeleteQuestions(selectedQuestions);
+							}}
 						>
-							{buttonText.deleteText(selectedUsers.length)}
+							{buttonText.deleteText(selectedQuestions.length)}
 						</button>
 					)}
 				</div>
@@ -678,49 +866,113 @@ const UserManagement = () => {
 			<div className={styles.importHelp}>
 				<details>
 					<summary>💡 Excel Import Format Guide</summary>
-					<p>Your Excel file should contain the following columns:</p>
+					<p>
+						Your Excel file should contain the following columns
+						(case-insensitive):
+					</p>
 					<ul>
 						<li>
-							<strong>Employee ID</strong> - Unique identifier
-							(required)
+							<strong>Category</strong> (or &quot;category&quot;)
+							- Question category (required)
+							<br />
+							<small>
+								Example: Safety, Regulations, Protocol, etc.
+							</small>
 						</li>
 						<li>
-							<strong>Full Name</strong> - User&apos;s full name
-							(required)
+							<strong>Question Title</strong> (or
+							&quot;question_title&quot;) - The complete question
+							text (required) - must be unique
+							<br />
+							<small>
+								Example: &quot;What is the emergency evacuation
+								procedure?&quot;
+							</small>
 						</li>
 						<li>
-							<strong>Rank</strong> - User&apos;s rank (required)
+							<strong>Chapter</strong> (or &quot;chapter&quot;) -
+							Reference chapter (required)
+							<br />
+							<small>
+								Example: &quot;Emergency Procedures&quot; or
+								&quot;1&quot;
+							</small>
 						</li>
 						<li>
-							<strong>Base</strong> - User&apos;s base location
-							(required)
+							<strong>Page</strong> (or &quot;page&quot;) -
+							Reference page number (required)
+							<br />
+							<small>Example: 25</small>
 						</li>
 						<li>
-							<strong>Email</strong> - User&apos;s email address
-							(required)
+							<strong>Line</strong> (or &quot;line&quot;) -
+							Reference line number (required)
+							<br />
+							<small>Example: 10</small>
 						</li>
-						<li>
-							<strong>Excluded Categories</strong> -
-							Comma-separated list (optional)
-						</li>
+						{currentUser &&
+							currentUser.authentication_level >= 10 && (
+								<li>
+									<strong>Difficulty Level</strong> (or
+									&quot;difficulty_level&quot;) - Optional
+									difficulty level (1-5, defaults to 3)
+									<br />
+									<small>Example: 3</small>
+								</li>
+							)}
 					</ul>
 					<p>
 						<em>
-							Default password &quot;TempPassword123!&quot; will
-							be assigned to imported users.
+							Note: Question numbers are auto-generated and should
+							not be included in import files. Question titles
+							must be unique.
 						</em>
 					</p>
+					<div
+						style={{
+							marginTop: "1rem",
+							padding: "0.5rem",
+							background: "#e3f2fd",
+							borderRadius: "4px",
+						}}
+					>
+						<strong>📋 Supported Column Formats:</strong>
+						<ul style={{ marginTop: "0.5rem", fontSize: "0.9rem" }}>
+							<li>
+								<strong>Display format:</strong>{" "}
+								&quot;Category&quot;, &quot;Question
+								Title&quot;, &quot;Chapter&quot;,
+								&quot;Page&quot;, &quot;Line&quot;
+							</li>
+							<li>
+								<strong>Database format:</strong>{" "}
+								&quot;category&quot;,
+								&quot;question_title&quot;, &quot;chapter&quot;,
+								&quot;page&quot;, &quot;line&quot;
+							</li>
+							<li>
+								<strong>Mixed format:</strong> Any combination
+								of the above
+							</li>
+						</ul>
+					</div>
 				</details>
 			</div>
 
 			<div className={styles.tableContainer}>
 				<DataTable
-					data={users}
+					data={questions}
 					columns={columns}
-					onEdit={(user) => setEditingUser(user)}
-					onDelete={(user) => handleDeleteUsers([user.id])}
-					onSelectionChange={setSelectedUsers}
-					selectedItems={selectedUsers}
+					onEdit={(question: Question) => setEditingQuestion(question)}
+					onDelete={(question: Question) => {
+						console.log(
+							"Delete button clicked for question:",
+							question.id
+						);
+						handleDeleteQuestions([question.id]);
+					}}
+					onSelectionChange={setSelectedQuestions}
+					selectedItems={selectedQuestions}
 					rowKey="id"
 					// NEW: Enable pagination preservation
 					preservePagination={true}
@@ -729,17 +981,14 @@ const UserManagement = () => {
 				/>
 			</div>
 
-			{(showAddForm || editingUser) && (
-				<UserForm
-					user={editingUser}
-					onSave={handleSaveUser}
+			{(showAddForm || editingQuestion) && (
+				<QuestionForm
+					question={editingQuestion}
+					onSave={handleSaveQuestion}
 					onCancel={() => {
-						setEditingUser(null);
+						setEditingQuestion(null);
 						setShowAddForm(false);
 					}}
-					currentUserAuthLevel={
-						currentUser?.authentication_level || 1
-					}
 					currentUser={currentUser}
 				/>
 			)}
@@ -747,101 +996,44 @@ const UserManagement = () => {
 	);
 };
 
-interface UserFormProps {
-	user: User | null;
-	onSave: (userData: Partial<User>) => void;
+interface QuestionFormProps {
+	question: Question | null;
+	onSave: (questionData: Partial<Question>) => void;
 	onCancel: () => void;
-	currentUserAuthLevel: number;
-	currentUser: User | null;
+	currentUser: CurrentUser | null;
 }
 
-const UserForm = ({
-	user,
+const QuestionForm = ({
+	question,
 	onSave,
 	onCancel,
-	currentUserAuthLevel,
 	currentUser,
-}: UserFormProps) => {
+}: QuestionFormProps) => {
 	const [formData, setFormData] = useState({
-		employee_id: user?.employee_id || "",
-		full_name: user?.full_name || "",
-		rank: user?.rank || "",
-		base: user?.base || "",
-		email: user?.email || "",
-		password: "",
-		filter: user?.filter || [],
-		handicap_level: user?.handicap_level || 3,
-		authentication_level: user?.authentication_level || 1,
+		question_category: question?.question_category || "",
+		question_title: question?.question_title || "",
+		question_chapter: question?.question_chapter || "",
+		question_page: question?.question_page || 1,
+		question_line: question?.question_line || "1",
+		difficulty_level: question?.difficulty_level || 3,
 	});
 
-	// UPDATED: Use dynamic categories instead of hardcoded ones
-	const availableCategories = USER_FILTER_CATEGORIES;
-
-	// Rest of the component remains exactly the same...
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
-		const submitData = { ...formData };
-
-		// Remove password if empty (for updates)
-		if (!submitData.password && user) {
-			delete (submitData as any).password;
-		}
-
-		onSave(submitData);
+		onSave(formData);
 	};
 
-	const handleFilterToggle = (category: string) => {
-		setFormData((prev) => {
-			const newFilters = prev.filter.includes(category)
-				? prev.filter.filter((f) => f !== category)
-				: [...prev.filter, category];
-			return { ...prev, filter: newFilters };
-		});
-	};
+	const categories = QUESTION_CATEGORIES;
 
-	const handleRankSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-		setFormData((prev) => ({ ...prev, rank: e.target.value }));
-	};
-
-	// Updated rank options with full descriptions
-	const commonRanks = [
-		"FA - Flight Attendant",
-		"FS - Flight Stewardess",
-		"LF - Leading Flight Attendant",
-		"PR - Purser",
-		"FI - Flight Attendant Instructor",
-		"SC - Section Chief",
-		"MG - Manager",
-	];
-
-	// Determine if password field should be shown and if it's editable
-	const canChangePassword = (): boolean => {
-		if (!user) return true; // New user, always show password
-		if (!currentUser) return false;
-		if (currentUser.authentication_level >= 20) return true; // Level 20+ can change any password
-		if (user.id === currentUser.id) return true; // Can change own password
-		return false; // Cannot change other users' passwords
-	};
-
-	// Determine if this is editing another user's account
-	const isEditingOtherUser = (): boolean => {
-		if (!user || !currentUser) return false;
-		return user.id !== currentUser.id;
-	};
+	// FIXED: Determine if difficulty selector should be shown
+	const showDifficulty =
+		currentUser && currentUser.authentication_level >= 10;
 
 	return (
 		<div className={styles.modal}>
 			<div className={styles.modalContent}>
 				<div className={styles.modalHeader}>
-					<h2>
-						{user ? "✏️ Edit User" : "➕ Add New User"}
-						{/* Show admin indicator in form */}
-						{user?.employee_id === "admin" && (
-							<span className={styles.adminFormBadge}>
-								🔒 ADMIN ACCOUNT
-							</span>
-						)}
-					</h2>
+					<h2>{question ? "✏️ Edit Question" : "➕ Add New Question"}</h2>
 					<button
 						type="button"
 						className={styles.closeButton}
@@ -852,295 +1044,133 @@ const UserForm = ({
 					</button>
 				</div>
 
-				<form onSubmit={handleSubmit} className={styles.userForm}>
+				<form onSubmit={handleSubmit} className={styles.questionForm}>
 					<div className={styles.formGrid}>
-						{/* Employee ID - show based on permissions and form type */}
-						{currentUser &&
-							currentUser.authentication_level >= 5 && (
-								<div className={styles.formGroup}>
-									<label className={styles.formLabel}>
-										Employee ID *
-									</label>
-									<input
-										type="text"
-										className={styles.formInput}
-										value={formData.employee_id}
-										onChange={(e) =>
-											setFormData((prev) => ({
-												...prev,
-												employee_id: e.target.value,
-											}))
-										}
-										required
-										placeholder="e.g., USER001"
-										// Disable editing admin employee ID for non-admin users
-										disabled={
-											user?.employee_id === "admin" &&
-											currentUser?.employee_id !== "admin"
-										}
-									/>
-									{user?.employee_id === "admin" && (
-										<small className={styles.adminNote}>
-											⚠️ Admin account - handle with care
-										</small>
-									)}
-								</div>
-							)}
-
 						<div className={styles.formGroup}>
-							<label className={styles.formLabel}>
-								Full Name *
-							</label>
-							<input
-								type="text"
-								className={styles.formInput}
-								value={formData.full_name}
+							<label className={styles.formLabel}>Category *</label>
+							<select
+								className={styles.formSelect}
+								value={formData.question_category}
 								onChange={(e) =>
 									setFormData((prev) => ({
 										...prev,
-										full_name: e.target.value,
+										question_category: e.target.value,
 									}))
 								}
 								required
-								placeholder="Enter full name"
-							/>
-						</div>
-
-						<div className={styles.formGroup}>
-							<label className={styles.formLabel}>Rank *</label>
-							<select
-								className={styles.formSelect}
-								value={formData.rank}
-								onChange={handleRankSelect}
-								required
 							>
-								<option value="">Select Rank</option>
-								{commonRanks.map((rank) => (
-									<option 
-										key={rank} 
-										value={rank}
-									>
-										{rank}
+								<option value="">Select Category</option>
+								{categories.map((category) => (
+									<option key={category} value={category}>
+										{category}
 									</option>
 								))}
 							</select>
 						</div>
 
 						<div className={styles.formGroup}>
-							<label className={styles.formLabel}>Base *</label>
+							<label className={styles.formLabel}>Chapter *</label>
 							<input
 								type="text"
 								className={styles.formInput}
-								value={formData.base}
+								value={formData.question_chapter}
 								onChange={(e) =>
 									setFormData((prev) => ({
 										...prev,
-										base: e.target.value,
+										question_chapter: e.target.value,
 									}))
 								}
 								required
-								placeholder="e.g., KHH"
+								placeholder="e.g., Traffic Rules"
 							/>
 						</div>
 
 						<div className={styles.formGroup}>
-							<label className={styles.formLabel}>Email *</label>
+							<label className={styles.formLabel}>Page *</label>
 							<input
-								type="email"
+								type="number"
 								className={styles.formInput}
-								value={formData.email}
+								min="1"
+								value={formData.question_page}
 								onChange={(e) =>
 									setFormData((prev) => ({
 										...prev,
-										email: e.target.value,
+										question_page:
+											parseInt(e.target.value) || 1,
 									}))
 								}
 								required
-								placeholder="user@example.com"
 							/>
 						</div>
 
-						{/* Password field - only show if user has permission and restrict editing other users */}
-						{canChangePassword() && !isEditingOtherUser() && (
+						<div className={styles.formGroup}>
+							<label className={styles.formLabel}>Line *</label>
+							<input
+								type="text"
+								className={styles.formInput}
+								value={formData.question_line}
+								onChange={(e) =>
+									setFormData((prev) => ({
+										...prev,
+										question_line: e.target.value,
+									}))
+								}
+								required
+								placeholder="e.g., 1, 1.5.20, Chapter A"
+							/>
+						</div>
+
+						{/* FIXED: Show difficulty selector for level 10+ users */}
+						{showDifficulty && (
 							<div className={styles.formGroup}>
 								<label className={styles.formLabel}>
-									Password {!user && "*"}
-									{user && (
-										<span className={styles.optional}>
-											(Leave blank to keep current)
-										</span>
-									)}
+									Difficulty Level *
 								</label>
-								<input
-									type="password"
-									className={styles.formInput}
-									value={formData.password}
+								<select
+									className={styles.formSelect}
+									value={formData.difficulty_level}
 									onChange={(e) =>
 										setFormData((prev) => ({
 											...prev,
-											password: e.target.value,
+											difficulty_level:
+												parseInt(e.target.value) || 3,
 										}))
 									}
-									required={!user}
-									placeholder={
-										user
-											? "Leave blank to keep current password"
-											: "Enter password"
-									}
-									minLength={6}
-								/>
-								{user?.employee_id === "admin" && (
-									<small className={styles.adminNote}>
-										⚠️ Changing admin password affects
-										system access
-									</small>
-								)}
+									required
+								>
+									<option value={1}>Level 1 - Easiest</option>
+									<option value={2}>Level 2 - Easy</option>
+									<option value={3}>Level 3 - Medium</option>
+									<option value={4}>Level 4 - Hard</option>
+									<option value={5}>Level 5 - Hardest</option>
+								</select>
+								<small>
+									Controls which users will see this question
+									based on their handicap level
+								</small>
 							</div>
 						)}
-
-						{/* Show password field for level 20+ users editing other users */}
-						{canChangePassword() &&
-							isEditingOtherUser() &&
-							currentUser &&
-							currentUser.authentication_level >= 20 && (
-								<div className={styles.formGroup}>
-									<label className={styles.formLabel}>
-										Password
-										<span className={styles.optional}>
-											(Leave blank to keep current)
-										</span>
-									</label>
-									<input
-										type="password"
-										className={styles.formInput}
-										value={formData.password}
-										onChange={(e) =>
-											setFormData((prev) => ({
-												...prev,
-												password: e.target.value,
-											}))
-										}
-										placeholder="Leave blank to keep current password"
-										minLength={6}
-									/>
-									{user?.employee_id === "admin" && (
-										<small className={styles.adminNote}>
-											⚠️ Changing admin password affects
-											system access
-										</small>
-									)}
-									<small className={styles.authNote}>
-										✅ You have level{" "}
-										{currentUser?.authentication_level}{" "}
-										access - can modify other users&apos;
-										passwords
-									</small>
-								</div>
-							)}
-
-						{/* Handicap Level - only for level 10+ users */}
-						{currentUser &&
-							currentUser.authentication_level >= 10 && (
-								<div className={styles.formGroup}>
-									<label className={styles.formLabel}>
-										Handicap Level
-									</label>
-									<select
-										className={styles.formSelect}
-										value={formData.handicap_level}
-										onChange={(e) =>
-											setFormData((prev) => ({
-												...prev,
-												handicap_level: parseInt(
-													e.target.value
-												),
-											}))
-										}
-									>
-										<option value={1}>
-											1 - Hardest Questions Only
-										</option>
-										<option value={2}>
-											2 - Hard Questions
-										</option>
-										<option value={3}>
-											3 - Mixed Questions (Default)
-										</option>
-										<option value={4}>
-											4 - Easy Questions
-										</option>
-										<option value={5}>
-											5 - Easiest Questions Only
-										</option>
-									</select>
-									<small>
-										Controls difficulty of test questions
-										for this user
-									</small>
-								</div>
-							)}
-
-						{/* Auth Level - only for level 20+ users */}
-						{currentUser &&
-							currentUser.authentication_level >= 20 && (
-								<div className={styles.formGroup}>
-									<label className={styles.formLabel}>
-										Authentication Level
-									</label>
-									<AuthLevelDropdown
-										value={formData.authentication_level}
-										onChange={(level) =>
-											setFormData((prev) => ({
-												...prev,
-												authentication_level: level,
-											}))
-										}
-										maxLevel={currentUserAuthLevel}
-									/>
-									<small>
-										Controls access to different parts of
-										the application. Cannot exceed your
-										level ({currentUserAuthLevel}).
-									</small>
-									{user?.employee_id === "admin" && (
-										<small className={styles.adminNote}>
-											⚠️ Admin typically has level 99
-											access
-										</small>
-									)}
-								</div>
-							)}
 					</div>
 
-					{/* Filter Categories Section */}
-					<div className={styles.filterCategoriesSection}>
-						<label className={styles.formLabel}>
-							🚫 Excluded Test Categories
-							<span className={styles.optional}>(Optional)</span>
-						</label>
-						<div className={styles.filterCategories}>
-							{availableCategories.map((category) => (
-								<label
-									key={category}
-									className={styles.filterCheckbox}
-								>
-									<input
-										type="checkbox"
-										checked={formData.filter.includes(
-											category
-										)}
-										onChange={() =>
-											handleFilterToggle(category)
-										}
-									/>
-									<span>{category}</span>
-								</label>
-							))}
-						</div>
-						<small>
-							Selected categories will be excluded from this
-							user&apos;s oral tests. Leave unchecked to allow all
-							question types.
+					<div className={styles.questionTitleSection}>
+						<label className={styles.formLabel}>Question Title *</label>
+						<textarea
+							className={styles.formInput}
+							rows={6}
+							value={formData.question_title}
+							onChange={(e) =>
+								setFormData((prev) => ({
+									...prev,
+									question_title: e.target.value,
+								}))
+							}
+							required
+							placeholder="Enter the complete question text... (must be unique)"
+							style={{ resize: "vertical", minHeight: "180px" }}
+						/>
+						<small style={{ color: "#e53e3e" }}>
+							⚠️ Question title must be unique - duplicates will
+							be rejected
 						</small>
 					</div>
 
@@ -1150,10 +1180,12 @@ const UserForm = ({
 							className="btn btn-secondary"
 							onClick={onCancel}
 						>
-							⌫ Cancel
+							↪ Cancel
 						</button>
 						<button type="submit" className="btn btn-primary">
-							{user ? "💾 Update User" : "✅ Create User"}
+							{question
+								? "💾 Update Question"
+								: "✅ Create Question"}
 						</button>
 					</div>
 				</form>
@@ -1162,170 +1194,4 @@ const UserForm = ({
 	);
 };
 
-// Define interface for authentication level option
-interface AuthLevelOption {
-	value: number;
-	short: string;
-	full: string;
-}
-
-// Custom Authentication Level Dropdown Component
-const AuthLevelDropdown = ({
-	value,
-	onChange,
-	maxLevel,
-}: {
-	value: number;
-	onChange: (level: number) => void;
-	maxLevel: number;
-}) => {
-	const [isOpen, setIsOpen] = useState(false);
-
-	const levels: AuthLevelOption[] = [
-		{ value: 1, short: "Squire (見習戦士)", full: "Dashboard" },
-		{ value: 2, short: "Knight (騎士)", full: "Dashboard/Results" },
-		{ value: 3, short: "Archer (弓手)", full: "Dashboard/Results/Test" },
-		{
-			value: 4,
-			short: "Oracle (陰陽師)",
-			full: "Dashboard/Results/Test/Questions",
-		},
-		{
-			value: 5,
-			short: "Black Mage (黒魔道士)",
-			full: "Dashboard/Results/Test/Questions/Users",
-		},
-		{
-			value: 10,
-			short: "Samurai (侍)",
-			full: "+Handicap/Difficulty Level",
-		},
-		{
-			value: 20,
-			short: "Dark Knight (黒暗騎士)",
-			full: "+Authentication Level",
-		},
-		{ value: 99, short: "GOD", full: "Super Administrator" },
-	].filter((level) => level.value <= maxLevel);
-
-	const selectedLevel = levels.find((l) => l.value === value);
-
-	// Helper function to get level CSS class for dropdown
-	const getLevelClass = (level: number): string => {
-		// Map specific authentication levels to CSS classes
-		switch (level) {
-			case 1:
-				return "level1";
-			case 2:
-				return "level2";
-			case 3:
-				return "level3";
-			case 4:
-				return "level4";
-			case 5:
-				return "level5";
-			case 10:
-				return "level10";
-			case 20:
-				return "level20";
-			case 99:
-				return "level99";
-			default:
-				// For any other levels, map to closest
-				if (level >= 99) return "level99";
-				if (level >= 20) return "level20";
-				if (level >= 10) return "level10";
-				if (level >= 5) return "level5";
-				if (level >= 4) return "level4";
-				if (level >= 3) return "level3";
-				if (level >= 2) return "level2";
-				return "level1";
-		}
-	};
-
-	// Close dropdown when clicking outside
-	useEffect(() => {
-		const handleClickOutside = (event: MouseEvent) => {
-			const target = event.target as Element;
-			if (!target.closest(`.${styles.customDropdown}`)) {
-				setIsOpen(false);
-			}
-		};
-
-		if (isOpen) {
-			document.addEventListener("mousedown", handleClickOutside);
-			return () =>
-				document.removeEventListener("mousedown", handleClickOutside);
-		}
-	}, [isOpen]);
-
-	return (
-		<div className={styles.customDropdown}>
-			<button
-				type="button"
-				className={styles.dropdownButton}
-				onClick={() => setIsOpen(!isOpen)}
-				aria-expanded={isOpen}
-				aria-haspopup="listbox"
-			>
-				<span
-					className={`${styles.levelNumber} ${
-						styles[getLevelClass(value)]
-					}`}
-				>
-					{value}
-				</span>
-				<span className={styles.levelShort}>
-					{selectedLevel?.short}
-				</span>
-				<span
-					className={`${styles.dropdownArrow} ${
-						isOpen ? styles.rotated : ""
-					}`}
-				>
-					▼
-				</span>
-			</button>
-
-			{isOpen && (
-				<div className={styles.dropdownMenu} role="listbox">
-					{levels.map((level) => (
-						<button
-							key={level.value}
-							type="button"
-							className={`${styles.dropdownItem} ${
-								value === level.value ? styles.selected : ""
-							}`}
-							onClick={() => {
-								onChange(level.value);
-								setIsOpen(false);
-							}}
-							role="option"
-							aria-selected={value === level.value}
-						>
-							<div className={styles.levelRow}>
-								<span
-									className={`${styles.levelNumber} ${
-										styles[getLevelClass(level.value)]
-									}`}
-								>
-									{level.value}
-								</span>
-								<div className={styles.levelInfo}>
-									<div className={styles.levelShort}>
-										{level.short}
-									</div>
-									<div className={styles.levelFull}>
-										{level.full}
-									</div>
-								</div>
-							</div>
-						</button>
-					))}
-				</div>
-			)}
-		</div>
-	);
-};
-
-export default UserManagement;
+export default QuestionManagement;
