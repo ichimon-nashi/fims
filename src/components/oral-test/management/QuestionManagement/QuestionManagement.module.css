@@ -276,171 +276,16 @@
 .questionForm {
 	display: flex;
 	flex-direction: column;
-	gap: 2.5rem;
+	gap: 1rem;
 }
 
 .formGrid {
 	display: grid;
-	grid-template-columns: repeat(3, 1fr);
+	grid-template-columns: repeat(2, 1fr);
 	gap: 2rem 2.5rem;
-	margin-bottom: 2rem;
 }
 
-/* ENHANCED FORM GROUP STYLING */
-.questionForm .form-group,
-.questionForm .formGroup {
-	display: flex;
-	flex-direction: column;
-	gap: 0.75rem;
-	position: relative;
-}
-
-.questionForm .form-group .form-label,
-.questionForm .form-group .formLabel,
-.questionForm .formGroup .form-label,
-.questionForm .formGroup .formLabel {
-	font-weight: 600;
-	color: #2d3748;
-	font-size: 1rem;
-	margin-bottom: 0.25rem;
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	letter-spacing: 0.02em;
-}
-
-/* ENHANCED INPUT FIELD STYLING */
-.questionForm .form-group .form-input,
-.questionForm .form-group .form-select,
-.questionForm .form-group .formInput,
-.questionForm .form-group .formSelect,
-.questionForm .formGroup .form-input,
-.questionForm .formGroup .form-select,
-.questionForm .formGroup .formInput,
-.questionForm .formGroup .formSelect {
-	padding: 1rem 1.25rem;
-	border: 2px solid #e2e8f0;
-	border-radius: 12px;
-	font-size: 1rem;
-	font-weight: 500;
-	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-	background: white;
-	font-family: inherit;
-	color: #2d3748;
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-	position: relative;
-}
-
-/* Hover Effects */
-.questionForm .form-group .form-input:hover,
-.questionForm .form-group .form-select:hover,
-.questionForm .form-group .formInput:hover,
-.questionForm .form-group .formSelect:hover,
-.questionForm .formGroup .form-input:hover,
-.questionForm .formGroup .form-select:hover,
-.questionForm .formGroup .formInput:hover,
-.questionForm .formGroup .formSelect:hover {
-	border-color: #cbd5e0;
-	transform: translateY(-2px);
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* Focus Effects */
-.questionForm .form-group .form-input:focus,
-.questionForm .form-group .form-select:focus,
-.questionForm .form-group .formInput:focus,
-.questionForm .form-group .formSelect:focus,
-.questionForm .formGroup .form-input:focus,
-.questionForm .formGroup .form-select:focus,
-.questionForm .formGroup .formInput:focus,
-.questionForm .formGroup .formSelect:focus {
-	outline: none;
-	border-color: #667eea;
-	box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15), 0 4px 20px rgba(102, 126, 234, 0.1);
-	transform: translateY(-2px);
-	background: #fefeff;
-}
-
-/* Active/Filled State */
-.questionForm .form-group .form-input:not(:placeholder-shown),
-.questionForm .form-group .form-select:not([value=""]),
-.questionForm .form-group .formInput:not(:placeholder-shown),
-.questionForm .form-group .formSelect:not([value=""]),
-.questionForm .formGroup .form-input:not(:placeholder-shown),
-.questionForm .formGroup .form-select:not([value=""]),
-.questionForm .formGroup .formInput:not(:placeholder-shown),
-.questionForm .formGroup .formSelect:not([value=""]) {
-	border-color: #a0aec0;
-	background: #fafbfc;
-}
-
-/* Placeholder Styling */
-.questionForm .form-group .form-input::placeholder,
-.questionForm .form-group .formInput::placeholder,
-.questionForm .formGroup .form-input::placeholder,
-.questionForm .formGroup .formInput::placeholder {
-	color: #a0aec0;
-	font-weight: 400;
-	transition: all 0.3s ease;
-}
-
-.questionForm .form-group .form-input:focus::placeholder,
-.questionForm .form-group .formInput:focus::placeholder,
-.questionForm .formGroup .form-input:focus::placeholder,
-.questionForm .formGroup .formInput:focus::placeholder {
-	color: #cbd5e0;
-	transform: translateY(-2px);
-}
-
-/* Select Dropdown Arrow Styling */
-.questionForm .form-group .form-select,
-.questionForm .form-group .formSelect,
-.questionForm .formGroup .form-select,
-.questionForm .formGroup .formSelect {
-	appearance: none;
-	background-image: url("data:image/svg+xml;charset=US-ASCII,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'><path fill='%23a0aec0' d='m0 0 2 2 2-2z'/></svg>");
-	background-repeat: no-repeat;
-	background-position: right 1rem center;
-	background-size: 12px;
-	padding-right: 3rem;
-	cursor: pointer;
-}
-
-.questionForm .form-group .form-select:focus,
-.questionForm .form-group .formSelect:focus,
-.questionForm .formGroup .form-select:focus,
-.questionForm .formGroup .formSelect:focus {
-	background-image: url("data:image/svg+xml;charset=US-ASCII,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'><path fill='%23667eea' d='m0 0 2 2 2-2z'/></svg>");
-}
-
-.questionForm .form-group small,
-.questionForm .formGroup small {
-	font-size: 0.85rem;
-	color: #6b7280;
-	margin-top: 0.5rem;
-	line-height: 1.5;
-	padding-left: 0.25rem;
-	font-weight: 400;
-}
-
-/* Question Title - Full Width */
-.questionTitleSection {
-	grid-column: 1 / -1;
-	margin-top: 1rem;
-}
-
-.questionTitleSection .form-label,
-.questionTitleSection .formLabel {
-	font-weight: 600;
-	color: #2d3748;
-	font-size: 1.1rem;
-	margin-bottom: 0.75rem;
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-}
-
-/* Individual class definitions for easier targeting */
+/* UNIFIED FORM GROUP STYLING */
 .formGroup {
 	display: flex;
 	flex-direction: column;
@@ -459,6 +304,7 @@
 	letter-spacing: 0.02em;
 }
 
+/* UNIFIED INPUT FIELD STYLING */
 .formInput,
 .formSelect {
 	padding: 1rem 1.25rem;
@@ -472,8 +318,10 @@
 	color: #2d3748;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 	position: relative;
+	width: 100%;
 }
 
+/* Hover Effects */
 .formInput:hover,
 .formSelect:hover {
 	border-color: #cbd5e0;
@@ -481,6 +329,7 @@
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
+/* Focus Effects */
 .formInput:focus,
 .formSelect:focus {
 	outline: none;
@@ -490,20 +339,136 @@
 	background: #fefeff;
 }
 
+/* Active/Filled State */
+.formInput:not(:placeholder-shown),
+.formSelect:not([value=""]) {
+	border-color: #a0aec0;
+	background: #fafbfc;
+}
+
+/* Placeholder Styling */
+.formInput::placeholder {
+	color: #a0aec0;
+	font-weight: 400;
+	transition: all 0.3s ease;
+}
+
+.formInput:focus::placeholder {
+	color: #cbd5e0;
+	transform: translateY(-2px);
+}
+
+/* UNIFIED SELECT DROPDOWN STYLING WITH ARROW */
 .formSelect {
 	appearance: none;
-	background-image: url("data:image/svg+xml;charset=US-ASCII,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'><path fill='%23a0aec0' d='m0 0 2 2 2-2z'/></svg>");
-	background-repeat: no-repeat;
-	background-position: right 1rem center;
-	background-size: 12px;
+	background: white;
+	padding: 1rem 1.25rem;
 	padding-right: 3rem;
+	border: 2px solid #e2e8f0;
+	border-radius: 12px;
+	font-size: 1rem;
+	font-weight: 500;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	font-family: inherit;
+	color: #2d3748;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+	position: relative;
+	width: 100%;
 	cursor: pointer;
+	background-image: none !important;
 }
 
+/* REMOVE the :has() selector approach to avoid double arrows */
+.formGroup {
+	position: relative;
+}
+
+/* Only use selectWrapper approach for arrows */
+.selectWrapper {
+	position: relative;
+	width: 100%;
+}
+
+.selectWrapper::after {
+	content: '▼';
+	position: absolute;
+	right: 1rem;
+	top: 50%;
+	transform: translateY(-50%);
+	color: #a0aec0;
+	font-size: 0.8rem;
+	pointer-events: none;
+	transition: transform 0.3s ease;
+	z-index: 1;
+}
+
+/* FIXED: Keep arrow gray, only rotate it */
+.selectWrapper.selectOpen::after {
+	transform: translateY(-50%) rotate(180deg);
+	/* Removed color change - keep it gray */
+}
+
+/* Hover state for wrapper */
+.selectWrapper:hover::after {
+	color: #667eea;
+}
+
+/* Focus state for select element */
 .formSelect:focus {
-	background-image: url("data:image/svg+xml;charset=US-ASCII,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'><path fill='%23667eea' d='m0 0 2 2 2-2z'/></svg>");
+	outline: none;
+	border-color: #667eea;
+	box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15), 0 4px 20px rgba(102, 126, 234, 0.1);
+	transform: translateY(-2px);
+	background: #fefeff;
 }
 
+/* Fix for native select dropdown styling */
+.formSelect option {
+	background: white;
+	color: #2d3748;
+	padding: 0.75rem 1rem;
+	border: none;
+	font-weight: 500;
+}
+
+.formSelect option:hover {
+	background: #f7fafc;
+}
+
+.formSelect option:checked,
+.formSelect option:selected {
+	background: #667eea;
+	color: white;
+	font-weight: 600;
+}
+
+/* Small text styling */
+.formGroup small {
+	font-size: 0.85rem;
+	color: #6b7280;
+	margin-top: 0.5rem;
+	line-height: 1.5;
+	padding-left: 0.25rem;
+	font-weight: 400;
+}
+
+/* Question Title - Full Width */
+.questionTitleSection {
+	grid-column: 1 / -1;
+	margin-top: 1rem;
+}
+
+.questionTitleSection .formLabel {
+	font-weight: 600;
+	color: #2d3748;
+	font-size: 1.1rem;
+	margin-bottom: 0.75rem;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+/* Textarea styling for question title */
 .questionForm textarea {
 	resize: vertical;
 	min-height: 180px;
@@ -597,6 +562,29 @@
 	box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
+/* BUTTON STYLING CONSISTENCY */
+.formActions .btn-secondary {
+	background: #f7fafc;
+	color: #4a5568;
+	border: 2px solid #e2e8f0;
+}
+
+.formActions .btn-secondary:hover {
+	background: #edf2f7;
+	border-color: #cbd5e0;
+	color: #2d3748;
+}
+
+.formActions .btn-primary {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	border: none;
+	color: white;
+}
+
+.formActions .btn-primary:hover {
+	background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+}
+
 /* Animations */
 @keyframes fadeIn {
 	from {
@@ -659,8 +647,8 @@
 	}
 	
 	/* Enhanced form responsiveness */
-	.questionForm .form-group .form-input,
-	.questionForm .form-group .form-select {
+	.formInput,
+	.formSelect {
 		padding: 0.875rem 1rem;
 		font-size: 0.95rem;
 	}

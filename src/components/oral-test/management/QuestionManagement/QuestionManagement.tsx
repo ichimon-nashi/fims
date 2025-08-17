@@ -1013,14 +1013,44 @@ const QuestionForm = ({
 		question_category: question?.question_category || "",
 		question_title: question?.question_title || "",
 		question_chapter: question?.question_chapter || "",
-		question_page: question?.question_page || 1,
-		question_line: question?.question_line || "1",
+		// NEW: Empty defaults for Page and Line when adding new question
+		question_page: question?.question_page || "",
+		question_line: question?.question_line || "",
 		difficulty_level: question?.difficulty_level || 3,
 	});
 
+	// NEW: State to track which selects are open
+	const [openSelects, setOpenSelects] = useState<{[key: string]: boolean}>({});
+
+	// NEW: Handle select dropdown open/close for arrow rotation
+	const handleSelectChange = (selectName: string, value: string | number) => {
+		setFormData((prev) => ({
+			...prev,
+			[selectName]: value,
+		}));
+		// Close the select after selection
+		setOpenSelects(prev => ({ ...prev, [selectName]: false }));
+	};
+
+	const handleSelectFocus = (selectName: string) => {
+		setOpenSelects(prev => ({ ...prev, [selectName]: true }));
+	};
+
+	const handleSelectBlur = (selectName: string) => {
+		// Use setTimeout to allow the change event to fire first
+		setTimeout(() => {
+			setOpenSelects(prev => ({ ...prev, [selectName]: false }));
+		}, 100);
+	};
+
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
-		onSave(formData);
+		// Convert page to number if it's not empty
+		const submitData = {
+			...formData,
+			question_page: formData.question_page ? parseInt(formData.question_page.toString()) || 1 : 1,
+		};
+		onSave(submitData);
 	};
 
 	const categories = QUESTION_CATEGORIES;
@@ -1048,24 +1078,23 @@ const QuestionForm = ({
 					<div className={styles.formGrid}>
 						<div className={styles.formGroup}>
 							<label className={styles.formLabel}>Category *</label>
-							<select
-								className={styles.formSelect}
-								value={formData.question_category}
-								onChange={(e) =>
-									setFormData((prev) => ({
-										...prev,
-										question_category: e.target.value,
-									}))
-								}
-								required
-							>
-								<option value="">Select Category</option>
-								{categories.map((category) => (
-									<option key={category} value={category}>
-										{category}
-									</option>
-								))}
-							</select>
+							<div className={`${styles.selectWrapper} ${openSelects.question_category ? styles.selectOpen : ''}`}>
+								<select
+									className={styles.formSelect}
+									value={formData.question_category}
+									onChange={(e) => handleSelectChange('question_category', e.target.value)}
+									onFocus={() => handleSelectFocus('question_category')}
+									onBlur={() => handleSelectBlur('question_category')}
+									required
+								>
+									<option value="">Select Category</option>
+									{categories.map((category) => (
+										<option key={category} value={category}>
+											{category}
+										</option>
+									))}
+								</select>
+							</div>
 						</div>
 
 						<div className={styles.formGroup}>
@@ -1081,7 +1110,7 @@ const QuestionForm = ({
 									}))
 								}
 								required
-								placeholder="e.g., Traffic Rules"
+								placeholder="e.g., 10.2.4"
 							/>
 						</div>
 
@@ -1095,11 +1124,11 @@ const QuestionForm = ({
 								onChange={(e) =>
 									setFormData((prev) => ({
 										...prev,
-										question_page:
-											parseInt(e.target.value) || 1,
+										question_page: e.target.value,
 									}))
 								}
 								required
+								placeholder="Enter page number"
 							/>
 						</div>
 
@@ -1126,27 +1155,24 @@ const QuestionForm = ({
 								<label className={styles.formLabel}>
 									Difficulty Level *
 								</label>
-								<select
-									className={styles.formSelect}
-									value={formData.difficulty_level}
-									onChange={(e) =>
-										setFormData((prev) => ({
-											...prev,
-											difficulty_level:
-												parseInt(e.target.value) || 3,
-										}))
-									}
-									required
-								>
-									<option value={1}>Level 1 - Easiest</option>
-									<option value={2}>Level 2 - Easy</option>
-									<option value={3}>Level 3 - Medium</option>
-									<option value={4}>Level 4 - Hard</option>
-									<option value={5}>Level 5 - Hardest</option>
-								</select>
+								<div className={`${styles.selectWrapper} ${openSelects.difficulty_level ? styles.selectOpen : ''}`}>
+									<select
+										className={styles.formSelect}
+										value={formData.difficulty_level}
+										onChange={(e) => handleSelectChange('difficulty_level', parseInt(e.target.value) || 3)}
+										onFocus={() => handleSelectFocus('difficulty_level')}
+										onBlur={() => handleSelectBlur('difficulty_level')}
+										required
+									>
+										<option value={1}>Level 1 - Easiest</option>
+										<option value={2}>Level 2 - Easy</option>
+										<option value={3}>Level 3 - Medium</option>
+										<option value={4}>Level 4 - Hard</option>
+										<option value={5}>Level 5 - Hardest</option>
+									</select>
+								</div>
 								<small>
-									Controls which users will see this question
-									based on their handicap level
+									Controls what questions will appear based on user handicap level
 								</small>
 							</div>
 						)}

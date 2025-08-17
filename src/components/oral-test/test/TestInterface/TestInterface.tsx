@@ -48,6 +48,109 @@ const TestInterface: React.FC = () => {
 	const [showConfirmModal, setShowConfirmModal] = useState(false);
 	const [testComplete, setTestComplete] = useState(false);
 
+	// Apply handicap-based difficulty filtering
+	const applyHandicapFiltering = (questions: Question[], handicapLevel: number): Question[] => {
+		console.log(`Applying handicap filtering for level ${handicapLevel}`);
+		
+		// Group questions by difficulty level
+		const questionsByDifficulty: { [key: number]: Question[] } = {};
+		questions.forEach(question => {
+			const difficulty = question.difficulty_level || 3; // Default to level 3 if not set
+			if (!questionsByDifficulty[difficulty]) {
+				questionsByDifficulty[difficulty] = [];
+			}
+			questionsByDifficulty[difficulty].push(question);
+		});
+
+		console.log("Questions grouped by difficulty:", 
+			Object.keys(questionsByDifficulty).map(level => 
+				`Level ${level}: ${questionsByDifficulty[parseInt(level)].length} questions`
+			).join(", ")
+		);
+
+		let filteredQuestions: Question[] = [];
+
+		switch (handicapLevel) {
+			case 1: // Hardest - only difficulty level 5
+				filteredQuestions = questionsByDifficulty[5] || [];
+				console.log(`Handicap 1: Selected ${filteredQuestions.length} level 5 questions`);
+				break;
+
+			case 2: // Hard - 75% chance of level 4-5
+				const level45Questions = [
+					...(questionsByDifficulty[4] || []),
+					...(questionsByDifficulty[5] || [])
+				];
+				const allQuestionsForLevel2 = [...questions];
+				
+				// 75% from level 4-5, 25% from all levels
+				const targetCount = Math.min(50, questions.length); // Get up to 50 questions for selection
+				const from45Count = Math.floor(targetCount * 0.75);
+				const fromAllCount = targetCount - from45Count;
+
+				// Shuffle and select from level 4-5
+				const shuffled45 = [...level45Questions].sort(() => Math.random() - 0.5);
+				const selected45 = shuffled45.slice(0, Math.min(from45Count, shuffled45.length));
+
+				// Shuffle and select from all levels
+				const shuffledAll = [...allQuestionsForLevel2].sort(() => Math.random() - 0.5);
+				const selectedAll = shuffledAll.slice(0, fromAllCount);
+
+				filteredQuestions = [...selected45, ...selectedAll];
+				console.log(`Handicap 2: Selected ${selected45.length} from level 4-5, ${selectedAll.length} from all levels`);
+				break;
+
+			case 3: // Medium - completely random (no filtering)
+				filteredQuestions = [...questions];
+				console.log(`Handicap 3: No filtering, ${filteredQuestions.length} questions available`);
+				break;
+
+			case 4: // Easy - 75% chance of level 1-2
+				const level12Questions = [
+					...(questionsByDifficulty[1] || []),
+					...(questionsByDifficulty[2] || [])
+				];
+				const allQuestionsForLevel4 = [...questions];
+				
+				// 75% from level 1-2, 25% from all levels
+				const targetCountLevel4 = Math.min(50, questions.length);
+				const from12Count = Math.floor(targetCountLevel4 * 0.75);
+				const fromAllCountLevel4 = targetCountLevel4 - from12Count;
+
+				// Shuffle and select from level 1-2
+				const shuffled12 = [...level12Questions].sort(() => Math.random() - 0.5);
+				const selected12 = shuffled12.slice(0, Math.min(from12Count, shuffled12.length));
+
+				// Shuffle and select from all levels
+				const shuffledAllLevel4 = [...allQuestionsForLevel4].sort(() => Math.random() - 0.5);
+				const selectedAllLevel4 = shuffledAllLevel4.slice(0, fromAllCountLevel4);
+
+				filteredQuestions = [...selected12, ...selectedAllLevel4];
+				console.log(`Handicap 4: Selected ${selected12.length} from level 1-2, ${selectedAllLevel4.length} from all levels`);
+				break;
+
+			case 5: // Easiest - only difficulty level 1
+				filteredQuestions = questionsByDifficulty[1] || [];
+				console.log(`Handicap 5: Selected ${filteredQuestions.length} level 1 questions`);
+				break;
+
+			default:
+				// Fallback to level 3 behavior (completely random)
+				filteredQuestions = [...questions];
+				console.log(`Unknown handicap level ${handicapLevel}, defaulting to random selection`);
+				break;
+		}
+
+		// Remove duplicates (in case a question appears in both selected pools for levels 2 and 4)
+		const uniqueQuestions = filteredQuestions.filter((question, index, array) => 
+			array.findIndex(q => q.id === question.id) === index
+		);
+
+		console.log(`Final filtered questions: ${uniqueQuestions.length} (removed ${filteredQuestions.length - uniqueQuestions.length} duplicates)`);
+		
+		return uniqueQuestions;
+	};
+
 	// Complete test and save results
 	const completeTest = useCallback(
 		async (finalSession: TestSession) => {
@@ -205,7 +308,7 @@ const TestInterface: React.FC = () => {
 
 			if (response.ok) {
 				const questions: Question[] = await response.json();
-				console.log("Questions received:", questions.length);
+				console.log("Questions received (after category filtering):", questions.length);
 				console.log("Sample questions:", questions.slice(0, 3));
 
 				if (questions.length < 5) {
@@ -215,8 +318,21 @@ const TestInterface: React.FC = () => {
 					return;
 				}
 
+				// Apply handicap-based difficulty filtering
+				const handicapLevel = examineeData.handicap_level || 3;
+				const filteredByDifficulty = applyHandicapFiltering(questions, handicapLevel);
+				
+				console.log(`Questions after handicap filtering (level ${handicapLevel}):`, filteredByDifficulty.length);
+
+				if (filteredByDifficulty.length < 5) {
+					setError(
+						`Not enough questions available for handicap level ${handicapLevel}. Found ${filteredByDifficulty.length} questions, need at least 5.`
+					);
+					return;
+				}
+
 				// Better shuffling algorithm - ensure unique questions
-				const availableQuestions = [...questions];
+				const availableQuestions = [...filteredByDifficulty];
 				const selectedQuestions: Question[] = [];
 
 				for (let i = 0; i < 5 && availableQuestions.length > 0; i++) {
@@ -232,6 +348,7 @@ const TestInterface: React.FC = () => {
 					selectedQuestions.map((q: Question) => ({
 						id: q.id,
 						title: q.question_title.substring(0, 50) + "...",
+						difficulty: q.difficulty_level || 3,
 					}))
 				);
 

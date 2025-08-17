@@ -706,7 +706,7 @@ const UserManagement = () => {
 					</ul>
 					<p>
 						<em>
-							Default password "TempPassword123!" will
+							Default password &quot;TempPassword123!&quot; will
 							be assigned to imported users.
 						</em>
 					</p>
@@ -774,8 +774,32 @@ const UserForm = ({
 		authentication_level: user?.authentication_level || 1,
 	});
 
+	// NEW: State to track which selects are open
+	const [openSelects, setOpenSelects] = useState<{[key: string]: boolean}>({});
+
 	// UPDATED: Use dynamic categories instead of hardcoded ones
 	const availableCategories = USER_FILTER_CATEGORIES;
+
+	// NEW: Handle select dropdown open/close for arrow rotation
+	const handleSelectChange = (selectName: string, value: string | number) => {
+		setFormData((prev) => ({
+			...prev,
+			[selectName]: value,
+		}));
+		// Close the select after selection
+		setOpenSelects(prev => ({ ...prev, [selectName]: false }));
+	};
+
+	const handleSelectFocus = (selectName: string) => {
+		setOpenSelects(prev => ({ ...prev, [selectName]: true }));
+	};
+
+	const handleSelectBlur = (selectName: string) => {
+		// Use setTimeout to allow the change event to fire first
+		setTimeout(() => {
+			setOpenSelects(prev => ({ ...prev, [selectName]: false }));
+		}, 100);
+	};
 
 	// Rest of the component remains exactly the same...
 	const handleSubmit = (e: React.FormEvent) => {
@@ -797,10 +821,6 @@ const UserForm = ({
 				: [...prev.filter, category];
 			return { ...prev, filter: newFilters };
 		});
-	};
-
-	const handleRankSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-		setFormData((prev) => ({ ...prev, rank: e.target.value }));
 	};
 
 	// Updated rank options with full descriptions
@@ -908,22 +928,26 @@ const UserForm = ({
 
 						<div className={styles.formGroup}>
 							<label className={styles.formLabel}>Rank *</label>
-							<select
-								className={styles.formSelect}
-								value={formData.rank}
-								onChange={handleRankSelect}
-								required
-							>
-								<option value="">Select Rank</option>
-								{commonRanks.map((rank) => (
-									<option 
-										key={rank} 
-										value={rank}
-									>
-										{rank}
-									</option>
-								))}
-							</select>
+							<div className={`${styles.selectWrapper} ${openSelects.rank ? styles.selectOpen : ''}`}>
+								<select
+									className={styles.formSelect}
+									value={formData.rank}
+									onChange={(e) => handleSelectChange('rank', e.target.value)}
+									onFocus={() => handleSelectFocus('rank')}
+									onBlur={() => handleSelectBlur('rank')}
+									required
+								>
+									<option value="">Select Rank</option>
+									{commonRanks.map((rank) => (
+										<option 
+											key={rank} 
+											value={rank}
+										>
+											{rank}
+										</option>
+									))}
+								</select>
+							</div>
 						</div>
 
 						<div className={styles.formGroup}>
@@ -940,23 +964,6 @@ const UserForm = ({
 								}
 								required
 								placeholder="e.g., KHH"
-							/>
-						</div>
-
-						<div className={styles.formGroup}>
-							<label className={styles.formLabel}>Email *</label>
-							<input
-								type="email"
-								className={styles.formInput}
-								value={formData.email}
-								onChange={(e) =>
-									setFormData((prev) => ({
-										...prev,
-										email: e.target.value,
-									}))
-								}
-								required
-								placeholder="user@example.com"
 							/>
 						</div>
 
@@ -1045,34 +1052,31 @@ const UserForm = ({
 									<label className={styles.formLabel}>
 										Handicap Level
 									</label>
-									<select
-										className={styles.formSelect}
-										value={formData.handicap_level}
-										onChange={(e) =>
-											setFormData((prev) => ({
-												...prev,
-												handicap_level: parseInt(
-													e.target.value
-												),
-											}))
-										}
-									>
-										<option value={1}>
-											1 - Hardest Questions Only
-										</option>
-										<option value={2}>
-											2 - Hard Questions
-										</option>
-										<option value={3}>
-											3 - Mixed Questions (Default)
-										</option>
-										<option value={4}>
-											4 - Easy Questions
-										</option>
-										<option value={5}>
-											5 - Easiest Questions Only
-										</option>
-									</select>
+									<div className={`${styles.selectWrapper} ${openSelects.handicap_level ? styles.selectOpen : ''}`}>
+										<select
+											className={styles.formSelect}
+											value={formData.handicap_level}
+											onChange={(e) => handleSelectChange('handicap_level', parseInt(e.target.value))}
+											onFocus={() => handleSelectFocus('handicap_level')}
+											onBlur={() => handleSelectBlur('handicap_level')}
+										>
+											<option value={1}>
+												1 - Hardest Questions Only
+											</option>
+											<option value={2}>
+												2 - Hard Questions
+											</option>
+											<option value={3}>
+												3 - Mixed Questions (Default)
+											</option>
+											<option value={4}>
+												4 - Easy Questions
+											</option>
+											<option value={5}>
+												5 - Easiest Questions Only
+											</option>
+										</select>
+									</div>
 									<small>
 										Controls difficulty of test questions
 										for this user
@@ -1150,7 +1154,7 @@ const UserForm = ({
 							className="btn btn-secondary"
 							onClick={onCancel}
 						>
-							⌫ Cancel
+							↪ Cancel
 						</button>
 						<button type="submit" className="btn btn-primary">
 							{user ? "💾 Update User" : "✅ Create User"}

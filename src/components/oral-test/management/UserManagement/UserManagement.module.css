@@ -293,12 +293,12 @@
 .modalContent {
 	background: white;
 	border-radius: 20px;
-	padding: 3rem;
+	padding: 2rem;
 	box-shadow: 0 25px 80px rgba(0, 0, 0, 0.25);
 	max-width: 1100px;
 	width: 95%;
 	max-height: 90vh;
-	overflow-y: auto;
+	overflow-y: hidden;
 	animation: slideIn 0.4s ease;
 	position: relative;
 	border: 1px solid #e2e8f0;
@@ -355,25 +355,23 @@
 .userForm {
 	display: flex;
 	flex-direction: column;
-	gap: 2.5rem;
+	gap: 2rem;
 }
 
 .formGrid {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
 	gap: 2rem 2.5rem;
-	margin-bottom: 2rem;
 }
 
-/* ENHANCED FORM GROUP STYLING */
-.userForm .form-group {
+.formGroup {
 	display: flex;
 	flex-direction: column;
 	gap: 0.75rem;
 	position: relative;
 }
 
-.userForm .form-group label {
+.formLabel {
 	font-weight: 600;
 	color: #2d3748;
 	font-size: 1rem;
@@ -384,9 +382,8 @@
 	letter-spacing: 0.02em;
 }
 
-/* ENHANCED INPUT FIELD STYLING */
-.userForm .form-group .form-input,
-.userForm .form-group .form-select {
+.formInput,
+.formSelect {
 	padding: 1rem 1.25rem;
 	border: 2px solid #e2e8f0;
 	border-radius: 12px;
@@ -398,19 +395,18 @@
 	color: #2d3748;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 	position: relative;
+	width: 100%;
 }
 
-/* Hover Effects */
-.userForm .form-group .form-input:hover,
-.userForm .form-group .form-select:hover {
+.formInput:hover,
+.formSelect:hover {
 	border-color: #cbd5e0;
 	transform: translateY(-2px);
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-/* Focus Effects */
-.userForm .form-group .form-input:focus,
-.userForm .form-group .form-select:focus {
+.formInput:focus,
+.formSelect:focus {
 	outline: none;
 	border-color: #667eea;
 	box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15), 0 4px 20px rgba(102, 126, 234, 0.1);
@@ -419,65 +415,110 @@
 }
 
 /* Active/Filled State */
-.userForm .form-group .form-input:not(:placeholder-shown),
-.userForm .form-group .form-select:not([value=""]) {
+.formInput:not(:placeholder-shown),
+.formSelect:not([value=""]) {
 	border-color: #a0aec0;
 	background: #fafbfc;
 }
 
 /* Placeholder Styling */
-.userForm .form-group .form-input::placeholder {
+.formInput::placeholder {
 	color: #a0aec0;
 	font-weight: 400;
 	transition: all 0.3s ease;
 }
 
-.userForm .form-group .form-input:focus::placeholder {
+.formInput:focus::placeholder {
 	color: #cbd5e0;
 	transform: translateY(-2px);
 }
 
-/* Select Dropdown Arrow Styling */
-.userForm .form-group .form-select {
+/* UNIFIED SELECT DROPDOWN STYLING WITH ARROW */
+.formSelect {
 	appearance: none;
-	background-image: url("data:image/svg+xml;charset=US-ASCII,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'><path fill='%23a0aec0' d='m0 0 2 2 2-2z'/></svg>");
-	background-repeat: no-repeat;
-	background-position: right 1rem center;
-	background-size: 12px;
+	background: white;
+	padding: 1rem 1.25rem;
 	padding-right: 3rem;
+	border: 2px solid #e2e8f0;
+	border-radius: 12px;
+	font-size: 1rem;
+	font-weight: 500;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	font-family: inherit;
+	color: #2d3748;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+	position: relative;
+	width: 100%;
 	cursor: pointer;
+	background-image: none !important;
 }
 
-.userForm .form-group .form-select:focus {
-	background-image: url("data:image/svg+xml;charset=US-ASCII,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'><path fill='%23667eea' d='m0 0 2 2 2-2z'/></svg>");
-}
-
-/* Input Icon Support (if you want to add icons to inputs) */
-.form-input-with-icon {
+/* REMOVE the :has() selector approach to avoid double arrows */
+.formGroup {
 	position: relative;
 }
 
-.form-input-with-icon .form-input {
-	padding-left: 3.5rem;
+/* Only use selectWrapper approach for arrows */
+.selectWrapper {
+	position: relative;
+	width: 100%;
 }
 
-.form-input-icon {
+.selectWrapper::after {
+	content: '▼';
 	position: absolute;
-	left: 1.25rem;
+	right: 1rem;
 	top: 50%;
 	transform: translateY(-50%);
 	color: #a0aec0;
-	font-size: 1.1rem;
+	font-size: 0.8rem;
 	pointer-events: none;
-	transition: color 0.3s ease;
+	transition: transform 0.3s ease;
+	z-index: 1;
 }
 
-.form-input-with-icon .form-input:focus + .form-input-icon {
+/* FIXED: Keep arrow gray, only rotate it */
+.selectWrapper.selectOpen::after {
+	transform: translateY(-50%) rotate(180deg);
+	/* Removed color change - keep it gray */
+}
+
+/* Hover state for wrapper */
+.selectWrapper:hover::after {
 	color: #667eea;
 }
 
-/* Help Text Styling */
-.userForm .form-group small {
+/* Focus state for select element */
+.formSelect:focus {
+	outline: none;
+	border-color: #667eea;
+	box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15), 0 4px 20px rgba(102, 126, 234, 0.1);
+	transform: translateY(-2px);
+	background: #fefeff;
+}
+
+/* Fix for native select dropdown styling */
+.formSelect option {
+	background: white;
+	color: #2d3748;
+	padding: 0.75rem 1rem;
+	border: none;
+	font-weight: 500;
+}
+
+.formSelect option:hover {
+	background: #f7fafc;
+}
+
+.formSelect option:checked,
+.formSelect option:selected {
+	background: #667eea;
+	color: white;
+	font-weight: 600;
+}
+
+/* Small text styling */
+.formGroup small {
 	font-size: 0.85rem;
 	color: #6b7280;
 	margin-top: 0.5rem;
@@ -503,39 +544,23 @@
 }
 
 /* Input States */
-.form-input.error,
-.form-select.error {
+.formInput.error,
+.formSelect.error {
 	border-color: #e53e3e;
 	box-shadow: 0 0 0 4px rgba(229, 62, 62, 0.1);
 	background: #fef5f5;
 }
 
-.form-input.success,
-.form-select.success {
+.formInput.success,
+.formSelect.success {
 	border-color: #38a169;
 	box-shadow: 0 0 0 4px rgba(56, 161, 105, 0.1);
 	background: #f0fff4;
 }
 
-/* Loading State */
-.form-input.loading {
-	background: linear-gradient(90deg, #f7fafc 25%, #edf2f7 50%, #f7fafc 75%);
-	background-size: 200% 100%;
-	animation: shimmer 1.5s infinite;
-}
-
-@keyframes shimmer {
-	0% {
-		background-position: -200% 0;
-	}
-	100% {
-		background-position: 200% 0;
-	}
-}
-
 /* Disabled State */
-.form-input:disabled,
-.form-select:disabled {
+.formInput:disabled,
+.formSelect:disabled {
 	background: #f7fafc;
 	border-color: #e2e8f0;
 	color: #a0aec0;
@@ -544,167 +569,15 @@
 	box-shadow: none;
 }
 
-.form-input:disabled::placeholder {
+.formInput:disabled::placeholder {
 	color: #cbd5e0;
 }
 
-/* Enhanced Number Input */
-.form-input[type="number"] {
-	text-align: right;
-}
-
-/* Enhanced Text Area (if needed) */
-.form-textarea {
-	padding: 1rem 1.25rem;
-	border: 2px solid #e2e8f0;
-	border-radius: 12px;
-	font-size: 1rem;
-	font-weight: 500;
-	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-	background: white;
-	font-family: inherit;
-	color: #2d3748;
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-	resize: vertical;
-	min-height: 120px;
-}
-
-.form-textarea:hover {
-	border-color: #cbd5e0;
-	transform: translateY(-2px);
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.form-textarea:focus {
-	outline: none;
-	border-color: #667eea;
-	box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15), 0 4px 20px rgba(102, 126, 234, 0.1);
-	transform: translateY(-2px);
-	background: #fefeff;
-}
-
-/* Enhanced Checkbox Styling (for consistency) */
-.form-checkbox-group {
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
-	padding: 1rem;
-	border: 2px solid #e2e8f0;
-	border-radius: 12px;
-	transition: all 0.3s ease;
-	background: white;
-	cursor: pointer;
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.form-checkbox-group:hover {
-	border-color: #cbd5e0;
-	transform: translateY(-2px);
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.form-checkbox-group input[type="checkbox"] {
-	width: 20px;
-	height: 20px;
-	accent-color: #667eea;
-	cursor: pointer;
-	transform: scale(1.1);
-}
-
-.form-checkbox-group label {
-	margin: 0;
-	cursor: pointer;
-	font-weight: 500;
-	color: #2d3748;
-}
-
-/* Enhanced Radio Button Group */
-.form-radio-group {
-	display: flex;
-	flex-direction: column;
-	gap: 0.75rem;
-}
-
-.form-radio-option {
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
-	padding: 1rem;
-	border: 2px solid #e2e8f0;
-	border-radius: 12px;
-	transition: all 0.3s ease;
-	background: white;
-	cursor: pointer;
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.form-radio-option:hover {
-	border-color: #cbd5e0;
-	transform: translateY(-2px);
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.form-radio-option input[type="radio"]:checked {
-	accent-color: #667eea;
-}
-
-.form-radio-option.selected {
-	background: rgba(102, 126, 234, 0.05);
-	border-color: #667eea;
-}
-
-/* File Input Enhancement */
-.form-file-input {
-	position: relative;
-	overflow: hidden;
-	display: inline-block;
-	width: 100%;
-}
-
-.form-file-input input[type="file"] {
-	position: absolute;
-	left: -9999px;
-	opacity: 0;
-}
-
-.form-file-label {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 0.75rem;
-	padding: 1rem 1.25rem;
-	border: 2px dashed #cbd5e0;
-	border-radius: 12px;
-	background: #fafbfc;
-	cursor: pointer;
-	transition: all 0.3s ease;
-	color: #4a5568;
-	font-weight: 500;
-	text-align: center;
-}
-
-.form-file-label:hover {
-	border-color: #667eea;
-	background: rgba(102, 126, 234, 0.05);
-	color: #667eea;
-	transform: translateY(-2px);
-	box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
-}
-
-.form-file-label.has-file {
-	border-style: solid;
-	border-color: #38a169;
-	background: #f0fff4;
-	color: #38a169;
-}
-
-/* FILTER CATEGORIES SECTION - FULL WIDTH */
 .filterCategoriesSection {
 	grid-column: 1 / -1;
-	margin-top: 1.5rem;
 }
 
-.filterCategoriesSection .form-label {
+.filterCategoriesSection .formLabel {
 	font-weight: 600;
 	color: #2d3748;
 	font-size: 1.1rem;
@@ -762,36 +635,39 @@
 }
 
 /* CUSTOM AUTHENTICATION LEVEL DROPDOWN */
-.customDropdown, .formGroup {
+.customDropdown {
 	position: relative;
 	width: 100%;
 }
 
-.dropdownButton, .formInput, .formSelect {
+.dropdownButton {
 	width: 100%;
-	padding: 0.875rem;
+	padding: 1rem 1.25rem;
 	border: 2px solid #e2e8f0;
-	border-radius: 10px;
+	border-radius: 12px;
 	background: white;
 	cursor: pointer;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	transition: all 0.3s ease;
-	font-size: 0.95rem;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	font-size: 1rem;
 	text-align: left;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .dropdownButton:hover {
 	border-color: #cbd5e0;
-	transform: translateY(-1px);
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .dropdownButton:focus {
 	outline: none;
 	border-color: #667eea;
-	box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+	box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15), 0 4px 20px rgba(102, 126, 234, 0.1);
+	transform: translateY(-2px);
+	background: #fefeff;
 }
 
 /* Level Number in Dropdown - with colors */
@@ -967,6 +843,29 @@
 	box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
+/* BUTTON STYLING CONSISTENCY TO MATCH QUESTION MANAGEMENT */
+.formActions .btn-secondary {
+	background: #f7fafc;
+	color: #4a5568;
+	border: 2px solid #e2e8f0;
+}
+
+.formActions .btn-secondary:hover {
+	background: #edf2f7;
+	border-color: #cbd5e0;
+	color: #2d3748;
+}
+
+.formActions .btn-primary {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	border: none;
+	color: white;
+}
+
+.formActions .btn-primary:hover {
+	background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+}
+
 /* Animations */
 @keyframes fadeIn {
 	from {
@@ -1034,19 +933,14 @@
 	}
 	
 	/* Enhanced form responsiveness */
-	.userForm .form-group .form-input,
-	.userForm .form-group .form-select {
+	.formInput,
+	.formSelect {
 		padding: 0.875rem 1rem;
 		font-size: 0.95rem;
 	}
 	
-	.form-checkbox-group,
-	.form-radio-option {
+	.filterCheckbox {
 		padding: 0.875rem;
-	}
-	
-	.form-file-label {
-		padding: 0.875rem 1rem;
 	}
 }
 
@@ -1100,4 +994,4 @@
 .tableContainer input[type="checkbox"] {
 	width: 20px;
 	height: 20px;
-}
+} 
