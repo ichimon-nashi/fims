@@ -18,6 +18,18 @@ const ExamineeInfo: React.FC<ExamineeInfoProps> = ({
 	// Use the correct property name from User type
 	const employeeId = examinee.employee_id;
 	
+	// Format rank to show only first two characters unless it's "admin"
+	const formatRank = (rank: string | undefined | null): string => {
+		if (!rank) return "N/A";
+		
+		// Keep "admin" as is, otherwise show only first 2 characters
+		if (rank.toLowerCase() === "admin") {
+			return rank;
+		}
+		
+		return rank.substring(0, 2).toUpperCase();
+	};
+	
 	return (
 		<div className={styles.examineeInfo}>
 			<Avatar
@@ -40,7 +52,7 @@ const ExamineeInfo: React.FC<ExamineeInfoProps> = ({
 
 					<div className={styles.infoItem}>
 						<span className={styles.label}>Rank:</span>
-						<span className={styles.value}>{examinee.rank || "N/A"}</span>
+						<span className={styles.value}>{formatRank(examinee.rank)}</span>
 					</div>
 
 					<div className={styles.infoItem}>

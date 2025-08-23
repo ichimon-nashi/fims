@@ -31,13 +31,13 @@ const Navbar = () => {
     
     switch (base) {
       case "KHH":
-      case "KAOHSIUNG":
+      case "高雄":
         return { name: "KHH", icon: "✈️", colorScheme: "khh" };
       case "TSA":
-      case "TAOYUAN":
+      case "松山":
         return { name: "TSA", icon: "✈️", colorScheme: "tsa" };
       case "RMQ":
-      case "TAICHUNG":
+      case "台中":
         return { name: "RMQ", icon: "✈️", colorScheme: "rmq" };
       default:
         return { name: user.base || "Unknown", icon: "✈️", colorScheme: "default" };
