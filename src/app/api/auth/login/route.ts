@@ -1,5 +1,4 @@
 // src/app/api/auth/login/route.ts
-// Updated version with rank-based access control
 import { NextRequest, NextResponse } from "next/server";
 import { getUserByEmail, getUserByEmployeeId } from "@/lib/database";
 import { verifyPassword, generateToken } from "@/lib/auth";
@@ -64,7 +63,6 @@ export async function POST(request: NextRequest) {
 		}
 
 		console.log("Verifying password...");
-		// Verify password
 		const isValidPassword = await verifyPassword(
 			password,
 			user.password_hash

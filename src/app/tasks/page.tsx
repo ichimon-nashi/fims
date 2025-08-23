@@ -3,7 +3,7 @@ import { Metadata } from "next";
 import TaskManager from "@/components/tasks/TaskManager";
 
 export const metadata: Metadata = {
-	title: "任務管理 - 豪神教師管理系統",
+	title: "FIMS - Task Manager",
 	description: "Kanban 任務看板",
 };
 

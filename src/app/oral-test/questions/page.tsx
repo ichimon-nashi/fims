@@ -12,7 +12,6 @@ export default function QuestionsPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if user has minimum access level for question management
     if (user && user.authentication_level < 4) {
       router.push('/oral-test/dashboard');
     }

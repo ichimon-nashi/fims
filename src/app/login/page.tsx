@@ -1,4 +1,4 @@
-// src/app/login/page.tsx - Simplified without AuthProvider wrapper
+// src/app/login/page.tsx
 'use client';
 
 import { useEffect } from 'react';
@@ -12,7 +12,6 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      // Redirect to dashboard instead of roster
       router.replace('/dashboard');
     }
   }, [user, loading, router]);

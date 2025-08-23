@@ -6,7 +6,7 @@ import styles from "./Timer.module.css";
 
 interface TimerProps {
 	initialTime?: number; // in seconds
-	onTimeUp?: () => void;
+	onTimeUp?: () => void; // Made optional since we're not using it for auto-submit anymore
 	onTimeWarning?: (timeLeft: number) => void;
 	autoStart?: boolean;
 	className?: string;
@@ -55,6 +55,11 @@ const Timer = ({
 		}
 	}, [initialTime]);
 
+	// Auto-reset when component mounts (new question loaded)
+	useEffect(() => {
+		resetTimer();
+	}, [resetTimer]);
+
 	const startPauseTimer = useCallback(() => {
 		if (!hasStarted) {
 			setHasStarted(true);
@@ -80,6 +85,8 @@ const Timer = ({
 						onTimeWarning?.(newTime);
 					} else if (newTime === 0) {
 						playAudioAlert(0);
+						// Call onTimeUp if provided, but don't auto-submit
+						// This allows for visual/audio notification only
 						onTimeUp?.();
 					}
 
@@ -142,7 +149,7 @@ const Timer = ({
 				<div className={styles.statusText}>{getStatusText()}</div>
 			</div>
 
-			<div className={styles.timerControls}>
+			{/* <div className={styles.timerControls}>
 				<button
 					className={styles.controlButton}
 					onClick={startPauseTimer}
@@ -154,12 +161,11 @@ const Timer = ({
 				<button className={styles.controlButton} onClick={resetTimer}>
 					🔄 Reset
 				</button>
-			</div>
+			</div> */}
 
-			<div className={styles.instructions}>
+			{/* <div className={styles.instructions}>
 				<p>Single click: Start/Pause | Double click: Reset</p>
-				<p>Audio alerts at 20s, 10s, and 0s</p>
-			</div>
+			</div> */}
 		</div>
 	);
 };

@@ -47,6 +47,8 @@ const TestInterface: React.FC = () => {
 	const [error, setError] = useState("");
 	const [showConfirmModal, setShowConfirmModal] = useState(false);
 	const [testComplete, setTestComplete] = useState(false);
+	// Add timerKey to force timer reset when question changes
+	const [timerKey, setTimerKey] = useState(0);
 
 	// Apply handicap-based difficulty filtering
 	const applyHandicapFiltering = (questions: Question[], handicapLevel: number): Question[] => {
@@ -363,6 +365,8 @@ const TestInterface: React.FC = () => {
 
 				setTestSession(newSession);
 				setCurrentQuestion(selectedQuestions[0]);
+				// Reset timer when first question is loaded
+				setTimerKey(prev => prev + 1);
 				console.log("Test session initialized successfully");
 			} else {
 				const errorData = await response.json();
@@ -447,6 +451,8 @@ const TestInterface: React.FC = () => {
 			} else {
 				console.log("Moving to next question:", nextIndex);
 				setCurrentQuestion(testSession.questions[nextIndex]);
+				// Reset timer when moving to next question
+				setTimerKey(prev => prev + 1);
 			}
 		},
 		[testSession, currentQuestion, completeTest]
@@ -460,6 +466,7 @@ const TestInterface: React.FC = () => {
 		setCurrentQuestion(null);
 		setTestComplete(false);
 		setError("");
+		setTimerKey(0); // Reset timer key
 	};
 
 	// Get question label (Q1, Q2, Q3, R1, R2)
@@ -468,10 +475,8 @@ const TestInterface: React.FC = () => {
 		return `R${index - 2}`;
 	};
 
-	// Handle timer events
-	const handleTimeUp = useCallback((): void => {
-		submitAnswer(false); // Auto-submit as incorrect when time is up
-	}, [submitAnswer]);
+	// REMOVED: handleTimeUp function - no longer auto-submitting on timeout
+	// Timer will still provide visual/audio alerts but won't auto-submit
 
 	const handleTimeWarning = useCallback((timeLeft: number): void => {
 		// Visual/audio warning handled by Timer component
@@ -600,8 +605,8 @@ const TestInterface: React.FC = () => {
 							<div className={styles.rightPanel}>
 								<div className={styles.timerSection}>
 									<Timer
+										key={timerKey} // Force timer reset when this changes
 										initialTime={30}
-										onTimeUp={handleTimeUp}
 										onTimeWarning={handleTimeWarning}
 										autoStart={false}
 									/>

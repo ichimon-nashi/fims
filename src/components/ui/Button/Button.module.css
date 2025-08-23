@@ -1,6 +1,6 @@
 /* src/components/ui/Button/Button.module.css */
 .button {
-	border-radius: 8px;
+	border-radius: 0.5rem;
 	font-weight: 600;
 	cursor: pointer;
 	transition: all 0.3s ease;

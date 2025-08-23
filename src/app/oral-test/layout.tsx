@@ -3,7 +3,7 @@ import { Metadata } from 'next';
 import ClientOralTestLayout from './ClientOralTestLayout';
 
 export const metadata: Metadata = {
-  title: '口試系統 - 豪神教師管理系統',
+  title: 'FIMS - Oral Test',
   description: '口試題目管理與紀錄',
 };
 

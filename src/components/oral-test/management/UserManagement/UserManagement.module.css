@@ -298,7 +298,7 @@
 	max-width: 1100px;
 	width: 95%;
 	max-height: 90vh;
-	overflow-y: hidden;
+	overflow-y: auto;
 	animation: slideIn 0.4s ease;
 	position: relative;
 	border: 1px solid #e2e8f0;

@@ -4,7 +4,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: '豪神-Instructor',
+  title: 'FIMS',
   description: 'Flight Instructor Management System',
 };
 

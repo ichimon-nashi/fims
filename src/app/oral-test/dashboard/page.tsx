@@ -41,7 +41,6 @@ export default function OralTestDashboard() {
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user has minimum access level for oral test system
     if (user && user.authentication_level < 1) {
       router.push('/dashboard');
     }
@@ -60,7 +59,7 @@ export default function OralTestDashboard() {
       
       const response = await fetch('/api/oral-test/dashboard', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}` // FIXED: Use correct token key
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
       
@@ -141,7 +140,7 @@ export default function OralTestDashboard() {
             textAlign: 'center',
             marginBottom: '0.5rem'
           }}>
-            口試系統儀表板
+            口試儀表板
           </h1>
           <p style={{
             textAlign: 'center',
@@ -245,7 +244,7 @@ export default function OralTestDashboard() {
                   {dashboardData.examineeTesting.totalUsers || dashboardData.examineeTesting.total || 0}
                 </div>
                 <div style={{ color: '#718096', fontSize: '0.9rem' }}>
-                  Registered Flight Attendants (excluding admin)
+                  Cabin Crew (excluding admin)
                 </div>
               </div>
 

@@ -3,7 +3,7 @@
 	display: flex;
 	align-items: flex-start;
 	gap: 1.5rem;
-	padding: 1.5rem;
+	padding: 1rem;
 	background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%);
 	border-radius: 12px;
 	border: 1px solid #e2e8f0;
@@ -11,8 +11,8 @@
 }
 
 .avatar {
-	min-width: 8rem;
-	min-height: 8rem;
+	min-width: 6.5rem;
+	min-height: 6.5rem;
 	border-radius: 50%;
 	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 	display: flex;
