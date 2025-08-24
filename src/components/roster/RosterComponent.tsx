@@ -1,4 +1,4 @@
-// src/components/roster/RosterComponent.tsx - ENHANCED VERSION WITH MINIMIZED INSTRUCTIONS
+// src/components/roster/RosterComponent.tsx - ENHANCED VERSION WITH SORTING AND HIDING
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
@@ -14,6 +14,14 @@ import styles from "./RosterComponent.module.css";
 
 // Special accounts that can modify all schedules
 const ADMIN_ACCOUNTS = ["admin", "21986", "51892"];
+
+// Priority order for sorting - these employees will appear first in this exact order
+const PRIORITY_ORDER = ["21701", "21531", "21986"];
+
+// Employees to hide from the roster (even if they meet the filter criteria)
+const HIDDEN_EMPLOYEES = [
+	"20580",
+];
 
 // Define interfaces for better type safety
 interface DateColumn {
@@ -147,6 +155,63 @@ const RosterComponent: React.FC = () => {
 			`User ${user.full_name}: employee_id=${user.employee_id}, id=${user.id}, using=${identifier}`
 		);
 		return identifier;
+	};
+
+	// Custom sort function for instructors
+	const sortInstructors = (instructors: User[]): User[] => {
+		console.log("Sorting instructors...", {
+			priorityOrder: PRIORITY_ORDER,
+			hiddenEmployees: HIDDEN_EMPLOYEES,
+			totalInstructors: instructors.length
+		});
+
+		// First, filter out hidden employees
+		const visibleInstructors = instructors.filter(instructor => {
+			const employeeId = getEmployeeIdentifier(instructor);
+			const isHidden = HIDDEN_EMPLOYEES.includes(employeeId);
+			if (isHidden) {
+				console.log(`Hiding instructor: ${instructor.full_name} (${employeeId})`);
+			}
+			return !isHidden;
+		});
+
+		console.log(`After filtering hidden employees: ${visibleInstructors.length} instructors`);
+
+		// Sort the visible instructors
+		const sorted = visibleInstructors.sort((a, b) => {
+			const aId = getEmployeeIdentifier(a);
+			const bId = getEmployeeIdentifier(b);
+			
+			const aPriority = PRIORITY_ORDER.indexOf(aId);
+			const bPriority = PRIORITY_ORDER.indexOf(bId);
+			
+			// If both are in priority list, sort by priority order
+			if (aPriority !== -1 && bPriority !== -1) {
+				return aPriority - bPriority;
+			}
+			
+			// If only A is in priority list, A comes first
+			if (aPriority !== -1) {
+				return -1;
+			}
+			
+			// If only B is in priority list, B comes first
+			if (bPriority !== -1) {
+				return 1;
+			}
+			
+			// If neither is in priority list, sort by employee ID numerically (smallest to largest)
+			const aNum = parseInt(aId) || 0;
+			const bNum = parseInt(bId) || 0;
+			return aNum - bNum;
+		});
+
+		console.log("Sorted instructor order:", sorted.map(instructor => ({
+			id: getEmployeeIdentifier(instructor),
+			name: instructor.full_name
+		})));
+
+		return sorted;
 	};
 
 	// Detect mobile/tablet for different interaction modes
@@ -292,12 +357,18 @@ const RosterComponent: React.FC = () => {
 					(user: User) =>
 						user.rank === "FI - Flight Attendant Instructor" ||
 						user.rank === "SC - Section Chief" ||
+						getEmployeeIdentifier(user) === "21701" ||
 						getEmployeeIdentifier(user) === "22119" ||
 						getEmployeeIdentifier(user) === "36639"
 				);
 
-				console.log("Filtered instructors:", filteredInstructors);
-				setInstructors(filteredInstructors);
+				console.log("Filtered instructors before sorting:", filteredInstructors.length);
+				
+				// Apply custom sorting
+				const sortedInstructors = sortInstructors(filteredInstructors);
+				
+				console.log("Final sorted instructors:", sortedInstructors.length);
+				setInstructors(sortedInstructors);
 			} else {
 				const errorData = await response.json();
 				setError(
@@ -1468,6 +1539,16 @@ const RosterComponent: React.FC = () => {
 								<strong>受保護任務：</strong>
 								由管理員設定的任務無法被一般使用者移除
 							</li>
+							<li>
+								<strong>排序說明：</strong>
+								員工按照特定順序排列：21701, 21531, 21986 優先，其餘按員編號碼排序
+							</li>
+							{HIDDEN_EMPLOYEES.length > 0 && (
+								<li>
+									<strong>隱藏員工：</strong>
+									部分員工已從名單中隱藏 ({HIDDEN_EMPLOYEES.length} 人)
+								</li>
+							)}
 						</ul>
 					</div>
 				)}

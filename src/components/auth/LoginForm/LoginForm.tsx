@@ -181,7 +181,7 @@ const LoginForm = () => {
 					)}
 
 					<div className={styles.inputGroup}>
-						<label htmlFor="identifier">Email</label>
+						<label htmlFor="identifier">ID/Email</label>
 						<input
 							type="text"
 							id="identifier"
@@ -192,7 +192,7 @@ const LoginForm = () => {
 							autoComplete="username"
 							disabled={isLoading}
 							className={styles.input}
-							placeholder="Enter your email"
+							placeholder="Enter your ID or email"
 						/>
 					</div>
 
