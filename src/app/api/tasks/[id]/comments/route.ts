@@ -3,21 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { addTaskComment, getTaskComments } from "@/lib/taskDatabase";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 
-// Correct type definition for Next.js App Router
-interface RouteContext {
-	params: {
-		id: string;
-	};
-}
-
 export async function GET(
 	request: NextRequest,
-	context: RouteContext
+	{ params }: { params: { id: string } }
 ) {
 	try {
 		console.log(
 			"GET /api/tasks/[id]/comments - Fetching comments for task:",
-			context.params.id
+			params.id
 		);
 
 		// Extract and verify token
@@ -34,7 +27,7 @@ export async function GET(
 		const decoded = verifyToken(token);
 		console.log("Token verified for user:", decoded.userId);
 
-		const comments = await getTaskComments(context.params.id);
+		const comments = await getTaskComments(params.id);
 		console.log("Retrieved comments:", comments.length);
 
 		return NextResponse.json(comments);
@@ -52,12 +45,12 @@ export async function GET(
 
 export async function POST(
 	request: NextRequest,
-	context: RouteContext
+	{ params }: { params: { id: string } }
 ) {
 	try {
 		console.log(
 			"POST /api/tasks/[id]/comments - Adding comment to task:",
-			context.params.id
+			params.id
 		);
 
 		// Extract and verify token
@@ -90,7 +83,7 @@ export async function POST(
 
 		// Create comment data
 		const commentData = {
-			task_id: context.params.id,
+			task_id: params.id,
 			comment_text: body.comment_text,
 			author_id: body.author_id || decoded.userId,
 			author_name: body.author_name,
