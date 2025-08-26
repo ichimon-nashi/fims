@@ -3,15 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getTaskById, updateTask, deleteTask } from "@/lib/taskDatabase";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 
-interface RouteParams {
-	params: {
-		id: string;
-	};
-}
-
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(
+	request: NextRequest,
+	{ params }: { params: Promise<{ id: string }> }
+) {
 	try {
-		console.log("GET /api/tasks/[id] - Fetching task:", params.id);
+		const { id } = await params;
+		console.log("GET /api/tasks/[id] - Fetching task:", id);
 
 		// Extract and verify token
 		const authHeader = request.headers.get("authorization");
@@ -27,7 +25,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 		const decoded = verifyToken(token);
 		console.log("Token verified for user:", decoded.userId);
 
-		const task = await getTaskById(params.id);
+		const task = await getTaskById(id);
 
 		if (!task) {
 			return NextResponse.json(
@@ -49,9 +47,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 	}
 }
 
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(
+	request: NextRequest,
+	{ params }: { params: Promise<{ id: string }> }
+) {
 	try {
-		console.log("PUT /api/tasks/[id] - Updating task:", params.id);
+		const { id } = await params;
+		console.log("PUT /api/tasks/[id] - Updating task:", id);
 
 		// Extract and verify token
 		const authHeader = request.headers.get("authorization");
@@ -94,7 +96,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 			);
 		}
 
-		const task = await updateTask(params.id, updates);
+		const task = await updateTask(id, updates);
 		console.log("Task updated successfully:", task.id);
 
 		return NextResponse.json(task);
@@ -110,9 +112,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 	}
 }
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(
+	request: NextRequest,
+	{ params }: { params: Promise<{ id: string }> }
+) {
 	try {
-		console.log("DELETE /api/tasks/[id] - Deleting task:", params.id);
+		const { id } = await params;
+		console.log("DELETE /api/tasks/[id] - Deleting task:", id);
 
 		// Extract and verify token
 		const authHeader = request.headers.get("authorization");
@@ -128,8 +134,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 		const decoded = verifyToken(token);
 		console.log("Token verified for user:", decoded.userId);
 
-		await deleteTask(params.id);
-		console.log("Task deleted successfully:", params.id);
+		await deleteTask(id);
+		console.log("Task deleted successfully:", id);
 
 		return NextResponse.json({ message: "Task deleted successfully" });
 	} catch (error) {

@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 		const created_by = searchParams.get("created_by");
 
 		// Build filters
-		const filters: any = {};
+		const filters: Record<string, any> = {};
 		if (year) filters.year = parseInt(year);
 		if (status) filters.status = status;
 		if (priority) filters.priority = priority;
