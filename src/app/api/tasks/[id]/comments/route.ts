@@ -5,12 +5,13 @@ import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 
 export async function GET(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
+		const { id } = await params;
 		console.log(
 			"GET /api/tasks/[id]/comments - Fetching comments for task:",
-			params.id
+			id
 		);
 
 		// Extract and verify token
@@ -27,7 +28,7 @@ export async function GET(
 		const decoded = verifyToken(token);
 		console.log("Token verified for user:", decoded.userId);
 
-		const comments = await getTaskComments(params.id);
+		const comments = await getTaskComments(id);
 		console.log("Retrieved comments:", comments.length);
 
 		return NextResponse.json(comments);
@@ -45,12 +46,13 @@ export async function GET(
 
 export async function POST(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
+		const { id } = await params;
 		console.log(
 			"POST /api/tasks/[id]/comments - Adding comment to task:",
-			params.id
+			id
 		);
 
 		// Extract and verify token
@@ -83,7 +85,7 @@ export async function POST(
 
 		// Create comment data
 		const commentData = {
-			task_id: params.id,
+			task_id: id,
 			comment_text: body.comment_text,
 			author_id: body.author_id || decoded.userId,
 			author_name: body.author_name,
