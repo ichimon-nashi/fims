@@ -15,6 +15,41 @@ export interface User {
 	updated_at?: string;
 }
 
+// Task Management Types
+export interface Task {
+	id: string;
+	title: string;
+	description: string;
+	priority: 'low' | 'medium' | 'high';
+	status: 'backlog' | 'in-progress' | 'review' | 'complete';
+	assignees: string[];
+	assigneeNames: string[];
+	assigneeAvatars: string[];
+	due_date?: string;
+	created_by?: string;
+	created_at: string;
+	updated_at: string;
+	year: number;
+	comments: TaskComment[];
+}
+
+export interface TaskComment {
+	id: string;
+	task_id: string;
+	comment_text: string;
+	author_id?: string;
+	author_name: string;
+	created_at: string;
+}
+
+export interface TaskFilters {
+	year?: number;
+	status?: string;
+	priority?: string;
+	assignee?: string;
+	created_by?: string;
+}
+
 // Schedule-related types for FI roster
 export interface ScheduleEntry {
 	id?: string;
