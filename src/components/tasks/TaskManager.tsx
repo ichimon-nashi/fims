@@ -1034,7 +1034,7 @@ const TaskManager = () => {
                                 <Avatar
                                   employeeId={employeeId}
                                   fullName={assigneeName}
-                                  size="tiny"
+                                  size="small"
                                 />
                               </span>
                             );
