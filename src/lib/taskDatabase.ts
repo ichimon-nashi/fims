@@ -1,6 +1,16 @@
 // src/lib/taskDatabase.ts
 import { createClient } from "@/utils/supabase/server";
-import { User } from "./types";
+
+// Define a specific User interface for task management
+export interface TaskUser {
+	id: string;
+	employee_id: string;
+	full_name: string;
+	rank: string;
+	base: string;
+	email: string;
+	authentication_level: number;
+}
 
 // Task interfaces
 export interface Task {
@@ -38,7 +48,7 @@ export interface TaskFilters {
 }
 
 // Get all available users for assignment (from your existing users table)
-export const getAvailableUsers = async (): Promise<User[]> => {
+export const getAvailableUsers = async (): Promise<TaskUser[]> => {
 	try {
 		console.log("Getting available users for task assignment");
 
@@ -155,29 +165,11 @@ export const getTasks = async (filters: TaskFilters = {}): Promise<Task[]> => {
 };
 
 // Helper function to generate avatar for user
-const getAvatarForUser = (user?: User): string => {
-	if (!user) return "👤";
+const getAvatarForUser = (user?: TaskUser): string => {
+	if (!user) return "";
 
-	// Generate avatar based on user properties
-	const avatars = [
-		"👩‍💻",
-		"👨‍💼",
-		"👩‍🎨",
-		"👨‍💻",
-		"👩‍🔬",
-		"👨‍🎨",
-		"👩‍💼",
-		"👨‍🔬",
-		"👩‍⚕️",
-		"👨‍⚕️",
-	];
-
-	// Use employee_id or full_name to consistently assign avatar
-	const index = user.employee_id
-		? parseInt(user.employee_id) % avatars.length
-		: user.full_name.length % avatars.length;
-
-	return avatars[index];
+	// Return the employee_id for avatar purposes
+	return user.employee_id || "";
 };
 
 // Create a new task
