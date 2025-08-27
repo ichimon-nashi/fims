@@ -313,7 +313,8 @@ const TaskManager = () => {
                            user.rank === "SC - Section Chief" ||
                            (user.employee_id && user.employee_id === "21701") ||
                            (user.employee_id && user.employee_id === "22119") ||
-                           (user.employee_id && user.employee_id === "36639");
+                           (user.employee_id && user.employee_id === "36639") ||
+                           (user.employee_id && user.employee_id === "59976");
             
             console.log(`User ${user.full_name} (${user.employee_id}): rank="${user.rank}", matches=${matches}`);
             return matches;
