@@ -414,7 +414,7 @@ const TestInterface: React.FC = () => {
 				totalQuestions: testSession.questions.length,
 			});
 
-			// FIXED: Test ending conditions - ONLY these 3 scenarios:
+			// Test ending conditions - ONLY these 3 scenarios:
 			// 1. Got 3 correct answers (PASS early)
 			// 2. Used all 5 attempts (END regardless of results)
 			// 3. Not enough questions available (handled during initialization)
