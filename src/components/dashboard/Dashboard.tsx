@@ -22,7 +22,7 @@ const Dashboard = () => {
     monthlyScheduleCount: 0,
     remainingOralTests: 0,
     trainingProgress: 0,
-    pendingTasks: 8 // Keep as placeholder for now
+    pendingTasks: 0
   });
   const [statsLoading, setStatsLoading] = useState(true);
   
@@ -43,14 +43,21 @@ const Dashboard = () => {
     try {
       setStatsLoading(true);
       
+      // Get user identifier - prefer employee_id for API calls
+      const userIdentifier = user.employee_id || user.id;
+      
       // Fetch multiple endpoints concurrently
-      const [scheduleResponse, oralTestResponse] = await Promise.all([
+      const [scheduleResponse, oralTestResponse, taskStatsResponse] = await Promise.all([
         // Get current month schedule count for user
-        fetch(`/api/dashboard/schedule-stats?user_id=${user.employee_id || user.id}`, {
+        fetch(`/api/dashboard/schedule-stats?user_id=${userIdentifier}`, {
           headers: { Authorization: `Bearer ${token}` }
         }).catch(() => null), // Handle gracefully if endpoint doesn't exist yet
         // Get oral test dashboard data
         fetch('/api/oral-test/dashboard', {
+          headers: { Authorization: `Bearer ${token}` }
+        }).catch(() => null), // Handle gracefully if endpoint doesn't exist yet
+        // Get task statistics for user
+        fetch(`/api/dashboard/task-stats?user_id=${userIdentifier}`, {
           headers: { Authorization: `Bearer ${token}` }
         }).catch(() => null) // Handle gracefully if endpoint doesn't exist yet
       ]);
@@ -58,6 +65,7 @@ const Dashboard = () => {
       let monthlyScheduleCount = 0;
       let remainingOralTests = 0;
       let trainingProgress = 0;
+      let pendingTasks = 0; // Default to 0 instead of hardcoded 8
 
       // Process schedule stats
       if (scheduleResponse?.ok) {
@@ -76,11 +84,22 @@ const Dashboard = () => {
         trainingProgress = totalUsers > 0 ? Math.min(100, Math.round((currentYearTested / totalUsers) * 100)) : 0;
       }
 
+      // Process task stats
+      if (taskStatsResponse?.ok) {
+        const taskData = await taskStatsResponse.json();
+        pendingTasks = taskData.unfinishedTasksCount || 0;
+        console.log('Task stats loaded:', { 
+          pendingTasks, 
+          totalTasks: taskData.totalUserTasks,
+          completed: taskData.completedTasks 
+        });
+      }
+
       setDashboardStats({
         monthlyScheduleCount,
         remainingOralTests,
         trainingProgress,
-        pendingTasks: 8 // Keep as placeholder until TaskManager is implemented
+        pendingTasks
       });
 
     } catch (error) {
@@ -148,7 +167,7 @@ const Dashboard = () => {
     },
     {
       title: "待完成任務",
-      value: dashboardStats.pendingTasks.toString(),
+      value: statsLoading ? "--" : dashboardStats.pendingTasks.toString(),
       unit: "項",
       icon: "✅",
       color: "#10b981"

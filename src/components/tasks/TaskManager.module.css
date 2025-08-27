@@ -1,4 +1,4 @@
-/* Complete TaskManager.module.css with delete button support */
+/* Complete TaskManager.module.css with Due Date Feature */
 
 /* Task Cards */
 .taskCard {
@@ -42,15 +42,15 @@
 
 /* Color coding for different columns */
 .taskCardBacklog {
-  border-left-color: #8B5CF6 !important;
+  border-left-color: #3B82F6 !important;
 }
 
 .taskCardInProgress {
-  border-left-color: #F59E0B !important;
+  border-left-color: #907ad6 !important;
 }
 
 .taskCardReview {
-  border-left-color: #3B82F6 !important;
+  border-left-color: #ef476f !important;
 }
 
 .taskCardComplete {
@@ -59,13 +59,15 @@
 
 .taskHeader {
   margin-bottom: 0.75rem;
+  position: relative;
 }
 
+/* Priority Corner - positioned in top left, moved higher */
 .priorityCorner {
   position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 10;
+  top: -1.5rem;
+  left: -1rem;
+  z-index: 12;
 }
 
 .priorityCorner .priorityTag {
@@ -76,11 +78,33 @@
   color: white;
 }
 
+/* Due Date Corner - positioned in top right */
+.dueDateCorner {
+  position: absolute;
+  top: -1rem;
+  right: -1rem;
+  z-index: 11;
+}
+
+.dueDateTag {
+  background: #6b7280;
+  color: white;
+  border-radius: 0 0.5rem 0 0.5rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  display: inline-block;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  min-width: 40px;
+  text-align: center;
+  white-space: nowrap;
+}
+
 .taskTitle {
   font-size: 0.875rem;
   font-weight: 600;
   color: #1f2937;
-  margin: 0.5rem 0 0.5rem 0;
+  margin: 0.5rem 2.5rem 0.5rem 0.5rem;
   line-height: 1.4;
   padding-left: 0.5rem;
 }
@@ -416,7 +440,7 @@
   background: #e5e7eb;
 }
 
-/* DELETE BUTTON STYLES - NEW */
+/* DELETE BUTTON STYLES */
 .deleteButton {
   background: #ef4444;
   color: white;
@@ -795,6 +819,33 @@
   color: white;
 }
 
+/* Due Date Display Styles */
+.dueDateDisplay {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.dueDateBadge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+  white-space: nowrap;
+}
+
+.dueDateFull {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.noDueDate {
+  color: #9ca3af;
+  font-style: italic;
+  font-size: 0.875rem;
+}
+
 .description {
   color: #6b7280;
   line-height: 1.6;
@@ -1012,6 +1063,16 @@
   .avatar {
     margin-left: 0.25rem;
   }
+
+  .taskTitle {
+    margin: 0.5rem 1.5rem 0.5rem 0.5rem;
+  }
+
+  .dueDateDisplay {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1021,6 +1082,7 @@
 
   .taskTitle {
     font-size: 0.8125rem;
+    margin: 0.5rem 1rem 0.5rem 0.5rem;
   }
 
   .modalHeader,
@@ -1028,4 +1090,16 @@
   .modalFooter {
     padding: 1rem;
   }
+
+  .dueDateTag {
+    font-size: 0.5625rem;
+    padding: 0.1875rem 0.375rem;
+    min-width: 35px;
+  }
+
+  .priorityCorner .priorityTag {
+    font-size: 0.5625rem;
+    padding: 0.1875rem 0.375rem;
+  }
 }
+  

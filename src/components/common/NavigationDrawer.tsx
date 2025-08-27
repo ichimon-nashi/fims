@@ -260,7 +260,7 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 					</button>
 					<div className={styles.footerInfo}>
 						<div className={styles.appVersion}>
-							豪神教師管理系統 v2.0
+							豪神教師管理系統 v2.2.1
 						</div>
 						<div className={styles.lastUpdate}>
 							最後更新: {new Date().toLocaleDateString("zh-TW")}

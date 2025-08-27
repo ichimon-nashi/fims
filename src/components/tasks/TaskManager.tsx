@@ -1,4 +1,4 @@
-// src/components/tasks/TaskManager.tsx - Complete Fixed Version
+// src/components/tasks/TaskManager.tsx - Complete Updated Version with Due Date Feature
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -95,7 +95,7 @@ const TaskManager = () => {
   // Current year state
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
+  const years = Array.from({ length: 3 }, (_, i) => currentYear + i);
 
   // Comment state
   const [newComment, setNewComment] = useState('');
@@ -105,33 +105,87 @@ const TaskManager = () => {
   const [columns, setColumns] = useState<Column[]>([
     {
       id: 'backlog',
-      title: 'Backlog',
-      color: '#8B5CF6',
-      count: 0,
-      tasks: []
-    },
-    {
-      id: 'in-progress',
-      title: 'In Progress',
-      color: '#F59E0B',
-      count: 0,
-      tasks: []
-    },
-    {
-      id: 'review',
-      title: 'Review',
+      title: '代辦 Open',
       color: '#3B82F6',
       count: 0,
       tasks: []
     },
     {
+      id: 'in-progress',
+      title: '進行中 In Progress',
+      color: '#907ad6',
+      count: 0,
+      tasks: []
+    },
+    {
       id: 'complete',
-      title: 'Complete',
+      title: '完成 Complete',
       color: '#10B981',
       count: 0,
       tasks: []
-    }
+    },    
+    {
+      id: 'review',
+      title: '暫緩 On Hold',
+      color: '#ef476f',
+      count: 0,
+      tasks: []
+    },
   ]);
+
+  // Helper function to get due date status and styling
+  const getDueDateStatus = (dueDateString: string) => {
+    const dueDate = new Date(dueDateString);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    // Reset time to compare dates only
+    today.setHours(0, 0, 0, 0);
+    tomorrow.setHours(0, 0, 0, 0);
+    dueDate.setHours(0, 0, 0, 0);
+    
+    const diffTime = dueDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) {
+      return {
+        status: 'overdue',
+        color: '#ef4444',
+        text: 'Overdue'
+      };
+    } else if (diffDays === 0) {
+      return {
+        status: 'dueToday',
+        color: '#f59e0b',
+        text: 'Today'
+      };
+    } else if (diffDays === 1) {
+      return {
+        status: 'dueTomorrow',
+        color: '#f59e0b',
+        text: 'Tomorrow'
+      };
+    } else if (diffDays <= 7) {
+      return {
+        status: 'dueSoon',
+        color: '#3b82f6',
+        text: dueDate.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric'
+        })
+      };
+    } else {
+      return {
+        status: 'normal',
+        color: '#6b7280',
+        text: dueDate.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric'
+        })
+      };
+    }
+  };
 
   // Get employee identifier - prioritize employee_id over UUID
   const getEmployeeIdentifier = (user: AvailableUser): string => {
@@ -567,6 +621,8 @@ const TaskManager = () => {
 
       console.log('Task created in database:', createdTask);
 
+console.log('Database URL being used:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+
       // Create task object for local state
       const task: Task = {
         id: createdTask.id,
@@ -942,7 +998,7 @@ const TaskManager = () => {
         <div className={styles.container}>
           <div className={styles.header}>
             <div className={styles.headerLeft}>
-              <h1 className={styles.boardTitle}>Studio Board</h1>
+              <h1 className={styles.boardTitle}>任務看板</h1>
               <div className={styles.yearSelector}>
                 <select 
                   value={selectedYear} 
@@ -1017,6 +1073,22 @@ const TaskManager = () => {
                             {getPriorityLabel(task.priority)}
                           </span>
                         </div>
+                        
+                        {/* Due Date in top right corner with color coding */}
+                        {task.due_date && (
+                          <div className={styles.dueDateCorner}>
+                            <span 
+                              className={styles.dueDateTag}
+                              style={{ 
+                                backgroundColor: getDueDateStatus(task.due_date).color 
+                              }}
+                              title={`Due: ${new Date(task.due_date).toLocaleDateString()}`}
+                            >
+                              {getDueDateStatus(task.due_date).text}
+                            </span>
+                          </div>
+                        )}
+                        
                         <h3 className={styles.taskTitle}>{task.title}</h3>
                         <div className={styles.taskMeta}>
                           <span className={styles.comments}>
@@ -1278,6 +1350,41 @@ const TaskManager = () => {
                     >
                       {getPriorityLabel(selectedTask.priority)}
                     </span>
+                  )}
+                </div>
+
+                <div className={styles.taskDetailRow}>
+                  <span className={styles.label}>Due Date:</span>
+                  {isEditing ? (
+                    <input
+                      type="date"
+                      className={styles.editInput}
+                      value={editTask?.due_date || ''}
+                      onChange={(e) => setEditTask(prev => prev ? {...prev, due_date: e.target.value} : null)}
+                    />
+                  ) : (
+                    selectedTask.due_date ? (
+                      <div className={styles.dueDateDisplay}>
+                        <span 
+                          className={styles.dueDateBadge}
+                          style={{ 
+                            backgroundColor: getDueDateStatus(selectedTask.due_date).color 
+                          }}
+                        >
+                          {getDueDateStatus(selectedTask.due_date).text}
+                        </span>
+                        <span className={styles.dueDateFull}>
+                          {new Date(selectedTask.due_date).toLocaleDateString('en-US', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className={styles.noDueDate}>No due date set</span>
+                    )
                   )}
                 </div>
 
