@@ -1,8 +1,13 @@
-// Updated src/hooks/useTimeline.ts - FIXED: Dynamic date ranges based on task data
+// Fixed src/hooks/useTimeline.ts - Cleaned up duplicate code and proper TypeScript types
 import { useMemo, useState } from 'react';
 import { ZoomLevel } from '@/lib/task.types';
 
-export const useTimeline = (tasks?: any[]) => {
+interface Task {
+  start_date?: string;
+  due_date?: string;
+}
+
+export const useTimeline = (tasks: Task[] = []) => {
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('days');
   const [viewStartDate, setViewStartDate] = useState(() => {
     const today = new Date();
@@ -16,8 +21,8 @@ export const useTimeline = (tasks?: any[]) => {
     let unit = '';
     let columns = 0;
 
-    // FIXED: Calculate dynamic end date based on tasks
-    const calculateEndDate = () => {
+    // Calculate dynamic end date based on tasks
+    const calculateEndDate = (): Date => {
       if (!tasks || tasks.length === 0) {
         // Default range if no tasks
         const defaultEnd = new Date(start);
@@ -37,12 +42,6 @@ export const useTimeline = (tasks?: any[]) => {
           const taskEndDate = new Date(task.due_date);
           if (taskEndDate > latestDate) {
             latestDate = taskEndDate;
-          }
-        }
-        if (task.start_date) {
-          const taskStartDate = new Date(task.start_date);
-          if (taskStartDate < start) {
-            // Extend start if needed
           }
         }
       });
@@ -88,7 +87,7 @@ export const useTimeline = (tasks?: any[]) => {
       case 'months':
         unit = 'month';
         const monthsDiff = (endDate.getFullYear() - start.getFullYear()) * 12 + (endDate.getMonth() - start.getMonth());
-        columns = Math.max(6, Math.min(36, monthsDiff)); // Min 6 months, max 3 years
+        columns = Math.max(6, Math.min(36, Math.max(1, monthsDiff))); // Min 6 months, max 3 years
         
         for (let i = 0; i < columns; i++) {
           const date = new Date(start);
@@ -101,7 +100,7 @@ export const useTimeline = (tasks?: any[]) => {
         unit = 'quarter';
         const totalMonths = (endDate.getFullYear() - start.getFullYear()) * 12 + (endDate.getMonth() - start.getMonth());
         const quartersDiff = Math.ceil(totalMonths / 3);
-        columns = Math.max(4, Math.min(20, quartersDiff)); // Min 4 quarters, max 5 years
+        columns = Math.max(4, Math.min(20, Math.max(1, quartersDiff))); // Min 4 quarters, max 5 years
         
         for (let i = 0; i < columns; i++) {
           const date = new Date(start);
@@ -114,16 +113,15 @@ export const useTimeline = (tasks?: any[]) => {
     return { dateRange: range, dateUnit: unit, gridColumns: columns };
   }, [zoomLevel, viewStartDate, tasks]);
 
-  // Rest of the hook remains the same...
-
-    return { dateRange: range, dateUnit: unit, gridColumns: columns };
-  }, [zoomLevel, viewStartDate]);
-
-  // FIXED: Completely rewritten getTaskPosition with proper calculations
+  // Completely rewritten getTaskPosition with proper calculations
   const getTaskPosition = (startDate: string, endDate: string) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
     const viewStart = dateRange[0];
+    
+    if (!viewStart) {
+      return { left: '0px', width: '100px' };
+    }
     
     let startPosition: number;
     let endPosition: number;
@@ -193,6 +191,8 @@ export const useTimeline = (tasks?: any[]) => {
   const getTodayPosition = () => {
     const today = new Date();
     const firstDate = dateRange[0];
+    
+    if (!firstDate) return '0px';
     
     let todayPosition: number;
     

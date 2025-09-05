@@ -1,4 +1,4 @@
-// src/hooks/useTasks.ts - FIXED: Proper task loading with sort_order support
+// src/hooks/useTasks.ts - FIXED: Circular dependency and proper task loading with sort_order support
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { createServiceClient } from '@/utils/supabase/service-client';
@@ -10,12 +10,16 @@ export const useTasks = (selectedYear: number) => {
   const [availableUsers, setAvailableUsers] = useState<AvailableUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [loadingTasks, setLoadingTasks] = useState(false);
-  const [columns, setColumns] = useState<Column[]>([
+  
+  // FIXED: Initialize columns with proper static structure to avoid circular dependencies
+  const initialColumns: Column[] = [
     { id: 'backlog', title: '代辦 Open', color: '#3B82F6', count: 0, tasks: [] },
     { id: 'in-progress', title: '進行中 In Progress', color: '#907ad6', count: 0, tasks: [] },
     { id: 'complete', title: '完成 Complete', color: '#10B981', count: 0, tasks: [] },
     { id: 'review', title: '暫緩 On Hold', color: '#ef476f', count: 0, tasks: [] },
-  ]);
+  ];
+  
+  const [columns, setColumns] = useState<Column[]>(initialColumns);
 
   // Load users
   useEffect(() => {
@@ -68,7 +72,7 @@ export const useTasks = (selectedYear: number) => {
     }
   }, [user, token]);
 
-  // FIXED: Load tasks with proper sort_order handling and cross-year support - wrapped in useCallback
+  // FIXED: Load tasks with proper sort_order handling and removed circular dependency
   const loadTasks = useCallback(async () => {
     if (!user || !token || loadingUsers) return;
     
@@ -92,7 +96,8 @@ export const useTasks = (selectedYear: number) => {
       
       if (error) {
         console.log('Error loading tasks:', error.message);
-        const emptyColumns = columns.map(column => ({
+        // FIXED: Use static structure to avoid circular dependency
+        const emptyColumns = initialColumns.map(column => ({
           ...column,
           tasks: [],
           count: 0
@@ -153,7 +158,8 @@ export const useTasks = (selectedYear: number) => {
           comments: commentsByTask.get(task.id) || []
         }));
 
-        const newColumns = columns.map(column => ({
+        // FIXED: Use static structure to avoid circular dependency
+        const newColumns = initialColumns.map(column => ({
           ...column,
           tasks: transformedTasks.filter(task => task.status === column.id),
           count: transformedTasks.filter(task => task.status === column.id && !task.parent_id).length
@@ -161,7 +167,8 @@ export const useTasks = (selectedYear: number) => {
 
         setColumns(newColumns);
       } else {
-        const emptyColumns = columns.map(column => ({
+        // FIXED: Use static structure to avoid circular dependency
+        const emptyColumns = initialColumns.map(column => ({
           ...column,
           tasks: [],
           count: 0
@@ -170,7 +177,8 @@ export const useTasks = (selectedYear: number) => {
       }
     } catch (error) {
       console.error('Error loading tasks:', error);
-      const emptyColumns = columns.map(column => ({
+      // FIXED: Use static structure to avoid circular dependency
+      const emptyColumns = initialColumns.map(column => ({
         ...column,
         tasks: [],
         count: 0
@@ -179,19 +187,19 @@ export const useTasks = (selectedYear: number) => {
     } finally {
       setLoadingTasks(false);
     }
-  }, [user, token, selectedYear, loadingUsers, availableUsers, columns]); // FIXED: Added all dependencies
+  }, [user, token, selectedYear, loadingUsers, availableUsers]); // FIXED: Removed columns dependency
 
   // FIXED: Load tasks with cross-year support - using loadTasks callback
   useEffect(() => {
-    if (user && token && !loadingUsers) {
+    if (user && token && !loadingUsers && availableUsers.length >= 0) {
       loadTasks();
     }
-  }, [user, token, selectedYear, loadingUsers, loadTasks]); // FIXED: Added loadTasks dependency
+  }, [user, token, selectedYear, loadingUsers, availableUsers, loadTasks]);
 
   // ADDED: Expose loadTasks function for external refresh calls
-  const refreshTasks = () => {
+  const refreshTasks = useCallback(() => {
     loadTasks();
-  };
+  }, [loadTasks]);
 
   return {
     availableUsers,

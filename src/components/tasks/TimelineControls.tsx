@@ -1,4 +1,4 @@
-// src/components/tasks/TimelineControls.tsx - Updated with extended ranges
+// src/components/tasks/TimelineControls.tsx - Fixed with proper dateRangeLength prop
 import React from "react";
 import { ZoomLevel } from "@/lib/task.types";
 
@@ -9,6 +9,7 @@ interface TimelineControlsProps {
 	onNavigateNext: () => void;
 	onGoToToday: () => void;
 	taskCount: number;
+	dateRangeLength: number; // FIXED: Added missing prop
 }
 
 const TimelineControls: React.FC<TimelineControlsProps> = ({
@@ -18,6 +19,7 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
 	onNavigateNext,
 	onGoToToday,
 	taskCount,
+	dateRangeLength, // FIXED: Destructured the prop
 }) => {
 	const getNavigationLabel = () => {
 		switch (zoomLevel) {
@@ -168,13 +170,13 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
 				</div>
 			</div>
 
-			{/* Info Display - FIXED: Updated ranges */}
+			{/* Info Display - FIXED: Proper conditional rendering */}
 			<div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
 				<div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
 					View: {zoomLevel} • {taskCount} main tasks
 				</div>
 
-				{/* View Range Indicator - FIXED: Conservative ranges for better scrolling */}
+				{/* View Range Indicator - FIXED: Proper conditional and variable usage */}
 				<div
 					style={{
 						background: "#e5e7eb",
@@ -185,10 +187,17 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
 						fontWeight: "500",
 					}}
 				>
-					{zoomLevel === "days" && "60 days"}
-					{zoomLevel === "weeks" && "26 weeks"}
-					{zoomLevel === "months" && "12 months"}
-					{zoomLevel === "quarters" && "8 quarters"}
+					{dateRangeLength > 0 ? (
+						<>
+							{zoomLevel === "days" && `${dateRangeLength} days`}
+							{zoomLevel === "weeks" && `${dateRangeLength} weeks`}
+							{zoomLevel === "months" && `${dateRangeLength} months`}
+							{zoomLevel === "quarters" && `${dateRangeLength} quarters`}
+						</>
+					) : (
+						// Fallback to show current zoom level
+						`View: ${zoomLevel}`
+					)}
 				</div>
 			</div>
 		</div>

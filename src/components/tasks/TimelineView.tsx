@@ -1,4 +1,4 @@
-// src/components/tasks/TimelineView.tsx - COMPLETELY REWRITTEN: Grid-based layout to fix scrollbar cutoff
+// src/components/tasks/TimelineView.tsx - FIXED: All TypeScript errors and proper useTimeline usage
 import React, { useState, useRef } from "react";
 import Avatar from "@/components/ui/Avatar/Avatar";
 import TimelineControls from "./TimelineControls";
@@ -21,6 +21,7 @@ const TASK_COLOR_PALETTE = [
 ];
 
 const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refreshTasks }) => {
+	// FIXED: Pass tasks to useTimeline hook
 	const {
 		zoomLevel,
 		setZoomLevel,
@@ -28,7 +29,7 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 		setViewStartDate,
 		dateRange,
 		getTaskPosition,
-	} = useTimeline();
+	} = useTimeline(tasks);
 
 	// Refs for scroll synchronization
 	const timelineScrollRef = useRef<HTMLDivElement>(null);
@@ -313,7 +314,7 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 		}
 	};
 
-	const totalContentWidth = dateRange.length * columnWidth;
+	const totalContentWidth = (dateRange?.length || 0) * columnWidth;
 	const containerHeight = calculateContainerHeight();
 
 	return (
@@ -330,6 +331,7 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 				onNavigateNext={navigateNext}
 				onGoToToday={goToToday}
 				taskCount={parentTasks.length}
+				dateRangeLength={dateRange.length} // FIXED: Pass dynamic range length
 			/>
 
 			{/* COMPLETELY REWRITTEN: CSS Grid layout for better control */}
