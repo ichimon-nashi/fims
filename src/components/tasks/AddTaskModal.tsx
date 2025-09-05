@@ -27,13 +27,22 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 }) => {
 	const { user } = useAuth();
 	const [savingTask, setSavingTask] = useState(false);
-	const [newTask, setNewTask] = useState({
+	const [newTask, setNewTask] = useState<{
+		title: string;
+		description: string;
+		priority: "low" | "medium" | "high";
+		task_type: "main" | "subtask";
+		parent_id: string;
+		assignees: string[];
+		due_date: string;
+		start_date: string;
+	}>({
 		title: "",
 		description: "",
-		priority: "medium" as const,
-		task_type: "main" as const,
+		priority: "medium",
+		task_type: "main",
 		parent_id: "",
-		assignees: [] as string[],
+		assignees: [],
 		due_date: "",
 		start_date: "",
 	});
@@ -88,8 +97,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 
 			const task: Task = {
 				...createdTask,
-				task_type:
-					createdTask.task_type === "subtask" ? "subtask" : "main",
+				task_type: (createdTask.task_type as string) === "subtask" ? "subtask" : "main",
 				progress: createdTask.progress || 0,
 				dependencies: createdTask.dependencies || [],
 				assigneeNames: (createdTask.assignees || []).map(

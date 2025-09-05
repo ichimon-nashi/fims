@@ -4,7 +4,7 @@ export interface Task {
   description: string;
   priority: 'low' | 'medium' | 'high';
   status: 'backlog' | 'in-progress' | 'review' | 'complete';
-  task_type: 'main' | 'subtask';
+  task_type?: 'main' | 'subtask';
   parent_id?: string;
   start_date?: string;
   actual_hours?: number;
