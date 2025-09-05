@@ -1,5 +1,5 @@
 // src/hooks/useTasks.ts - FIXED: Proper task loading with sort_order support
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { createServiceClient } from '@/utils/supabase/service-client';
 import { Task, TaskComment, Column, AvailableUser } from '@/lib/task.types';
@@ -68,8 +68,8 @@ export const useTasks = (selectedYear: number) => {
     }
   }, [user, token]);
 
-  // FIXED: Load tasks with proper sort_order handling and cross-year support
-  const loadTasks = async () => {
+  // FIXED: Load tasks with proper sort_order handling and cross-year support - wrapped in useCallback
+  const loadTasks = useCallback(async () => {
     if (!user || !token || loadingUsers) return;
     
     try {
@@ -179,14 +179,14 @@ export const useTasks = (selectedYear: number) => {
     } finally {
       setLoadingTasks(false);
     }
-  };
+  }, [user, token, selectedYear, loadingUsers, availableUsers, columns]); // FIXED: Added all dependencies
 
-  // Load tasks with cross-year support
+  // FIXED: Load tasks with cross-year support - using loadTasks callback
   useEffect(() => {
     if (user && token && !loadingUsers) {
       loadTasks();
     }
-  }, [user, token, selectedYear, loadingUsers, availableUsers]);
+  }, [user, token, selectedYear, loadingUsers, loadTasks]); // FIXED: Added loadTasks dependency
 
   // ADDED: Expose loadTasks function for external refresh calls
   const refreshTasks = () => {

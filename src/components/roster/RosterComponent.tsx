@@ -103,51 +103,6 @@ const RosterComponent: React.FC = () => {
 
 	const DUTY_COLORS = dutyColors;
 
-	// Check if current user can modify a duty
-	const canModifyDuty = (
-		instructorId: string,
-		date: string,
-		duty?: string
-	): boolean => {
-		// Get user identifier - try multiple fields
-		const userEmployeeId = currentUser?.employee_id || currentUser?.id;
-
-		console.log("Permission check:", {
-			currentUser: currentUser,
-			userEmployeeId,
-			instructorId,
-			adminAccounts: ADMIN_ACCOUNTS,
-		});
-
-		// Admin accounts can modify anything
-		if (ADMIN_ACCOUNTS.includes(userEmployeeId || "")) {
-			console.log("User is admin, allowing modification");
-			return true;
-		}
-
-		// Users can only modify their own schedule
-		if (userEmployeeId !== instructorId) {
-			console.log("User trying to modify someone else's schedule");
-			return false;
-		}
-
-		// If checking a specific duty, ensure it wasn't created by admin
-		if (duty) {
-			const key = `${instructorId}-${date}`;
-			const entry = scheduleData[key]?.[0];
-			if (
-				entry?.created_by &&
-				ADMIN_ACCOUNTS.includes(entry.created_by)
-			) {
-				console.log("Duty was created by admin, cannot modify");
-				return false;
-			}
-		}
-
-		console.log("Permission granted for self-modification");
-		return true;
-	};
-
 	// Get employee identifier - prioritize employee_id over UUID
 	const getEmployeeIdentifier = (user: User): string => {
 		const identifier = user.employee_id || user.id || "";
@@ -157,8 +112,8 @@ const RosterComponent: React.FC = () => {
 		return identifier;
 	};
 
-	// Custom sort function for instructors
-	const sortInstructors = (instructors: User[]): User[] => {
+	// FIXED: Move sortInstructors inside component to avoid useCallback dependency warning
+	const sortInstructors = useCallback((instructors: User[]): User[] => {
 		console.log("Sorting instructors...", {
 			priorityOrder: PRIORITY_ORDER,
 			hiddenEmployees: HIDDEN_EMPLOYEES,
@@ -212,6 +167,51 @@ const RosterComponent: React.FC = () => {
 		})));
 
 		return sorted;
+	}, []); // FIXED: Empty dependency array since getEmployeeIdentifier is defined within component
+
+	// Check if current user can modify a duty
+	const canModifyDuty = (
+		instructorId: string,
+		date: string,
+		duty?: string
+	): boolean => {
+		// Get user identifier - try multiple fields
+		const userEmployeeId = currentUser?.employee_id || currentUser?.id;
+
+		console.log("Permission check:", {
+			currentUser: currentUser,
+			userEmployeeId,
+			instructorId,
+			adminAccounts: ADMIN_ACCOUNTS,
+		});
+
+		// Admin accounts can modify anything
+		if (ADMIN_ACCOUNTS.includes(userEmployeeId || "")) {
+			console.log("User is admin, allowing modification");
+			return true;
+		}
+
+		// Users can only modify their own schedule
+		if (userEmployeeId !== instructorId) {
+			console.log("User trying to modify someone else's schedule");
+			return false;
+		}
+
+		// If checking a specific duty, ensure it wasn't created by admin
+		if (duty) {
+			const key = `${instructorId}-${date}`;
+			const entry = scheduleData[key]?.[0];
+			if (
+				entry?.created_by &&
+				ADMIN_ACCOUNTS.includes(entry.created_by)
+			) {
+				console.log("Duty was created by admin, cannot modify");
+				return false;
+			}
+		}
+
+		console.log("Permission granted for self-modification");
+		return true;
 	};
 
 	// Detect mobile/tablet for different interaction modes
@@ -336,7 +336,7 @@ const RosterComponent: React.FC = () => {
 		}
 	}, [token]);
 
-	// Fetch instructors - wrapped in useCallback
+	// Fetch instructors - wrapped in useCallback with sortInstructors dependency
 	const fetchInstructors = useCallback(async (): Promise<void> => {
 		try {
 			setLoading(true);
@@ -385,7 +385,7 @@ const RosterComponent: React.FC = () => {
 		} finally {
 			setLoading(false);
 		}
-	}, [token]);
+	}, [token, sortInstructors]); // FIXED: Added sortInstructors to dependency array
 
 	// Fetch schedules from API - wrapped in useCallback
 	const fetchSchedulesFromAPI = useCallback(async (): Promise<void> => {

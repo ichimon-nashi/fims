@@ -12,7 +12,7 @@ export const useTimeline = () => {
 
   const { dateRange, dateUnit, gridColumns } = useMemo(() => {
     const start = new Date(viewStartDate);
-    let range: Date[] = [];
+    const range: Date[] = []; // FIXED: Changed from 'let' to 'const'
     let unit = '';
     let columns = 0;
 
