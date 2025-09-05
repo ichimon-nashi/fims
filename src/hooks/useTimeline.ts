@@ -1,8 +1,8 @@
-// Updated src/hooks/useTimeline.ts - FIXED positioning calculations
+// Updated src/hooks/useTimeline.ts - FIXED: Dynamic date ranges based on task data
 import { useMemo, useState } from 'react';
 import { ZoomLevel } from '@/lib/task.types';
 
-export const useTimeline = () => {
+export const useTimeline = (tasks?: any[]) => {
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('days');
   const [viewStartDate, setViewStartDate] = useState(() => {
     const today = new Date();
@@ -12,41 +12,97 @@ export const useTimeline = () => {
 
   const { dateRange, dateUnit, gridColumns } = useMemo(() => {
     const start = new Date(viewStartDate);
-    const range: Date[] = []; // FIXED: Changed from 'let' to 'const'
+    const range: Date[] = [];
     let unit = '';
     let columns = 0;
 
+    // FIXED: Calculate dynamic end date based on tasks
+    const calculateEndDate = () => {
+      if (!tasks || tasks.length === 0) {
+        // Default range if no tasks
+        const defaultEnd = new Date(start);
+        switch (zoomLevel) {
+          case 'days': defaultEnd.setDate(start.getDate() + 60); break;
+          case 'weeks': defaultEnd.setDate(start.getDate() + (26 * 7)); break;
+          case 'months': defaultEnd.setMonth(start.getMonth() + 12); break;
+          case 'quarters': defaultEnd.setMonth(start.getMonth() + (8 * 3)); break;
+        }
+        return defaultEnd;
+      }
+
+      // Find the latest due date from all tasks
+      let latestDate = new Date(start);
+      tasks.forEach(task => {
+        if (task.due_date) {
+          const taskEndDate = new Date(task.due_date);
+          if (taskEndDate > latestDate) {
+            latestDate = taskEndDate;
+          }
+        }
+        if (task.start_date) {
+          const taskStartDate = new Date(task.start_date);
+          if (taskStartDate < start) {
+            // Extend start if needed
+          }
+        }
+      });
+
+      // Add padding after the latest task
+      switch (zoomLevel) {
+        case 'days': latestDate.setDate(latestDate.getDate() + 30); break;
+        case 'weeks': latestDate.setDate(latestDate.getDate() + (4 * 7)); break;
+        case 'months': latestDate.setMonth(latestDate.getMonth() + 3); break;
+        case 'quarters': latestDate.setMonth(latestDate.getMonth() + 6); break;
+      }
+
+      return latestDate;
+    };
+
+    const endDate = calculateEndDate();
+
     switch (zoomLevel) {
       case 'days':
-        columns = 37;
         unit = 'day';
+        const daysDiff = Math.ceil((endDate.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+        columns = Math.max(30, Math.min(365, daysDiff)); // Min 30 days, max 1 year
+        
         for (let i = 0; i < columns; i++) {
           const date = new Date(start);
           date.setDate(start.getDate() + i);
           range.push(date);
         }
         break;
+        
       case 'weeks':
-        columns = 26;
         unit = 'week';
+        const weeksDiff = Math.ceil((endDate.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 7));
+        columns = Math.max(12, Math.min(104, weeksDiff)); // Min 12 weeks, max 2 years
+        
         for (let i = 0; i < columns; i++) {
           const date = new Date(start);
           date.setDate(start.getDate() + (i * 7));
           range.push(date);
         }
         break;
+        
       case 'months':
-        columns = 12;
         unit = 'month';
+        const monthsDiff = (endDate.getFullYear() - start.getFullYear()) * 12 + (endDate.getMonth() - start.getMonth());
+        columns = Math.max(6, Math.min(36, monthsDiff)); // Min 6 months, max 3 years
+        
         for (let i = 0; i < columns; i++) {
           const date = new Date(start);
           date.setMonth(start.getMonth() + i);
           range.push(date);
         }
         break;
+        
       case 'quarters':
-        columns = 8;
         unit = 'quarter';
+        const totalMonths = (endDate.getFullYear() - start.getFullYear()) * 12 + (endDate.getMonth() - start.getMonth());
+        const quartersDiff = Math.ceil(totalMonths / 3);
+        columns = Math.max(4, Math.min(20, quartersDiff)); // Min 4 quarters, max 5 years
+        
         for (let i = 0; i < columns; i++) {
           const date = new Date(start);
           date.setMonth(start.getMonth() + (i * 3));
@@ -56,6 +112,11 @@ export const useTimeline = () => {
     }
 
     return { dateRange: range, dateUnit: unit, gridColumns: columns };
+  }, [zoomLevel, viewStartDate, tasks]);
+
+  // Rest of the hook remains the same...
+
+    return { dateRange: range, dateUnit: unit, gridColumns: columns };
   }, [zoomLevel, viewStartDate]);
 
   // FIXED: Completely rewritten getTaskPosition with proper calculations
@@ -63,7 +124,6 @@ export const useTimeline = () => {
     const start = new Date(startDate);
     const end = new Date(endDate);
     const viewStart = dateRange[0];
-    const viewEnd = dateRange[dateRange.length - 1];
     
     let startPosition: number;
     let endPosition: number;

@@ -1,4 +1,4 @@
-// src/components/tasks/TimelineView.tsx - FIXED: Proper scrolling and synchronization
+// src/components/tasks/TimelineView.tsx - COMPLETELY REWRITTEN: Grid-based layout to fix scrollbar cutoff
 import React, { useState, useRef } from "react";
 import Avatar from "@/components/ui/Avatar/Avatar";
 import TimelineControls from "./TimelineControls";
@@ -30,7 +30,7 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 		getTaskPosition,
 	} = useTimeline();
 
-	// Refs for scroll synchronization - FIXED: Only need one ref for the scrollable container
+	// Refs for scroll synchronization
 	const timelineScrollRef = useRef<HTMLDivElement>(null);
 
 	// Drag and drop state for subtask reordering
@@ -40,6 +40,23 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 
 	// Get parent tasks
 	const parentTasks = tasks.filter((task) => !task.parent_id);
+
+	// Calculate dynamic height based on number of tasks
+	const calculateContainerHeight = () => {
+		const baseHeight = 120;
+		const taskRowHeight = 60;
+		
+		const totalRows = parentTasks.reduce((acc, task) => {
+			const subtasks = getOrderedSubtasks(task.id);
+			return acc + 1 + subtasks.length;
+		}, 0);
+		
+		const calculatedHeight = baseHeight + (totalRows * taskRowHeight);
+		const maxHeight = window.innerHeight - 250;
+		const minHeight = 400;
+		
+		return Math.min(maxHeight, Math.max(minHeight, calculatedHeight));
+	};
 
 	// Color functions
 	const getTaskColor = (taskId: string) => {
@@ -79,7 +96,7 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 
 	const columnWidth = getColumnWidth();
 
-	// FIXED: Better today line positioning
+	// Better today line positioning
 	const getTodayLinePosition = () => {
 		const today = new Date();
 		if (!dateRange || dateRange.length === 0) return 0;
@@ -136,7 +153,7 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 		}
 	};
 
-	// FIXED: Helper function to get ordered subtasks
+	// Helper function to get ordered subtasks
 	const getOrderedSubtasks = (parentId: string): Task[] => {
 		const subtasks = getSubtasks(tasks, parentId);
 		return subtasks.sort((a, b) => {
@@ -150,7 +167,7 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 		});
 	};
 
-	// FIXED: Drag and drop handlers
+	// Drag and drop handlers
 	const handleSubtaskDragStart = (e: React.DragEvent, subtask: Task) => {
 		setDraggedSubtask(subtask);
 		setDragOverParentId(subtask.parent_id || null);
@@ -297,13 +314,14 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 	};
 
 	const totalContentWidth = dateRange.length * columnWidth;
+	const containerHeight = calculateContainerHeight();
 
 	return (
-		<div className="timeline-view" style={{
+		<div style={{
 			background: "white",
 			borderRadius: "0.5rem",
 			margin: "1rem",
-			overflow: "hidden",
+			overflow: "hidden"
 		}}>
 			<TimelineControls
 				zoomLevel={zoomLevel}
@@ -314,24 +332,26 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 				taskCount={parentTasks.length}
 			/>
 
-			{/* FIXED: Timeline Container - Grouped with proper scrolling */}
-			<div className="timeline-container" style={{ 
-				display: "flex", 
-				borderBottom: "2px solid #e5e7eb", 
-				height: "calc(100vh - 200px)" 
+			{/* COMPLETELY REWRITTEN: CSS Grid layout for better control */}
+			<div style={{
+				display: "grid",
+				gridTemplateColumns: "400px 1fr",
+				height: `${containerHeight}px`,
+				minHeight: "400px",
+				maxHeight: "80vh",
+				borderBottom: "2px solid #e5e7eb"
 			}}>
 				
-				{/* Fixed Left Panel */}
-				<div className="timeline-left-panel" style={{ 
-					width: "400px", 
-					minWidth: "400px",
+				{/* Left Panel - Task List */}
+				<div style={{
 					background: "#f9fafb",
 					borderRight: "2px solid #e5e7eb",
 					display: "flex",
-					flexDirection: "column"
+					flexDirection: "column",
+					overflow: "hidden"
 				}}>
 					{/* Fixed Header */}
-					<div className="timeline-left-header" style={{ 
+					<div style={{
 						padding: "1rem",
 						borderBottom: "1px solid #e5e7eb",
 						background: "#f9fafb",
@@ -349,7 +369,11 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 					</div>
 
 					{/* Scrollable Task List */}
-					<div className="timeline-task-list" style={{ flex: 1, overflowY: "auto" }}>
+					<div style={{
+						flex: 1,
+						overflowY: parentTasks.length <= 5 ? "hidden" : "auto",
+						overflowX: "hidden"
+					}}>
 						{parentTasks.map((task, taskIndex) => {
 							const subtasks = getOrderedSubtasks(task.id);
 							
@@ -504,27 +528,38 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 					</div>
 				</div>
 				
-				{/* FIXED: Grouped Timeline Panel with proper scrolling */}
-				<div className="timeline-right-panel" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+				{/* Right Panel - Timeline with CONSTRAINED width */}
+				<div style={{
+					display: "flex",
+					flexDirection: "column",
+					overflow: "hidden", // Critical: prevents spillover
+					minWidth: 0 // Allow shrinking
+				}}>
 					
-					{/* FIXED: Single scrollable container for both header and body */}
+					{/* Timeline Scroll Container - CONSTRAINED */}
 					<div 
-						className="timeline-scroll-container"
 						ref={timelineScrollRef}
-						style={{ 
+						style={{
 							flex: 1,
 							overflowX: "auto",
 							overflowY: "auto",
+							// CRITICAL: These constraints prevent right-side cutoff
+							width: "100%",
+							maxWidth: "100%",
 							position: "relative"
 						}}
 					>
-						{/* FIXED: Combined content that scrolls together */}
-						<div className="timeline-content" style={{ minWidth: `${totalContentWidth}px` }}>
+						{/* Timeline Content - EXACT width control */}
+						<div style={{
+							width: `${totalContentWidth}px`,
+							height: "100%",
+							position: "relative"
+						}}>
 							
 							{/* Timeline Header */}
-							<div className="timeline-header" style={{ 
-								display: "flex", 
-								background: "#f9fafb", 
+							<div style={{
+								display: "flex",
+								background: "#f9fafb",
 								borderBottom: "1px solid #e5e7eb",
 								position: "sticky",
 								top: 0,
@@ -538,8 +573,8 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 									
 									return (
 										<div key={index} style={{
-											minWidth: `${columnWidth}px`,
 											width: `${columnWidth}px`,
+											minWidth: `${columnWidth}px`,
 											padding: "0.5rem 0.25rem",
 											textAlign: "center",
 											fontSize: "0.75rem",
@@ -564,7 +599,7 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 							</div>
 							
 							{/* Timeline Body */}
-							<div className="timeline-body" style={{ position: "relative" }}>
+							<div style={{ position: "relative" }}>
 								{parentTasks.map((task, taskIndex) => {
 									const subtasks = getOrderedSubtasks(task.id);
 									const taskColor = getTaskColor(task.id);
@@ -650,7 +685,6 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 									}} />
 								)}
 							</div>
-							
 						</div>
 					</div>
 				</div>

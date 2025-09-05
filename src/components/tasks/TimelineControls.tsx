@@ -1,4 +1,4 @@
-// src/components/tasks/TimelineControls.tsx
+// src/components/tasks/TimelineControls.tsx - Updated with extended ranges
 import React from "react";
 import { ZoomLevel } from "@/lib/task.types";
 
@@ -168,13 +168,13 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
 				</div>
 			</div>
 
-			{/* Info Display */}
+			{/* Info Display - FIXED: Updated ranges */}
 			<div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
 				<div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
 					View: {zoomLevel} • {taskCount} main tasks
 				</div>
 
-				{/* View Range Indicator */}
+				{/* View Range Indicator - FIXED: Conservative ranges for better scrolling */}
 				<div
 					style={{
 						background: "#e5e7eb",
@@ -185,7 +185,7 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
 						fontWeight: "500",
 					}}
 				>
-					{zoomLevel === "days" && "37 days"}
+					{zoomLevel === "days" && "60 days"}
 					{zoomLevel === "weeks" && "26 weeks"}
 					{zoomLevel === "months" && "12 months"}
 					{zoomLevel === "quarters" && "8 quarters"}

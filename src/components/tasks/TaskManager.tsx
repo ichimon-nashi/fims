@@ -26,8 +26,8 @@ const TaskManager = () => {
   const [currentView, setCurrentView] = useState<ViewType>('board');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  // Custom hooks
-  const { availableUsers, loadingUsers, loadingTasks, columns, setColumns } = useTasks(selectedYear);
+  // Custom hooks - FIXED: Get refreshTasks function
+  const { availableUsers, loadingUsers, loadingTasks, columns, setColumns, refreshTasks } = useTasks(selectedYear);
   
   // Constants
   const currentYear = new Date().getFullYear();
@@ -155,11 +155,12 @@ const TaskManager = () => {
             </button>
           </div>
 
-          {/* Render Current View */}
+          {/* Render Current View - FIXED: Pass refreshTasks to TimelineView */}
           {currentView === 'timeline' ? (
             <TimelineView 
               tasks={getAllTasks()} 
               onTaskClick={handleTaskClick} 
+              refreshTasks={refreshTasks} // ADDED: Pass refresh function for drag-drop reordering
             />
           ) : (
             <BoardView 
