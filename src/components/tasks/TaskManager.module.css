@@ -1,4 +1,4 @@
-/* Complete TaskManager.module.css with Due Date Feature */
+/* Complete TaskManager.module.css with Due Date Feature and Full Viewport Width */
 
 /* Task Cards */
 .taskCard {
@@ -180,7 +180,7 @@
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
 }
 
-/* Main Container */
+/* Main Container - Updated for full viewport width */
 .taskManager {
   min-height: 100vh;
   background: #f8fafc;
@@ -188,8 +188,9 @@
 }
 
 .container {
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
+  padding: 0 1rem;
 }
 
 /* Header */
@@ -289,12 +290,13 @@
   background: #2563eb;
 }
 
-/* Kanban Board */
+/* Kanban Board - Updated for full viewport width */
 .kanbanBoard {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 1.5rem;
   min-height: 70vh;
+  width: 100%;
 }
 
 .column {
@@ -359,7 +361,7 @@
   background: #f9fafb;
 }
 
-/* Modal Styles */
+/* Modal Styles - Updated for larger screens */
 .modal {
   position: fixed;
   top: 0;
@@ -377,7 +379,7 @@
 .modalContent {
   background: white;
   border-radius: 1rem;
-  max-width: 1000px;
+  max-width: min(1400px, 90vw);
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
@@ -995,7 +997,32 @@
   }
 }
 
-/* Responsive Design */
+/* Responsive Design - Updated breakpoints for full width */
+@media (min-width: 1920px) {
+  .kanbanBoard {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 2rem;
+  }
+}
+
+@media (max-width: 1600px) {
+  .kanbanBoard {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 1400px) {
+  .kanbanBoard {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+  
+  .modalContent {
+    max-width: min(1200px, 90vw);
+  }
+}
+
 @media (max-width: 1200px) {
   .kanbanBoard {
     grid-template-columns: repeat(2, 1fr);
@@ -1003,13 +1030,17 @@
   }
   
   .modalContent {
-    max-width: 900px;
+    max-width: min(1000px, 90vw);
   }
 }
 
 @media (max-width: 768px) {
   .taskManager {
     padding: 0.5rem;
+  }
+
+  .container {
+    padding: 0 0.5rem;
   }
 
   .kanbanBoard {
@@ -1024,11 +1055,13 @@
 
   .headerLeft {
     justify-content: center;
+    gap: 1rem;
   }
 
   .modalContent {
     margin: 1rem;
     max-width: none;
+    width: calc(100vw - 2rem);
   }
   
   .modalBody {
@@ -1075,6 +1108,17 @@
   }
 }
 
+@media (max-width: 640px) {
+  .headerLeft {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  
+  .boardTitle {
+    font-size: 1.25rem;
+  }
+}
+
 @media (max-width: 480px) {
   .taskCard {
     padding: 0.75rem;
@@ -1100,6 +1144,20 @@
   .priorityCorner .priorityTag {
     font-size: 0.5625rem;
     padding: 0.1875rem 0.375rem;
+  }
+  
+  .headerLeft {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .taskManager {
+    padding: 0.25rem;
+  }
+  
+  .container {
+    padding: 0 0.25rem;
   }
 }
   

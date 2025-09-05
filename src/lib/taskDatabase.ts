@@ -1,4 +1,4 @@
-// src/lib/taskDatabase.ts
+// src/lib/taskDatabase.ts - COMPLETE: Added sort_order support for subtask reordering
 import { createClient } from "@/utils/supabase/server";
 
 // Define a specific User interface for task management
@@ -12,13 +12,19 @@ export interface TaskUser {
 	authentication_level: number;
 }
 
-// Task interfaces
+// FIXED: Task interfaces with sort_order field
 export interface Task {
 	id: string;
 	title: string;
 	description: string;
 	priority: "low" | "medium" | "high";
 	status: "backlog" | "in-progress" | "review" | "complete";
+	task_type?: "main" | "subtask";
+	parent_id?: string;
+	start_date?: string;
+	actual_hours?: number;
+	progress?: number;
+	dependencies?: string[];
 	assignees: string[];
 	assigneeNames: string[];
 	assigneeAvatars: string[];
@@ -27,6 +33,7 @@ export interface Task {
 	created_at: string;
 	updated_at: string;
 	year: number;
+	sort_order?: number; // ADDED: For subtask drag-drop ordering
 	comments: TaskComment[];
 }
 
@@ -82,7 +89,7 @@ export const getAvailableUsers = async (): Promise<TaskUser[]> => {
 	}
 };
 
-// Get all tasks with filters
+// FIXED: Get all tasks with filters - now includes sort_order
 export const getTasks = async (filters: TaskFilters = {}): Promise<Task[]> => {
 	try {
 		console.log("Getting tasks with filters:", filters);
@@ -91,6 +98,7 @@ export const getTasks = async (filters: TaskFilters = {}): Promise<Task[]> => {
 
 		let query = supabase.from("tasks").select(`
         *,
+        sort_order,
         task_comments (
           id,
           comment_text,
@@ -134,13 +142,19 @@ export const getTasks = async (filters: TaskFilters = {}): Promise<Task[]> => {
 		const users = await getAvailableUsers();
 		const userMap = new Map(users.map((user) => [user.id, user]));
 
-		// Transform the data to match your interface
+		// FIXED: Transform the data to include sort_order
 		const transformedTasks: Task[] = (tasks || []).map((task) => ({
 			id: task.id,
 			title: task.title,
 			description: task.description || "",
 			priority: task.priority,
 			status: task.status,
+			task_type: task.task_type || "main",
+			parent_id: task.parent_id || undefined,
+			start_date: task.start_date || undefined,
+			actual_hours: task.actual_hours || undefined,
+			progress: task.progress || 0,
+			dependencies: task.dependencies || [],
 			assignees: task.assignees || [],
 			assigneeNames: (task.assignees || []).map(
 				(id: string) => userMap.get(id)?.full_name || "Unknown User"
@@ -153,6 +167,7 @@ export const getTasks = async (filters: TaskFilters = {}): Promise<Task[]> => {
 			created_at: task.created_at,
 			updated_at: task.updated_at,
 			year: task.year,
+			sort_order: task.sort_order, // ADDED: Include sort_order
 			comments: task.task_comments || [],
 		}));
 
@@ -172,15 +187,22 @@ const getAvatarForUser = (user?: TaskUser): string => {
 	return user.employee_id || "";
 };
 
-// Create a new task
+// FIXED: Create a new task - now includes sort_order
 export const createTask = async (taskData: {
 	title: string;
 	description: string;
 	priority: "low" | "medium" | "high";
 	status: "backlog" | "in-progress" | "review" | "complete";
+	task_type?: "main" | "subtask";
+	parent_id?: string;
+	start_date?: string;
+	actual_hours?: number;
+	progress?: number;
+	dependencies?: string[];
 	assignees: string[];
 	due_date?: string;
 	created_by: string;
+	sort_order?: number;
 }): Promise<Task> => {
 	try {
 		console.log("Creating new task:", taskData.title);
@@ -198,6 +220,7 @@ export const createTask = async (taskData: {
 			.select(
 				`
         *,
+        sort_order,
         task_comments (
           id,
           comment_text,
@@ -224,6 +247,12 @@ export const createTask = async (taskData: {
 			description: data.description || "",
 			priority: data.priority,
 			status: data.status,
+			task_type: data.task_type || "main",
+			parent_id: data.parent_id || undefined,
+			start_date: data.start_date || undefined,
+			actual_hours: data.actual_hours || undefined,
+			progress: data.progress || 0,
+			dependencies: data.dependencies || [],
 			assignees: data.assignees || [],
 			assigneeNames: (data.assignees || []).map(
 				(id: string) => userMap.get(id)?.full_name || "Unknown User"
@@ -236,6 +265,7 @@ export const createTask = async (taskData: {
 			created_at: data.created_at,
 			updated_at: data.updated_at,
 			year: data.year,
+			sort_order: data.sort_order, // ADDED: Include sort_order
 			comments: data.task_comments || [],
 		};
 
@@ -247,7 +277,7 @@ export const createTask = async (taskData: {
 	}
 };
 
-// Update a task
+// FIXED: Update a task - now includes sort_order
 export const updateTask = async (
 	taskId: string,
 	updates: Partial<{
@@ -255,8 +285,15 @@ export const updateTask = async (
 		description: string;
 		priority: "low" | "medium" | "high";
 		status: "backlog" | "in-progress" | "review" | "complete";
+		task_type: "main" | "subtask";
+		parent_id: string;
+		start_date: string;
+		actual_hours: number;
+		progress: number;
+		dependencies: string[];
 		assignees: string[];
 		due_date: string;
+		sort_order: number;
 	}>
 ): Promise<Task> => {
 	try {
@@ -271,6 +308,7 @@ export const updateTask = async (
 			.select(
 				`
         *,
+        sort_order,
         task_comments (
           id,
           comment_text,
@@ -297,6 +335,12 @@ export const updateTask = async (
 			description: data.description || "",
 			priority: data.priority,
 			status: data.status,
+			task_type: data.task_type || "main",
+			parent_id: data.parent_id || undefined,
+			start_date: data.start_date || undefined,
+			actual_hours: data.actual_hours || undefined,
+			progress: data.progress || 0,
+			dependencies: data.dependencies || [],
 			assignees: data.assignees || [],
 			assigneeNames: (data.assignees || []).map(
 				(id: string) => userMap.get(id)?.full_name || "Unknown User"
@@ -309,6 +353,7 @@ export const updateTask = async (
 			created_at: data.created_at,
 			updated_at: data.updated_at,
 			year: data.year,
+			sort_order: data.sort_order, // ADDED: Include sort_order
 			comments: data.task_comments || [],
 		};
 
@@ -412,7 +457,7 @@ export const getTaskComments = async (
 	}
 };
 
-// Get task by ID
+// FIXED: Get task by ID - now includes sort_order
 export const getTaskById = async (taskId: string): Promise<Task | null> => {
 	try {
 		console.log("Getting task by ID:", taskId);
@@ -424,6 +469,7 @@ export const getTaskById = async (taskId: string): Promise<Task | null> => {
 			.select(
 				`
         *,
+        sort_order,
         task_comments (
           id,
           comment_text,
@@ -455,6 +501,12 @@ export const getTaskById = async (taskId: string): Promise<Task | null> => {
 			description: data.description || "",
 			priority: data.priority,
 			status: data.status,
+			task_type: data.task_type || "main",
+			parent_id: data.parent_id || undefined,
+			start_date: data.start_date || undefined,
+			actual_hours: data.actual_hours || undefined,
+			progress: data.progress || 0,
+			dependencies: data.dependencies || [],
 			assignees: data.assignees || [],
 			assigneeNames: (data.assignees || []).map(
 				(id: string) => userMap.get(id)?.full_name || "Unknown User"
@@ -467,6 +519,7 @@ export const getTaskById = async (taskId: string): Promise<Task | null> => {
 			created_at: data.created_at,
 			updated_at: data.updated_at,
 			year: data.year,
+			sort_order: data.sort_order, // ADDED: Include sort_order
 			comments: data.task_comments || [],
 		};
 
