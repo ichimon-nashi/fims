@@ -1,4 +1,4 @@
-// Fixed src/hooks/useTimeline.ts - Cleaned up duplicate code and proper TypeScript types
+// Fixed src/hooks/useTimeline.ts - Accurate date calculations
 import { useMemo, useState } from 'react';
 import { ZoomLevel } from '@/lib/task.types';
 
@@ -89,10 +89,11 @@ export const useTimeline = (tasks: Task[] = []) => {
         const monthsDiff = (endDate.getFullYear() - start.getFullYear()) * 12 + (endDate.getMonth() - start.getMonth());
         columns = Math.max(6, Math.min(36, Math.max(1, monthsDiff))); // Min 6 months, max 3 years
         
+        // FIXED: Proper month generation to avoid duplicates
+        const currentDate = new Date(start.getFullYear(), start.getMonth(), 1); // Start at beginning of month
         for (let i = 0; i < columns; i++) {
-          const date = new Date(start);
-          date.setMonth(start.getMonth() + i);
-          range.push(date);
+          range.push(new Date(currentDate));
+          currentDate.setMonth(currentDate.getMonth() + 1); // Move to next month
         }
         break;
         
@@ -102,10 +103,11 @@ export const useTimeline = (tasks: Task[] = []) => {
         const quartersDiff = Math.ceil(totalMonths / 3);
         columns = Math.max(4, Math.min(20, Math.max(1, quartersDiff))); // Min 4 quarters, max 5 years
         
+        // FIXED: Proper quarter generation
+        const quarterStart = new Date(start.getFullYear(), Math.floor(start.getMonth() / 3) * 3, 1);
         for (let i = 0; i < columns; i++) {
-          const date = new Date(start);
-          date.setMonth(start.getMonth() + (i * 3));
-          range.push(date);
+          range.push(new Date(quarterStart));
+          quarterStart.setMonth(quarterStart.getMonth() + 3); // Move to next quarter
         }
         break;
     }
@@ -113,7 +115,7 @@ export const useTimeline = (tasks: Task[] = []) => {
     return { dateRange: range, dateUnit: unit, gridColumns: columns };
   }, [zoomLevel, viewStartDate, tasks]);
 
-  // Completely rewritten getTaskPosition with proper calculations
+  // FIXED: Accurate task position calculations without extending end dates
   const getTaskPosition = (startDate: string, endDate: string) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -128,35 +130,59 @@ export const useTimeline = (tasks: Task[] = []) => {
 
     switch (zoomLevel) {
       case 'days':
-        // Calculate position based on actual date difference in days
-        const startDays = Math.floor((start.getTime() - viewStart.getTime()) / (1000 * 60 * 60 * 24));
-        const endDays = Math.floor((end.getTime() - viewStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        // FIXED: Precise day calculations - tasks end exactly on due date
+        const startDays = (start.getTime() - viewStart.getTime()) / (1000 * 60 * 60 * 24);
+        const endDays = (end.getTime() - viewStart.getTime()) / (1000 * 60 * 60 * 24); // Removed +1
         startPosition = startDays;
-        endPosition = endDays;
+        endPosition = endDays + 1; // Add 1 only for display width, not date calculation
         break;
         
       case 'weeks':
-        // Calculate position based on weeks
-        const startWeeks = Math.floor((start.getTime() - viewStart.getTime()) / (1000 * 60 * 60 * 24 * 7));
-        const endWeeks = Math.floor((end.getTime() - viewStart.getTime()) / (1000 * 60 * 60 * 24 * 7)) + 1;
+        // More precise week calculations
+        const startWeeks = (start.getTime() - viewStart.getTime()) / (1000 * 60 * 60 * 24 * 7);
+        const endWeeks = (end.getTime() - viewStart.getTime()) / (1000 * 60 * 60 * 24 * 7);
         startPosition = startWeeks;
-        endPosition = endWeeks;
+        endPosition = endWeeks + 0.2;
         break;
         
       case 'months':
-        // Calculate position based on months with proper handling of month boundaries
-        const startMonths = (start.getFullYear() - viewStart.getFullYear()) * 12 + (start.getMonth() - viewStart.getMonth());
-        const endMonths = (end.getFullYear() - viewStart.getFullYear()) * 12 + (end.getMonth() - viewStart.getMonth()) + 1;
-        startPosition = startMonths;
-        endPosition = endMonths;
+        // FIXED: Accurate month calculations without extra month extension
+        const startYear = start.getFullYear();
+        const startMonth = start.getMonth();
+        const startDay = start.getDate();
+        
+        const endYear = end.getFullYear();
+        const endMonth = end.getMonth(); 
+        const endDay = end.getDate();
+        
+        const viewYear = viewStart.getFullYear();
+        const viewMonth = viewStart.getMonth();
+        
+        // Calculate exact months from view start
+        const startMonthsFromView = (startYear - viewYear) * 12 + (startMonth - viewMonth);
+        const endMonthsFromView = (endYear - viewYear) * 12 + (endMonth - viewMonth);
+        
+        // Add day fractions within the month (0-1)
+        const startDaysInMonth = new Date(startYear, startMonth + 1, 0).getDate();
+        const endDaysInMonth = new Date(endYear, endMonth + 1, 0).getDate();
+        
+        const startDayFraction = (startDay - 1) / startDaysInMonth;
+        const endDayFraction = (endDay - 1) / endDaysInMonth; // FIXED: Changed from endDay to (endDay - 1)
+        
+        startPosition = startMonthsFromView + startDayFraction;
+        endPosition = endMonthsFromView + endDayFraction + (1 / endDaysInMonth); // Add one day width for visibility
         break;
         
       case 'quarters':
-        // Calculate position based on quarters
-        const startQuarter = Math.floor(((start.getFullYear() - viewStart.getFullYear()) * 12 + (start.getMonth() - viewStart.getMonth())) / 3);
-        const endQuarter = Math.floor(((end.getFullYear() - viewStart.getFullYear()) * 12 + (end.getMonth() - viewStart.getMonth())) / 3) + 1;
-        startPosition = startQuarter;
-        endPosition = endQuarter;
+        // More precise quarter calculations
+        const startQuarterMonths = (start.getFullYear() - viewStart.getFullYear()) * 12 + (start.getMonth() - viewStart.getMonth());
+        const endQuarterMonths = (end.getFullYear() - viewStart.getFullYear()) * 12 + (end.getMonth() - viewStart.getMonth());
+        
+        const startDayInQuarter = start.getDate() / new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate();
+        const endDayInQuarter = end.getDate() / new Date(end.getFullYear(), end.getMonth() + 1, 0).getDate();
+        
+        startPosition = (startQuarterMonths + startDayInQuarter) / 3;
+        endPosition = (endQuarterMonths + endDayInQuarter) / 3;
         break;
         
       default:
@@ -165,7 +191,7 @@ export const useTimeline = (tasks: Task[] = []) => {
     }
     
     // Ensure minimum width and clamp to visible range
-    const width = Math.max(1, endPosition - startPosition);
+    const width = Math.max(0.5, endPosition - startPosition);
     const left = Math.max(0, startPosition);
     
     // Calculate pixel positions based on column width

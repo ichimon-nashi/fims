@@ -1,4 +1,4 @@
-// src/components/tasks/TimelineView.tsx - FIXED: All TypeScript errors and proper useTimeline usage
+// src/components/tasks/TimelineView.tsx - FIXED: Hover and date calculation issues
 import React, { useState, useRef } from "react";
 import Avatar from "@/components/ui/Avatar/Avatar";
 import TimelineControls from "./TimelineControls";
@@ -21,14 +21,12 @@ const TASK_COLOR_PALETTE = [
 ];
 
 const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refreshTasks }) => {
-	// FIXED: Pass tasks to useTimeline hook
 	const {
 		zoomLevel,
 		setZoomLevel,
 		viewStartDate,
 		setViewStartDate,
 		dateRange,
-		getTaskPosition,
 	} = useTimeline(tasks);
 
 	// Refs for scroll synchronization
@@ -39,8 +37,238 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 	const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 	const [dragOverParentId, setDragOverParentId] = useState<string | null>(null);
 
+	// Hover tooltip state
+	const [hoveredTask, setHoveredTask] = useState<{
+		task: Task;
+		x: number;
+		y: number;
+	} | null>(null);
+
 	// Get parent tasks
 	const parentTasks = tasks.filter((task) => !task.parent_id);
+
+	// FIXED: Better date formatting for tooltip that handles timezone correctly
+	const formatTooltipDate = (dateString: string) => {
+		// Create date without timezone manipulation
+		const dateParts = dateString.split('-');
+		const year = parseInt(dateParts[0]);
+		const month = parseInt(dateParts[1]) - 1; // Month is 0-based
+		const day = parseInt(dateParts[2]);
+		const date = new Date(year, month, day);
+		
+		return date.toLocaleDateString("en-US", {
+			year: "numeric",
+			month: "short",
+			day: "numeric"
+		});
+	};
+
+	// FIXED: Improved task position calculation with proper date handling and inclusive end dates
+	const getFixedTaskPosition = (startDate: string, endDate: string) => {
+		if (!dateRange || dateRange.length === 0) return { left: '0px', width: '0px' };
+
+		// Parse dates without timezone issues - ensure we're working with local dates
+		const parseDate = (dateStr: string) => {
+			const parts = dateStr.split('-');
+			const year = parseInt(parts[0]);
+			const month = parseInt(parts[1]) - 1; // JavaScript months are 0-based
+			const day = parseInt(parts[2]);
+			return new Date(year, month, day);
+		};
+
+		// FIXED: Normalize dates to midnight to avoid time component issues
+		const normalizeToMidnight = (date: Date) => {
+			return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+		};
+
+		const start = parseDate(startDate);
+		const end = parseDate(endDate);
+		const firstDate = normalizeToMidnight(dateRange[0]); // FIXED: Remove time component
+		
+		const columnWidth = getColumnWidth();
+
+		// Debug logging for February 2026 issue
+		if (endDate.includes('2026-02')) {
+			console.log('Debug Feb 2026 task - Current zoom level:', zoomLevel, {
+				startDate,
+				endDate,
+				parsedStart: start,
+				parsedEnd: end,
+				endMonth: end.getMonth(),
+				endYear: end.getFullYear(),
+				originalFirstDate: dateRange[0],
+				normalizedFirstDate: firstDate,
+				dateRangeLength: dateRange.length
+			});
+		}
+
+		switch (zoomLevel) {
+			case "days": {
+				// FIXED: Use normalized dates for accurate day calculations
+				const normalizedStart = normalizeToMidnight(start);
+				const normalizedEnd = normalizeToMidnight(end);
+				
+				const startDiff = Math.round((normalizedStart.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24));
+				const endDiff = Math.round((normalizedEnd.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24));
+				// FIXED: Include the end date by adding 1 to duration
+				const duration = Math.max(1, endDiff - startDiff + 1);
+				
+				if (endDate.includes('2026-02')) {
+					console.log('Days view calculation:', { 
+						normalizedStart, 
+						normalizedEnd, 
+						firstDate,
+						startDiff, 
+						endDiff, 
+						duration,
+						taskStartsOn: normalizedStart.toDateString(),
+						taskEndsOn: normalizedEnd.toDateString()
+					});
+				}
+				
+				return {
+					left: `${Math.max(0, startDiff * columnWidth)}px`,
+					width: `${duration * columnWidth}px`
+				};
+			}
+			case "weeks": {
+				// FIXED: Use normalized dates for accurate week calculations
+				const normalizedStart = normalizeToMidnight(start);
+				const normalizedEnd = normalizeToMidnight(end);
+				
+				const startWeek = Math.floor((normalizedStart.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24 * 7));
+				const endWeek = Math.floor((normalizedEnd.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24 * 7));
+				// FIXED: Include the end week
+				const duration = Math.max(1, endWeek - startWeek + 1);
+				
+				if (endDate.includes('2026-02')) {
+					console.log('Weeks view calculation:', { 
+						normalizedStart, 
+						normalizedEnd, 
+						firstDate,
+						startWeek, 
+						endWeek, 
+						duration 
+					});
+				}
+				
+				return {
+					left: `${Math.max(0, startWeek * columnWidth)}px`,
+					width: `${duration * columnWidth}px`
+				};
+			}
+			case "months": {
+				const startMonths = (start.getFullYear() - firstDate.getFullYear()) * 12 + (start.getMonth() - firstDate.getMonth());
+				const endMonths = (end.getFullYear() - firstDate.getFullYear()) * 12 + (end.getMonth() - firstDate.getMonth());
+				
+				// FIXED: For month view, we need to be more precise about end date positioning
+				const startDay = start.getDate();
+				const endDay = end.getDate();
+				const endDaysInMonth = new Date(end.getFullYear(), end.getMonth() + 1, 0).getDate();
+				
+				// Calculate precise positioning within months
+				const startFraction = (startDay - 1) / new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate();
+				const endFraction = endDay / endDaysInMonth; // Include the end date
+				
+				const leftPosition = (startMonths + startFraction) * columnWidth;
+				const rightPosition = (endMonths + endFraction) * columnWidth;
+				const width = Math.max(columnWidth * 0.1, rightPosition - leftPosition); // Minimum 10% of column width
+				
+				// Enhanced debug logging for February 2026 issue
+				if (endDate.includes('2026-02')) {
+					console.log('MONTHS view calculation:', {
+						firstDate: firstDate.toLocaleDateString(),
+						startMonths,
+						endMonths,
+						startDay,
+						endDay,
+						endDaysInMonth,
+						startFraction,
+						endFraction,
+						leftPosition,
+						rightPosition,
+						width,
+						columnWidth,
+						endMonthName: end.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+					});
+				}
+				
+				return {
+					left: `${Math.max(0, leftPosition)}px`,
+					width: `${width}px`
+				};
+			}
+			case "quarters": {
+				// FIXED: Use normalized dates for accurate quarter calculations
+				const normalizedStart = normalizeToMidnight(start);
+				const normalizedEnd = normalizeToMidnight(end);
+				
+				const startQuarter = Math.floor(((normalizedStart.getFullYear() - firstDate.getFullYear()) * 12 + (normalizedStart.getMonth() - firstDate.getMonth())) / 3);
+				const endQuarter = Math.floor(((normalizedEnd.getFullYear() - firstDate.getFullYear()) * 12 + (normalizedEnd.getMonth() - firstDate.getMonth())) / 3);
+				
+				if (endDate.includes('2026-02')) {
+					console.log('Quarters view calculation:', { 
+						normalizedStart: normalizedStart.toDateString(), 
+						normalizedEnd: normalizedEnd.toDateString(), 
+						firstDate: firstDate.toDateString(),
+						startQuarter, 
+						endQuarter,
+						calculatedDuration: endQuarter - startQuarter + 1,
+						isStartBeforeTimeline: startQuarter < 0,
+						dateRangeQuarters: dateRange.length
+					});
+				}
+				
+				// FIXED: Handle tasks that extend outside timeline bounds
+				const leftPosition = Math.max(0, startQuarter * columnWidth);
+				const rightPosition = Math.min(dateRange.length * columnWidth, (endQuarter + 1) * columnWidth);
+				const width = Math.max(columnWidth * 0.1, rightPosition - leftPosition);
+				
+				return {
+					left: `${leftPosition}px`,
+					width: `${width}px`
+				};
+			}
+			default:
+				return { left: '0px', width: '100px' };
+		}
+	};
+
+	// FIXED: Handle task hover for tooltip - track mouse position
+	const handleTaskMouseEnter = (e: React.MouseEvent, task: Task) => {
+		setHoveredTask({
+			task,
+			x: e.clientX, // Use mouse position instead of element center
+			y: e.clientY - 10
+		});
+	};
+
+	// FIXED: Handle mouse move to update tooltip position
+	const handleTaskMouseMove = (e: React.MouseEvent, task: Task) => {
+		if (hoveredTask?.task.id === task.id) {
+			setHoveredTask({
+				task,
+				x: e.clientX,
+				y: e.clientY - 10
+			});
+		}
+	};
+
+	const handleTaskMouseLeave = () => {
+		setHoveredTask(null);
+	};
+
+	// Month color coding function
+	const getMonthBackgroundColor = (date: Date) => {
+		const month = date.getMonth();
+		
+		const monthColors = [
+			"#f8fafc", "#f1f5f9", "#fef7f0", "#f0fdf4", "#fef3c7", "#fdf2f8",
+			"#f3f4f6", "#ecfdf5", "#fef9e7", "#f0f9ff", "#fdf4ff", "#f9fafb"
+		];
+		
+		return monthColors[month % monthColors.length];
+	};
 
 	// Calculate dynamic height based on number of tasks
 	const calculateContainerHeight = () => {
@@ -158,12 +386,10 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 	const getOrderedSubtasks = (parentId: string): Task[] => {
 		const subtasks = getSubtasks(tasks, parentId);
 		return subtasks.sort((a, b) => {
-			// If both have sort_order, use that
 			if (a.sort_order !== null && a.sort_order !== undefined && 
 				b.sort_order !== null && b.sort_order !== undefined) {
 				return a.sort_order - b.sort_order;
 			}
-			// Otherwise, sort by created_at (earliest first)
 			return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
 		});
 	};
@@ -213,7 +439,6 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 		try {
 			const supabase = createServiceClient();
 
-			// Update sort_order for all affected subtasks
 			const updates = reorderedSubtasks.map((task, index) => 
 				supabase
 					.from("tasks")
@@ -331,10 +556,10 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 				onNavigateNext={navigateNext}
 				onGoToToday={goToToday}
 				taskCount={parentTasks.length}
-				dateRangeLength={dateRange.length} // FIXED: Pass dynamic range length
+				dateRangeLength={dateRange.length}
 			/>
 
-			{/* COMPLETELY REWRITTEN: CSS Grid layout for better control */}
+			{/* CSS Grid layout for better control */}
 			<div style={{
 				display: "grid",
 				gridTemplateColumns: "400px 1fr",
@@ -371,11 +596,20 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 					</div>
 
 					{/* Scrollable Task List */}
-					<div style={{
-						flex: 1,
-						overflowY: parentTasks.length <= 5 ? "hidden" : "auto",
-						overflowX: "hidden"
-					}}>
+					<div 
+						ref={timelineScrollRef}
+						style={{
+							flex: 1,
+							overflowY: parentTasks.length <= 5 ? "hidden" : "auto",
+							overflowX: "hidden"
+						}}
+						onScroll={(e) => {
+							const timelineBody = document.querySelector('[data-timeline-body="true"]') as HTMLElement;
+							if (timelineBody) {
+								timelineBody.scrollTop = e.currentTarget.scrollTop;
+							}
+						}}
+					>
 						{parentTasks.map((task, taskIndex) => {
 							const subtasks = getOrderedSubtasks(task.id);
 							
@@ -530,28 +764,32 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 					</div>
 				</div>
 				
-				{/* Right Panel - Timeline with CONSTRAINED width */}
+				{/* Right Panel - Timeline */}
 				<div style={{
 					display: "flex",
 					flexDirection: "column",
-					overflow: "hidden", // Critical: prevents spillover
-					minWidth: 0 // Allow shrinking
+					overflow: "hidden",
+					minWidth: 0
 				}}>
 					
-					{/* Timeline Scroll Container - CONSTRAINED */}
+					{/* Timeline Scroll Container */}
 					<div 
-						ref={timelineScrollRef}
+						data-timeline-body="true"
 						style={{
 							flex: 1,
 							overflowX: "auto",
 							overflowY: "auto",
-							// CRITICAL: These constraints prevent right-side cutoff
 							width: "100%",
 							maxWidth: "100%",
 							position: "relative"
 						}}
+						onScroll={(e) => {
+							if (timelineScrollRef.current) {
+								timelineScrollRef.current.scrollTop = e.currentTarget.scrollTop;
+							}
+						}}
 					>
-						{/* Timeline Content - EXACT width control */}
+						{/* Timeline Content */}
 						<div style={{
 							width: `${totalContentWidth}px`,
 							height: "100%",
@@ -572,6 +810,7 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 									const todayColumnIndex = getTodayColumnIndex();
 									const isToday = index === todayColumnIndex;
 									const isWeekend = zoomLevel === "days" && (date.getDay() === 0 || date.getDay() === 6);
+									const monthBgColor = getMonthBackgroundColor(date);
 									
 									return (
 										<div key={index} style={{
@@ -581,7 +820,7 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 											textAlign: "center",
 											fontSize: "0.75rem",
 											borderRight: "1px solid #e5e7eb",
-											background: isWeekend ? "#f3f4f6" : "transparent",
+											background: isWeekend ? "#f3f4f6" : monthBgColor,
 											color: isToday ? "#ef4444" : isWeekend ? "#9ca3af" : "#6b7280",
 											fontWeight: isToday ? "700" : "400"
 										}}>
@@ -617,23 +856,77 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 												display: "flex",
 												alignItems: "center"
 											}}>
+												{/* FIXED: Month background stripes with lower z-index */}
+												{dateRange.map((date, dateIndex) => {
+													const monthBgColor = getMonthBackgroundColor(date);
+													const isWeekend = zoomLevel === "days" && (date.getDay() === 0 || date.getDay() === 6);
+													
+													return (
+														<div key={dateIndex} style={{
+															position: "absolute",
+															left: `${dateIndex * columnWidth}px`,
+															width: `${columnWidth}px`,
+															top: 0,
+															bottom: 0,
+															background: isWeekend ? "#f3f4f6" : monthBgColor,
+															opacity: 0.3,
+															pointerEvents: "none",
+															zIndex: 1
+														}} />
+													);
+												})}
+												
 												{task.start_date && task.due_date && (
-													<div style={{
-														position: "absolute", top: "50%", transform: "translateY(-50%)",
-														height: "1.75rem", background: taskColor, borderRadius: "0.25rem",
-														display: "flex", alignItems: "center", paddingLeft: "0.5rem",
-														color: "white", fontSize: "0.75rem", fontWeight: "500",
-														cursor: "pointer", minWidth: "100px",
-														...getTaskPosition(task.start_date, task.due_date)
-													}} onClick={() => onTaskClick(task)}>
+													<div 
+														style={{
+															position: "absolute", 
+															top: "50%", 
+															transform: "translateY(-50%)",
+															height: "1.75rem", 
+															background: taskColor, 
+															borderRadius: "0.25rem",
+															display: "flex", 
+															alignItems: "center", 
+															paddingLeft: "0.5rem",
+															paddingRight: "0.5rem",
+															color: "white", 
+															fontSize: "0.75rem", 
+															fontWeight: "500",
+															cursor: "pointer", 
+															minWidth: "100px",
+															zIndex: 200,
+															boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+															transition: "all 0.2s ease",
+															...getFixedTaskPosition(task.start_date, task.due_date)
+														}} 
+														onClick={() => onTaskClick(task)}
+														onMouseEnter={(e) => handleTaskMouseEnter(e, task)}
+														onMouseMove={(e) => handleTaskMouseMove(e, task)}
+														onMouseLeave={handleTaskMouseLeave}
+													>
+														{/* FIXED: Progress bar as background layer only */}
 														<div style={{ 
-															position: "absolute", left: 0, top: 0, bottom: 0,
+															position: "absolute", 
+															left: 0, 
+															top: 0, 
+															bottom: 0,
 															width: `${task.progress || 0}%`,
 															background: getDarkerColor(taskColor),
-															borderRadius: "0.25rem", transition: "width 0.3s ease"
+															borderRadius: "0.25rem", 
+															transition: "width 0.3s ease",
+															pointerEvents: "none",
+															zIndex: -1
 														}} />
 														
-														<span style={{ position: "relative", zIndex: 1 }}>
+														<span style={{ 
+															position: "relative", 
+															zIndex: 1,
+															overflow: "hidden",
+															textOverflow: "ellipsis",
+															whiteSpace: "nowrap",
+															flex: 1,
+															pointerEvents: "none"
+														}}>
 															{task.title}
 														</span>
 													</div>
@@ -646,27 +939,85 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 												
 												return (
 													<div key={subtask.id} style={{ 
-														minHeight: "60px", borderBottom: "1px solid #f3f4f6",
-														backgroundColor: "#f8fafc", position: "relative",
-														display: "flex", alignItems: "center"
+														minHeight: "60px", 
+														borderBottom: "1px solid #f3f4f6",
+														backgroundColor: "#f8fafc", 
+														position: "relative",
+														display: "flex", 
+														alignItems: "center"
 													}}>
+														{/* FIXED: Month background stripes for subtasks */}
+														{dateRange.map((date, dateIndex) => {
+															const monthBgColor = getMonthBackgroundColor(date);
+															const isWeekend = zoomLevel === "days" && (date.getDay() === 0 || date.getDay() === 6);
+															
+															return (
+																<div key={dateIndex} style={{
+																	position: "absolute",
+																	left: `${dateIndex * columnWidth}px`,
+																	width: `${columnWidth}px`,
+																	top: 0,
+																	bottom: 0,
+																	background: isWeekend ? "#f3f4f6" : monthBgColor,
+																	opacity: 0.2,
+																	pointerEvents: "none",
+																	zIndex: 1
+																}} />
+															);
+														})}
+														
 														{subtask.start_date && subtask.due_date && (
-															<div style={{
-																position: "absolute", top: "50%", transform: "translateY(-50%)",
-																height: "1.5rem", background: subtaskColor, borderRadius: "0.25rem",
-																display: "flex", alignItems: "center", paddingLeft: "0.5rem",
-																color: "white", fontSize: "0.75rem", fontWeight: "400",
-																cursor: "pointer", opacity: 0.9, minWidth: "100px",
-																...getTaskPosition(subtask.start_date, subtask.due_date)
-															}} onClick={() => onTaskClick(subtask)}>
+															<div 
+																style={{
+																	position: "absolute", 
+																	top: "50%", 
+																	transform: "translateY(-50%)",
+																	height: "1.5rem", 
+																	background: subtaskColor, 
+																	borderRadius: "0.25rem",
+																	display: "flex", 
+																	alignItems: "center", 
+																	paddingLeft: "0.5rem",
+																	paddingRight: "0.5rem",
+																	color: "white", 
+																	fontSize: "0.75rem", 
+																	fontWeight: "400",
+																	cursor: "pointer", 
+																	opacity: 0.9, 
+																	minWidth: "80px",
+																	zIndex: 200,
+																	boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+																	transition: "all 0.2s ease",
+																	...getFixedTaskPosition(subtask.start_date, subtask.due_date)
+																}} 
+																onClick={() => onTaskClick(subtask)}
+																onMouseEnter={(e) => handleTaskMouseEnter(e, subtask)}
+																onMouseMove={(e) => handleTaskMouseMove(e, subtask)}
+																onMouseLeave={handleTaskMouseLeave}
+															>
+																{/* FIXED: Progress bar as background layer only */}
 																<div style={{ 
-																	position: "absolute", left: 0, top: 0, bottom: 0,
+																	position: "absolute", 
+																	left: 0, 
+																	top: 0, 
+																	bottom: 0,
 																	width: `${subtask.progress || 0}%`,
 																	background: getDarkerColor(subtaskColor),
-																	borderRadius: "0.25rem", transition: "width 0.3s ease"
+																	borderRadius: "0.25rem", 
+																	transition: "width 0.3s ease",
+																	pointerEvents: "none",
+																	zIndex: -1
 																}} />
 																
-																<span style={{ position: "relative", zIndex: 1 }}>
+																<span style={{ 
+																	position: "relative", 
+																	zIndex: 1,
+																	overflow: "hidden",
+																	textOverflow: "ellipsis",
+																	whiteSpace: "nowrap",
+																	flex: 1,
+																	pointerEvents: "none"
+																}}>
 																	{subtask.title}
 																</span>
 															</div>
@@ -691,6 +1042,43 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 					</div>
 				</div>
 			</div>
+
+			{/* FIXED: Enhanced Hover Tooltip */}
+			{hoveredTask && (
+				<div style={{
+					position: "fixed",
+					left: `${hoveredTask.x}px`,
+					top: `${hoveredTask.y}px`,
+					transform: "translateX(-50%) translateY(-100%)",
+					background: "rgba(0, 0, 0, 0.9)",
+					color: "white",
+					padding: "0.75rem",
+					borderRadius: "0.5rem",
+					fontSize: "0.875rem",
+					zIndex: 1000,
+					pointerEvents: "none",
+					boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
+					maxWidth: "300px",
+					minWidth: "200px"
+				}}>
+					<div style={{ fontWeight: "600", marginBottom: "0.5rem" }}>
+						{hoveredTask.task.title}
+					</div>
+					{hoveredTask.task.start_date && (
+						<div style={{ fontSize: "0.75rem", color: "#e5e7eb", marginBottom: "0.25rem" }}>
+							<strong>Start:</strong> {formatTooltipDate(hoveredTask.task.start_date)}
+						</div>
+					)}
+					{hoveredTask.task.due_date && (
+						<div style={{ fontSize: "0.75rem", color: "#e5e7eb", marginBottom: "0.25rem" }}>
+							<strong>End:</strong> {formatTooltipDate(hoveredTask.task.due_date)}
+						</div>
+					)}
+					<div style={{ fontSize: "0.75rem", color: "#e5e7eb" }}>
+						<strong>Progress:</strong> {hoveredTask.task.progress || 0}%
+					</div>
+				</div>
+			)}
 		</div>
 	);
 };
