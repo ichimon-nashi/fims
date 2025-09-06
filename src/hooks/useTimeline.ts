@@ -1,4 +1,4 @@
-// Fixed src/hooks/useTimeline.ts - Accurate date calculations
+// Fixed src/hooks/useTimeline.ts - Include earliest task dates
 import { useMemo, useState } from 'react';
 import { ZoomLevel } from '@/lib/task.types';
 
@@ -9,14 +9,56 @@ interface Task {
 
 export const useTimeline = (tasks: Task[] = []) => {
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('days');
+  
+  // FIXED: Calculate initial view start based on tasks
   const [viewStartDate, setViewStartDate] = useState(() => {
-    const today = new Date();
-    today.setDate(today.getDate() - 7);
-    return today;
+    if (!tasks || tasks.length === 0) {
+      const today = new Date();
+      today.setDate(today.getDate() - 7);
+      return today;
+    }
+
+    // Find the earliest start date from all tasks
+    let earliestDate = new Date();
+    tasks.forEach(task => {
+      if (task.start_date) {
+        const taskStartDate = new Date(task.start_date);
+        if (taskStartDate < earliestDate) {
+          earliestDate = taskStartDate;
+        }
+      }
+    });
+
+    // Add some padding before the earliest task
+    earliestDate.setDate(earliestDate.getDate() - 7);
+    return earliestDate;
   });
 
   const { dateRange, dateUnit, gridColumns } = useMemo(() => {
-    const start = new Date(viewStartDate);
+    // FIXED: Recalculate start date when tasks change
+    let start = new Date(viewStartDate);
+    
+    // If we have tasks, ensure we start early enough to include all tasks
+    if (tasks && tasks.length > 0) {
+      let earliestTaskDate = new Date();
+      tasks.forEach(task => {
+        if (task.start_date) {
+          const taskStartDate = new Date(task.start_date);
+          if (taskStartDate < earliestTaskDate) {
+            earliestTaskDate = taskStartDate;
+          }
+        }
+      });
+      
+      // If earliest task is before our current start, adjust start date
+      const earliestWithPadding = new Date(earliestTaskDate);
+      earliestWithPadding.setDate(earliestWithPadding.getDate() - 7);
+      
+      if (earliestWithPadding < start) {
+        start = earliestWithPadding;
+      }
+    }
+
     const range: Date[] = [];
     let unit = '';
     let columns = 0;
