@@ -15,20 +15,24 @@ interface TimelineViewProps {
 
 // Color palette for tasks
 const TASK_COLOR_PALETTE = [
-	"#d4e09b",
-	"#f6f4d2",
-	"#cbdfbd",
-	"#f19c79",
-	"#ffa69e",
-	"#b8f2e6",
-	"#aed9e0",
-	"#ffe9b3",
-	"#ffdc74",
-	"#bfd3c1",
-	"#90f1ef",
-	"#c1fba4",
-	"#e8d6cb",
-	"#d1be9c",
+	"#3b82f6", 
+	"#8b5cf6", 
+	"#06b6d4", 
+	"#10b981", 
+	"#f59e0b", 
+	"#ef4444",
+	"#84cc16", 
+	"#ec4899", 
+	"#6366f1", 
+	"#14b8a6", 
+	"#f97316", 
+	"#8b5a2b",
+	"#7c3aed", 
+	"#059669", 
+	"#dc2626", 
+	"#c2410c", 
+	"#9333ea", 
+	"#0891b2",
 ];
 
 const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refreshTasks }) => {
