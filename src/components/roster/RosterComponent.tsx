@@ -1,4 +1,4 @@
-// src/components/roster/RosterComponent.tsx - ENHANCED VERSION WITH SORTING AND HIDING
+// src/components/roster/RosterComponent.tsx - ENHANCED VERSION WITH MANUAL ORDERING
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
@@ -15,12 +15,21 @@ import styles from "./RosterComponent.module.css";
 // Special accounts that can modify all schedules
 const ADMIN_ACCOUNTS = ["admin", "21986", "51892"];
 
-// Priority order for sorting - these employees will appear first in this exact order
-const PRIORITY_ORDER = ["21701", "21531", "21986"];
+// Manual order for roster display - add employee IDs in your desired order
+const MANUAL_ORDER = [
+	"21986",
+	"22018",
+	"39426",
+	"51892",
+	"22119",
+	"36639",
+	// Add more employee IDs here in your desired sequence
+	// Any employees not listed here will appear at the end, sorted by employee ID
+];
 
 // Employees to hide from the roster (even if they meet the filter criteria)
 const HIDDEN_EMPLOYEES = [
-	"20580",
+	"20580", "21701", "21531"
 ];
 
 // Define interfaces for better type safety
@@ -78,7 +87,7 @@ const RosterComponent: React.FC = () => {
 	const [selectedDuty, setSelectedDuty] = useState<string | null>(null);
 	const [isMobile, setIsMobile] = useState(false);
 	const [dutiesMinimized, setDutiesMinimized] = useState(false);
-	const [instructionsMinimized, setInstructionsMinimized] = useState(true); // Default to minimized
+	const [instructionsMinimized, setInstructionsMinimized] = useState(true);
 	const [availableDuties, setAvailableDuties] = useState<string[]>([
 		"OD",
 		"SAG",
@@ -112,10 +121,10 @@ const RosterComponent: React.FC = () => {
 		return identifier;
 	};
 
-	// FIXED: Move sortInstructors inside component to avoid useCallback dependency warning
+	// Enhanced sortInstructors with manual ordering
 	const sortInstructors = useCallback((instructors: User[]): User[] => {
-		console.log("Sorting instructors...", {
-			priorityOrder: PRIORITY_ORDER,
+		console.log("Sorting instructors with manual order...", {
+			manualOrder: MANUAL_ORDER,
 			hiddenEmployees: HIDDEN_EMPLOYEES,
 			totalInstructors: instructors.length
 		});
@@ -132,42 +141,44 @@ const RosterComponent: React.FC = () => {
 
 		console.log(`After filtering hidden employees: ${visibleInstructors.length} instructors`);
 
-		// Sort the visible instructors
+		// Sort using manual order
 		const sorted = visibleInstructors.sort((a, b) => {
 			const aId = getEmployeeIdentifier(a);
 			const bId = getEmployeeIdentifier(b);
 			
-			const aPriority = PRIORITY_ORDER.indexOf(aId);
-			const bPriority = PRIORITY_ORDER.indexOf(bId);
+			const aIndex = MANUAL_ORDER.indexOf(aId);
+			const bIndex = MANUAL_ORDER.indexOf(bId);
 			
-			// If both are in priority list, sort by priority order
-			if (aPriority !== -1 && bPriority !== -1) {
-				return aPriority - bPriority;
+			// If both are in manual order, sort by their position in MANUAL_ORDER
+			if (aIndex !== -1 && bIndex !== -1) {
+				return aIndex - bIndex;
 			}
 			
-			// If only A is in priority list, A comes first
-			if (aPriority !== -1) {
+			// If only A is in manual order, A comes first
+			if (aIndex !== -1) {
 				return -1;
 			}
 			
-			// If only B is in priority list, B comes first
-			if (bPriority !== -1) {
+			// If only B is in manual order, B comes first
+			if (bIndex !== -1) {
 				return 1;
 			}
 			
-			// If neither is in priority list, sort by employee ID numerically (smallest to largest)
+			// If neither is in manual order, sort by employee ID numerically (smallest to largest)
 			const aNum = parseInt(aId) || 0;
 			const bNum = parseInt(bId) || 0;
 			return aNum - bNum;
 		});
 
-		console.log("Sorted instructor order:", sorted.map(instructor => ({
+		console.log("Final sorted instructor order:", sorted.map((instructor, index) => ({
+			position: index + 1,
 			id: getEmployeeIdentifier(instructor),
-			name: instructor.full_name
+			name: instructor.full_name,
+			inManualOrder: MANUAL_ORDER.includes(getEmployeeIdentifier(instructor))
 		})));
 
 		return sorted;
-	}, []); // FIXED: Empty dependency array since getEmployeeIdentifier is defined within component
+	}, []);
 
 	// Check if current user can modify a duty
 	const canModifyDuty = (
@@ -175,25 +186,15 @@ const RosterComponent: React.FC = () => {
 		date: string,
 		duty?: string
 	): boolean => {
-		// Get user identifier - try multiple fields
 		const userEmployeeId = currentUser?.employee_id || currentUser?.id;
-
-		console.log("Permission check:", {
-			currentUser: currentUser,
-			userEmployeeId,
-			instructorId,
-			adminAccounts: ADMIN_ACCOUNTS,
-		});
 
 		// Admin accounts can modify anything
 		if (ADMIN_ACCOUNTS.includes(userEmployeeId || "")) {
-			console.log("User is admin, allowing modification");
 			return true;
 		}
 
 		// Users can only modify their own schedule
 		if (userEmployeeId !== instructorId) {
-			console.log("User trying to modify someone else's schedule");
 			return false;
 		}
 
@@ -205,12 +206,10 @@ const RosterComponent: React.FC = () => {
 				entry?.created_by &&
 				ADMIN_ACCOUNTS.includes(entry.created_by)
 			) {
-				console.log("Duty was created by admin, cannot modify");
 				return false;
 			}
 		}
 
-		console.log("Permission granted for self-modification");
 		return true;
 	};
 
@@ -248,7 +247,7 @@ const RosterComponent: React.FC = () => {
 	const generateYearOptions = (): number[] => {
 		const years: number[] = [];
 		const currentYear = currentDate.getFullYear();
-		const startYear = Math.max(2025, currentYear - 1); // Don't go below 2025
+		const startYear = Math.max(2025, currentYear - 1);
 		const endYear = currentYear + 1;
 
 		for (let i = startYear; i <= endYear; i++) {
@@ -280,7 +279,7 @@ const RosterComponent: React.FC = () => {
 
 		for (let day = 1; day <= daysInMonth; day++) {
 			const date = new Date(selectedYear, selectedMonth - 1, day);
-			const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
+			const dayOfWeek = date.getDay();
 			const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
 			columns.push({
@@ -298,7 +297,7 @@ const RosterComponent: React.FC = () => {
 
 	const dateColumns = generateDateColumns();
 
-	// Fetch duties from database - wrapped in useCallback
+	// Fetch duties from database
 	const fetchDutiesFromAPI = useCallback(async (): Promise<void> => {
 		try {
 			const response = await fetch("/api/duties", {
@@ -309,7 +308,6 @@ const RosterComponent: React.FC = () => {
 
 			if (response.ok) {
 				const data: DutyResponse = await response.json();
-				console.log("Duties API response:", data);
 
 				if (data.duties && Array.isArray(data.duties)) {
 					const dutyNames = data.duties.map((d) => d.name);
@@ -321,22 +319,16 @@ const RosterComponent: React.FC = () => {
 						{}
 					);
 
-					console.log("Setting duties from API:", dutyNames);
-					console.log("Setting colors from API:", dutyColorsMap);
-
 					setAvailableDuties(dutyNames);
 					setDutyColors(dutyColorsMap);
 				}
-			} else {
-				console.log("Failed to fetch duties from API, using defaults");
 			}
 		} catch (error) {
 			console.error("Error fetching duties:", error);
-			console.log("Using default duties due to error");
 		}
 	}, [token]);
 
-	// Fetch instructors - wrapped in useCallback with sortInstructors dependency
+	// Fetch instructors
 	const fetchInstructors = useCallback(async (): Promise<void> => {
 		try {
 			setLoading(true);
@@ -348,7 +340,6 @@ const RosterComponent: React.FC = () => {
 
 			if (response.ok) {
 				const data: UsersResponse | User[] = await response.json();
-				console.log("Users API response:", data);
 				const users = Array.isArray(data)
 					? data
 					: (data as UsersResponse).users || [];
@@ -364,12 +355,7 @@ const RosterComponent: React.FC = () => {
 						getEmployeeIdentifier(user) === "36639"
 				);
 
-				console.log("Filtered instructors before sorting:", filteredInstructors.length);
-				
-				// Apply custom sorting
 				const sortedInstructors = sortInstructors(filteredInstructors);
-				
-				console.log("Final sorted instructors:", sortedInstructors.length);
 				setInstructors(sortedInstructors);
 			} else {
 				const errorData = await response.json();
@@ -385,9 +371,9 @@ const RosterComponent: React.FC = () => {
 		} finally {
 			setLoading(false);
 		}
-	}, [token, sortInstructors]); // FIXED: Added sortInstructors to dependency array
+	}, [token, sortInstructors]);
 
-	// Fetch schedules from API - wrapped in useCallback
+	// Fetch schedules from API
 	const fetchSchedulesFromAPI = useCallback(async (): Promise<void> => {
 		try {
 			const scheduleApiUrl = `/api/schedule?year=${selectedYear}&month=${selectedMonth}`;
@@ -429,60 +415,58 @@ const RosterComponent: React.FC = () => {
 			const html2canvasModule = await import("html2canvas");
 			const html2canvas = html2canvasModule.default || html2canvasModule;
 
-			console.log("Creating universal screenshot...");
-
 			const tableContainer = tableContainerRef.current;
 			if (!tableContainer) {
 				alert("無法找到表格元素");
 				return;
 			}
 
-			// Create a dedicated screenshot container with universal styling
+			// Create screenshot container
 			const screenshotContainer = document.createElement("div");
 			screenshotContainer.id = "screenshot-container";
 			screenshotContainer.style.cssText = `
-			position: absolute;
-			top: -10000px;
-			left: 0;
-			width: fit-content;
-			height: fit-content;
-			background: #ffffff !important;
-			padding: 8px 20px 20px 8px;
-			margin: 0;
-			border: none;
-			box-shadow: none;
-			z-index: -999;
-			visibility: hidden;
-			opacity: 0;
-			overflow: visible;
-			box-sizing: content-box;
-			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-		`;
+				position: absolute;
+				top: -10000px;
+				left: 0;
+				width: fit-content;
+				height: fit-content;
+				background: #ffffff !important;
+				padding: 8px 20px 20px 8px;
+				margin: 0;
+				border: none;
+				box-shadow: none;
+				z-index: -999;
+				visibility: hidden;
+				opacity: 0;
+				overflow: visible;
+				box-sizing: content-box;
+				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+			`;
 
-			// Create outer wrapper with balanced padding
+			// Create outer wrapper
 			const outerWrapper = document.createElement("div");
 			outerWrapper.style.cssText = `
-			background: #ffffff !important;
-			padding: 8px 16px 16px 8px;
-			margin: 0;
-			border: 4px solid #ffffff;
-			box-sizing: border-box;
-			width: fit-content;
-			height: fit-content;
-		`;
+				background: #ffffff !important;
+				padding: 8px 16px 16px 8px;
+				margin: 0;
+				border: 4px solid #ffffff;
+				box-sizing: border-box;
+				width: fit-content;
+				height: fit-content;
+			`;
 
-			// Create table with comprehensive styling
+			// Create table
 			const table = document.createElement("table");
 			table.style.cssText = `
-			border-collapse: collapse;
-			width: auto;
-			background: #ffffff !important;
-			font-family: inherit;
-			table-layout: auto;
-			margin: 0;
-			padding: 0;
-			border: 2px solid #e5e7eb;
-		`;
+				border-collapse: collapse;
+				width: auto;
+				background: #ffffff !important;
+				font-family: inherit;
+				table-layout: auto;
+				margin: 0;
+				padding: 0;
+				border: 2px solid #e5e7eb;
+			`;
 
 			// Create thead
 			const thead = document.createElement("thead");
@@ -495,17 +479,17 @@ const RosterComponent: React.FC = () => {
 				const th = document.createElement("th");
 				th.textContent = header;
 				th.style.cssText = `
-				background: #02c39a !important;
-				color: #ffffff !important;
-				padding: 12px 10px;
-				text-align: center;
-				font-weight: 600;
-				border: 1px solid #00a783;
-				font-size: 14px;
-				min-width: 90px;
-				white-space: nowrap;
-				box-sizing: border-box;
-			`;
+					background: #02c39a !important;
+					color: #ffffff !important;
+					padding: 12px 10px;
+					text-align: center;
+					font-weight: 600;
+					border: 1px solid #00a783;
+					font-size: 14px;
+					min-width: 90px;
+					white-space: nowrap;
+					box-sizing: border-box;
+				`;
 				headerRow.appendChild(th);
 			});
 
@@ -516,48 +500,47 @@ const RosterComponent: React.FC = () => {
 					col.dayOfWeek
 				];
 
-				// Create date content
 				const dateContent = document.createElement("div");
 				dateContent.style.cssText = `
-				display: flex;
-				flex-direction: column;
-				align-items: center;
-				gap: 2px;
-				padding: 2px;
-			`;
+					display: flex;
+					flex-direction: column;
+					align-items: center;
+					gap: 2px;
+					padding: 2px;
+				`;
 
 				const dateNumber = document.createElement("div");
 				dateNumber.textContent = col.date.toString();
 				dateNumber.style.cssText = `
-				font-size: 14px;
-				font-weight: bold;
-				color: inherit;
-			`;
+					font-size: 14px;
+					font-weight: bold;
+					color: inherit;
+				`;
 
 				const dayOfWeekSpan = document.createElement("div");
 				dayOfWeekSpan.textContent = dayName;
 				dayOfWeekSpan.style.cssText = `
-				font-size: 10px;
-				opacity: 0.9;
-				color: inherit;
-			`;
+					font-size: 10px;
+					opacity: 0.9;
+					color: inherit;
+				`;
 
 				dateContent.appendChild(dateNumber);
 				dateContent.appendChild(dayOfWeekSpan);
 				th.appendChild(dateContent);
 
 				th.style.cssText = `
-				background: ${col.isWeekend ? "#ef6f6f" : "#5c98f9"} !important;
-				color: #ffffff !important;
-				padding: 8px 6px;
-				text-align: center;
-				font-weight: 600;
-				border: 1px solid ${col.isWeekend ? "#dc2626" : "#2563eb"};
-				font-size: 12px;
-				min-width: 70px;
-				white-space: nowrap;
-				box-sizing: border-box;
-			`;
+					background: ${col.isWeekend ? "#ef6f6f" : "#5c98f9"} !important;
+					color: #ffffff !important;
+					padding: 8px 6px;
+					text-align: center;
+					font-weight: 600;
+					border: 1px solid ${col.isWeekend ? "#dc2626" : "#2563eb"};
+					font-size: 12px;
+					min-width: 70px;
+					white-space: nowrap;
+					box-sizing: border-box;
+				`;
 				headerRow.appendChild(th);
 			});
 
@@ -568,13 +551,13 @@ const RosterComponent: React.FC = () => {
 			const tbody = document.createElement("tbody");
 			tbody.style.background = "#ffffff";
 
-			instructors.forEach((instructor, instructorIndex) => {
+			instructors.forEach((instructor) => {
 				const employeeId = getEmployeeIdentifier(instructor);
 				const row = document.createElement("tr");
 				row.style.cssText = `
-				border-bottom: 1px solid #e5e7eb;
-				background: #ffffff !important;
-			`;
+					border-bottom: 1px solid #e5e7eb;
+					background: #ffffff !important;
+				`;
 
 				// Instructor info cells
 				const cells = [
@@ -586,17 +569,17 @@ const RosterComponent: React.FC = () => {
 					const td = document.createElement("td");
 					td.textContent = text || "";
 					td.style.cssText = `
-					padding: 10px 8px;
-					text-align: center;
-					border: 1px solid #e5e7eb;
-					background: ${cellIndex === 0 ? "#f1f5f9" : "#f8fafc"} !important;
-					font-weight: 500;
-					font-size: 13px;
-					min-width: 90px;
-					white-space: nowrap;
-					color: #1f2937;
-					box-sizing: border-box;
-				`;
+						padding: 10px 8px;
+						text-align: center;
+						border: 1px solid #e5e7eb;
+						background: ${cellIndex === 0 ? "#f1f5f9" : "#f8fafc"} !important;
+						font-weight: 500;
+						font-size: 13px;
+						min-width: 90px;
+						white-space: nowrap;
+						color: #1f2937;
+						box-sizing: border-box;
+					`;
 					row.appendChild(td);
 				});
 
@@ -606,50 +589,50 @@ const RosterComponent: React.FC = () => {
 					const duties = getDutiesForDate(employeeId, col.fullDate);
 
 					td.style.cssText = `
-					padding: 4px;
-					border: 1px solid #e5e7eb;
-					vertical-align: top;
-					min-width: 70px;
-					height: 80px;
-					background: #ffffff !important;
-					box-sizing: border-box;
-				`;
+						padding: 4px;
+						border: 1px solid #e5e7eb;
+						vertical-align: top;
+						min-width: 70px;
+						height: 80px;
+						background: #ffffff !important;
+						box-sizing: border-box;
+					`;
 
 					const dutiesContainer = document.createElement("div");
 					dutiesContainer.style.cssText = `
-					display: flex;
-					flex-direction: column;
-					gap: 2px;
-					height: 100%;
-					min-height: 70px;
-					align-items: center;
-					justify-content: flex-start;
-					padding: 2px;
-					box-sizing: border-box;
-				`;
+						display: flex;
+						flex-direction: column;
+						gap: 2px;
+						height: 100%;
+						min-height: 70px;
+						align-items: center;
+						justify-content: flex-start;
+						padding: 2px;
+						box-sizing: border-box;
+					`;
 
 					duties.forEach((duty) => {
 						const dutyTag = document.createElement("div");
 						dutyTag.textContent = duty;
 						dutyTag.style.cssText = `
-						padding: 3px 6px;
-						text-align: center;
-						font-size: 11px;
-						font-weight: 600;
-						border-radius: 3px;
-						color: #ffffff !important;
-						text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.6);
-						min-height: 18px;
-						display: flex;
-						align-items: center;
-						justify-content: center;
-						background: ${DUTY_COLORS[duty] || "#3b82f6"} !important;
-						border: 1px solid rgba(0, 0, 0, 0.2);
-						white-space: nowrap;
-						width: 100%;
-						box-sizing: border-box;
-						max-width: 60px;
-					`;
+							padding: 3px 6px;
+							text-align: center;
+							font-size: 11px;
+							font-weight: 600;
+							border-radius: 3px;
+							color: #ffffff !important;
+							text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.6);
+							min-height: 18px;
+							display: flex;
+							align-items: center;
+							justify-content: center;
+							background: ${DUTY_COLORS[duty] || "#3b82f6"} !important;
+							border: 1px solid rgba(0, 0, 0, 0.2);
+							white-space: nowrap;
+							width: 100%;
+							box-sizing: border-box;
+							max-width: 60px;
+						`;
 						dutiesContainer.appendChild(dutyTag);
 					});
 
@@ -664,38 +647,29 @@ const RosterComponent: React.FC = () => {
 			outerWrapper.appendChild(table);
 			screenshotContainer.appendChild(outerWrapper);
 
-			// Add to DOM
 			document.body.appendChild(screenshotContainer);
 
-			// Force layout calculation
 			await new Promise((resolve) => {
 				requestAnimationFrame(() => {
 					requestAnimationFrame(resolve);
 				});
 			});
 
-			// Calculate dimensions with balanced padding
 			const tableWidth = table.offsetWidth;
 			const tableHeight = table.offsetHeight;
-			const totalWidth = tableWidth + 24; // 8px left + 16px right
-			const totalHeight = tableHeight + 24; // 8px top + 16px bottom
+			const totalWidth = tableWidth + 24;
+			const totalHeight = tableHeight + 24;
 
-			console.log(
-				`Table dimensions: ${tableWidth}x${tableHeight}, Total: ${totalWidth}x${totalHeight}`
-			);
-
-			// Temporarily make visible for measurement and capture
 			screenshotContainer.style.visibility = "visible";
 			screenshotContainer.style.opacity = "1";
 
-			// Capture with comprehensive options
 			const canvas = await html2canvas(screenshotContainer, {
 				useCORS: true,
 				allowTaint: true,
 				backgroundColor: "#ffffff",
 				logging: false,
-				pixelRatio: Math.min(window.devicePixelRatio || 1, 2), // Cap at 2x for performance
-				scale: 1.2, // Balanced quality/performance
+				pixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+				scale: 1.2,
 				width: totalWidth,
 				height: totalHeight,
 				windowWidth: totalWidth,
@@ -703,10 +677,9 @@ const RosterComponent: React.FC = () => {
 				scrollX: 0,
 				scrollY: 0,
 				removeContainer: true,
-				foreignObjectRendering: false, // More compatible
+				foreignObjectRendering: false,
 				imageTimeout: 0,
 				onclone: (clonedDoc: Document) => {
-					// Ensure white background in cloned document
 					const clonedBody = clonedDoc.body;
 					if (clonedBody) {
 						clonedBody.style.backgroundColor = "#ffffff";
@@ -722,12 +695,8 @@ const RosterComponent: React.FC = () => {
 				},
 			} as any);
 
-			// Clean up
 			document.body.removeChild(screenshotContainer);
 
-			console.log("Canvas created:", canvas.width, "x", canvas.height);
-
-			// Verify canvas has content
 			const ctx = canvas.getContext("2d");
 			const imageData = ctx?.getImageData(
 				0,
@@ -736,43 +705,37 @@ const RosterComponent: React.FC = () => {
 				canvas.height
 			);
 			const hasContent = imageData?.data.some(
-				(value, index) => index % 4 !== 3 && value !== 255 // Check for non-white pixels (excluding alpha)
+				(value, index) => index % 4 !== 3 && value !== 255
 			);
 
 			if (!hasContent) {
 				throw new Error("Screenshot appears to be blank");
 			}
 
-			// Create and download
 			const link = document.createElement("a");
 			const fileName = `教師班表-${selectedYear}年${selectedMonth}月-${new Date()
 				.toISOString()
 				.slice(0, 10)}.png`;
 			link.download = fileName;
-			link.href = canvas.toDataURL("image/png", 0.95); // High quality
+			link.href = canvas.toDataURL("image/png", 0.95);
 
 			document.body.appendChild(link);
 			link.click();
 			document.body.removeChild(link);
 
-			console.log("Universal screenshot saved successfully:", fileName);
 			alert(`截圖已儲存：${fileName}`);
 		} catch (error: any) {
 			console.error("Screenshot error:", error);
-
-			// Provide specific error guidance
 			let errorMessage = "截圖失敗：";
 			if (error.message?.includes("blank")) {
 				errorMessage += "截圖內容為空白，請稍後再試";
 			} else if (error.message?.includes("html2canvas")) {
 				errorMessage += "截圖庫載入失敗，請重新整理頁面";
 			} else if (error.message?.includes("Canvas")) {
-				errorMessage +=
-					"瀏覽器不支援此功能，請使用最新版 Chrome 或 Firefox";
+				errorMessage += "瀏覽器不支援此功能，請使用最新版 Chrome 或 Firefox";
 			} else {
 				errorMessage += error.message || "未知錯誤";
 			}
-
 			alert(errorMessage);
 		}
 	};
@@ -780,18 +743,13 @@ const RosterComponent: React.FC = () => {
 	// Excel export functionality
 	const handleExcelExport = async (): Promise<void> => {
 		try {
-			// Use SheetJS library for Excel export - handle different export formats
 			const XLSXModule = await import("xlsx");
 			const XLSX = XLSXModule.default || XLSXModule;
 
-			console.log("XLSX module loaded:", XLSX);
-
-			// Check if XLSX has the required methods
 			if (!XLSX.utils || !XLSX.utils.book_new) {
 				throw new Error("XLSX utils not available");
 			}
 
-			// Prepare data for Excel
 			const excelData: (string | number)[][] = [];
 
 			// Add header row
@@ -821,36 +779,25 @@ const RosterComponent: React.FC = () => {
 				excelData.push(row);
 			});
 
-			console.log("Excel data prepared:", excelData.length, "rows");
-
-			// Create workbook
 			const wb = XLSX.utils.book_new();
 			const ws = XLSX.utils.aoa_to_sheet(excelData);
 
-			// Set column widths
 			const colWidths = [
-				{ wch: 10 }, // 員編
-				{ wch: 15 }, // 姓名
-				{ wch: 8 }, // 基地
-				...dateColumns.map(() => ({ wch: 12 })), // 日期列
+				{ wch: 10 },
+				{ wch: 15 },
+				{ wch: 8 },
+				...dateColumns.map(() => ({ wch: 12 })),
 			];
 			ws["!cols"] = colWidths;
 
-			// Add worksheet to workbook
 			const sheetName = `${selectedYear}年${selectedMonth}月班表`;
 			XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
-			// Save file
 			const fileName = `教師班表-${selectedYear}年${selectedMonth}月.xlsx`;
-			console.log("Saving Excel file:", fileName);
-
 			XLSX.writeFile(wb, fileName);
 
-			console.log("Excel export completed successfully");
 		} catch (error: any) {
 			console.error("Excel export error:", error);
-
-			// Provide more specific error information
 			if (error.message?.includes("XLSX")) {
 				alert("Excel資料庫載入失敗，請確認已安裝 xlsx 套件");
 			} else {
@@ -877,7 +824,6 @@ const RosterComponent: React.FC = () => {
 		try {
 			setLoading(true);
 
-			// Preview cleanup first
 			const previewResponse = await fetch("/api/cleanup", {
 				headers: {
 					Authorization: `Bearer ${token}`,
@@ -896,7 +842,6 @@ const RosterComponent: React.FC = () => {
 				}
 			}
 
-			// Execute cleanup
 			const response = await fetch("/api/cleanup", {
 				method: "POST",
 				headers: {
@@ -910,7 +855,6 @@ const RosterComponent: React.FC = () => {
 					`清理完成！\n\n• 刪除空任務：${result.summary.emptyDutiesDeleted} 個\n• 刪除過期記錄：${result.summary.oldRecordsDeleted} 個\n• 剩餘記錄：${result.summary.remainingRecords} 個\n• 日期範圍：${result.summary.dateRange}`
 				);
 
-				// Refresh data after cleanup
 				await handleRefresh();
 			} else {
 				const errorData = await response.json();
@@ -1107,21 +1051,12 @@ const RosterComponent: React.FC = () => {
 		newDuty: string,
 		color: string
 	): Promise<void> => {
-		console.log("Adding custom duty:", newDuty, "with color:", color);
-
 		if (!availableDuties.includes(newDuty)) {
 			setAvailableDuties((prev) => [...prev, newDuty]);
-
-			// Update duty colors with the new color
 			setDutyColors((prev) => ({
 				...prev,
 				[newDuty]: color,
 			}));
-
-			console.log("Updated duty colors:", {
-				...dutyColors,
-				[newDuty]: color,
-			});
 		}
 	};
 
@@ -1543,7 +1478,7 @@ const RosterComponent: React.FC = () => {
 							</li>
 							<li>
 								<strong>排序說明：</strong>
-								員工按照特定順序排列：21701, 21531, 21986 優先，其餘按員編號碼排序
+								員工按照手動設定順序排列：MANUAL_ORDER 中的員工依序顯示，其餘按員編號碼排序
 							</li>
 							{HIDDEN_EMPLOYEES.length > 0 && (
 								<li>
@@ -1551,6 +1486,10 @@ const RosterComponent: React.FC = () => {
 									部分員工已從名單中隱藏 ({HIDDEN_EMPLOYEES.length} 人)
 								</li>
 							)}
+							<li>
+								<strong>手動排序：</strong>
+								若要調整員工顯示順序，請修改程式碼中的 MANUAL_ORDER 陣列
+							</li>
 						</ul>
 					</div>
 				)}
