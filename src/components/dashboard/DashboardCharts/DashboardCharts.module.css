@@ -282,12 +282,31 @@
 
 @media (max-width: 480px) {
 	.statsRow {
-		grid-template-columns: 1fr;
+		grid-template-columns: repeat(4, 1fr);
 		gap: 0.5rem;
 	}
 	
 	.statsCard {
-		padding: 0.875rem;
+		padding: 0.75rem;
+		flex-direction: column;
+		text-align: center;
+		gap: 0.25rem;
+	}
+
+	.statsIcon {
+		width: 30px;
+		height: 30px;
+		font-size: 1.25rem;
+	}
+
+	.statsNumber {
+		font-size: 1rem;
+		line-height: 1.2;
+	}
+
+	.statsContent h3 {
+		font-size: 0.7rem;
+		margin: 0 0 0.1rem 0;
 	}
 	
 	.chartCard {

@@ -205,6 +205,16 @@ const Dashboard = () => {
     }
   ];
 
+  // Create two-line subtitle text
+  const dateString = new Date().toLocaleDateString('zh-TW', {
+    year: 'numeric',
+    month: 'long', 
+    day: 'numeric',
+    weekday: 'long'
+  });
+
+  const twoLineSubtitle = `歡迎使用豪神FIMS\n今天是 ${dateString}`;
+
   return (
     <>
       <Navbar />
@@ -217,16 +227,8 @@ const Dashboard = () => {
                 {greeting}, {user?.full_name || user?.employee_id || "使用者"}!
               </h1>
               <p className={styles.welcomeSubtitle}>
-                歡迎使用豪神FIMS - 今天是 {new Date().toLocaleDateString('zh-TW', {
-                  year: 'numeric',
-                  month: 'long', 
-                  day: 'numeric',
-                  weekday: 'long'
-                })}
+                {twoLineSubtitle}
               </p>
-            </div>
-            <div className={styles.welcomeIcon}>
-              ✈️
             </div>
           </div>
 
