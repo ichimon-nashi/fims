@@ -20,9 +20,9 @@ const MANUAL_ORDER = [
 	"21986",
 	"22018",
 	"39426",
+	"36639",
 	"51892",
 	"22119",
-	"36639",
 	// Add more employee IDs here in your desired sequence
 	// Any employees not listed here will appear at the end, sorted by employee ID
 ];
