@@ -27,7 +27,7 @@ export function getInstructorBase(employeeId: string): string {
 		"22018": "TSA",
 		"39426": "TSA",
 		"51892": "KHH",
-		"36639": "TSA", 
+		"36639": "TSA",
 	};
 	return bases[employeeId] || "TSA";
 }
@@ -191,33 +191,36 @@ export async function assignODForMonth(
 	const weekAssignments: { [weekNumber: number]: string } = {};
 
 	// Process each instructor in rotation order
-	for (const instructor of OD_INSTRUCTORS) {
+	for (let instructorIndex = 0; instructorIndex < OD_INSTRUCTORS.length; instructorIndex++) {
+		const instructor = OD_INSTRUCTORS[instructorIndex];
 		console.log(`[OD-CRON] ───────────────────────────────────────`);
 		console.log(`[OD-CRON] Processing instructor: ${instructor} (${getInstructorName(instructor)})`);
 
 		// Find their last OD assignment
 		const lastOd = await getLastOdAssignment(instructor, year, month);
 		
+		let targetWeek: number;
+		
 		if (!lastOd) {
-			const msg = `${instructor}: No previous OD found in last 6 months, skipping`;
-			console.log(`[OD-CRON] ${msg}`);
-			details.push(msg);
-			continue;
+			// New instructor with no previous OD - find first available week
+			console.log(`[OD-CRON]   No previous OD found - new instructor, will find first available week`);
+			targetWeek = 1; // Start from week 1, will search for available week
+		} else {
+			// Get previous month's total weeks for calculation
+			const prevMonth = month === 1 ? 12 : month - 1;
+			const prevYear = month === 1 ? year - 1 : year;
+			const prevMonthWeeks = getMonthWeeks(prevYear, prevMonth);
+
+			// Calculate next week in rotation
+			targetWeek = calculateNextOdWeek(
+				lastOd.weekNumber,
+				prevMonthWeeks.length,
+				weeks.length
+			);
+
+			console.log(`[OD-CRON]   Last OD: ${lastOd.year}-${lastOd.month} week ${lastOd.weekNumber}`);
 		}
-
-		// Get previous month's total weeks for calculation
-		const prevMonth = month === 1 ? 12 : month - 1;
-		const prevYear = month === 1 ? year - 1 : year;
-		const prevMonthWeeks = getMonthWeeks(prevYear, prevMonth);
-
-		// Calculate next week in rotation
-		let targetWeek = calculateNextOdWeek(
-			lastOd.weekNumber,
-			prevMonthWeeks.length,
-			weeks.length
-		);
-
-		console.log(`[OD-CRON]   Last OD: ${lastOd.year}-${lastOd.month} week ${lastOd.weekNumber}`);
+		
 		console.log(`[OD-CRON]   Target week: ${targetWeek}`);
 
 		// Try to find an available week (check for conflicts and already-assigned weeks)
