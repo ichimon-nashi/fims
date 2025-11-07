@@ -1,8 +1,8 @@
 // src/app/api/cron/od-utils.ts
 import { createOrUpdateScheduleEntry, getScheduleEntry } from "@/lib/database";
 
-// OD rotation instructors in order
-export const OD_INSTRUCTORS = ["22018", "39426", "51892"];
+// OD rotation instructors in order (4 instructors)
+export const OD_INSTRUCTORS = ["39426", "22018", "51892", "36639"];
 
 export interface WeekInfo {
 	weekNumber: number;
@@ -11,13 +11,34 @@ export interface WeekInfo {
 	dates: string[];
 }
 
+// Helper functions to get instructor details
+export function getInstructorName(employeeId: string): string {
+	const names: { [key: string]: string } = {
+		"22018": "凌誌謙",
+		"39426": "李盈瑤",
+		"51892": "韓建豪",
+		"36639": "柯佳華", 
+	};
+	return names[employeeId] || "Unknown Instructor";
+}
+
+export function getInstructorBase(employeeId: string): string {
+	const bases: { [key: string]: string } = {
+		"22018": "TSA",
+		"39426": "TSA",
+		"51892": "KHH",
+		"36639": "TSA", 
+	};
+	return bases[employeeId] || "TSA";
+}
+
 // Get all Monday-Friday weeks in a month
 export function getMonthWeeks(year: number, month: number): WeekInfo[] {
 	const weeks: WeekInfo[] = [];
 	const firstDay = new Date(year, month - 1, 1);
 	const lastDay = new Date(year, month, 0);
 
-	// Find first Monday of the month (or first day if it starts later in week)
+	// Find first Monday of the month
 	const currentDate = new Date(firstDay);
 	while (currentDate.getDay() !== 1 && currentDate <= lastDay) {
 		currentDate.setDate(currentDate.getDate() + 1);
@@ -40,8 +61,9 @@ export function getMonthWeeks(year: number, month: number): WeekInfo[] {
 			}
 		}
 
-		// Only add week if it has weekdays in the target month
-		if (weekDates.length > 0) {
+		// Only add week if it has ALL 5 weekdays in the target month
+		// This ensures OD weeks are complete Monday-Friday
+		if (weekDates.length === 5) {
 			const weekEnd = new Date(weekStart);
 			weekEnd.setDate(weekStart.getDate() + 4); // Friday
 
@@ -51,65 +73,96 @@ export function getMonthWeeks(year: number, month: number): WeekInfo[] {
 				endDate: weekEnd,
 				dates: weekDates,
 			});
+			weekNumber++;
 		}
 
 		// Move to next Monday
 		currentDate.setDate(currentDate.getDate() + 7);
-		weekNumber++;
 	}
 
 	return weeks;
 }
 
-// Get current rotation state for a specific month/year
-export function getCurrentRotationState(
-	year: number,
-	month: number
-): { [instructor: string]: number } {
-	// Define the base rotation pattern (September 2024)
-	const baseYear = 2024;
-	const baseMonth = 9; // September
-	const baseRotation = {
-		"22018": 1, // Week 1
-		"39426": 2, // Week 2
-		"51892": 3, // Week 3
-	};
-
-	// Calculate months since base
-	const monthsSinceBase = (year - baseYear) * 12 + (month - baseMonth);
-
-	// Calculate rotation offset
-	const rotationState: { [instructor: string]: number } = {};
-
-	OD_INSTRUCTORS.forEach((instructor) => {
-		const basePosition =
-			baseRotation[instructor as keyof typeof baseRotation];
-		// Rotation pattern: 1->4->3->2->1...
-		const positions = [1, 4, 3, 2];
-		const currentIndex = (basePosition - 1 + monthsSinceBase) % 4;
-		rotationState[instructor] = positions[currentIndex];
-	});
-
-	return rotationState;
+// Check if a week has any conflicting duties for an instructor
+async function hasConflictInWeek(
+	employeeId: string,
+	weekDates: string[]
+): Promise<boolean> {
+	for (const date of weekDates) {
+		const existingEntry = await getScheduleEntry(employeeId, date);
+		// Conflict if there are ANY duties on that day (excluding OD which we might be updating)
+		if (existingEntry && existingEntry.duties.length > 0) {
+			const nonOdDuties = existingEntry.duties.filter(d => d !== "OD");
+			if (nonOdDuties.length > 0) {
+				console.log(`[OD-CRON] Conflict found for ${employeeId} on ${date}: ${nonOdDuties.join(", ")}`);
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
-// Helper functions to get instructor details
-export function getInstructorName(employeeId: string): string {
-	const names: { [key: string]: string } = {
-		"22018": "凌珂瑋",
-		"39426": "柯台豐",
-		"51892": "韓蕙愛",
-	};
-	return names[employeeId] || "Unknown Instructor";
+// Get the last OD assignment for an instructor
+async function getLastOdAssignment(
+	employeeId: string,
+	beforeYear: number,
+	beforeMonth: number
+): Promise<{ year: number; month: number; weekNumber: number } | null> {
+	// Search backwards through previous months to find last OD assignment
+	let searchYear = beforeMonth === 1 ? beforeYear - 1 : beforeYear;
+	let searchMonth = beforeMonth === 1 ? 12 : beforeMonth - 1;
+	
+	// Search up to 6 months back
+	for (let i = 0; i < 6; i++) {
+		const weeks = getMonthWeeks(searchYear, searchMonth);
+		
+		// Check each week for OD assignment
+		for (const week of weeks) {
+			// Check if this instructor has OD on the first day of this week
+			const firstDay = week.dates[0];
+			const entry = await getScheduleEntry(employeeId, firstDay);
+			
+			if (entry && entry.duties.includes("OD")) {
+				console.log(`[OD-CRON] Found last OD for ${employeeId}: ${searchYear}-${searchMonth} week ${week.weekNumber}`);
+				return {
+					year: searchYear,
+					month: searchMonth,
+					weekNumber: week.weekNumber
+				};
+			}
+		}
+		
+		// Move to previous month
+		searchMonth--;
+		if (searchMonth === 0) {
+			searchMonth = 12;
+			searchYear--;
+		}
+	}
+	
+	return null;
 }
 
-export function getInstructorBase(employeeId: string): string {
-	const bases: { [key: string]: string } = {
-		"22018": "TSA",
-		"39426": "TSA",
-		"51892": "KHH",
-	};
-	return bases[employeeId] || "TSA";
+// Calculate next OD week for an instructor based on rotation
+function calculateNextOdWeek(
+	lastWeekNumber: number,
+	totalWeeksInLastMonth: number,
+	totalWeeksInTargetMonth: number
+): number {
+	// Move to next week in rotation
+	let nextWeek = lastWeekNumber + 1;
+	
+	// If we exceeded the previous month's weeks, wrap to week 1
+	if (nextWeek > totalWeeksInLastMonth) {
+		nextWeek = 1;
+	}
+	
+	// If the calculated week doesn't exist in target month, wrap around
+	if (nextWeek > totalWeeksInTargetMonth) {
+		nextWeek = 1;
+	}
+	
+	return nextWeek;
 }
 
 // Assign OD duties for a month
@@ -122,87 +175,141 @@ export async function assignODForMonth(
 	skipped: number;
 	details: string[];
 }> {
-	console.log(
-		`[OD-CRON] Assigning OD duties for ${year}-${month
-			.toString()
-			.padStart(2, "0")}`
-	);
+	console.log(`[OD-CRON] ═══════════════════════════════════════`);
+	console.log(`[OD-CRON] Assigning OD duties for ${year}-${month.toString().padStart(2, "0")}`);
+	console.log(`[OD-CRON] ═══════════════════════════════════════`);
 
 	const weeks = getMonthWeeks(year, month);
-	const rotationState = getCurrentRotationState(year, month);
-
-	console.log(`[OD-CRON] Month weeks: ${weeks.length}`);
-	console.log(`[OD-CRON] Rotation state:`, rotationState);
+	console.log(`[OD-CRON] Available complete weeks in month: ${weeks.length}`);
+	weeks.forEach(w => {
+		console.log(`[OD-CRON]   Week ${w.weekNumber}: ${w.dates[0]} to ${w.dates[4]}`);
+	});
 
 	let assigned = 0;
 	let skipped = 0;
 	const details: string[] = [];
+	const weekAssignments: { [weekNumber: number]: string } = {};
 
-	// Assign each instructor to their designated week
+	// Process each instructor in rotation order
 	for (const instructor of OD_INSTRUCTORS) {
-		const assignedWeek = rotationState[instructor];
+		console.log(`[OD-CRON] ───────────────────────────────────────`);
+		console.log(`[OD-CRON] Processing instructor: ${instructor} (${getInstructorName(instructor)})`);
 
-		// Check if this week exists in the month
-		const weekInfo = weeks.find((w) => w.weekNumber === assignedWeek);
-		if (!weekInfo) {
-			const msg = `${instructor}: Week ${assignedWeek} not found in month`;
-			details.push(msg);
+		// Find their last OD assignment
+		const lastOd = await getLastOdAssignment(instructor, year, month);
+		
+		if (!lastOd) {
+			const msg = `${instructor}: No previous OD found in last 6 months, skipping`;
 			console.log(`[OD-CRON] ${msg}`);
+			details.push(msg);
 			continue;
 		}
 
-		console.log(
-			`[OD-CRON] Assigning ${instructor} to week ${assignedWeek} (${weekInfo.dates.length} days)`
+		// Get previous month's total weeks for calculation
+		const prevMonth = month === 1 ? 12 : month - 1;
+		const prevYear = month === 1 ? year - 1 : year;
+		const prevMonthWeeks = getMonthWeeks(prevYear, prevMonth);
+
+		// Calculate next week in rotation
+		let targetWeek = calculateNextOdWeek(
+			lastOd.weekNumber,
+			prevMonthWeeks.length,
+			weeks.length
 		);
 
-		// Assign OD duty for each weekday in the week
-		for (const date of weekInfo.dates) {
-			try {
-				// Check if OD duty already exists for this instructor on this date
-				const existingEntry = await getScheduleEntry(instructor, date);
-				if (existingEntry && existingEntry.duties.includes("OD")) {
-					const msg = `${instructor} ${date}: OD already assigned, skipped`;
-					details.push(msg);
-					console.log(`[OD-CRON] ${msg}`);
-					skipped++;
-					continue;
-				}
+		console.log(`[OD-CRON]   Last OD: ${lastOd.year}-${lastOd.month} week ${lastOd.weekNumber}`);
+		console.log(`[OD-CRON]   Target week: ${targetWeek}`);
 
-				// Get existing duties (if any) and add OD
-				const existingDuties = existingEntry?.duties || [];
-				const newDuties = existingDuties.includes("OD")
-					? existingDuties
-					: [...existingDuties, "OD"];
+		// Try to find an available week (check for conflicts and already-assigned weeks)
+		let weekFound = false;
+		let attemptCount = 0;
+		const maxAttempts = weeks.length;
 
-				// Create/update schedule entry
-				await createOrUpdateScheduleEntry({
-					employee_id: instructor,
-					full_name: getInstructorName(instructor),
-					rank: "FI - Flight Attendant Instructor",
-					base: getInstructorBase(instructor),
-					date: date,
-					duties: newDuties,
-					created_by: createdBy,
-				});
+		while (!weekFound && attemptCount < maxAttempts) {
+			const weekInfo = weeks.find(w => w.weekNumber === targetWeek);
 
-				const msg = `${instructor} ${date}: OD assigned`;
-				details.push(msg);
-				console.log(`[OD-CRON] ${msg}`);
-				assigned++;
-			} catch (error) {
-				const msg = `${instructor} ${date}: Error - ${error}`;
-				console.error(
-					`[OD-CRON] Error assigning OD for ${instructor} on ${date}:`,
-					error
-				);
-				details.push(msg);
-				skipped++;
+			if (!weekInfo) {
+				console.log(`[OD-CRON]   Week ${targetWeek} doesn't exist, trying next week`);
+				targetWeek = (targetWeek % weeks.length) + 1;
+				attemptCount++;
+				continue;
 			}
+
+			// Check if week is already assigned to another instructor
+			if (weekAssignments[targetWeek]) {
+				console.log(`[OD-CRON]   Week ${targetWeek} already assigned to ${weekAssignments[targetWeek]}, trying next week`);
+				targetWeek = (targetWeek % weeks.length) + 1;
+				attemptCount++;
+				continue;
+			}
+
+			// Check for duty conflicts
+			const hasConflict = await hasConflictInWeek(instructor, weekInfo.dates);
+			
+			if (hasConflict) {
+				console.log(`[OD-CRON]   Week ${targetWeek} has conflicts, trying next week`);
+				targetWeek = (targetWeek % weeks.length) + 1;
+				attemptCount++;
+				continue;
+			}
+
+			// Week is available!
+			weekFound = true;
+			weekAssignments[targetWeek] = instructor;
+			console.log(`[OD-CRON]   ✓ Assigning week ${targetWeek} (${weekInfo.dates[0]} to ${weekInfo.dates[4]})`);
+
+			// Assign OD for each day in the week
+			for (const date of weekInfo.dates) {
+				try {
+					const existingEntry = await getScheduleEntry(instructor, date);
+					const existingDuties = existingEntry?.duties || [];
+
+					// Skip if OD already assigned
+					if (existingDuties.includes("OD")) {
+						console.log(`[OD-CRON]     ${date}: OD already exists, skipping`);
+						skipped++;
+						continue;
+					}
+
+					// Add OD to duties
+					const newDuties = [...existingDuties, "OD"];
+
+					await createOrUpdateScheduleEntry({
+						employee_id: instructor,
+						full_name: getInstructorName(instructor),
+						rank: "FI - Flight Attendant Instructor",
+						base: getInstructorBase(instructor),
+						date: date,
+						duties: newDuties,
+						created_by: createdBy,
+					});
+
+					console.log(`[OD-CRON]     ${date}: OD assigned ✓`);
+					assigned++;
+				} catch (error) {
+					const msg = `${instructor} ${date}: Error - ${error}`;
+					console.error(`[OD-CRON]     ${date}: Error assigning OD:`, error);
+					details.push(msg);
+					skipped++;
+				}
+			}
+
+			const msg = `${instructor}: Assigned to week ${targetWeek} (${weekInfo.dates[0]} to ${weekInfo.dates[4]})`;
+			details.push(msg);
+		}
+
+		if (!weekFound) {
+			const msg = `${instructor}: Could not find available week after ${maxAttempts} attempts`;
+			console.log(`[OD-CRON]   ✗ ${msg}`);
+			details.push(msg);
 		}
 	}
 
-	console.log(
-		`[OD-CRON] Assignment complete. Assigned: ${assigned}, Skipped: ${skipped}`
-	);
+	console.log(`[OD-CRON] ═══════════════════════════════════════`);
+	console.log(`[OD-CRON] Assignment complete`);
+	console.log(`[OD-CRON]   Assigned: ${assigned} days`);
+	console.log(`[OD-CRON]   Skipped: ${skipped} days`);
+	console.log(`[OD-CRON] ═══════════════════════════════════════`);
+	
 	return { assigned, skipped, details };
 }
