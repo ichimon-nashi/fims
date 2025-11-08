@@ -118,11 +118,17 @@ async function getLastOdAssignment(
 		
 		// Check each week for OD assignment
 		for (const week of weeks) {
-			// Check if this instructor has OD on the first day of this week
-			const firstDay = week.dates[0];
-			const entry = await getScheduleEntry(employeeId, firstDay);
+			// Check if this instructor has OD on ANY day of this week
+			let hasOdInWeek = false;
+			for (const date of week.dates) {
+				const entry = await getScheduleEntry(employeeId, date);
+				if (entry && entry.duties.includes("OD")) {
+					hasOdInWeek = true;
+					break;
+				}
+			}
 			
-			if (entry && entry.duties.includes("OD")) {
+			if (hasOdInWeek) {
 				console.log(`[OD-CRON] Found last OD for ${employeeId}: ${searchYear}-${searchMonth} week ${week.weekNumber}`);
 				return {
 					year: searchYear,
@@ -144,22 +150,23 @@ async function getLastOdAssignment(
 }
 
 // Calculate next OD week for an instructor based on rotation
+// Rotation moves BACKWARD: Week 2 → Week 1, Week 1 → Week 4, etc.
 function calculateNextOdWeek(
 	lastWeekNumber: number,
 	totalWeeksInLastMonth: number,
 	totalWeeksInTargetMonth: number
 ): number {
-	// Move to next week in rotation
-	let nextWeek = lastWeekNumber + 1;
+	// Move to PREVIOUS week in rotation (backward/earlier)
+	let nextWeek = lastWeekNumber - 1;
 	
-	// If we exceeded the previous month's weeks, wrap to week 1
-	if (nextWeek > totalWeeksInLastMonth) {
-		nextWeek = 1;
+	// If we go below week 1, wrap to last week of target month
+	if (nextWeek < 1) {
+		nextWeek = totalWeeksInTargetMonth;
 	}
 	
 	// If the calculated week doesn't exist in target month, wrap around
 	if (nextWeek > totalWeeksInTargetMonth) {
-		nextWeek = 1;
+		nextWeek = totalWeeksInTargetMonth;
 	}
 	
 	return nextWeek;
@@ -189,8 +196,28 @@ export async function assignODForMonth(
 	let skipped = 0;
 	const details: string[] = [];
 	const weekAssignments: { [weekNumber: number]: string } = {};
+	
+	// Track which instructors are available for each week (no conflicts)
+	const instructorAvailability: { [weekNumber: number]: string[] } = {};
+	
+	// Pre-calculate availability for all instructors and weeks
+	console.log(`[OD-CRON] ───────────────────────────────────────`);
+	console.log(`[OD-CRON] Phase 0: Checking availability for all instructors`);
+	for (const week of weeks) {
+		instructorAvailability[week.weekNumber] = [];
+		for (const instructor of OD_INSTRUCTORS) {
+			const hasConflict = await hasConflictInWeek(instructor, week.dates);
+			if (!hasConflict) {
+				instructorAvailability[week.weekNumber].push(instructor);
+			}
+		}
+		console.log(`[OD-CRON]   Week ${week.weekNumber}: ${instructorAvailability[week.weekNumber].length} available instructors - ${instructorAvailability[week.weekNumber].join(', ') || 'NONE'}`);
+	}
 
-	// Process each instructor in rotation order
+	// PHASE 1: Try to assign instructors to their target weeks (based on rotation)
+	console.log(`[OD-CRON] ───────────────────────────────────────`);
+	console.log(`[OD-CRON] Phase 1: Rotation-based assignment`);
+	
 	for (let instructorIndex = 0; instructorIndex < OD_INSTRUCTORS.length; instructorIndex++) {
 		const instructor = OD_INSTRUCTORS[instructorIndex];
 		console.log(`[OD-CRON] ───────────────────────────────────────`);
@@ -308,10 +335,83 @@ export async function assignODForMonth(
 		}
 	}
 
+	// PHASE 2: Fill any unassigned weeks with available instructors
+	console.log(`[OD-CRON] ───────────────────────────────────────`);
+	console.log(`[OD-CRON] Phase 2: Filling unassigned weeks`);
+	
+	const unassignedWeeks = weeks.filter(w => !weekAssignments[w.weekNumber]);
+	
+	if (unassignedWeeks.length > 0) {
+		console.log(`[OD-CRON]   Found ${unassignedWeeks.length} unassigned weeks`);
+		
+		for (const week of unassignedWeeks) {
+			console.log(`[OD-CRON]   Trying to fill Week ${week.weekNumber} (${week.dates[0]} to ${week.dates[4]})`);
+			
+			// Find available instructors for this week who aren't assigned yet
+			const availableInstructors = instructorAvailability[week.weekNumber].filter(
+				instructor => !Object.values(weekAssignments).includes(instructor)
+			);
+			
+			if (availableInstructors.length === 0) {
+				const msg = `Week ${week.weekNumber}: ❌ NO INSTRUCTOR AVAILABLE - all have conflicts or already assigned`;
+				console.log(`[OD-CRON]     ${msg}`);
+				details.push(msg);
+				continue;
+			}
+			
+			// Assign the first available instructor
+			const instructor = availableInstructors[0];
+			weekAssignments[week.weekNumber] = instructor;
+			console.log(`[OD-CRON]     ✓ Assigning ${instructor} to Week ${week.weekNumber}`);
+			
+			// Assign OD for each day in the week
+			for (const date of week.dates) {
+				try {
+					const existingEntry = await getScheduleEntry(instructor, date);
+					const existingDuties = existingEntry?.duties || [];
+
+					// Skip if OD already assigned
+					if (existingDuties.includes("OD")) {
+						console.log(`[OD-CRON]       ${date}: OD already exists, skipping`);
+						skipped++;
+						continue;
+					}
+
+					// Add OD to duties
+					const newDuties = [...existingDuties, "OD"];
+
+					await createOrUpdateScheduleEntry({
+						employee_id: instructor,
+						full_name: getInstructorName(instructor),
+						rank: "FI - Flight Attendant Instructor",
+						base: getInstructorBase(instructor),
+						date: date,
+						duties: newDuties,
+						created_by: createdBy,
+					});
+
+					console.log(`[OD-CRON]       ${date}: OD assigned ✓`);
+					assigned++;
+				} catch (error) {
+					const msg = `${instructor} ${date}: Error - ${error}`;
+					console.error(`[OD-CRON]       ${date}: Error assigning OD:`, error);
+					details.push(msg);
+					skipped++;
+				}
+			}
+			
+			const msg = `Week ${week.weekNumber}: Filled with ${instructor} (${week.dates[0]} to ${week.dates[4]})`;
+			details.push(msg);
+		}
+	} else {
+		console.log(`[OD-CRON]   ✓ All weeks assigned in Phase 1`);
+	}
+
 	console.log(`[OD-CRON] ═══════════════════════════════════════`);
 	console.log(`[OD-CRON] Assignment complete`);
 	console.log(`[OD-CRON]   Assigned: ${assigned} days`);
 	console.log(`[OD-CRON]   Skipped: ${skipped} days`);
+	console.log(`[OD-CRON]   Week coverage: ${Object.keys(weekAssignments).length}/${weeks.length} weeks`);
 	console.log(`[OD-CRON] ═══════════════════════════════════════`);
 	
 	return { assigned, skipped, details };
