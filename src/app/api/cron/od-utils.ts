@@ -17,10 +17,15 @@ async function getScheduleEntry(employeeId: string, date: string) {
 
 async function createOrUpdateScheduleEntry(entryData: any) {
 	const supabase = createServiceClient();
+	
+	// Add year field from date
+	const year = new Date(entryData.date).getFullYear();
+	
 	const { data, error } = await supabase
 		.from('fi_schedule')
 		.upsert({
 			...entryData,
+			year,
 			updated_at: new Date().toISOString()
 		}, {
 			onConflict: 'employee_id,date'
@@ -28,7 +33,10 @@ async function createOrUpdateScheduleEntry(entryData: any) {
 		.select()
 		.single();
 	
-	if (error) throw error;
+	if (error) {
+		console.error('[OD-CRON] Database error:', error);
+		throw new Error(`Database error: ${error.message || JSON.stringify(error)}`);
+	}
 	return data;
 }
 
@@ -48,7 +56,7 @@ export function getInstructorName(employeeId: string): string {
 		"22018": "凌誌謙",
 		"39426": "柯佳華",
 		"51892": "韓建豪",
-		"36639": "李盈瑤",
+		"36639": "李盈瑤", 
 	};
 	return names[employeeId] || "Unknown Instructor";
 }
@@ -347,8 +355,9 @@ export async function assignODForMonth(
 
 					console.log(`[OD-CRON]     ${date}: OD assigned ✓`);
 					assigned++;
-				} catch (error) {
-					const msg = `${instructor} ${date}: Error - ${error}`;
+				} catch (error: any) {
+					const errorMsg = error instanceof Error ? error.message : String(error);
+					const msg = `${instructor} ${date}: Error - ${errorMsg}`;
 					console.error(`[OD-CRON]     ${date}: Error assigning OD:`, error);
 					details.push(msg);
 					skipped++;
@@ -423,8 +432,9 @@ export async function assignODForMonth(
 
 					console.log(`[OD-CRON]       ${date}: OD assigned ✓`);
 					assigned++;
-				} catch (error) {
-					const msg = `${instructor} ${date}: Error - ${error}`;
+				} catch (error: any) {
+					const errorMsg = error instanceof Error ? error.message : String(error);
+					const msg = `${instructor} ${date}: Error - ${errorMsg}`;
 					console.error(`[OD-CRON]       ${date}: Error assigning OD:`, error);
 					details.push(msg);
 					skipped++;
