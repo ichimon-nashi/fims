@@ -10,10 +10,12 @@
 
 .container {
 	min-height: 100vh;
+	max-height: 100vh;
 	background-color: #f9fafb;
 	display: flex;
 	flex-direction: column;
 	font-family: Arial, sans-serif;
+	overflow: hidden;
 }
 
 /* Rotation Prompt for Portrait Mode */
@@ -41,102 +43,203 @@
 	font-weight: 600;
 }
 
-.header {
-	background-color: #477df1;
-	color: white;
-	padding: 16px;
-	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-	text-align: center;
-}
-
-.headerTitle {
-	font-size: 24px;
-	font-weight: bold;
-	margin: 0;
-}
-
-/* Tray Toggle Styles */
-.headerContent {
+/* Top Controls - Game-inspired UI */
+.topControls {
 	display: flex;
-	flex-direction: column;
+	justify-content: space-between;
 	align-items: center;
+	padding: 1rem 1.5rem;
 	gap: 1rem;
+	flex-wrap: wrap;
 }
 
-.trayTypeToggle {
+.trayTypeSelector {
 	display: flex;
-	align-items: center;
-	min-width: max-content;
-	gap: 1rem;
-	margin-bottom: 0.5rem;
+	gap: 0.75rem;
 }
 
-.trayTypeLabel {
-	font-weight: 600;
-	color: white;
-	font-size: 1rem;
-	opacity: 0.9;
-}
-
-.toggleButtons {
-	display: flex;
-	border-radius: 0.5rem;
-	overflow: hidden;
-	border: 2px solid rgba(255, 255, 255, 0.3);
-	background-color: rgba(255, 255, 255, 0.1);
-}
-
-.toggleButton {
-	padding: 0.5rem 1.5rem;
+.trayTypeBtn {
+	position: relative;
+	width: 4rem;
+	height: 4rem;
 	border: none;
-	min-width: max-content;
-	margin: 0 0.5rem;
-	background-color: transparent;
-	color: rgba(255, 255, 255, 0.8);
-	font-weight: 500;
-	font-size: 0.9rem;
+	background: linear-gradient(145deg, #2d3748, #1a202c);
+	border-radius: 0.75rem;
 	cursor: pointer;
-	transition: all 0.2s ease-in-out;
-	border-right: 1px solid rgba(255, 255, 255, 0.2);
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+	overflow: hidden;
 }
 
-.toggleButton:last-child {
-	border-right: none;
+.trayTypeBtn::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), transparent);
+	opacity: 0;
+	transition: opacity 0.3s;
 }
 
-.toggleButton:hover {
-	background-color: rgba(255, 255, 255, 0.2);
-	color: white;
+.trayTypeBtn:hover::before {
+	opacity: 1;
 }
 
-.toggleButton.active {
-	background-color: rgba(255, 255, 255, 0.9);
-	color: #477df1;
+.trayTypeBtn:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.trayTypeBtn:active {
+	transform: translateY(0);
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.trayLabel {
+	position: relative;
+	z-index: 1;
+	font-size: 1.5rem;
+	font-weight: 700;
+	color: #a0aec0;
+	text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+	transition: all 0.3s;
+}
+
+.activeTray {
+	background: linear-gradient(145deg, #4299e1, #3182ce);
+	box-shadow: 0 4px 12px rgba(66, 153, 225, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.activeTray .trayLabel {
+	color: #ffffff;
+	text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.activeTray::after {
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 100%;
+	height: 100%;
+	background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
+	animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+	0%, 100% { opacity: 0.3; }
+	50% { opacity: 0.6; }
+}
+
+.actionButtons {
+	display: flex;
+	gap: 0.75rem;
+	flex-wrap: wrap;
+}
+
+.gameBtn {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.75rem 1.5rem;
+	border: none;
+	border-radius: 0.75rem;
 	font-weight: 600;
+	font-size: 0.95rem;
+	cursor: pointer;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	position: relative;
+	overflow: hidden;
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-.toggleButton.active:hover {
-	background-color: white;
-	color: #477df1;
+.gameBtn::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: -100%;
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+	transition: left 0.5s;
+}
+
+.gameBtn:hover::before {
+	left: 100%;
+}
+
+.gameBtn:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.gameBtn:active {
+	transform: translateY(0);
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.btnIcon {
+	font-size: 1.25rem;
+	line-height: 1;
+}
+
+.btnText {
+	position: relative;
+	z-index: 1;
+}
+
+.submitBtn {
+	background: linear-gradient(145deg, #48bb78, #38a169);
+	color: white;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.submitBtn:hover {
+	background: linear-gradient(145deg, #4ade80, #48bb78);
+}
+
+.resetBtn {
+	background: linear-gradient(145deg, #f56565, #e53e3e);
+	color: white;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.resetBtn:hover {
+	background: linear-gradient(145deg, #fc8181, #f56565);
+}
+
+.hintBtn {
+	background: linear-gradient(145deg, #ed8936, #dd6b20);
+	color: white;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.hintBtn:hover {
+	background: linear-gradient(145deg, #f6ad55, #ed8936);
 }
 
 .mainContent {
 	flex: 1;
 	display: flex;
 	flex-direction: column;
-	padding: 16px;
-	height: calc(100vh - 140px);
+	padding: 0 1.5rem 1rem;
+	min-height: 0;
+	gap: 0.75rem;
+	overflow: hidden;
 }
 
 .dropZoneContainer {
-	height: 60vh;
+	flex: 1;
 	position: relative;
 	background-color: white;
-	border-radius: 8px;
-	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+	border-radius: 12px;
+	box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
 	border: 2px dashed #d1d5db;
-	margin-bottom: 16px;
 	overflow: hidden;
+	min-height: 0;
 }
 
 .dropZone {
@@ -160,6 +263,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	pointer-events: none;
 }
 
 .tableSurfaceText {
@@ -167,6 +271,7 @@
 	font-weight: 600;
 	opacity: 0.5;
 	font-size: 5rem;
+	pointer-events: none;
 }
 
 .correctPosition {
@@ -217,86 +322,51 @@
 	pointer-events: none;
 }
 
-.controlButtons {
-	display: flex;
-	gap: 16px;
-	justify-content: center;
-	margin-bottom: 16px;
-}
-
-.button {
-	padding: 8px 24px;
-	border-radius: 8px;
-	font-weight: 600;
-	border: none;
-	cursor: pointer;
-	transition: background-color 0.2s;
-}
-
-.submitButton {
-	background-color: #16a34a;
-	color: white;
-}
-
-.submitButton:hover {
-	background-color: #15803d;
-}
-
-.resetButton {
-	background-color: #dc2626;
-	color: white;
-}
-
-.resetButton:hover {
-	background-color: #b91c1c;
-}
-
-/* Note: This toggleButton style is for the show/hide correct positions button */
-.toggleButton:not(.active):not(:hover) {
-	background-color: #ca8a04;
-	color: white;
-}
-
-.toggleButton:not(.active):hover {
-	background-color: #a16207;
-}
-
 .feedback {
-	background-color: #f3f4f6;
+	background: linear-gradient(145deg, #f8fafc, #f1f5f9);
 	border-left: 4px solid #3b82f6;
-	padding: 16px;
-	margin-bottom: 16px;
-	border-radius: 4px;
+	padding: 0.75rem;
+	border-radius: 8px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	flex-shrink: 0;
+	max-height: 150px;
+	overflow-y: auto;
 }
 
 .feedbackTitle {
 	font-weight: 600;
 	color: #1f2937;
-	margin-bottom: 8px;
+	margin-bottom: 0.4rem;
+	font-size: 0.95rem;
 }
 
 .feedbackText {
-	font-size: 14px;
+	font-size: 12px;
 	color: #374151;
 	white-space: pre-wrap;
-	font-family: monospace;
+	font-family: 'Courier New', monospace;
+	line-height: 1.4;
+	margin: 0;
 }
 
 .itemsTray {
-	background-color: #1f2937;
-	border-radius: 8px;
-	padding: 12px;
-	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-	max-height: 25vh;
+	background: linear-gradient(145deg, #1e293b, #0f172a);
+	border-radius: 12px;
+	padding: 0.75rem;
+	box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+	max-height: 140px;
+	min-height: 140px;
 	overflow-y: auto;
+	flex-shrink: 0;
 }
 
 .trayTitle {
-	color: white;
+	color: #e2e8f0;
 	font-weight: 600;
-	margin-bottom: 8px;
+	margin-bottom: 0.5rem;
 	text-align: center;
-	font-size: 1rem;
+	font-size: 0.9rem;
+	text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .trayItems {
@@ -368,78 +438,34 @@
 	border-bottom: 4px solid #1f2937;
 }
 
-.trayInstructions {
-	color: #9ca3af;
-	font-size: 14px;
-	text-align: center;
-	margin-top: 8px;
-}
-
-.instructions {
-	background-color: #eff6ff;
-	padding: 16px;
-	border-top: 1px solid #e5e7eb;
-}
-
-.instructionsContainer {
-	max-width: 1200px;
-	margin: 0 auto;
-}
-
-.instructionsTitle {
-	font-weight: 600;
-	color: #1e40af;
-	margin-bottom: 8px;
-}
-
-.instructionsGrid {
-	font-size: 14px;
-	color: #1d4ed8;
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-	gap: 8px;
-}
-
 /* Responsive Design for Tablets and Mobile */
 @media screen and (max-height: 900px) and (orientation: landscape) {
-	.headerTitle {
-		font-size: 20px;
-	}
-
-	.headerSubtitle {
-		font-size: 14px;
-	}
-
-	/* Responsive tray toggle adjustments */
-	.headerContent {
+	.topControls {
+		padding: 0.75rem 1rem;
 		gap: 0.75rem;
 	}
 
-	.trayTypeToggle {
-		gap: 0.75rem;
+	.trayTypeBtn {
+		width: 3.5rem;
+		height: 3.5rem;
 	}
 
-	.toggleButton {
-		padding: 0.4rem 1.2rem;
-		font-size: 0.8rem;
+	.trayLabel {
+		font-size: 1.25rem;
 	}
 
-	.trayTypeLabel {
-		font-size: 0.9rem;
+	.gameBtn {
+		padding: 0.6rem 1.2rem;
+		font-size: 0.85rem;
+	}
+
+	.btnIcon {
+		font-size: 1.1rem;
 	}
 
 	.mainContent {
-		padding: 12px;
-		overflow: hidden;
-	}
-
-	.dropZoneContainer {
-		height: 65vh;
-		overflow: hidden;
-	}
-
-	.dropZone {
-		overflow: hidden;
+		padding: 0 1rem 0.75rem;
+		gap: 0.5rem;
 	}
 
 	.tableSurface {
@@ -450,30 +476,19 @@
 		font-size: 3rem;
 	}
 
-	.controlButtons {
-		gap: 12px;
-		margin-bottom: 12px;
+	.itemsTray {
+		padding: 0.6rem;
+		max-height: 120px;
+		min-height: 120px;
 	}
 
-	.button {
-		padding: 6px 18px;
-		font-size: 14px;
+	.trayTitle {
+		font-size: 0.85rem;
+		margin-bottom: 0.4rem;
 	}
 
 	.trayItems {
 		gap: 6px;
-	}
-
-	.itemsTray {
-		padding: 10px;
-		max-height: 20vh;
-		overflow-x: hidden;
-		overflow-y: auto;
-	}
-
-	.trayTitle {
-		font-size: 0.9rem;
-		margin-bottom: 6px;
 	}
 
 	.placedItem {
@@ -483,52 +498,33 @@
 }
 
 @media screen and (max-height: 600px) and (orientation: landscape) {
-	.header {
-		padding: 8px;
-	}
-
-	.headerTitle {
-		font-size: 16px;
-	}
-
-	.headerSubtitle {
-		font-size: 11px;
-	}
-
-	/* Responsive tray toggle adjustments for small screens */
-	.headerContent {
+	.topControls {
+		padding: 0.5rem 0.75rem;
 		gap: 0.5rem;
 	}
 
-	.trayTypeToggle {
-		flex-direction: column;
-		gap: 0.4rem;
-		text-align: center;
+	.trayTypeBtn {
+		width: 3rem;
+		height: 3rem;
 	}
 
-	.toggleButton {
-		padding: 0.3rem 1rem;
+	.trayLabel {
+		font-size: 1.1rem;
+	}
+
+	.gameBtn {
+		padding: 0.5rem 1rem;
 		font-size: 0.75rem;
+		gap: 0.4rem;
 	}
 
-	.trayTypeLabel {
-		font-size: 0.8rem;
+	.btnIcon {
+		font-size: 1rem;
 	}
 
 	.mainContent {
-		padding: 6px;
-		height: calc(100vh - 100px);
-		overflow: hidden;
-	}
-
-	.dropZoneContainer {
-		height: 70vh;
-		margin-bottom: 8px;
-		overflow: hidden;
-	}
-
-	.dropZone {
-		overflow: hidden;
+		padding: 0 0.75rem 0.5rem;
+		gap: 0.4rem;
 	}
 
 	.tableSurface {
@@ -539,39 +535,33 @@
 		font-size: 1.5rem;
 	}
 
-	.controlButtons {
-		gap: 6px;
-		margin-bottom: 6px;
+	.itemsTray {
+		padding: 0.5rem;
+		max-height: 100px;
+		min-height: 100px;
 	}
 
-	.button {
-		padding: 3px 10px;
-		font-size: 11px;
+	.trayTitle {
+		font-size: 0.75rem;
+		margin-bottom: 0.3rem;
 	}
 
 	.trayItems {
 		gap: 4px;
 	}
 
-	.itemsTray {
-		padding: 6px;
-		max-height: 15vh;
-		overflow-x: hidden;
-		overflow-y: auto;
-	}
-
-	.trayTitle {
-		font-size: 0.8rem;
-		margin-bottom: 4px;
-	}
-
 	.feedback {
-		padding: 8px;
-		margin-bottom: 6px;
+		padding: 0.5rem;
+		max-height: 120px;
+	}
+
+	.feedbackTitle {
+		font-size: 0.85rem;
+		margin-bottom: 0.3rem;
 	}
 
 	.feedbackText {
-		font-size: 10px;
+		font-size: 11px;
 	}
 
 	.placedItem {
@@ -580,35 +570,31 @@
 	}
 }
 
-/* Additional mobile responsiveness for tray toggle */
+/* Additional mobile responsiveness */
 @media (max-width: 768px) {
-	.trayTypeToggle {
+	.topControls {
 		flex-direction: column;
-		gap: 0.5rem;
-		text-align: center;
+		align-items: stretch;
 	}
 
-	.toggleButton {
-		padding: 0.4rem 1.2rem;
-		font-size: 0.8rem;
+	.trayTypeSelector {
+		justify-content: center;
 	}
 
-	.trayTypeLabel {
-		font-size: 0.9rem;
+	.actionButtons {
+		justify-content: center;
 	}
 }
 
 @media (max-width: 480px) {
-	.trayTypeToggle {
-		gap: 0.4rem;
+	.trayTypeBtn {
+		width: 3.5rem;
+		height: 3.5rem;
 	}
 
-	.toggleButton {
-		padding: 0.3rem 1rem;
-		font-size: 0.75rem;
-	}
-
-	.trayTypeLabel {
-		font-size: 0.8rem;
+	.gameBtn {
+		flex: 1;
+		min-width: 90px;
+		justify-content: center;
 	}
 }

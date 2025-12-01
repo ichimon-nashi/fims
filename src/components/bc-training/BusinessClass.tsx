@@ -10,10 +10,8 @@ import {
 	ItemsConfig,
 	PlacedItems,
 	CorrectPositions,
-	TouchOffset,
 	Position,
 	PositionPercent,
-	Size,
 } from "./types";
 
 // Import all assets
@@ -28,60 +26,117 @@ import waterPlaceholder from "./assets/water-placeholder.png";
 import winePlaceholder from "./assets/wine-placeholder.png";
 import utensilPlaceholder from "./assets/utensil-placeholder.png";
 
-const BusinessClass: React.FC<BusinessClassProps> = ({
-	userDetails,
-	onLogout,
-}) => {
+const BusinessClass: React.FC<BusinessClassProps> = () => {
 	const [trayType, setTrayType] = useState<TrayType>("A");
 	const [ITEMS_CONFIG, setItemsConfig] = useState<ItemsConfig>({});
 	const [placedItems, setPlacedItems] = useState<PlacedItems>({});
-	const [correctPositions, setCorrectPositions] = useState<CorrectPositions>(
-		{}
-	);
+	const [correctPositions, setCorrectPositions] = useState<CorrectPositions>({});
 	const [draggedItem, setDraggedItem] = useState<string | null>(null);
 	const [feedback, setFeedback] = useState<string>("");
-	const [showCorrectPositions, setShowCorrectPositions] =
-		useState<boolean>(false);
+	const [showCorrectPositions, setShowCorrectPositions] = useState<boolean>(false);
 	const [isLandscape, setIsLandscape] = useState<boolean>(true);
 	const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-	const [touchOffset, setTouchOffset] = useState<TouchOffset>({ x: 0, y: 0 });
 	const dropZoneRef = useRef<HTMLDivElement>(null);
 	const tableSurfaceRef = useRef<HTMLDivElement>(null);
 
-	// Base item configurations with percentage-based positioning
+	// Physical measurements in centimeters - REPLACE THESE WITH YOUR ACTUAL MEASUREMENTS
+	const PHYSICAL_MEASUREMENTS: {
+		TABLE_TRAY_WIDTH_CM: number;
+		TABLE_TRAY_HEIGHT_CM: number;
+		A: {
+			MAIN_PLATE_WIDTH_CM: number;
+			MAIN_PLATE_HEIGHT_CM: number;
+			SALAD_PLATE_DIAMETER_CM: number;
+			FRUIT_BOWL_DIAMETER_CM: number;
+			BREAD_PLATE_DIAMETER_CM: number;
+			UTENSILS_WIDTH_CM: number;
+			UTENSILS_HEIGHT_CM: number;
+			WATER_GLASS_DIAMETER_CM: number;
+			WINE_GLASS_DIAMETER_CM: number;
+			SALT_PEPPER_WIDTH_CM: number;
+			SALT_PEPPER_HEIGHT_CM: number;
+			BUTTER_DISH_WIDTH_CM: number;
+			BUTTER_DISH_HEIGHT_CM: number;
+		};
+		B: {
+			MAIN_PLATE_WIDTH_CM: number;
+			MAIN_PLATE_HEIGHT_CM: number;
+			APPETIZER_PLATE_DIAMETER_CM: number;
+			SOUP_BOWL_DIAMETER_CM: number;
+			BREAD_PLATE_DIAMETER_CM: number;
+			DESSERT_PLATE_DIAMETER_CM: number;
+			UTENSILS_WIDTH_CM: number;
+			UTENSILS_HEIGHT_CM: number;
+			WATER_GLASS_DIAMETER_CM: number;
+			WINE_GLASS_DIAMETER_CM: number;
+			NAPKIN_WIDTH_CM: number;
+			NAPKIN_HEIGHT_CM: number;
+			CONDIMENT_TRAY_WIDTH_CM: number;
+			CONDIMENT_TRAY_HEIGHT_CM: number;
+		};
+	} = {
+		TABLE_TRAY_WIDTH_CM: 38,
+		TABLE_TRAY_HEIGHT_CM: 27.5,
+		A: {
+			MAIN_PLATE_WIDTH_CM: 19.5,
+			MAIN_PLATE_HEIGHT_CM: 15.5,
+			SALAD_PLATE_DIAMETER_CM: 12.5,
+			FRUIT_BOWL_DIAMETER_CM: 12.5,
+			BREAD_PLATE_DIAMETER_CM: 19.8,
+			UTENSILS_WIDTH_CM: 6,
+			UTENSILS_HEIGHT_CM: 21,
+			WATER_GLASS_DIAMETER_CM: 5.5,
+			WINE_GLASS_DIAMETER_CM: 5.5,
+			SALT_PEPPER_WIDTH_CM: 3,
+			SALT_PEPPER_HEIGHT_CM: 6.8,
+			BUTTER_DISH_WIDTH_CM: 7.7,
+			BUTTER_DISH_HEIGHT_CM: 7.7,
+		},
+		B: {
+			MAIN_PLATE_WIDTH_CM: 19.5,
+			MAIN_PLATE_HEIGHT_CM: 15.5,
+			APPETIZER_PLATE_DIAMETER_CM: 16,
+			SOUP_BOWL_DIAMETER_CM: 20,
+			BREAD_PLATE_DIAMETER_CM: 19.8,
+			DESSERT_PLATE_DIAMETER_CM: 16,
+			UTENSILS_WIDTH_CM: 6,
+			UTENSILS_HEIGHT_CM: 21,
+			WATER_GLASS_DIAMETER_CM: 5.5,
+			WINE_GLASS_DIAMETER_CM: 5.5,
+			NAPKIN_WIDTH_CM: 12,
+			NAPKIN_HEIGHT_CM: 10,
+			CONDIMENT_TRAY_WIDTH_CM: 14,
+			CONDIMENT_TRAY_HEIGHT_CM: 8,
+		},
+	};
+
 	const getBaseItemConfig = useCallback((trayType: TrayType = "A"): ItemsConfig => {
-		const width = typeof window !== "undefined" ? window.innerWidth : 1920;
-		const height =
-			typeof window !== "undefined" ? window.innerHeight : 1080;
-		const deviceSize = Math.min(width, height);
-		const isTouchDevice =
-			typeof window !== "undefined" &&
-			("ontouchstart" in window || navigator.maxTouchPoints > 0);
+		const dropZoneWidth = dropZoneRef.current?.clientWidth || (typeof window !== "undefined" ? window.innerWidth * 0.9 : 1000);
+		const tableSurfaceWidthPx = dropZoneWidth * 0.5;
+		const pixelsPerCm = tableSurfaceWidthPx / PHYSICAL_MEASUREMENTS.TABLE_TRAY_WIDTH_CM;
+		
+		const cmToRem = (cm: number): string => {
+			const pixels = cm * pixelsPerCm;
+			const rem = pixels / 16;
+			return `${rem}rem`;
+		};
+		
+		const getSizeFromCm = (widthCm: number, heightCm: number) => ({
+			width: cmToRem(widthCm),
+			height: cmToRem(heightCm),
+		});
 
-		let scaleFactor: number;
-		if (deviceSize >= 900 && !isTouchDevice) {
-			scaleFactor = 1; // Desktop
-		} else if (width >= 768) {
-			scaleFactor = 0.75; // Tablet
-		} else {
-			scaleFactor = 0.1; // Mobile
-		}
-
-		// Define positions as percentages of the drop zone for each tray type
-		const trayConfigurations: Record<
-			TrayType,
-			Record<string, PositionPercent>
-		> = {
+		const trayConfigurations: Record<TrayType, Record<string, PositionPercent>> = {
 			A: {
-				"main-plate": { xPercent: 52, yPercent: 73 },
-				"salad-plate": { xPercent: 32.5, yPercent: 27 },
+				"main-plate": { xPercent: 52, yPercent: 66 },
+				"salad-plate": { xPercent: 29, yPercent: 29 },
 				"fruit-bowl": { xPercent: 52.5, yPercent: 27 },
-				"bread-plate": { xPercent: 32.5, yPercent: 73 },
+				"bread-plate": { xPercent: 29, yPercent: 71 },
 				utensils: { xPercent: 68, yPercent: 65 },
-				"water-glass": { xPercent: 66, yPercent: 27 },
-				"wine-glass": { xPercent: 72, yPercent: 27 },
+				"water-glass": { xPercent: 68, yPercent: 16 },
+				"wine-glass": { xPercent: 76, yPercent: 16 },
 				"salt-pepper": { xPercent: 42.5, yPercent: 17 },
-				"butter-dish": { xPercent: 42.5, yPercent: 34 },
+				"butter-dish": { xPercent: 41, yPercent: 25 },
 			},
 			B: {
 				"main-plate": { xPercent: 45, yPercent: 45 },
@@ -98,285 +153,171 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 		};
 
 		const basePositions = trayConfigurations[trayType];
-
-		// Item configurations for both tray types
-		const itemConfigurations: Record<TrayType, ItemsConfig> = {
-			A: {
+		const TRAY_SCALE = 0.22;
+		
+		if (trayType === "A") {
+			const measA = PHYSICAL_MEASUREMENTS.A;
+			return {
 				"main-plate": {
 					name: "Main Plate",
 					color: "#e5e7eb",
-					size: {
-						width: `${17 * scaleFactor}rem`,
-						height: `${10 * scaleFactor}rem`,
-					},
-					traySize: {
-						width: `${4 * scaleFactor}rem`,
-						height: `${2.8 * scaleFactor}rem`,
-					},
+					size: getSizeFromCm(measA.MAIN_PLATE_WIDTH_CM, measA.MAIN_PLATE_HEIGHT_CM),
+					traySize: getSizeFromCm(measA.MAIN_PLATE_WIDTH_CM * TRAY_SCALE, measA.MAIN_PLATE_HEIGHT_CM * TRAY_SCALE),
 					positionPercent: basePositions["main-plate"],
 					image: mainPlaceholder.src,
 				},
 				"salad-plate": {
 					name: "Salad Plate",
 					color: "#fecaca",
-					size: {
-						width: `${10 * scaleFactor}rem`,
-						height: `${10 * scaleFactor}rem`,
-					},
-					traySize: {
-						width: `${2.5 * scaleFactor}rem`,
-						height: `${2.5 * scaleFactor}rem`,
-					},
+					size: getSizeFromCm(measA.SALAD_PLATE_DIAMETER_CM, measA.SALAD_PLATE_DIAMETER_CM),
+					traySize: getSizeFromCm(measA.SALAD_PLATE_DIAMETER_CM * TRAY_SCALE, measA.SALAD_PLATE_DIAMETER_CM * TRAY_SCALE),
 					positionPercent: basePositions["salad-plate"],
 					image: saladPlaceholder.src,
 				},
 				"fruit-bowl": {
 					name: "Fruit Bowl",
 					color: "#fecaca",
-					size: {
-						width: `${10 * scaleFactor}rem`,
-						height: `${10 * scaleFactor}rem`,
-					},
-					traySize: {
-						width: `${2.5 * scaleFactor}rem`,
-						height: `${2.5 * scaleFactor}rem`,
-					},
+					size: getSizeFromCm(measA.FRUIT_BOWL_DIAMETER_CM, measA.FRUIT_BOWL_DIAMETER_CM),
+					traySize: getSizeFromCm(measA.FRUIT_BOWL_DIAMETER_CM * TRAY_SCALE, measA.FRUIT_BOWL_DIAMETER_CM * TRAY_SCALE),
 					positionPercent: basePositions["fruit-bowl"],
 					image: fruitPlaceholder.src,
 				},
 				"bread-plate": {
 					name: "Bread Plate",
 					color: "#fef3c7",
-					size: {
-						width: `${10 * scaleFactor}rem`,
-						height: `${10 * scaleFactor}rem`,
-					},
-					traySize: {
-						width: `${2.8 * scaleFactor}rem`,
-						height: `${2.8 * scaleFactor}rem`,
-					},
+					size: getSizeFromCm(measA.BREAD_PLATE_DIAMETER_CM, measA.BREAD_PLATE_DIAMETER_CM),
+					traySize: getSizeFromCm(measA.BREAD_PLATE_DIAMETER_CM * TRAY_SCALE, measA.BREAD_PLATE_DIAMETER_CM * TRAY_SCALE),
 					positionPercent: basePositions["bread-plate"],
 					image: breadPlaceholder.src,
 				},
 				utensils: {
 					name: "Utensils",
 					color: "#d1d5db",
-					size: {
-						width: `${4 * scaleFactor}rem`,
-						height: `${10 * scaleFactor}rem`,
-					},
-					traySize: {
-						width: `${1.2 * scaleFactor}rem`,
-						height: `${3.2 * scaleFactor}rem`,
-					},
+					size: getSizeFromCm(measA.UTENSILS_WIDTH_CM, measA.UTENSILS_HEIGHT_CM),
+					traySize: getSizeFromCm(measA.UTENSILS_WIDTH_CM * TRAY_SCALE, measA.UTENSILS_HEIGHT_CM * TRAY_SCALE),
 					positionPercent: basePositions["utensils"],
 					image: utensilPlaceholder.src,
 				},
 				"water-glass": {
 					name: "Water Glass",
 					color: "#dbeafe",
-					size: {
-						width: `${4 * scaleFactor}rem`,
-						height: `${10 * scaleFactor}rem`,
-					},
-					traySize: {
-						width: `${0.8 * scaleFactor}rem`,
-						height: `${2 * scaleFactor}rem`,
-					},
+					size: getSizeFromCm(measA.WATER_GLASS_DIAMETER_CM, measA.WATER_GLASS_DIAMETER_CM),
+					traySize: getSizeFromCm(measA.WATER_GLASS_DIAMETER_CM * TRAY_SCALE, measA.WATER_GLASS_DIAMETER_CM * TRAY_SCALE),
 					positionPercent: basePositions["water-glass"],
 					image: waterPlaceholder.src,
 				},
 				"wine-glass": {
 					name: "Wine Glass",
 					color: "#e9d5ff",
-					size: {
-						width: `${4 * scaleFactor}rem`,
-						height: `${10 * scaleFactor}rem`,
-					},
-					traySize: {
-						width: `${0.8 * scaleFactor}rem`,
-						height: `${2 * scaleFactor}rem`,
-					},
+					size: getSizeFromCm(measA.WINE_GLASS_DIAMETER_CM, measA.WINE_GLASS_DIAMETER_CM),
+					traySize: getSizeFromCm(measA.WINE_GLASS_DIAMETER_CM * TRAY_SCALE, measA.WINE_GLASS_DIAMETER_CM * TRAY_SCALE),
 					positionPercent: basePositions["wine-glass"],
 					image: winePlaceholder.src,
 				},
 				"salt-pepper": {
 					name: "Salt & Pepper",
 					color: "#9ca3af",
-					size: {
-						width: `${4 * scaleFactor}rem`,
-						height: `${4 * scaleFactor}rem`,
-					},
-					traySize: {
-						width: `${1 * scaleFactor}rem`,
-						height: `${1 * scaleFactor}rem`,
-					},
+					size: getSizeFromCm(measA.SALT_PEPPER_WIDTH_CM, measA.SALT_PEPPER_HEIGHT_CM),
+					traySize: getSizeFromCm(measA.SALT_PEPPER_WIDTH_CM * TRAY_SCALE, measA.SALT_PEPPER_HEIGHT_CM * TRAY_SCALE),
 					positionPercent: basePositions["salt-pepper"],
 					image: saltpepperPlaceholder.src,
 				},
 				"butter-dish": {
 					name: "Butter Dish",
 					color: "#fecaca",
-					size: {
-						width: `${4 * scaleFactor}rem`,
-						height: `${4 * scaleFactor}rem`,
-					},
-					traySize: {
-						width: `${1.2 * scaleFactor}rem`,
-						height: `${0.8 * scaleFactor}rem`,
-					},
+					size: getSizeFromCm(measA.BUTTER_DISH_WIDTH_CM, measA.BUTTER_DISH_HEIGHT_CM),
+					traySize: getSizeFromCm(measA.BUTTER_DISH_WIDTH_CM * TRAY_SCALE, measA.BUTTER_DISH_HEIGHT_CM * TRAY_SCALE),
 					positionPercent: basePositions["butter-dish"],
 					image: butterPlaceholder.src,
 				},
-			},
-			B: {
+			};
+		} else {
+			const measB = PHYSICAL_MEASUREMENTS.B;
+			return {
 				"main-plate": {
 					name: "Main Plate",
 					color: "#e5e7eb",
-					size: {
-						width: `${18 * scaleFactor}rem`,
-						height: `${12 * scaleFactor}rem`,
-					},
-					traySize: {
-						width: `${3.6 * scaleFactor}rem`,
-						height: `${2.4 * scaleFactor}rem`,
-					},
+					size: getSizeFromCm(measB.MAIN_PLATE_WIDTH_CM, measB.MAIN_PLATE_HEIGHT_CM),
+					traySize: getSizeFromCm(measB.MAIN_PLATE_WIDTH_CM * TRAY_SCALE, measB.MAIN_PLATE_HEIGHT_CM * TRAY_SCALE),
 					positionPercent: basePositions["main-plate"],
 					image: mainPlaceholder.src,
 				},
 				"appetizer-plate": {
 					name: "Appetizer Plate",
 					color: "#fed7d7",
-					size: {
-						width: `${10 * scaleFactor}rem`,
-						height: `${10 * scaleFactor}rem`,
-					},
-					traySize: {
-						width: `${2 * scaleFactor}rem`,
-						height: `${2 * scaleFactor}rem`,
-					},
+					size: getSizeFromCm(measB.APPETIZER_PLATE_DIAMETER_CM, measB.APPETIZER_PLATE_DIAMETER_CM),
+					traySize: getSizeFromCm(measB.APPETIZER_PLATE_DIAMETER_CM * TRAY_SCALE, measB.APPETIZER_PLATE_DIAMETER_CM * TRAY_SCALE),
 					positionPercent: basePositions["appetizer-plate"],
 					image: saladPlaceholder.src,
 				},
 				"soup-bowl": {
 					name: "Soup Bowl",
 					color: "#fef5e7",
-					size: {
-						width: `${12 * scaleFactor}rem`,
-						height: `${12 * scaleFactor}rem`,
-					},
-					traySize: {
-						width: `${2.4 * scaleFactor}rem`,
-						height: `${2.4 * scaleFactor}rem`,
-					},
+					size: getSizeFromCm(measB.SOUP_BOWL_DIAMETER_CM, measB.SOUP_BOWL_DIAMETER_CM),
+					traySize: getSizeFromCm(measB.SOUP_BOWL_DIAMETER_CM * TRAY_SCALE, measB.SOUP_BOWL_DIAMETER_CM * TRAY_SCALE),
 					positionPercent: basePositions["soup-bowl"],
 					image: fruitPlaceholder.src,
 				},
 				"bread-plate": {
 					name: "Bread Plate",
 					color: "#fef3c7",
-					size: {
-						width: `${12 * scaleFactor}rem`,
-						height: `${12 * scaleFactor}rem`,
-					},
-					traySize: {
-						width: `${2.4 * scaleFactor}rem`,
-						height: `${2.4 * scaleFactor}rem`,
-					},
+					size: getSizeFromCm(measB.BREAD_PLATE_DIAMETER_CM, measB.BREAD_PLATE_DIAMETER_CM),
+					traySize: getSizeFromCm(measB.BREAD_PLATE_DIAMETER_CM * TRAY_SCALE, measB.BREAD_PLATE_DIAMETER_CM * TRAY_SCALE),
 					positionPercent: basePositions["bread-plate"],
 					image: breadPlaceholder.src,
 				},
 				"dessert-plate": {
 					name: "Dessert Plate",
 					color: "#e0e7ff",
-					size: {
-						width: `${10 * scaleFactor}rem`,
-						height: `${10 * scaleFactor}rem`,
-					},
-					traySize: {
-						width: `${2 * scaleFactor}rem`,
-						height: `${2 * scaleFactor}rem`,
-					},
+					size: getSizeFromCm(measB.DESSERT_PLATE_DIAMETER_CM, measB.DESSERT_PLATE_DIAMETER_CM),
+					traySize: getSizeFromCm(measB.DESSERT_PLATE_DIAMETER_CM * TRAY_SCALE, measB.DESSERT_PLATE_DIAMETER_CM * TRAY_SCALE),
 					positionPercent: basePositions["dessert-plate"],
 					image: saladPlaceholder.src,
 				},
 				utensils: {
 					name: "Utensils",
 					color: "#d1d5db",
-					size: {
-						width: `${6 * scaleFactor}rem`,
-						height: `${16 * scaleFactor}rem`,
-					},
-					traySize: {
-						width: `${1.2 * scaleFactor}rem`,
-						height: `${3.2 * scaleFactor}rem`,
-					},
+					size: getSizeFromCm(measB.UTENSILS_WIDTH_CM, measB.UTENSILS_HEIGHT_CM),
+					traySize: getSizeFromCm(measB.UTENSILS_WIDTH_CM * TRAY_SCALE, measB.UTENSILS_HEIGHT_CM * TRAY_SCALE),
 					positionPercent: basePositions["utensils"],
 					image: utensilPlaceholder.src,
 				},
 				"water-glass": {
 					name: "Water Glass",
 					color: "#dbeafe",
-					size: {
-						width: `${4 * scaleFactor}rem`,
-						height: `${10 * scaleFactor}rem`,
-					},
-					traySize: {
-						width: `${0.8 * scaleFactor}rem`,
-						height: `${2 * scaleFactor}rem`,
-					},
+					size: getSizeFromCm(measB.WATER_GLASS_DIAMETER_CM, measB.WATER_GLASS_DIAMETER_CM),
+					traySize: getSizeFromCm(measB.WATER_GLASS_DIAMETER_CM * TRAY_SCALE, measB.WATER_GLASS_DIAMETER_CM * TRAY_SCALE),
 					positionPercent: basePositions["water-glass"],
 					image: waterPlaceholder.src,
 				},
 				"wine-glass": {
 					name: "Wine Glass",
 					color: "#e9d5ff",
-					size: {
-						width: `${4 * scaleFactor}rem`,
-						height: `${10 * scaleFactor}rem`,
-					},
-					traySize: {
-						width: `${0.8 * scaleFactor}rem`,
-						height: `${2 * scaleFactor}rem`,
-					},
+					size: getSizeFromCm(measB.WINE_GLASS_DIAMETER_CM, measB.WINE_GLASS_DIAMETER_CM),
+					traySize: getSizeFromCm(measB.WINE_GLASS_DIAMETER_CM * TRAY_SCALE, measB.WINE_GLASS_DIAMETER_CM * TRAY_SCALE),
 					positionPercent: basePositions["wine-glass"],
 					image: winePlaceholder.src,
 				},
 				napkin: {
 					name: "Napkin",
 					color: "#f0f9ff",
-					size: {
-						width: `${8 * scaleFactor}rem`,
-						height: `${6 * scaleFactor}rem`,
-					},
-					traySize: {
-						width: `${1.6 * scaleFactor}rem`,
-						height: `${1.2 * scaleFactor}rem`,
-					},
+					size: getSizeFromCm(measB.NAPKIN_WIDTH_CM, measB.NAPKIN_HEIGHT_CM),
+					traySize: getSizeFromCm(measB.NAPKIN_WIDTH_CM * TRAY_SCALE, measB.NAPKIN_HEIGHT_CM * TRAY_SCALE),
 					positionPercent: basePositions["napkin"],
 					image: saltpepperPlaceholder.src,
 				},
 				"condiment-tray": {
 					name: "Condiment Tray",
 					color: "#f7fafc",
-					size: {
-						width: `${8 * scaleFactor}rem`,
-						height: `${5 * scaleFactor}rem`,
-					},
-					traySize: {
-						width: `${1.6 * scaleFactor}rem`,
-						height: `${1 * scaleFactor}rem`,
-					},
+					size: getSizeFromCm(measB.CONDIMENT_TRAY_WIDTH_CM, measB.CONDIMENT_TRAY_HEIGHT_CM),
+					traySize: getSizeFromCm(measB.CONDIMENT_TRAY_WIDTH_CM * TRAY_SCALE, measB.CONDIMENT_TRAY_HEIGHT_CM * TRAY_SCALE),
 					positionPercent: basePositions["condiment-tray"],
 					image: butterPlaceholder.src,
 				},
-			},
-		};
-
-		return itemConfigurations[trayType];
+			};
+		}
 	}, []);
 
-	// Calculate correct positions based on current drop zone size - memoized
 	const updateCorrectPositions = useCallback((): void => {
 		if (!dropZoneRef.current) return;
 
@@ -385,12 +326,8 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 
 		Object.entries(ITEMS_CONFIG).forEach(([itemId, config]) => {
 			const { xPercent, yPercent } = config.positionPercent;
-
-			// Calculate position in pixels based on current drop zone size
 			const x = (dropZoneRect.width * xPercent) / 100;
 			const y = (dropZoneRect.height * yPercent) / 100;
-
-			// Adjust for item size (center the item on the target position)
 			const itemWidthPx = parseFloat(config.size.width) * 16;
 			const itemHeightPx = parseFloat(config.size.height) * 16;
 
@@ -403,7 +340,6 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 		setCorrectPositions(newCorrectPositions);
 	}, [ITEMS_CONFIG]);
 
-	// Check orientation on mount and resize
 	useEffect(() => {
 		const checkOrientation = (): void => {
 			if (typeof window === "undefined") return;
@@ -411,11 +347,9 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 			const isLandscapeMode = window.innerWidth > window.innerHeight;
 			setIsLandscape(isLandscapeMode);
 
-			// Update config when window resizes
 			const newConfig = getBaseItemConfig(trayType);
 			setItemsConfig(newConfig);
 
-			// Delay position calculation to ensure DOM has updated
 			setTimeout(() => {
 				updateCorrectPositions();
 			}, 100);
@@ -429,69 +363,45 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 
 			return () => {
 				window.removeEventListener("resize", checkOrientation);
-				window.removeEventListener(
-					"orientationchange",
-					checkOrientation
-				);
+				window.removeEventListener("orientationchange", checkOrientation);
 			};
 		}
 	}, [trayType, getBaseItemConfig, updateCorrectPositions]);
 
-	// Initialize items config on mount
 	useEffect(() => {
 		const initialConfig = getBaseItemConfig(trayType);
 		setItemsConfig(initialConfig);
 	}, [trayType, getBaseItemConfig]);
 
-	// Update correct positions when drop zone is ready
 	useEffect(() => {
 		if (dropZoneRef.current && Object.keys(ITEMS_CONFIG).length > 0) {
 			updateCorrectPositions();
 		}
 	}, [ITEMS_CONFIG, updateCorrectPositions]);
 
-	const handleDragStart = (
-		e: React.DragEvent<HTMLDivElement>,
-		itemId: string
-	): void => {
+	const handleDragStart = (e: React.DragEvent<HTMLDivElement>, itemId: string): void => {
 		setDraggedItem(itemId);
 		e.dataTransfer.effectAllowed = "move";
 	};
 
-	const handleTouchStart = (
-		e: React.TouchEvent<HTMLDivElement>,
-		itemId: string
-	): void => {
+	const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>, itemId: string): void => {
 		setDraggedItem(itemId);
 		e.preventDefault();
-
-		// Store initial touch position for drag calculation
-		const touch = e.touches[0];
-		setTouchOffset({
-			x: touch.clientX,
-			y: touch.clientY,
-		});
 	};
 
 	const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>): void => {
 		e.preventDefault();
-
-		if (!draggedItem) return;
+		if (!draggedItem || !dropZoneRef.current) return;
 
 		const touch = e.touches[0];
 		const config = ITEMS_CONFIG[draggedItem];
-
-		if (!dropZoneRef.current) return;
-
 		const dropZoneRect = dropZoneRef.current.getBoundingClientRect();
 		const widthPx = parseFloat(config.size.width) * 16;
 		const heightPx = parseFloat(config.size.height) * 16;
 
-		// Calculate new position
 		let x = touch.clientX - dropZoneRect.left - widthPx / 2;
 		let y = touch.clientY - dropZoneRect.top - heightPx / 2;
 
-		// Constrain to drop zone boundaries
 		const maxX = dropZoneRect.width - widthPx;
 		const minX = 0;
 		x = Math.max(minX, Math.min(maxX, x));
@@ -500,7 +410,6 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 		const minY = 0;
 		y = Math.max(minY, Math.min(maxY, y));
 
-		// Update position in real-time during drag
 		setPlacedItems((prev) => ({
 			...prev,
 			[draggedItem]: { x, y },
@@ -511,10 +420,8 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 		if (!draggedItem || !tableSurfaceRef.current) return;
 
 		const touch = e.changedTouches[0];
-		const tableSurfaceRect =
-			tableSurfaceRef.current.getBoundingClientRect();
+		const tableSurfaceRect = tableSurfaceRef.current.getBoundingClientRect();
 
-		// Check if final position is within table surface
 		const isWithinTableSurface =
 			touch.clientX >= tableSurfaceRect.left &&
 			touch.clientX <= tableSurfaceRect.right &&
@@ -522,7 +429,6 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 			touch.clientY <= tableSurfaceRect.bottom;
 
 		if (!isWithinTableSurface) {
-			// Remove from placed items if dropped outside table surface
 			setPlacedItems((prev) => {
 				const newItems = { ...prev };
 				delete newItems[draggedItem];
@@ -541,19 +447,15 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 
 	const handleDrop = (e: React.DragEvent<HTMLDivElement>): void => {
 		e.preventDefault();
-		if (!draggedItem || !dropZoneRef.current || !tableSurfaceRef.current)
-			return;
+		if (!draggedItem || !dropZoneRef.current || !tableSurfaceRef.current) return;
 
 		const dropZoneRect = dropZoneRef.current.getBoundingClientRect();
-		const tableSurfaceRect =
-			tableSurfaceRef.current.getBoundingClientRect();
+		const tableSurfaceRect = tableSurfaceRef.current.getBoundingClientRect();
 		const config = ITEMS_CONFIG[draggedItem];
 
-		// Convert rem to pixels for positioning (assuming 1rem = 16px)
 		const widthPx = parseFloat(config.size.width) * 16;
 		const heightPx = parseFloat(config.size.height) * 16;
 
-		// Check if the drop happened within the table surface boundaries
 		const isWithinTableSurface =
 			e.clientX >= tableSurfaceRect.left &&
 			e.clientX <= tableSurfaceRect.right &&
@@ -561,27 +463,22 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 			e.clientY <= tableSurfaceRect.bottom;
 
 		if (isWithinTableSurface) {
-			// Calculate position relative to the drop zone (for positioning)
 			let x = e.clientX - dropZoneRect.left - widthPx / 2;
 			let y = e.clientY - dropZoneRect.top - heightPx / 2;
 
-			// Prevent horizontal overflow - constrain x position
 			const maxX = dropZoneRect.width - widthPx;
 			const minX = 0;
 			x = Math.max(minX, Math.min(maxX, x));
 
-			// Prevent vertical overflow - constrain y position
 			const maxY = dropZoneRect.height - heightPx;
 			const minY = 0;
 			y = Math.max(minY, Math.min(maxY, y));
 
-			// Place item at constrained position relative to drop zone
 			setPlacedItems((prev) => ({
 				...prev,
 				[draggedItem]: { x, y },
 			}));
 		} else {
-			// If outside table surface, remove from placed items (return to tray)
 			setPlacedItems((prev) => {
 				const newItems = { ...prev };
 				delete newItems[draggedItem];
@@ -594,21 +491,18 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 	};
 
 	const handleDragEnd = (): void => {
-		// Clean up drag state
 		if (draggedItem) {
 			setDraggedItem(null);
 		}
 	};
 
 	const calculateDistance = (pos1: Position, pos2: Position): number => {
-		return Math.sqrt(
-			Math.pow(pos1.x - pos2.x, 2) + Math.pow(pos1.y - pos2.y, 2)
-		);
+		return Math.sqrt(Math.pow(pos1.x - pos2.x, 2) + Math.pow(pos1.y - pos2.y, 2));
 	};
 
 	const checkPlacement = (): void => {
 		const results: string[] = [];
-		const tolerance = 30; // pixels tolerance for more lenient checking
+		const tolerance = 30;
 
 		Object.keys(ITEMS_CONFIG).forEach((itemId) => {
 			const placedPos = placedItems[itemId];
@@ -617,9 +511,7 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 			if (!placedPos) {
 				results.push(`❌ ${ITEMS_CONFIG[itemId].name}: Not placed`);
 			} else if (!correctPos) {
-				results.push(
-					`⚠️ ${ITEMS_CONFIG[itemId].name}: Position not calculated`
-				);
+				results.push(`⚠️ ${ITEMS_CONFIG[itemId].name}: Position not calculated`);
 			} else {
 				const distance = calculateDistance(placedPos, correctPos);
 				const xDiff = Math.round(placedPos.x - correctPos.x);
@@ -631,9 +523,7 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 					const xDirection = xDiff > 0 ? "right" : "left";
 					const yDirection = yDiff > 0 ? "down" : "up";
 					results.push(
-						`❌ ${ITEMS_CONFIG[itemId].name}: Off by ${Math.abs(
-							xDiff
-						)}px ${xDirection}, ${Math.abs(yDiff)}px ${yDirection}`
+						`❌ ${ITEMS_CONFIG[itemId].name}: Off by ${Math.abs(xDiff)}px ${xDirection}, ${Math.abs(yDiff)}px ${yDirection}`
 					);
 				}
 			}
@@ -643,11 +533,7 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 		const totalItems = Object.keys(ITEMS_CONFIG).length;
 		const score = Math.round((correctCount / totalItems) * 100);
 
-		setFeedback(
-			`Score: ${score}% (${correctCount}/${totalItems} correct)\n\n${results.join(
-				"\n"
-			)}`
-		);
+		setFeedback(`Score: ${score}% (${correctCount}/${totalItems} correct)\n\n${results.join("\n")}`);
 	};
 
 	const resetPlacement = (): void => {
@@ -664,18 +550,15 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 		setTrayType(newTrayType);
 		const newConfig = getBaseItemConfig(newTrayType);
 		setItemsConfig(newConfig);
-		// Reset all placements when switching tray types
 		setPlacedItems({});
 		setCorrectPositions({});
 		setFeedback("");
 		setShowCorrectPositions(false);
-		// Delay position calculation to ensure DOM has updated
 		setTimeout(() => {
 			updateCorrectPositions();
 		}, 100);
 	};
 
-	// Show rotation prompt for portrait mode
 	if (!isLandscape) {
 		return (
 			<div className={styles.businessClassContainer}>
@@ -699,226 +582,147 @@ const BusinessClass: React.FC<BusinessClassProps> = ({
 	return (
 		<div className={styles.businessClassContainer}>
 			<Navbar />
-
 			<div className={styles.container}>
-				{/* Header */}
 				<div className={styles.header}>
 					<div className={styles.headerContent}>
 						<div className={styles.trayTypeToggle}>
-							<span className={styles.trayTypeLabel}>
-								Tray Type:
-							</span>
+							<span className={styles.trayTypeLabel}>Tray Type:</span>
 							<div className={styles.toggleButtons}>
 								<button
 									onClick={() => handleTrayTypeChange("A")}
-									className={`${styles.toggleButton} ${
-										trayType === "A" ? styles.active : ""
-									}`}
+									className={`${styles.toggleButton} ${trayType === "A" ? styles.active : ""}`}
 								>
 									Type A
 								</button>
 								<button
 									onClick={() => handleTrayTypeChange("B")}
-									className={`${styles.toggleButton} ${
-										trayType === "B" ? styles.active : ""
-									}`}
+									className={`${styles.toggleButton} ${trayType === "B" ? styles.active : ""}`}
 								>
 									Type B
 								</button>
 							</div>
 						</div>
 					</div>
-				</div>
+				</div>				
 
-				{/* Main Content Area */}
 				<div className={styles.mainContent}>
-					{/* Drop Zone */}
 					<div className={styles.dropZoneContainer}>
-						<div
-							ref={dropZoneRef}
-							className={styles.dropZone}
-							onDragOver={handleDragOver}
-							onDrop={handleDrop}
-						>
-							{/* Table representation */}
-							<div
-								className={styles.tableSurface}
-								ref={tableSurfaceRef}
-							>
-								<div className={styles.tableSurfaceText}>
-									Table Surface
-								</div>
+						<div ref={dropZoneRef} className={styles.dropZone} onDragOver={handleDragOver} onDrop={handleDrop}>
+							<div className={styles.tableSurface} ref={tableSurfaceRef}>
+								<div className={styles.tableSurfaceText}>Table Surface</div>
 							</div>
 
-							{/* Show correct positions when toggled */}
 							{showCorrectPositions &&
-								Object.entries(correctPositions).map(
-									([itemId, position]) => {
-										const config = ITEMS_CONFIG[itemId];
-										return (
-											<div
-												key={`correct-${itemId}`}
-												className={
-													styles.correctPosition
-												}
-												style={{
-													left: `${position.x}px`,
-													top: `${position.y}px`,
-													width: config.size.width,
-													height: config.size.height,
-												}}
-											>
-												{config.name}
-											</div>
-										);
-									}
-								)}
-
-							{/* Placed Items */}
-							{Object.entries(placedItems).map(
-								([itemId, position]) => {
+								Object.entries(correctPositions).map(([itemId, position]) => {
 									const config = ITEMS_CONFIG[itemId];
 									return (
 										<div
-											key={`placed-${itemId}`}
-											className={styles.placedItem}
+											key={`correct-${itemId}`}
+											className={styles.correctPosition}
 											style={{
-												left: position.x,
-												top: position.y,
+												left: `${position.x}px`,
+												top: `${position.y}px`,
 												width: config.size.width,
 												height: config.size.height,
 											}}
-											draggable
-											onDragStart={(e) =>
-												handleDragStart(e, itemId)
-											}
-											onDragEnd={handleDragEnd}
-											onTouchStart={(e) =>
-												handleTouchStart(e, itemId)
-											}
-											onTouchMove={handleTouchMove}
-											onTouchEnd={handleTouchEnd}
-											title={config.name}
 										>
-											<Image
-												src={config.image}
-												alt={config.name}
-												className={styles.itemImage}
-												width={200}
-												height={200}
-												draggable={false}
-												unoptimized
-											/>
+											{config.name}
 										</div>
 									);
-								}
-							)}
+								})}
+
+							{Object.entries(placedItems).map(([itemId, position]) => {
+								const config = ITEMS_CONFIG[itemId];
+								return (
+									<div
+										key={`placed-${itemId}`}
+										className={styles.placedItem}
+										style={{
+											left: position.x,
+											top: position.y,
+											width: config.size.width,
+											height: config.size.height,
+										}}
+										draggable
+										onDragStart={(e) => handleDragStart(e, itemId)}
+										onDragEnd={handleDragEnd}
+										onTouchStart={(e) => handleTouchStart(e, itemId)}
+										onTouchMove={handleTouchMove}
+										onTouchEnd={handleTouchEnd}
+										title={config.name}
+									>
+										<Image
+											src={config.image}
+											alt={config.name}
+											className={styles.itemImage}
+											width={200}
+											height={200}
+											draggable={false}
+											unoptimized
+										/>
+									</div>
+								);
+							})}
 						</div>
 					</div>
 
-					{/* Control Buttons */}
 					<div className={styles.controlButtons}>
-						<button
-							onClick={checkPlacement}
-							className={`${styles.button} ${styles.submitButton}`}
-						>
+						<button onClick={checkPlacement} className={`${styles.button} ${styles.submitButton}`}>
 							Submit & Check
 						</button>
-						<button
-							onClick={resetPlacement}
-							className={`${styles.button} ${styles.resetButton}`}
-						>
+						<button onClick={resetPlacement} className={`${styles.button} ${styles.resetButton}`}>
 							Reset
 						</button>
-						<button
-							onClick={toggleCorrectPositions}
-							className={`${styles.button} ${styles.toggleButton}`}
-						>
-							{showCorrectPositions ? "Hide" : "Show"} Correct
-							Positions
+						<button onClick={toggleCorrectPositions} className={`${styles.button} ${styles.toggleButton}`}>
+							{showCorrectPositions ? "Hide" : "Show"} Correct Positions
 						</button>
 					</div>
 
-					{/* Feedback Area */}
 					{feedback && (
 						<div className={styles.feedback}>
 							<h3 className={styles.feedbackTitle}>Results:</h3>
-							<pre className={styles.feedbackText}>
-								{feedback}
-							</pre>
+							<pre className={styles.feedbackText}>{feedback}</pre>
 						</div>
 					)}
 
-					{/* Items Tray */}
 					<div className={styles.itemsTray}>
-						<h3 className={styles.trayTitle}>
-							Items Tray 托盤物品 - Type {trayType}
-						</h3>
+						<h3 className={styles.trayTitle}>Items Tray 托盘物品 - Type {trayType}</h3>
 						<div className={styles.trayItems}>
-							{Object.entries(ITEMS_CONFIG).map(
-								([itemId, config]) => {
-									const isPlaced = placedItems[itemId];
-									return (
-										<div
-											key={itemId}
-											className={`${styles.trayItem} ${
-												isPlaced ? styles.placed : ""
-											}`}
-											style={{
-												width: config.traySize.width,
-												height: config.traySize.height,
-											}}
-											draggable={!isPlaced}
-											onDragStart={(e) =>
-												!isPlaced &&
-												handleDragStart(e, itemId)
-											}
-											onDragEnd={handleDragEnd}
-											onTouchStart={(e) =>
-												!isPlaced &&
-												handleTouchStart(e, itemId)
-											}
-											onTouchMove={
-												!isPlaced
-													? handleTouchMove
-													: undefined
-											}
-											onTouchEnd={
-												!isPlaced
-													? handleTouchEnd
-													: undefined
-											}
-											onMouseEnter={() =>
-												setHoveredItem(itemId)
-											}
-											onMouseLeave={() =>
-												setHoveredItem(null)
-											}
-											title={config.name}
-										>
-											<Image
-												src={config.image}
-												alt={config.name}
-												className={styles.itemImage}
-												width={100}
-												height={100}
-												draggable={false}
-												unoptimized
-											/>
-											{hoveredItem === itemId &&
-												!isPlaced && (
-													<div
-														className={
-															styles.itemTooltip
-														}
-													>
-														{config.name}
-													</div>
-												)}
-										</div>
-									);
-								}
-							)}
+							{Object.entries(ITEMS_CONFIG).map(([itemId, config]) => {
+								const isPlaced = placedItems[itemId];
+								return (
+									<div
+										key={itemId}
+										className={`${styles.trayItem} ${isPlaced ? styles.placed : ""}`}
+										style={{
+											width: config.traySize.width,
+											height: config.traySize.height,
+										}}
+										draggable={!isPlaced}
+										onDragStart={(e) => !isPlaced && handleDragStart(e, itemId)}
+										onDragEnd={handleDragEnd}
+										onTouchStart={(e) => !isPlaced && handleTouchStart(e, itemId)}
+										onTouchMove={!isPlaced ? handleTouchMove : undefined}
+										onTouchEnd={!isPlaced ? handleTouchEnd : undefined}
+										onMouseEnter={() => setHoveredItem(itemId)}
+										onMouseLeave={() => setHoveredItem(null)}
+										title={config.name}
+									>
+										<Image
+											src={config.image}
+											alt={config.name}
+											className={styles.itemImage}
+											width={100}
+											height={100}
+											draggable={false}
+											unoptimized
+										/>
+										{hoveredItem === itemId && !isPlaced && (
+											<div className={styles.itemTooltip}>{config.name}</div>
+										)}
+									</div>
+								);
+							})}
 						</div>
 					</div>
 				</div>

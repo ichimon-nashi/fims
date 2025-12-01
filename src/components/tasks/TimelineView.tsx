@@ -78,20 +78,19 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 		});
 	};
 
-	// FIXED: Improved task position calculation with proper date handling and inclusive end dates
 	const getFixedTaskPosition = (startDate: string, endDate: string) => {
 		if (!dateRange || dateRange.length === 0) return { left: '0px', width: '0px' };
 
-		// Parse dates without timezone issues - ensure we're working with local dates
+		// Parse dates without timezone issues
 		const parseDate = (dateStr: string) => {
 			const parts = dateStr.split('-');
 			const year = parseInt(parts[0]);
-			const month = parseInt(parts[1]) - 1; // JavaScript months are 0-based
+			const month = parseInt(parts[1]) - 1;
 			const day = parseInt(parts[2]);
 			return new Date(year, month, day);
 		};
 
-		// FIXED: Normalize dates to midnight to avoid time component issues
+		// Normalize dates to midnight to avoid time component issues
 		const normalizeToMidnight = (date: Date) => {
 			return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 		};

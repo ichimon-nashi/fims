@@ -5,7 +5,7 @@ import { verifyToken, extractTokenFromHeader, hashPassword } from "@/lib/auth";
 
 export async function GET(
 	request: NextRequest,
-	{ params }: { params: Promise<{ id: string }> } // Changed this line
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
 		const token = extractTokenFromHeader(
@@ -20,7 +20,7 @@ export async function GET(
 		}
 
 		const decoded = verifyToken(token);
-		const { id } = await params; // This line is correct
+		const { id } = await params;
 
 		console.log("Looking up user with ID:", id);
 
@@ -67,7 +67,9 @@ export async function GET(
 		// Remove password hash from response
 		const { password_hash, ...userWithoutPassword } = user;
 
-		// Add employeeID for frontend compatibility
+		// IMPORTANT: Keep employee_id for oral test interface
+		// The avatar and test interface need employee_id to function properly
+		// Always include both employee_id and employeeID for compatibility
 		userWithoutPassword.employeeID = userWithoutPassword.employee_id;
 
 		// Hide sensitive fields based on auth level
@@ -79,13 +81,12 @@ export async function GET(
 			delete userWithoutPassword.authentication_level;
 		}
 
-		// Hide employee_id unless level 99 (admin only)
-		if (decoded.authLevel < 99) {
-			delete userWithoutPassword.employee_id;
-		} else {
-			// Keep both formats for high-level users
-			userWithoutPassword.employeeID = userWithoutPassword.employee_id;
-		}
+		// NOTE: employee_id is now always visible for all auth levels
+		// This is necessary for:
+		// 1. Avatar loading in test interface
+		// 2. Roster management
+		// 3. Test result tracking
+		// Employee ID is not sensitive information in this context
 
 		return NextResponse.json(userWithoutPassword);
 	} catch (error: any) {
@@ -102,7 +103,7 @@ export async function GET(
 
 export async function PUT(
 	request: NextRequest,
-	{ params }: { params: Promise<{ id: string }> } // Changed this line
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
 		const token = extractTokenFromHeader(
@@ -125,7 +126,7 @@ export async function PUT(
 			);
 		}
 
-		const { id } = await params; // This line is correct
+		const { id } = await params;
 		const updateData = await request.json();
 
 		console.log(
@@ -166,7 +167,6 @@ export async function PUT(
 		const { data: updatedUser, error } = await supabase
 			.from("users")
 			.update(updateData)
-			.eq("id", id)
 			.select("*")
 			.single();
 
@@ -203,7 +203,7 @@ export async function PUT(
 
 export async function DELETE(
 	request: NextRequest,
-	{ params }: { params: Promise<{ id: string }> } // Changed this line
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
 		const token = extractTokenFromHeader(
@@ -226,7 +226,7 @@ export async function DELETE(
 			);
 		}
 
-		const { id } = await params; // This line is correct
+		const { id } = await params;
 
 		const supabase = await createClient();
 		const { error } = await supabase.from("users").delete().eq("id", id);

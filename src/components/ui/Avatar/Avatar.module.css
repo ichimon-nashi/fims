@@ -9,6 +9,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	background: #e2e8f0;
 }
 
 .avatar:hover {
@@ -20,21 +21,26 @@
 .small {
 	width: 2.5rem;
 	height: 2.5rem;
+	min-width: 2.5rem;
+	min-height: 2.5rem;
 }
 
 .medium {
 	width: 3.75rem;
 	height: 3.75rem;
+	min-width: 3.75rem;
+	min-height: 3.75rem;
 }
 
 .large {
-	width: 5rem;
-	height: 5rem;
+	width: 6rem;
+	height: 6rem;
+	min-width: 6rem;
+	min-height: 6rem;
 }
 
 /* Avatar image styling */
 .avatarImage {
-	width: 100%;
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
@@ -45,7 +51,7 @@
 
 /* Letter avatar fallback styling */
 .letterAvatar {
-	background: linear-gradient(135deg, #ff7b7b 0%, #ff9a9e 100%);
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -64,7 +70,7 @@
 }
 
 .large.letterAvatar {
-	font-size: 2rem;
+	font-size: 2.5rem;
 }
 
 /* Loading state shimmer effect */
@@ -98,18 +104,6 @@
 	}
 }
 
-/* Special styling for navigation drawer */
-.avatar.drawerAvatar {
-	backdrop-filter: blur(10px);
-	border: 2px solid rgba(255, 255, 255, 0.3);
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-.avatar.drawerAvatar:hover {
-	border-color: rgba(255, 255, 255, 0.5);
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
 /* High contrast mode support */
 @media (prefers-contrast: high) {
 	.avatar {
@@ -137,21 +131,63 @@
 	}
 }
 
-/* Mobile responsive adjustments */
-@media (max-width: 768px) {
+/* Tablet landscape (iPad: 768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+	.small {
+		width: 2.25rem;
+		height: 2.25rem;
+		min-width: 2.25rem;
+		min-height: 2.25rem;
+	}
+
+	.medium {
+		width: 3.5rem;
+		height: 3.5rem;
+		min-width: 3.5rem;
+		min-height: 3.5rem;
+	}
+
+	.large {
+		width: 5.5rem;
+		height: 5.5rem;
+		min-width: 5.5rem;
+		min-height: 5.5rem;
+	}
+
+	.small.letterAvatar {
+		font-size: 0.8rem;
+	}
+
+	.medium.letterAvatar {
+		font-size: 1.4rem;
+	}
+
+	.large.letterAvatar {
+		font-size: 2.2rem;
+	}
+}
+
+/* Mobile (iPhone: up to 767px) */
+@media (max-width: 767px) {
 	.small {
 		width: 2rem;
 		height: 2rem;
+		min-width: 2rem;
+		min-height: 2rem;
 	}
 
 	.medium {
 		width: 3rem;
 		height: 3rem;
+		min-width: 3rem;
+		min-height: 3rem;
 	}
 
 	.large {
-		width: 4rem;
-		height: 4rem;
+		width: 4.5rem;
+		height: 4.5rem;
+		min-width: 4.5rem;
+		min-height: 4.5rem;
 	}
 
 	.small.letterAvatar {
@@ -159,10 +195,10 @@
 	}
 
 	.medium.letterAvatar {
-		font-size: 1.25rem;
+		font-size: 1.2rem;
 	}
 
 	.large.letterAvatar {
-		font-size: 1.75rem;
+		font-size: 1.8rem;
 	}
 }

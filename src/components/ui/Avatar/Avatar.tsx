@@ -1,7 +1,7 @@
-// src/components/ui/Avatar/Avatar.tsx - Fixed version with correct URL handling
+// src/components/ui/Avatar/Avatar.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import styles from "./Avatar.module.css";
 
@@ -20,8 +20,16 @@ const Avatar = ({
 }: AvatarProps) => {
 	const [imageError, setImageError] = useState(false);
 	const [fallbackError, setFallbackError] = useState(false);
+	const [isLoading, setIsLoading] = useState(true);
 
-	// Fixed URL construction - using your actual Supabase URL
+	// Reset states when employeeId changes
+	useEffect(() => {
+		setImageError(false);
+		setFallbackError(false);
+		setIsLoading(true);
+	}, [employeeId]);
+
+	// Construct URLs - using your actual Supabase URL
 	const avatarUrl = employeeId
 		? `https://rhdpkxkmugimtlbdizfp.supabase.co/storage/v1/object/public/avatars/${employeeId}.png`
 		: null;
@@ -30,11 +38,23 @@ const Avatar = ({
 	const handleImageError = () => {
 		console.log(`Failed to load avatar for ${employeeId}: ${avatarUrl}`);
 		setImageError(true);
+		setIsLoading(false);
 	};
 
 	const handleFallbackError = () => {
 		console.log(`Failed to load fallback avatar: ${fallbackUrl}`);
 		setFallbackError(true);
+		setIsLoading(false);
+	};
+
+	const handleImageLoad = () => {
+		console.log(`Successfully loaded avatar for ${employeeId}`);
+		setIsLoading(false);
+	};
+
+	const handleFallbackLoad = () => {
+		console.log(`Successfully loaded fallback avatar`);
+		setIsLoading(false);
 	};
 
 	const getInitials = (name: string) => {
@@ -89,25 +109,16 @@ const Avatar = ({
 	const getSizeDimensions = (size: string) => {
 		switch (size) {
 			case "small":
-				return { width: 32, height: 32 };
+				return { width: 40, height: 40 };
 			case "large":
-				return { width: 80, height: 80 };
+				return { width: 96, height: 96 };
 			case "medium":
 			default:
-				return { width: 48, height: 48 };
+				return { width: 60, height: 60 };
 		}
 	};
 
 	const { width, height } = getSizeDimensions(size);
-
-	// Debug logging
-	console.log(`Avatar for ${employeeId}:`, {
-		employeeId,
-		fullName,
-		avatarUrl,
-		imageError,
-		fallbackError,
-	});
 
 	// If no employee ID, show initials immediately
 	if (!employeeId) {
@@ -145,34 +156,28 @@ const Avatar = ({
 			{!imageError ? (
 				<Image
 					src={avatarUrl}
-					alt={`${fullName}的頭像`}
+					alt={`${fullName} avatar`}
 					className={styles.avatarImage}
 					width={width}
 					height={height}
 					onError={handleImageError}
-					onLoad={() =>
-						console.log(
-							`Successfully loaded avatar for ${employeeId}`
-						)
-					}
+					onLoad={handleImageLoad}
 					priority={false}
 					unoptimized={true}
 				/>
-			) : (
+			) : !fallbackError ? (
 				<Image
 					src={fallbackUrl}
-					alt={`${fullName}的預設頭像`}
+					alt={`${fullName} default avatar`}
 					className={styles.avatarImage}
 					width={width}
 					height={height}
 					onError={handleFallbackError}
-					onLoad={() =>
-						console.log(`Successfully loaded fallback avatar`)
-					}
+					onLoad={handleFallbackLoad}
 					priority={false}
 					unoptimized={true}
 				/>
-			)}
+			) : null}
 		</div>
 	);
 };

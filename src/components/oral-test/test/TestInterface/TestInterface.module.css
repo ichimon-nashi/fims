@@ -135,7 +135,7 @@ input.form-input:focus::placeholder,
 	display: flex;
 	flex-direction: column;
 	gap: 0.5rem;
-	height: 100vh;
+	height: 100%;
 	min-height: 0;
 	overflow: hidden;
 }
@@ -144,40 +144,39 @@ input.form-input:focus::placeholder,
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	gap: 1rem;
+	gap: 0.75rem;
 	background: white;
-	border-radius: 12px;
-	padding: 0.75rem;
+	border-radius: 10px;
+	padding: 0.6rem;
 	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 	border: 1px solid #e2e8f0;
 	flex-shrink: 0;
-	height: auto;
 }
 
 .progressInfo {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 0.25rem;
+	gap: 0.2rem;
 	padding: 0.5rem 0.75rem;
 	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 	border-radius: 10px;
 	color: white;
-	min-width: 140px;
+	min-width: 110px;
 	flex-shrink: 0;
 }
 
 .questionLabel {
-	font-size: 3.5rem;
+	font-size: 2.5rem;
 	font-weight: bold;
 	text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 	line-height: 1;
 }
 
 .scoreInfo {
-	font-size: 0.8rem;
+	font-size: 0.7rem;
 	font-weight: 600;
-	opacity: 0.9;
+	opacity: 0.95;
 	text-align: center;
 }
 
@@ -187,43 +186,63 @@ input.form-input:focus::placeholder,
 	flex: 1;
 	min-height: 0;
 	overflow: hidden;
-	height: fit-content;
 }
 
 .questionCard {
 	background: white;
-	border-radius: 12px;
-	padding: 0.75rem;
+	border-radius: 10px;
+	padding: 0.85rem;
 	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 	border: 1px solid #e2e8f0;
 	border-left: 6px solid #667eea;
 	flex: 2;
 	display: flex;
 	flex-direction: column;
+	gap: 0.65rem;
 	min-height: 0;
 	overflow: hidden;
 }
 
+.questionHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 0.75rem;
+	flex-shrink: 0;
+}
+
 .questionTitle {
-	font-size: 1.5rem;
-	font-weight: bold;
+	flex: 1;
+	font-size: 1.4rem;
+	font-weight: 700;
 	color: #2d3748;
-	margin-bottom: 0.75rem;
-	line-height: 1.3;
-	padding: 1rem;
+	line-height: 1.25;
+	padding: 0.85rem 1rem;
 	background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
 	border-radius: 8px;
 	border: 1px solid #e2e8f0;
-	flex: 1;
 	overflow-y: auto;
-	min-height: 80px;
+	max-height: 120px;
+	display: flex;
+	align-items: center;
+}
+
+.questionNumber {
+	background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+	color: white;
+	padding: 0.4rem 0.8rem;
+	border-radius: 8px;
+	font-size: 0.8rem;
+	font-weight: 600;
+	white-space: nowrap;
+	box-shadow: 0 2px 8px rgba(66, 153, 225, 0.3);
+	flex-shrink: 0;
 }
 
 .questionDetails {
 	display: grid;
 	gap: 0.5rem;
-	grid-template-columns: repeat(4, 1fr);
-	margin-bottom: 0.5rem;
+	grid-template-columns: repeat(2, 1fr);
 	flex-shrink: 0;
 }
 
@@ -232,40 +251,57 @@ input.form-input:focus::placeholder,
 	background: #f8fafc;
 	border-radius: 6px;
 	border: 1px solid #e2e8f0;
-	font-size: 0.8rem;
+	font-size: 0.75rem;
 	text-align: center;
 }
 
 .detailItem strong {
 	color: #667eea;
 	display: block;
-	margin-bottom: 0.25rem;
-	font-size: 0.7rem;
+	margin-bottom: 0.2rem;
+	font-size: 0.65rem;
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
+}
+
+.rightPanel {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.85rem;
+	background: white;
+	border-radius: 10px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+	border: 1px solid #e2e8f0;
+	min-width: 280px;
+	max-width: 320px;
 }
 
 .timerSection {
 	display: flex;
 	justify-content: center;
+	align-items: center;
+	flex: 1;
+	min-height: 200px;
 }
 
 .answerButtons {
 	display: flex;
-	flex-direction: row;
+	flex-direction: column;
 	gap: 0.75rem;
-	justify-content: center;
 	width: 100%;
-	max-width: 250px;
 }
 
 .answerButtons button {
-	padding: 1rem 1.5rem;
-	font-size: 1.1rem;
+	padding: 1.1rem 1.75rem;
+	font-size: 1.15rem;
 	font-weight: bold;
 	border-radius: 10px;
 	width: 100%;
-	min-height: 50px;
+	min-height: 56px;
 	transition: all 0.3s ease;
 }
 
@@ -354,54 +390,6 @@ input.form-input:focus::placeholder,
 	justify-content: center;
 }
 
-.questionHeader {
-	display: flex;
-	justify-content: space-between;
-	align-items: flex-start;
-	flex-direction: column-reverse;
-	margin-bottom: 0.5rem;
-	gap: 0.75rem;
-}
-
-.questionTitle {
-	flex: 1;
-	width: 100%;
-	margin: 0;
-	font-size: 1.5rem;
-	font-weight: 600;
-	color: #2d3748;
-	line-height: 1.3;
-}
-
-.questionNumber {
-	background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
-	color: white;
-	padding: 0.4rem 0.8rem;
-	border-radius: 6px;
-	font-size: 0.8rem;
-	font-weight: 600;
-	white-space: nowrap;
-	box-shadow: 0 2px 8px rgba(66, 153, 225, 0.3);
-	flex-shrink: 0;
-}
-
-.rightPanel {
-	flex: 1;
-	display: flex;
-	flex-direction: column;
-	justify-content: space-around;
-	align-items: center;
-	gap: 0.75rem;
-	padding: 0.75rem;
-	background: white;
-	border-radius: 12px;
-	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-	border: 1px solid #e2e8f0;
-	min-width: 280px;
-	max-width: 320px;
-	overflow: hidden;
-}
-
 @keyframes fadeIn {
 	from {
 		opacity: 0;
@@ -422,437 +410,113 @@ input.form-input:focus::placeholder,
 	}
 }
 
-/* Tablet-specific improvements */
-@media (min-width: 769px) and (max-width: 1024px) {
-	/* Full viewport usage for tablets */
+/* Tablet landscape (iPad: 768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
 	.testInterface {
-		max-width: none;
-		padding: 0.75rem;
-		height: calc(100vh - 40px);
+		padding: 0.5rem;
+		height: 100vh;
 	}
 
-	/* Improved examinee lookup for tablets */
-	.examineeLookup {
-		min-height: calc(100vh - 80px);
-		padding: 2rem 1rem 1rem 1rem;
-		align-items: flex-start;
-	}
-
-	.lookupCard {
-		max-width: 750px;
-		padding: 2.5rem;
-		margin-top: 1.5rem;
-	}
-
-	.lookupCard h2 {
-		font-size: 2rem;
-		margin-bottom: 1.75rem;
-	}
-
-	.inputGroup {
-		margin-bottom: 1.75rem;
-	}
-
-	.inputGroup input,
-	.form-input,
-	#examineeId {
-		font-size: 1rem;
-		padding: 1rem 1.25rem;
-		min-height: 48px;
-	}
-
-	.lookupCard .btn {
-		min-height: 48px;
-		padding: 0.875rem 2rem;
-		font-size: 1rem;
-	}
-
-	/* Optimized test session layout */
 	.testSession {
-		gap: 0.75rem;
-		height: 100%;
-		display: flex;
-		flex-direction: column;
+		gap: 0.5rem;
 	}
 
-	/* Compact session header */
 	.sessionHeader {
-		padding: 0.875rem;
-		gap: 1rem;
-		flex-shrink: 0;
+		padding: 0.6rem;
+		gap: 0.65rem;
 	}
 
-	/* Progress info stays compact */
 	.progressInfo {
-		min-width: 130px;
-		padding: 0.5rem 0.75rem;
-		gap: 0.2rem;
-		flex-shrink: 0;
+		min-width: 100px;
+		padding: 0.5rem 0.7rem;
 	}
 
 	.questionLabel {
-		font-size: 2.75rem;
+		font-size: 2.25rem;
 	}
 
 	.scoreInfo {
-		font-size: 0.75rem;
-	}
-
-	/* Question area - flexible two-column layout */
-	.questionArea {
-		display: flex;
-		gap: 0.75rem;
-		flex: 1;
-		min-height: 0;
-	}
-
-	/* Question card - left side, takes remaining space */
-	.questionCard {
-		padding: 1rem;
-		border-left-width: 4px;
-		flex: 2;
-		display: flex;
-		flex-direction: column;
-		min-height: 0;
-	}
-
-	.questionHeader {
-		flex-direction: row;
-		justify-content: space-between;
-		align-items: flex-start;
-		margin-bottom: 0.75rem;
-		gap: 0.75rem;
-		flex-shrink: 0;
-	}
-
-	.questionTitle {
-		font-size: 1.4rem;
-		line-height: 1.3;
-		margin: 0;
-		flex: 1;
-		padding: 1.25rem;
-		margin-bottom: 0.75rem;
-		min-height: 100px;
-	}
-
-	.questionNumber {
-		font-size: 0.75rem;
-		padding: 0.35rem 0.7rem;
-		border-radius: 5px;
-		white-space: nowrap;
-		flex-shrink: 0;
-	}
-
-	/* Question details grid - compact */
-	.questionDetails {
-		grid-template-columns: repeat(2, 1fr);
-		gap: 0.5rem;
-		margin-bottom: 0.5rem;
-		flex-shrink: 0;
-	}
-
-	.detailItem {
-		padding: 0.4rem;
-		font-size: 0.75rem;
-		text-align: center;
-	}
-
-	.detailItem strong {
 		font-size: 0.65rem;
-		margin-bottom: 0.2rem;
-	}
-
-	/* Right panel - compact but functional */
-	.rightPanel {
-		flex: 1;
-		min-width: 260px;
-		max-width: 300px;
-		padding: 0.75rem;
-		gap: 0.75rem;
-		justify-content: space-around;
-	}
-
-	/* Answer buttons - stack vertically in right panel */
-	.answerButtons {
-		gap: 0.75rem;
-		/* flex-direction: column; */
-		flex-direction: row;
-		width: 100%;
-		max-width: 220px;
-	}
-
-	.answerButtons button {
-		min-height: 45px;
-		padding: 0.75rem 1.25rem;
-		font-size: 1rem;
-		width: 100%;
-	}
-
-	/* Improved test complete screen */
-	.testComplete {
-		min-height: calc(100vh - 70px);
-		padding: 2rem 1rem;
-	}
-
-	.completeCard {
-		max-width: 700px;
-		padding: 3rem;
-	}
-
-	.completeCard h2 {
-		font-size: 2rem;
-	}
-
-	.completeCard .btn {
-		min-height: 48px;
-		padding: 0.875rem 2rem;
-		font-size: 1rem;
-	}
-
-	/* Better modal sizing */
-	.modalContent {
-		max-width: 500px;
-		padding: 2rem;
-		margin: 2rem;
-	}
-
-	.modalContent h3 {
-		font-size: 1.3rem;
-	}
-
-	.modalButtons {
-		gap: 1rem;
-	}
-
-	.modalButtons .btn {
-		min-height: 48px;
-		padding: 0.75rem 1.5rem;
-		font-size: 1rem;
-		min-width: 120px;
-	}
-}
-
-/* Desktop responsive adjustments */
-@media (min-width: 1025px) {
-	.testInterface {
-		max-width: none;
-		padding: 0.75rem;
-		height: 100vh;
-		overflow: hidden;
-	}
-
-	.testSession {
-		height: 100vh;
-		gap: 0.75rem;
-		overflow: hidden;
-	}
-
-	.sessionHeader {
-		padding: 1rem;
-		gap: 1.5rem;
 	}
 
 	.questionArea {
-		display: flex;
-		gap: 1rem;
-		flex: 1;
-		min-height: 0;
-		overflow: hidden;
+		gap: 0.65rem;
 	}
 
 	.questionCard {
-		flex: 2.5;
-		padding: 1rem;
-		height: max-content;
-		overflow: hidden;
+		padding: 0.75rem;
 	}
 
 	.questionTitle {
-		font-size: 1.75rem;
-		padding: 1.25rem;
-		margin-bottom: 0.75rem;
-		min-height: 100px;
+		font-size: 1.25rem;
+		padding: 0.75rem 0.9rem;
+		max-height: 100px;
 	}
 
 	.questionDetails {
 		grid-template-columns: repeat(4, 1fr);
-		gap: 0.75rem;
+		gap: 0.45rem;
 	}
 
 	.detailItem {
-		padding: 0.75rem;
-		font-size: 0.9rem;
+		padding: 0.45rem;
+		font-size: 0.7rem;
 	}
 
 	.detailItem strong {
-		font-size: 0.8rem;
-		margin-bottom: 0.3rem;
+		font-size: 0.6rem;
 	}
 
 	.questionNumber {
-		padding: 0.5rem 1rem;
-		font-size: 0.9rem;
-		border-radius: 8px;
-	}
-
-	.questionLabel {
-		font-size: 3rem;
-	}
-
-	.progressInfo {
-		min-width: 160px;
-		padding: 0.75rem 1rem;
-	}
-
-	.scoreInfo {
-		font-size: 0.9rem;
+		padding: 0.35rem 0.7rem;
+		font-size: 0.75rem;
 	}
 
 	.rightPanel {
-		flex: 1;
-		min-width: 18.75rem;
-		max-width: 21.875rem;
-		padding: 1rem;
-		gap: 1rem;
-		height: max-content;
-		justify-content: flex-start;
-		overflow: hidden;
-	}
-
-	.answerButtons {
-		gap: 1rem;
+		min-width: 250px;
 		max-width: 280px;
+		padding: 0.75rem;
+		gap: 0.65rem;
 	}
 
-	.answerButtons button {
-		min-height: 55px;
-		font-size: 1.15rem;
-		padding: 1.1rem 1.75rem;
-	}
-}
-
-/* Large desktop adjustments */
-@media (min-width: 1400px) {
-	.questionArea {
-		gap: 1.25rem;
-	}
-
-	.questionCard {
-		padding: 1.25rem;
-	}
-
-	.questionTitle {
-		font-size: 2rem;
-		padding: 1.5rem;
-		min-height: 120px;
-	}
-
-	.questionDetails {
-		gap: 1rem;
-		margin-bottom: 0.75rem;
-	}
-
-	.detailItem {
-		padding: 1rem;
-		font-size: 1rem;
-		font-weight: 500;
-		border-radius: 8px;
-	}
-
-	.detailItem strong {
-		font-size: 0.9rem;
-		margin-bottom: 0.4rem;
-	}
-
-	.questionNumber {
-		padding: 0.6rem 1.2rem;
-		font-size: 1rem;
-		border-radius: 10px;
-	}
-
-	.questionLabel {
-		font-size: 3.5rem;
-	}
-
-	.progressInfo {
-		min-width: 180px;
-		padding: 1rem 1.25rem;
-	}
-
-	.scoreInfo {
-		font-size: 1rem;
-	}
-
-	.rightPanel {
-		max-width: 380px;
-		padding: 1.25rem;
-		gap: 1.25rem;
+	.timerSection {
+		min-height: 180px;
 	}
 
 	.answerButtons {
-		max-width: 320px;
-		gap: 1.25rem;
+		gap: 0.65rem;
 	}
 
 	.answerButtons button {
-		min-height: 60px;
-		font-size: 1.2rem;
-		padding: 1.25rem 2rem;
+		min-height: 50px;
+		font-size: 1.05rem;
+		padding: 0.95rem 1.5rem;
 	}
 }
 
-/* Mobile responsive adjustments */
-@media (max-width: 768px) {
+/* Desktop (MacBook Air: 1025px - 1439px) - OPTIMIZED FOR VIEWPORT FIT */
+@media (min-width: 1025px) and (max-width: 1439px) {
 	.testInterface {
 		padding: 0.5rem;
 		height: 100vh;
-	}
-
-	.examineeLookup {
-		min-height: calc(100vh - 80px);
-		padding: 1.5rem 0.75rem 1rem 0.75rem;
-		align-items: flex-start;
-	}
-
-	.lookupCard {
-		padding: 2rem 1.5rem;
-		max-width: 95%;
-		margin: 1rem auto 0 auto;
-	}
-
-	.lookupCard h2 {
-		font-size: 1.75rem;
-		margin-bottom: 1.5rem;
-	}
-
-	.inputGroup {
-		margin-bottom: 1.5rem;
-	}
-
-	.form-input,
-	input.form-input,
-	#examineeId,
-	.inputGroup input {
-		padding: 0.875rem 1rem;
-		font-size: 0.95rem;
+		overflow: hidden;
 	}
 
 	.testSession {
 		gap: 0.5rem;
-		height: 100vh;
+		height: 100%;
+		overflow: hidden;
 	}
 
 	.sessionHeader {
-		padding: 0.75rem;
-		flex-direction: column;
-		text-align: center;
+		padding: 0.6rem;
 		gap: 0.75rem;
+		flex-shrink: 0;
 	}
 
 	.progressInfo {
-		min-width: 120px;
-		padding: 0.5rem;
-		gap: 0.2rem;
+		min-width: 110px;
+		padding: 0.5rem 0.75rem;
 	}
 
 	.questionLabel {
@@ -864,8 +528,199 @@ input.form-input:focus::placeholder,
 	}
 
 	.questionArea {
-		flex-direction: column;
+		gap: 0.75rem;
+		flex: 1;
+		min-height: 0;
+		overflow: hidden;
+	}
+
+	.questionCard {
+		padding: 0.85rem;
+		overflow: hidden;
+	}
+
+	.questionTitle {
+		font-size: 1.4rem;
+		padding: 0.85rem 1rem;
+		max-height: 120px;
+		line-height: 1.25;
+	}
+
+	.questionDetails {
 		gap: 0.5rem;
+	}
+
+	.detailItem {
+		padding: 0.5rem;
+		font-size: 0.75rem;
+	}
+
+	.detailItem strong {
+		font-size: 0.65rem;
+	}
+
+	.questionNumber {
+		padding: 0.4rem 0.8rem;
+		font-size: 0.8rem;
+	}
+
+	.rightPanel {
+		min-width: 280px;
+		max-width: 320px;
+		padding: 0.85rem;
+		gap: 0.75rem;
+		height: 100%;
+		overflow: hidden;
+	}
+
+	.timerSection {
+		flex: 1;
+		min-height: 200px;
+		max-height: 260px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.answerButtons {
+		gap: 0.75rem;
+		flex-shrink: 0;
+	}
+
+	.answerButtons button {
+		min-height: 56px;
+		font-size: 1.15rem;
+		padding: 1.1rem 1.75rem;
+	}
+}
+
+/* Wide screen (1440px+) */
+@media (min-width: 1440px) {
+	.testInterface {
+		padding: 1rem;
+	}
+
+	.sessionHeader {
+		padding: 1rem;
+		gap: 1.25rem;
+	}
+
+	.progressInfo {
+		min-width: 140px;
+		padding: 0.75rem 1rem;
+	}
+
+	.questionLabel {
+		font-size: 3.5rem;
+	}
+
+	.scoreInfo {
+		font-size: 0.85rem;
+	}
+
+	.questionArea {
+		gap: 1.25rem;
+	}
+
+	.questionCard {
+		padding: 1.5rem;
+	}
+
+	.questionTitle {
+		font-size: 1.85rem;
+		padding: 1.35rem 1.5rem;
+		max-height: 160px;
+	}
+
+	.questionDetails {
+		gap: 0.85rem;
+	}
+
+	.detailItem {
+		padding: 0.85rem;
+		font-size: 0.9rem;
+	}
+
+	.detailItem strong {
+		font-size: 0.75rem;
+	}
+
+	.questionNumber {
+		padding: 0.5rem 1rem;
+		font-size: 0.9rem;
+	}
+
+	.rightPanel {
+		min-width: 340px;
+		max-width: 380px;
+		padding: 1.5rem;
+		gap: 1.25rem;
+	}
+
+	.timerSection {
+		min-height: 260px;
+	}
+
+	.answerButtons {
+		gap: 1rem;
+	}
+
+	.answerButtons button {
+		min-height: 64px;
+		font-size: 1.3rem;
+		padding: 1.35rem 2.25rem;
+	}
+}
+
+/* Mobile (iPhone: up to 767px) */
+@media (max-width: 767px) {
+	.testInterface {
+		padding: 0.5rem;
+		height: 100vh;
+	}
+
+	.examineeLookup {
+		min-height: calc(100vh - 80px);
+		padding: 1rem 0.5rem;
+	}
+
+	.lookupCard {
+		padding: 1.5rem 1rem;
+		margin-top: 0.5rem;
+	}
+
+	.lookupCard h2 {
+		font-size: 1.6rem;
+		margin-bottom: 1.25rem;
+	}
+
+	.testSession {
+		gap: 0.5rem;
+	}
+
+	.sessionHeader {
+		flex-direction: column;
+		padding: 0.75rem;
+		gap: 0.75rem;
+	}
+
+	.progressInfo {
+		width: 100%;
+		min-width: auto;
+		padding: 0.75rem;
+	}
+
+	.questionLabel {
+		font-size: 2.5rem;
+	}
+
+	.scoreInfo {
+		font-size: 0.75rem;
+	}
+
+	.questionArea {
+		flex-direction: column;
+		gap: 0.75rem;
 	}
 
 	.questionCard {
@@ -873,103 +728,99 @@ input.form-input:focus::placeholder,
 		flex: none;
 	}
 
+	.questionHeader {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.5rem;
+	}
+
 	.questionTitle {
-		font-size: 1.1rem;
-		padding: 0.75rem;
-		min-height: 60px;
+		font-size: 1.15rem;
+		padding: 0.85rem;
+		max-height: 80px;
+	}
+
+	.questionNumber {
+		font-size: 0.75rem;
+		padding: 0.35rem 0.7rem;
 	}
 
 	.questionDetails {
 		grid-template-columns: repeat(2, 1fr);
-		gap: 0.4rem;
+		gap: 0.5rem;
 	}
 
 	.detailItem {
-		padding: 0.4rem;
-		font-size: 0.7rem;
-		text-align: center;
+		padding: 0.5rem;
+		font-size: 0.75rem;
 	}
 
 	.detailItem strong {
-		font-size: 0.6rem;
-	}
-
-	.questionHeader {
-		flex-direction: column;
-		align-items: stretch;
-		gap: 0.5rem;
-		margin-bottom: 0.5rem;
-	}
-
-	.questionNumber {
-		align-self: flex-start;
-		font-size: 0.7rem;
-		padding: 0.3rem 0.6rem;
+		font-size: 0.65rem;
 	}
 
 	.rightPanel {
-		flex: none;
 		min-width: auto;
 		max-width: none;
-		padding: 0.75rem;
-		gap: 0.75rem;
-		justify-content: center;
+		padding: 1rem;
+		gap: 1rem;
+	}
+
+	.timerSection {
+		min-height: 180px;
 	}
 
 	.answerButtons {
 		flex-direction: row;
 		gap: 0.75rem;
-		max-width: none;
 	}
 
 	.answerButtons button {
-		min-height: 45px;
+		min-height: 50px;
 		font-size: 1rem;
-		padding: 0.75rem 1rem;
-		flex: 1;
+		padding: 0.85rem 1.25rem;
 	}
 
 	.completeCard {
-		padding: 1.5rem 1.25rem;
-		max-width: 95%;
-		margin: 0 auto;
+		padding: 2rem 1.5rem;
 	}
 
 	.completeCard h2 {
-		font-size: 1.5rem;
+		font-size: 1.75rem;
 	}
 
 	.modalContent {
-		padding: 1.5rem;
-		margin: 0.75rem;
+		padding: 1.75rem;
+		margin: 1rem;
 	}
 
 	.modalButtons {
 		flex-direction: column;
+		gap: 0.75rem;
 	}
 }
 
 /* Button styling enhancements */
 .btn {
 	transition: all 0.3s ease;
-	font-weight: 500;
-	border-radius: 8px;
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	font-weight: 600;
+	border-radius: 10px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 	border: none;
 	cursor: pointer;
 	font-family: inherit;
 }
 
 .btn:hover {
-	transform: translateY(-1px);
-	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+	transform: translateY(-2px);
+	box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
 }
 
 .btn-primary {
 	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 	color: white;
-	padding: 0.875rem 2rem;
-	font-size: 1rem;
+	padding: 1rem 2rem;
+	font-size: 1.05rem;
 }
 
 .btn-primary:hover {
@@ -978,10 +829,10 @@ input.form-input:focus::placeholder,
 
 .btn-secondary {
 	background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-	border: 1px solid #e2e8f0;
+	border: 2px solid #e2e8f0;
 	color: #4a5568;
-	padding: 0.875rem 2rem;
-	font-size: 1rem;
+	padding: 1rem 2rem;
+	font-size: 1.05rem;
 }
 
 .btn-secondary:hover {
@@ -1010,7 +861,7 @@ input.form-input:focus::placeholder,
 /* Alert styling */
 .alert {
 	padding: 1rem;
-	border-radius: 8px;
+	border-radius: 10px;
 	margin: 1.5rem 0;
 	border-left: 4px solid;
 	font-weight: 500;
@@ -1022,18 +873,6 @@ input.form-input:focus::placeholder,
 	color: #742a2a;
 }
 
-.alert-success {
-	background: #c6f6d5;
-	border-left-color: #38a169;
-	color: #22543d;
-}
-
-.alert-warning {
-	background: #fefcbf;
-	border-left-color: #d69e2e;
-	color: #744210;
-}
-
 /* Focus states for accessibility */
 .testInterface *:focus {
 	outline: 2px solid #667eea;
@@ -1041,15 +880,6 @@ input.form-input:focus::placeholder,
 }
 
 /* Loading states */
-.loading {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	padding: 4rem;
-	color: #4a5568;
-}
-
 .loading-spinner {
 	width: 40px;
 	height: 40px;
@@ -1057,33 +887,9 @@ input.form-input:focus::placeholder,
 	border-top: 4px solid #667eea;
 	border-radius: 50%;
 	animation: spin 1s linear infinite;
-	margin-bottom: 1rem;
 }
 
 @keyframes spin {
 	0% { transform: rotate(0deg); }
 	100% { transform: rotate(360deg); }
-}
-
-/* Scrollbar styling for webkit browsers */
-.modalContent::-webkit-scrollbar,
-.questionCard::-webkit-scrollbar {
-	width: 8px;
-}
-
-.modalContent::-webkit-scrollbar-track,
-.questionCard::-webkit-scrollbar-track {
-	background: #f1f5f9;
-	border-radius: 4px;
-}
-
-.modalContent::-webkit-scrollbar-thumb,
-.questionCard::-webkit-scrollbar-thumb {
-	background: #cbd5e0;
-	border-radius: 4px;
-}
-
-.modalContent::-webkit-scrollbar-thumb:hover,
-.questionCard::-webkit-scrollbar-thumb:hover {
-	background: #a0aec0;
 }
