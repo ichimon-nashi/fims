@@ -123,7 +123,7 @@ async function hasConflictInWeek(
 		const existingEntry = await getScheduleEntry(employeeId, date);
 		// Conflict if there are ANY duties on that day (excluding OD which we might be updating)
 		if (existingEntry && existingEntry.duties.length > 0) {
-			const nonOdDuties = existingEntry.duties.filter(d => d !== "OD");
+			const nonOdDuties = existingEntry.duties.filter((d: string) => d !== "OD");
 			if (nonOdDuties.length > 0) {
 				console.log(`[OD-CRON] Conflict found for ${employeeId} on ${date}: ${nonOdDuties.join(", ")}`);
 				return true;
@@ -219,7 +219,7 @@ export async function assignODForMonth(
 
 	const weeks = getMonthWeeks(year, month);
 	console.log(`[OD-CRON] Available complete weeks in month: ${weeks.length}`);
-	weeks.forEach(w => {
+	weeks.forEach((w: WeekInfo) => {
 		console.log(`[OD-CRON]   Week ${w.weekNumber}: ${w.dates[0]} to ${w.dates[4]}`);
 	});
 
@@ -287,7 +287,7 @@ export async function assignODForMonth(
 		const maxAttempts = weeks.length;
 
 		while (!weekFound && attemptCount < maxAttempts) {
-			const weekInfo = weeks.find(w => w.weekNumber === targetWeek);
+			const weekInfo = weeks.find((w: WeekInfo) => w.weekNumber === targetWeek);
 
 			if (!weekInfo) {
 				console.log(`[OD-CRON]   Week ${targetWeek} doesn't exist, trying next week`);
@@ -370,7 +370,7 @@ export async function assignODForMonth(
 	console.log(`[OD-CRON] ───────────────────────────────────────`);
 	console.log(`[OD-CRON] Phase 2: Filling unassigned weeks`);
 	
-	const unassignedWeeks = weeks.filter(w => !weekAssignments[w.weekNumber]);
+	const unassignedWeeks = weeks.filter((w: WeekInfo) => !weekAssignments[w.weekNumber]);
 	
 	if (unassignedWeeks.length > 0) {
 		console.log(`[OD-CRON]   Found ${unassignedWeeks.length} unassigned weeks`);
@@ -380,7 +380,7 @@ export async function assignODForMonth(
 			
 			// Find available instructors for this week who aren't assigned yet
 			const availableInstructors = instructorAvailability[week.weekNumber].filter(
-				instructor => !Object.values(weekAssignments).includes(instructor)
+				(instructor: string) => !Object.values(weekAssignments).includes(instructor)
 			);
 			
 			if (availableInstructors.length === 0) {
