@@ -45,10 +45,10 @@ export interface WeekInfo {
 // Helper functions to get instructor details
 export function getInstructorName(employeeId: string): string {
 	const names: { [key: string]: string } = {
-		"22018": "凌炯璋",
-		"39426": "柯尚豪",
-		"51892": "韓蕙愛",
-		"36639": "Instructor 36639", // Update with actual name
+		"22018": "凌誌謙",
+		"39426": "柯佳華",
+		"51892": "韓建豪",
+		"36639": "李盈瑤",
 	};
 	return names[employeeId] || "Unknown Instructor";
 }
@@ -58,7 +58,7 @@ export function getInstructorBase(employeeId: string): string {
 		"22018": "TSA",
 		"39426": "TSA",
 		"51892": "KHH",
-		"36639": "TSA", // Update with actual base
+		"36639": "TSA",
 	};
 	return bases[employeeId] || "TSA";
 }
