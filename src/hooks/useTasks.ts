@@ -1,5 +1,5 @@
-// src/hooks/useTasks.ts - FIXED: Circular dependency and proper task loading with sort_order support
-import { useState, useEffect, useCallback } from 'react';
+// src/hooks/useTasks.ts - FIXED: Proper dependencies and no circular references
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { createServiceClient } from '@/utils/supabase/service-client';
 import { Task, TaskComment, Column, AvailableUser } from '@/lib/task.types';
@@ -11,13 +11,13 @@ export const useTasks = (selectedYear: number) => {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [loadingTasks, setLoadingTasks] = useState(false);
   
-  // FIXED: Initialize columns with proper static structure to avoid circular dependencies
-  const initialColumns: Column[] = [
+  // FIXED: Memoize initial columns to maintain stable reference
+  const initialColumns: Column[] = useMemo(() => [
     { id: 'backlog', title: '代辦 Open', color: '#3B82F6', count: 0, tasks: [] },
     { id: 'in-progress', title: '進行中 In Progress', color: '#907ad6', count: 0, tasks: [] },
     { id: 'complete', title: '完成 Complete', color: '#10B981', count: 0, tasks: [] },
     { id: 'review', title: '暫緩 On Hold', color: '#ef476f', count: 0, tasks: [] },
-  ];
+  ], []);
   
   const [columns, setColumns] = useState<Column[]>(initialColumns);
 
@@ -72,7 +72,7 @@ export const useTasks = (selectedYear: number) => {
     }
   }, [user, token]);
 
-  // FIXED: Load tasks with proper sort_order handling and removed circular dependency
+  // FIXED: Load tasks with proper dependencies
   const loadTasks = useCallback(async () => {
     if (!user || !token || loadingUsers) return;
     
@@ -87,16 +87,15 @@ export const useTasks = (selectedYear: number) => {
         return;
       }
       
-      // Load tasks that span or touch the selected year - FIXED: Include sort_order in select
+      // Load tasks that span or touch the selected year
       const { data: tasks, error } = await supabase
         .from('tasks')
-        .select('*, sort_order') // Explicitly include sort_order
+        .select('*, sort_order')
         .or(`year.eq.${selectedYear},and(start_date.gte.${selectedYear}-01-01,start_date.lte.${selectedYear}-12-31),and(due_date.gte.${selectedYear}-01-01,due_date.lte.${selectedYear}-12-31),and(start_date.lt.${selectedYear}-01-01,due_date.gt.${selectedYear}-01-01)`)
         .order('created_at', { ascending: false });
       
       if (error) {
         console.log('Error loading tasks:', error.message);
-        // FIXED: Use static structure to avoid circular dependency
         const emptyColumns = initialColumns.map(column => ({
           ...column,
           tasks: [],
@@ -154,11 +153,10 @@ export const useTasks = (selectedYear: number) => {
           created_at: task.created_at,
           updated_at: task.updated_at,
           year: task.year,
-          sort_order: task.sort_order, // FIXED: Include sort_order in transformed tasks
+          sort_order: task.sort_order,
           comments: commentsByTask.get(task.id) || []
         }));
 
-        // FIXED: Use static structure to avoid circular dependency
         const newColumns = initialColumns.map(column => ({
           ...column,
           tasks: transformedTasks.filter(task => task.status === column.id),
@@ -167,7 +165,6 @@ export const useTasks = (selectedYear: number) => {
 
         setColumns(newColumns);
       } else {
-        // FIXED: Use static structure to avoid circular dependency
         const emptyColumns = initialColumns.map(column => ({
           ...column,
           tasks: [],
@@ -177,7 +174,6 @@ export const useTasks = (selectedYear: number) => {
       }
     } catch (error) {
       console.error('Error loading tasks:', error);
-      // FIXED: Use static structure to avoid circular dependency
       const emptyColumns = initialColumns.map(column => ({
         ...column,
         tasks: [],
@@ -187,16 +183,16 @@ export const useTasks = (selectedYear: number) => {
     } finally {
       setLoadingTasks(false);
     }
-  }, [user, token, selectedYear, loadingUsers, availableUsers]); // FIXED: Removed columns dependency
+  }, [user, token, selectedYear, loadingUsers, availableUsers, initialColumns]); // FIXED: Include initialColumns
 
-  // FIXED: Load tasks with cross-year support - using loadTasks callback
+  // Load tasks with cross-year support
   useEffect(() => {
     if (user && token && !loadingUsers && availableUsers.length >= 0) {
       loadTasks();
     }
   }, [user, token, selectedYear, loadingUsers, availableUsers, loadTasks]);
 
-  // ADDED: Expose loadTasks function for external refresh calls
+  // Expose loadTasks function for external refresh calls
   const refreshTasks = useCallback(() => {
     loadTasks();
   }, [loadTasks]);
@@ -207,6 +203,6 @@ export const useTasks = (selectedYear: number) => {
     loadingTasks,
     columns,
     setColumns,
-    refreshTasks // ADDED: Return refresh function
+    refreshTasks
   };
 };

@@ -80,7 +80,8 @@ const BusinessClass: React.FC<BusinessClassProps> = () => {
 		],
 	};
 
-	const getBaseItemConfig = (currentTrayType: TrayType): ItemsConfig => {
+	// FIXED: Wrap in useCallback to satisfy ESLint dependency requirements
+	const getBaseItemConfig = useCallback((currentTrayType: TrayType): ItemsConfig => {
 		const dropZoneWidth = dropZoneRef.current?.clientWidth || (typeof window !== "undefined" ? window.innerWidth * 0.9 : 1000);
 		const dropZoneHeight = dropZoneRef.current?.clientHeight || (typeof window !== "undefined" ? window.innerHeight * 0.6 : 600);
 		
@@ -239,7 +240,7 @@ const BusinessClass: React.FC<BusinessClassProps> = () => {
 
 		console.log(`Config generated with ${Object.keys(config).length} items for Type ${currentTrayType}`);
 		return config;
-	};
+	}, []); // FIXED: Empty dependencies - function doesn't depend on external state
 
 	const updateCorrectPositions = useCallback((config: ItemsConfig): void => {
 		if (!dropZoneRef.current || Object.keys(config).length === 0) return;
@@ -273,7 +274,7 @@ const BusinessClass: React.FC<BusinessClassProps> = () => {
 			setItemsConfig(config);
 			setIsInitialized(true);
 		}
-	}, [isInitialized, trayType]);
+	}, [isInitialized, trayType, getBaseItemConfig]); // FIXED: Added getBaseItemConfig dependency
 
 	// Update correct positions when refs become available
 	useEffect(() => {
@@ -281,7 +282,7 @@ const BusinessClass: React.FC<BusinessClassProps> = () => {
 			console.log("Refs are ready, updating correct positions...");
 			updateCorrectPositions(ITEMS_CONFIG);
 		}
-	}, [isInitialized, ITEMS_CONFIG]);
+	}, [isInitialized, ITEMS_CONFIG, updateCorrectPositions]); // FIXED: Added updateCorrectPositions dependency
 
 	// Handle ESC key to close modal
 	useEffect(() => {
@@ -318,7 +319,7 @@ const BusinessClass: React.FC<BusinessClassProps> = () => {
 			window.removeEventListener("resize", handleResize);
 			window.removeEventListener("orientationchange", handleResize);
 		};
-	}, [isInitialized, trayType, updateCorrectPositions]);
+	}, [isInitialized, trayType, updateCorrectPositions, getBaseItemConfig]); // FIXED: Added getBaseItemConfig dependency
 
 	const handleDragStart = (e: React.DragEvent<HTMLDivElement>, itemId: string): void => {
 		setDraggedItem(itemId);

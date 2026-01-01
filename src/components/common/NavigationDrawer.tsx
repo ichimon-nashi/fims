@@ -2,7 +2,7 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Avatar from "@/components/ui/Avatar/Avatar";
 import styles from "./NavigationDrawer.module.css";
@@ -23,50 +23,50 @@ interface NavigationItem {
 	badge?: string;
 }
 
+// FIXED: Move navigation items outside component to avoid recreating on every render
+const navigationItems: NavigationItem[] = [
+	{
+		id: "dashboard",
+		title: "儀表板",
+		icon: "🏠",
+		path: "/dashboard",
+		description: "系統總覽與快速功能",
+	},
+	{
+		id: "roster",
+		title: "排班管理",
+		icon: "📅",
+		path: "/roster",
+		description: "飛行教師排班系統",
+	},
+	{
+		id: "tasks",
+		title: "任務管理",
+		icon: "📋",
+		path: "/tasks",
+		description: "Kanban 任務看板",
+	},
+	{
+		id: "oral-test",
+		title: "口試系統",
+		icon: "🎯",
+		path: "/oral-test/dashboard",
+		description: "口試題目管理與紀錄",
+		minAuthLevel: 1,
+	},
+	{
+		id: "business-training",
+		title: "商務艙訓練",
+		icon: "🍴",
+		path: "/bc-training",
+		description: "商務艙服務訓練系統",
+	},
+];
+
 const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 	const router = useRouter();
 	const pathname = usePathname();
 	const { user, logout } = useAuth();
-
-	const navigationItems: NavigationItem[] = [
-		{
-			id: "dashboard",
-			title: "儀表板",
-			icon: "🏠",
-			path: "/dashboard",
-			description: "系統總覽與快速功能",
-		},
-		{
-			id: "roster",
-			title: "排班管理",
-			icon: "📅",
-			path: "/roster",
-			description: "飛行教師排班系統",
-		},
-		{
-			id: "tasks",
-			title: "任務管理",
-			icon: "📋",
-			path: "/tasks",
-			description: "Kanban 任務看板",
-			// badge: "0", // Number of pending tasks
-		},
-		{
-			id: "oral-test",
-			title: "口試系統",
-			icon: "🎯",
-			path: "/oral-test/dashboard", // Direct to dashboard
-			description: "口試題目管理與紀錄",
-			minAuthLevel: 1, // Minimum auth level required
-		},
-		{
-			id: "business-training",
-			title: "商務艙訓練",
-			icon: "🍴",
-			path: "/bc-training",
-			description: "商務艙服務訓練系統",
-		},
-	];
 
 	const handleNavigation = (path: string) => {
 		router.push(path);
@@ -85,12 +85,12 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 		}
 	};
 
-	// Check if user has access to a navigation item
-	const hasAccess = (item: NavigationItem) => {
+	// FIXED: Memoize hasAccess function
+	const hasAccess = useCallback((item: NavigationItem) => {
 		if (!user) return false;
 		if (!item.minAuthLevel) return true;
 		return user.authentication_level >= item.minAuthLevel;
-	};
+	}, [user]);
 
 	// Memoize base info to prevent recalculation on every render
 	const baseInfo = useMemo(() => {
@@ -99,7 +99,7 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 		}
 
 		if (user.employee_id === "admin") {
-			return { name: "ADMIN", icon: "🔒", colorScheme: "admin" };
+			return { name: "ADMIN", icon: "🔑", colorScheme: "admin" };
 		}
 
 		const base = user.base?.toUpperCase();
@@ -133,10 +133,10 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 		};
 	}, [user]);
 
-	// Memoize accessible items
+	// FIXED: Include hasAccess in dependencies
 	const accessibleItems = useMemo(() => {
 		return navigationItems.filter(item => hasAccess(item));
-	}, [user?.authentication_level]);
+	}, [hasAccess]);
 
 	// Don't render if drawer is closed
 	if (!isOpen) return null;

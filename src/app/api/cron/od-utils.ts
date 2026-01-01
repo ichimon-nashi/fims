@@ -47,6 +47,7 @@ export function getMonthWeeks(year: number, month: number): WeekInfo[] {
 	const lastDay = new Date(year, month, 0);
 	
 	// Find first Monday of the month
+	// eslint-disable-next-line prefer-const
 	let currentDate = new Date(firstDay);
 	while (currentDate.getDay() !== 1 && currentDate <= lastDay) {
 		currentDate.setDate(currentDate.getDate() + 1);
