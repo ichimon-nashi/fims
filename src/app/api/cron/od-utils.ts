@@ -43,47 +43,49 @@ export interface WeekInfo {
 // Get all Monday-Friday weeks in a month
 export function getMonthWeeks(year: number, month: number): WeekInfo[] {
 	const weeks: WeekInfo[] = [];
-	const firstDay = new Date(year, month - 1, 1);
-	const lastDay = new Date(year, month, 0);
-	
-	// Find first Monday of the month
-	// eslint-disable-next-line prefer-const
-	let currentDate = new Date(firstDay);
-	while (currentDate.getDay() !== 1 && currentDate <= lastDay) {
-		currentDate.setDate(currentDate.getDate() + 1);
-	}
 	
 	let weekNumber = 1;
+	// eslint-disable-next-line prefer-const
+	let currentDate = new Date(Date.UTC(year, month - 1, 1));
+	const lastDay = new Date(Date.UTC(year, month, 0));
 	
-	// Process each week
+	// Find all Mondays in the month
 	while (currentDate <= lastDay) {
-		const weekDates: string[] = [];
-		const weekStart = new Date(currentDate);
-		
-		// Collect Monday through Friday (5 days)
-		for (let dayOfWeek = 1; dayOfWeek <= 5; dayOfWeek++) {
-			if (currentDate.getMonth() === month - 1) { // Still in the target month
-				const dateStr = currentDate.toISOString().split('T')[0];
-				weekDates.push(dateStr);
+		// Only process if this is a Monday (day === 1) - use getUTCDay()
+		if (currentDate.getUTCDay() === 1) {
+			const weekDates: string[] = [];
+			const weekStart = new Date(currentDate);
+			
+			// Collect ONLY Monday through Friday (5 consecutive weekdays)
+			// eslint-disable-next-line prefer-const
+			let checkDate = new Date(weekStart);
+			for (let i = 0; i < 5; i++) {
+				const dayOfWeek = checkDate.getUTCDay(); // Use UTC day
+				const dateStr = checkDate.toISOString().split('T')[0];
+				
+				// Double-check: ONLY add if it's a weekday (1-5) AND in target month
+				if (dayOfWeek >= 1 && dayOfWeek <= 5 && checkDate.getUTCMonth() === month - 1) {
+					weekDates.push(dateStr);
+				}
+				
+				// Move to next day using UTC
+				checkDate = new Date(checkDate.getTime() + 24 * 60 * 60 * 1000);
 			}
-			currentDate.setDate(currentDate.getDate() + 1);
+			
+			// Only add week if we got at least 3 weekdays
+			if (weekDates.length >= 3) {
+				weeks.push({
+					weekNumber,
+					startDate: weekStart,
+					endDate: new Date(weekDates[weekDates.length - 1]),
+					dates: weekDates
+				});
+				weekNumber++;
+			}
 		}
 		
-		// Only add week if it has at least 3 work days
-		if (weekDates.length >= 3) {
-			weeks.push({
-				weekNumber,
-				startDate: weekStart,
-				endDate: new Date(weekDates[weekDates.length - 1]),
-				dates: weekDates
-			});
-			weekNumber++;
-		}
-		
-		// Skip weekend (Saturday, Sunday) to get to next Monday
-		while (currentDate.getDay() !== 1 && currentDate <= lastDay) {
-			currentDate.setDate(currentDate.getDate() + 1);
-		}
+		// Move to next day using UTC
+		currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
 	}
 	
 	return weeks;
@@ -152,13 +154,71 @@ export async function assignODForMonth(
 	
 	const assignments = [];
 	
-	// ✅ FIX: Assign OD for ALL weeks, not just week 2
+	// ✅ FIX: Assign OD for ALL weeks, ensuring full week coverage
 	for (const week of weeks) {
-		const assignedInstructor = getInstructorForWeek(year, month, week.weekNumber);
+		const primaryInstructor = getInstructorForWeek(year, month, week.weekNumber);
 		
-		console.log(`Week ${week.weekNumber} (${week.dates[0]} to ${week.dates[week.dates.length-1]}): ${assignedInstructor}`);
+		console.log(`Week ${week.weekNumber} (${week.dates[0]} to ${week.dates[week.dates.length-1]}): Primary = ${primaryInstructor}`);
 		
-		// Get user details for this instructor
+		// Check if primary instructor has conflicts for this entire week
+		let hasConflict = false;
+		for (const date of week.dates) {
+			const { data: existing } = await supabase
+				.from('fi_schedule')
+				.select('duties')
+				.eq('employee_id', primaryInstructor)
+				.eq('date', date)
+				.maybeSingle();
+			
+			if (existing && existing.duties && existing.duties.length > 0) {
+				console.log(`⚠ ${primaryInstructor} has conflict on ${date}: ${existing.duties.join(', ')}`);
+				hasConflict = true;
+				break; // Stop checking, we found a conflict
+			}
+		}
+		
+		// Determine which instructor will get this week
+		let assignedInstructor = primaryInstructor;
+		
+		if (hasConflict) {
+			console.log(`⚠ ${primaryInstructor} has conflicts in week ${week.weekNumber}, finding alternative...`);
+			
+			// Try to find an available instructor from the pool
+			let foundAlternative = false;
+			for (const altInstructor of OD_INSTRUCTORS) {
+				if (altInstructor === primaryInstructor) continue; // Skip the one with conflict
+				
+				// Check if this alternative has conflicts
+				let altHasConflict = false;
+				for (const date of week.dates) {
+					const { data: existing } = await supabase
+						.from('fi_schedule')
+						.select('duties')
+						.eq('employee_id', altInstructor)
+						.eq('date', date)
+						.maybeSingle();
+					
+					if (existing && existing.duties && existing.duties.length > 0) {
+						altHasConflict = true;
+						break;
+					}
+				}
+				
+				if (!altHasConflict) {
+					assignedInstructor = altInstructor;
+					foundAlternative = true;
+					console.log(`✓ Found alternative: ${altInstructor} for week ${week.weekNumber}`);
+					break;
+				}
+			}
+			
+			if (!foundAlternative) {
+				console.log(`❌ No available instructor for week ${week.weekNumber}, skipping entire week`);
+				continue; // Skip this entire week
+			}
+		}
+		
+		// Get user details for the assigned instructor
 		const { data: userData, error: userError } = await supabase
 			.from('users')
 			.select('full_name, rank, base')
@@ -167,43 +227,37 @@ export async function assignODForMonth(
 		
 		if (userError || !userData) {
 			console.error(`Error getting user data for ${assignedInstructor}:`, userError);
-			continue; // Skip this instructor if we can't get their data
+			continue;
 		}
 		
-		// Assign OD for each day of the week
+		// Assign OD for the full week to this instructor
 		for (const date of week.dates) {
 			try {
-				// Check if entry exists
 				const { data: existing } = await supabase
 					.from('fi_schedule')
 					.select('*')
 					.eq('employee_id', assignedInstructor)
 					.eq('date', date)
-					.single();
+					.maybeSingle();
 				
-				if (existing) {
-					// Update existing entry - add OD if not already present
-					const currentDuties = existing.duties || [];
-					if (!currentDuties.includes('OD')) {
-						const { error: updateError } = await supabase
-							.from('fi_schedule')
-							.update({ 
-								duties: [...currentDuties, 'OD'],
-								updated_by: executedBy
-							})
-							.eq('employee_id', assignedInstructor)
-							.eq('date', date);
-						
-						if (updateError) {
-							console.error(`Error updating OD for ${assignedInstructor} on ${date}:`, updateError);
-						} else {
-							console.log(`✓ Updated OD for ${assignedInstructor} on ${date}`);
-						}
+				if (existing && (!existing.duties || existing.duties.length === 0)) {
+					// Entry exists but has no duties - update with OD
+					const { error: updateError } = await supabase
+						.from('fi_schedule')
+						.update({ 
+							duties: ['OD'],
+							updated_by: executedBy
+						})
+						.eq('employee_id', assignedInstructor)
+						.eq('date', date);
+					
+					if (updateError) {
+						console.error(`Error updating OD for ${assignedInstructor} on ${date}:`, updateError);
 					} else {
-						console.log(`- OD already exists for ${assignedInstructor} on ${date}`);
+						console.log(`✓ Updated OD for ${assignedInstructor} on ${date}`);
 					}
-				} else {
-					// Create new entry with full user data
+				} else if (!existing) {
+					// No entry exists - create new with OD
 					const { error: insertError } = await supabase
 						.from('fi_schedule')
 						.insert({
