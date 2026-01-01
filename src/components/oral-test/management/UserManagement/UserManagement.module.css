@@ -510,8 +510,7 @@
 	background: #f7fafc;
 }
 
-.formSelect option:checked,
-.formSelect option:selected {
+.formSelect option:checked {
 	background: #667eea;
 	color: white;
 	font-weight: 600;
