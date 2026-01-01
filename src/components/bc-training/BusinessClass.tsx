@@ -15,7 +15,6 @@ import {
 } from "./types";
 
 // Import all assets
-import rotateDevice from "./assets/rotateDevice.gif";
 import breadPlaceholder from "./assets/bread-placeholder.png";
 import fruitPlaceholder from "./assets/fruit-placeholder.png";
 import saladPlaceholder from "./assets/salad-placeholder.png";
@@ -34,86 +33,92 @@ const BusinessClass: React.FC<BusinessClassProps> = () => {
 	const [draggedItem, setDraggedItem] = useState<string | null>(null);
 	const [feedback, setFeedback] = useState<string>("");
 	const [showCorrectPositions, setShowCorrectPositions] = useState<boolean>(false);
-	const [isLandscape, setIsLandscape] = useState<boolean>(true);
 	const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+	const [isInitialized, setIsInitialized] = useState<boolean>(false);
+	
 	const dropZoneRef = useRef<HTMLDivElement>(null);
 	const tableSurfaceRef = useRef<HTMLDivElement>(null);
 
-	// Physical measurements in centimeters - REPLACE THESE WITH YOUR ACTUAL MEASUREMENTS
-	const PHYSICAL_MEASUREMENTS: {
-		TABLE_TRAY_WIDTH_CM: number;
-		TABLE_TRAY_HEIGHT_CM: number;
-		A: {
-			MAIN_PLATE_WIDTH_CM: number;
-			MAIN_PLATE_HEIGHT_CM: number;
-			SALAD_PLATE_DIAMETER_CM: number;
-			FRUIT_BOWL_DIAMETER_CM: number;
-			BREAD_PLATE_DIAMETER_CM: number;
-			UTENSILS_WIDTH_CM: number;
-			UTENSILS_HEIGHT_CM: number;
-			WATER_GLASS_DIAMETER_CM: number;
-			WINE_GLASS_DIAMETER_CM: number;
-			SALT_PEPPER_WIDTH_CM: number;
-			SALT_PEPPER_HEIGHT_CM: number;
-			BUTTER_DISH_WIDTH_CM: number;
-			BUTTER_DISH_HEIGHT_CM: number;
-		};
-		B: {
-			MAIN_PLATE_WIDTH_CM: number;
-			MAIN_PLATE_HEIGHT_CM: number;
-			APPETIZER_PLATE_DIAMETER_CM: number;
-			SOUP_BOWL_DIAMETER_CM: number;
-			BREAD_PLATE_DIAMETER_CM: number;
-			DESSERT_PLATE_DIAMETER_CM: number;
-			UTENSILS_WIDTH_CM: number;
-			UTENSILS_HEIGHT_CM: number;
-			WATER_GLASS_DIAMETER_CM: number;
-			WINE_GLASS_DIAMETER_CM: number;
-			NAPKIN_WIDTH_CM: number;
-			NAPKIN_HEIGHT_CM: number;
-			CONDIMENT_TRAY_WIDTH_CM: number;
-			CONDIMENT_TRAY_HEIGHT_CM: number;
-		};
-	} = {
-		TABLE_TRAY_WIDTH_CM: 38,
-		TABLE_TRAY_HEIGHT_CM: 27.5,
-		A: {
-			MAIN_PLATE_WIDTH_CM: 19.5,
-			MAIN_PLATE_HEIGHT_CM: 15.5,
-			SALAD_PLATE_DIAMETER_CM: 12.5,
-			FRUIT_BOWL_DIAMETER_CM: 12.5,
-			BREAD_PLATE_DIAMETER_CM: 19.8,
-			UTENSILS_WIDTH_CM: 6,
-			UTENSILS_HEIGHT_CM: 21,
-			WATER_GLASS_DIAMETER_CM: 5.5,
-			WINE_GLASS_DIAMETER_CM: 5.5,
-			SALT_PEPPER_WIDTH_CM: 3,
-			SALT_PEPPER_HEIGHT_CM: 6.8,
-			BUTTER_DISH_WIDTH_CM: 7.7,
-			BUTTER_DISH_HEIGHT_CM: 7.7,
-		},
-		B: {
-			MAIN_PLATE_WIDTH_CM: 19.5,
-			MAIN_PLATE_HEIGHT_CM: 15.5,
-			APPETIZER_PLATE_DIAMETER_CM: 16,
-			SOUP_BOWL_DIAMETER_CM: 20,
-			BREAD_PLATE_DIAMETER_CM: 19.8,
-			DESSERT_PLATE_DIAMETER_CM: 16,
-			UTENSILS_WIDTH_CM: 6,
-			UTENSILS_HEIGHT_CM: 21,
-			WATER_GLASS_DIAMETER_CM: 5.5,
-			WINE_GLASS_DIAMETER_CM: 5.5,
-			NAPKIN_WIDTH_CM: 12,
-			NAPKIN_HEIGHT_CM: 10,
-			CONDIMENT_TRAY_WIDTH_CM: 14,
-			CONDIMENT_TRAY_HEIGHT_CM: 8,
-		},
+	console.log("🚀 BusinessClass component render - isInitialized:", isInitialized);
+
+	// Physical measurements in centimeters - defined once for all items
+	const ITEM_MEASUREMENTS = {
+		TABLE_TRAY_WIDTH_CM: 35,
+		TABLE_TRAY_HEIGHT_CM: 30, //27.5,
+		MAIN_PLATE: { width: 19.5, height: 15.5 },
+		SALAD_BOWL: { diameter: 12.5 },
+		BREAD_PLATE: { diameter: 19.8 },
+		DESSERT_BOWL: { diameter: 16 },
+		WATER_GLASS: { diameter: 5.5 },
+		WINE_GLASS: { diameter: 5.5 },
+		SALT_PEPPER: { width: 6.8, height: 3 },
+		UTENSILS: { width: 6, height: 21 },
+		BUTTER_DISH: { width: 7.7, height: 7.7 },
 	};
 
-	const getBaseItemConfig = useCallback((trayType: TrayType = "A"): ItemsConfig => {
+	// Define which items each type uses
+	const TYPE_ITEMS = {
+		A: [
+			"main-plate",
+			"salad-bowl",
+			"bread-plate",
+			"water-glass",
+			"wine-glass",
+			"salt-pepper",
+			"utensils",
+			"butter-dish",
+		],
+		B: [
+			"main-plate",
+			"salad-bowl",
+			"bread-plate",
+			"dessert-bowl",
+			"utensils",
+			"salt-pepper",
+			"butter-dish",
+			"water-glass",
+		],
+	};
+
+	const getBaseItemConfig = (currentTrayType: TrayType): ItemsConfig => {
 		const dropZoneWidth = dropZoneRef.current?.clientWidth || (typeof window !== "undefined" ? window.innerWidth * 0.9 : 1000);
-		const tableSurfaceWidthPx = dropZoneWidth * 0.5;
-		const pixelsPerCm = tableSurfaceWidthPx / PHYSICAL_MEASUREMENTS.TABLE_TRAY_WIDTH_CM;
+		const dropZoneHeight = dropZoneRef.current?.clientHeight || (typeof window !== "undefined" ? window.innerHeight * 0.6 : 600);
+		
+		// Get actual table surface dimensions from rendered element
+		// The CSS uses: width: 85%, aspect-ratio: 38/27.5, max-height: 90%
+		// We need to calculate what the actual rendered size will be
+		const targetWidth = dropZoneWidth * 0.85;
+		const targetHeight = targetWidth * (ITEM_MEASUREMENTS.TABLE_TRAY_HEIGHT_CM / ITEM_MEASUREMENTS.TABLE_TRAY_WIDTH_CM); // aspect ratio
+		const maxHeight = dropZoneHeight * 0.90;
+		
+		// If aspect-ratio height exceeds max-height, constrain by height
+		let tableSurfaceWidthPx, tableSurfaceHeightPx;
+		if (targetHeight > maxHeight) {
+			tableSurfaceHeightPx = maxHeight;
+			tableSurfaceWidthPx = tableSurfaceHeightPx * (ITEM_MEASUREMENTS.TABLE_TRAY_WIDTH_CM / ITEM_MEASUREMENTS.TABLE_TRAY_HEIGHT_CM);
+		} else {
+			tableSurfaceWidthPx = targetWidth;
+			tableSurfaceHeightPx = targetHeight;
+		}
+		
+		// Calculate scale based on table dimensions
+		// The table tray is 38cm x 27.5cm in real life
+		const scaleX = tableSurfaceWidthPx / ITEM_MEASUREMENTS.TABLE_TRAY_WIDTH_CM;
+		const scaleY = tableSurfaceHeightPx / ITEM_MEASUREMENTS.TABLE_TRAY_HEIGHT_CM;
+		
+		// Use the smaller scale to maintain aspect ratio and fit within table
+		const pixelsPerCm = Math.min(scaleX, scaleY);
+		
+		console.log("📏 Size calculations:", {
+			dropZoneWidth,
+			dropZoneHeight,
+			tableSurfaceWidthPx: tableSurfaceWidthPx.toFixed(1),
+			tableSurfaceHeightPx: tableSurfaceHeightPx.toFixed(1),
+			aspectRatio: (tableSurfaceWidthPx / tableSurfaceHeightPx).toFixed(3),
+			targetAspectRatio: (ITEM_MEASUREMENTS.TABLE_TRAY_WIDTH_CM / ITEM_MEASUREMENTS.TABLE_TRAY_HEIGHT_CM).toFixed(3),
+			pixelsPerCm: pixelsPerCm.toFixed(2),
+			tableTrayDimensions: `${ITEM_MEASUREMENTS.TABLE_TRAY_WIDTH_CM}cm × ${ITEM_MEASUREMENTS.TABLE_TRAY_HEIGHT_CM}cm`
+		});
 		
 		const cmToRem = (cm: number): string => {
 			const pixels = cm * pixelsPerCm;
@@ -126,210 +131,128 @@ const BusinessClass: React.FC<BusinessClassProps> = () => {
 			height: cmToRem(heightCm),
 		});
 
-		const trayConfigurations: Record<TrayType, Record<string, PositionPercent>> = {
+		// Position configurations for each type
+		const POSITIONS: Record<TrayType, Record<string, PositionPercent>> = {
 			A: {
 				"main-plate": { xPercent: 52, yPercent: 66 },
-				"salad-plate": { xPercent: 29, yPercent: 29 },
-				"fruit-bowl": { xPercent: 52.5, yPercent: 27 },
+				"salad-bowl": { xPercent: 50, yPercent: 27 },
 				"bread-plate": { xPercent: 29, yPercent: 71 },
-				utensils: { xPercent: 68, yPercent: 65 },
 				"water-glass": { xPercent: 68, yPercent: 16 },
 				"wine-glass": { xPercent: 76, yPercent: 16 },
-				"salt-pepper": { xPercent: 42.5, yPercent: 17 },
-				"butter-dish": { xPercent: 41, yPercent: 25 },
+				"salt-pepper": { xPercent: 25, yPercent: 15 },
+				utensils: { xPercent: 75, yPercent: 60 },
+				"butter-dish": { xPercent: 31, yPercent: 32 },
 			},
 			B: {
 				"main-plate": { xPercent: 45, yPercent: 45 },
-				"appetizer-plate": { xPercent: 25, yPercent: 12 },
-				"soup-bowl": { xPercent: 70, yPercent: 12 },
+				"salad-bowl": { xPercent: 25, yPercent: 12 },
 				"bread-plate": { xPercent: 15, yPercent: 45 },
-				"dessert-plate": { xPercent: 75, yPercent: 45 },
+				"dessert-bowl": { xPercent: 75, yPercent: 45 },
 				utensils: { xPercent: 88, yPercent: 35 },
+				"salt-pepper": { xPercent: 52, yPercent: 18 },
+				"butter-dish": { xPercent: 52, yPercent: 32 },
 				"water-glass": { xPercent: 65, yPercent: 8 },
-				"wine-glass": { xPercent: 78, yPercent: 8 },
-				napkin: { xPercent: 12, yPercent: 25 },
-				"condiment-tray": { xPercent: 52, yPercent: 25 },
 			},
 		};
 
-		const basePositions = trayConfigurations[trayType];
-		const TRAY_SCALE = 0.22;
-		
-		if (trayType === "A") {
-			const measA = PHYSICAL_MEASUREMENTS.A;
-			return {
-				"main-plate": {
-					name: "Main Plate",
-					color: "#e5e7eb",
-					size: getSizeFromCm(measA.MAIN_PLATE_WIDTH_CM, measA.MAIN_PLATE_HEIGHT_CM),
-					traySize: getSizeFromCm(measA.MAIN_PLATE_WIDTH_CM * TRAY_SCALE, measA.MAIN_PLATE_HEIGHT_CM * TRAY_SCALE),
-					positionPercent: basePositions["main-plate"],
-					image: mainPlaceholder.src,
-				},
-				"salad-plate": {
-					name: "Salad Plate",
-					color: "#fecaca",
-					size: getSizeFromCm(measA.SALAD_PLATE_DIAMETER_CM, measA.SALAD_PLATE_DIAMETER_CM),
-					traySize: getSizeFromCm(measA.SALAD_PLATE_DIAMETER_CM * TRAY_SCALE, measA.SALAD_PLATE_DIAMETER_CM * TRAY_SCALE),
-					positionPercent: basePositions["salad-plate"],
-					image: saladPlaceholder.src,
-				},
-				"fruit-bowl": {
-					name: "Fruit Bowl",
-					color: "#fecaca",
-					size: getSizeFromCm(measA.FRUIT_BOWL_DIAMETER_CM, measA.FRUIT_BOWL_DIAMETER_CM),
-					traySize: getSizeFromCm(measA.FRUIT_BOWL_DIAMETER_CM * TRAY_SCALE, measA.FRUIT_BOWL_DIAMETER_CM * TRAY_SCALE),
-					positionPercent: basePositions["fruit-bowl"],
-					image: fruitPlaceholder.src,
-				},
-				"bread-plate": {
-					name: "Bread Plate",
-					color: "#fef3c7",
-					size: getSizeFromCm(measA.BREAD_PLATE_DIAMETER_CM, measA.BREAD_PLATE_DIAMETER_CM),
-					traySize: getSizeFromCm(measA.BREAD_PLATE_DIAMETER_CM * TRAY_SCALE, measA.BREAD_PLATE_DIAMETER_CM * TRAY_SCALE),
-					positionPercent: basePositions["bread-plate"],
-					image: breadPlaceholder.src,
-				},
-				utensils: {
-					name: "Utensils",
-					color: "#d1d5db",
-					size: getSizeFromCm(measA.UTENSILS_WIDTH_CM, measA.UTENSILS_HEIGHT_CM),
-					traySize: getSizeFromCm(measA.UTENSILS_WIDTH_CM * TRAY_SCALE, measA.UTENSILS_HEIGHT_CM * TRAY_SCALE),
-					positionPercent: basePositions["utensils"],
-					image: utensilPlaceholder.src,
-				},
-				"water-glass": {
-					name: "Water Glass",
-					color: "#dbeafe",
-					size: getSizeFromCm(measA.WATER_GLASS_DIAMETER_CM, measA.WATER_GLASS_DIAMETER_CM),
-					traySize: getSizeFromCm(measA.WATER_GLASS_DIAMETER_CM * TRAY_SCALE, measA.WATER_GLASS_DIAMETER_CM * TRAY_SCALE),
-					positionPercent: basePositions["water-glass"],
-					image: waterPlaceholder.src,
-				},
-				"wine-glass": {
-					name: "Wine Glass",
-					color: "#e9d5ff",
-					size: getSizeFromCm(measA.WINE_GLASS_DIAMETER_CM, measA.WINE_GLASS_DIAMETER_CM),
-					traySize: getSizeFromCm(measA.WINE_GLASS_DIAMETER_CM * TRAY_SCALE, measA.WINE_GLASS_DIAMETER_CM * TRAY_SCALE),
-					positionPercent: basePositions["wine-glass"],
-					image: winePlaceholder.src,
-				},
-				"salt-pepper": {
-					name: "Salt & Pepper",
-					color: "#9ca3af",
-					size: getSizeFromCm(measA.SALT_PEPPER_WIDTH_CM, measA.SALT_PEPPER_HEIGHT_CM),
-					traySize: getSizeFromCm(measA.SALT_PEPPER_WIDTH_CM * TRAY_SCALE, measA.SALT_PEPPER_HEIGHT_CM * TRAY_SCALE),
-					positionPercent: basePositions["salt-pepper"],
-					image: saltpepperPlaceholder.src,
-				},
-				"butter-dish": {
-					name: "Butter Dish",
-					color: "#fecaca",
-					size: getSizeFromCm(measA.BUTTER_DISH_WIDTH_CM, measA.BUTTER_DISH_HEIGHT_CM),
-					traySize: getSizeFromCm(measA.BUTTER_DISH_WIDTH_CM * TRAY_SCALE, measA.BUTTER_DISH_HEIGHT_CM * TRAY_SCALE),
-					positionPercent: basePositions["butter-dish"],
-					image: butterPlaceholder.src,
-				},
-			};
-		} else {
-			const measB = PHYSICAL_MEASUREMENTS.B;
-			return {
-				"main-plate": {
-					name: "Main Plate",
-					color: "#e5e7eb",
-					size: getSizeFromCm(measB.MAIN_PLATE_WIDTH_CM, measB.MAIN_PLATE_HEIGHT_CM),
-					traySize: getSizeFromCm(measB.MAIN_PLATE_WIDTH_CM * TRAY_SCALE, measB.MAIN_PLATE_HEIGHT_CM * TRAY_SCALE),
-					positionPercent: basePositions["main-plate"],
-					image: mainPlaceholder.src,
-				},
-				"appetizer-plate": {
-					name: "Appetizer Plate",
-					color: "#fed7d7",
-					size: getSizeFromCm(measB.APPETIZER_PLATE_DIAMETER_CM, measB.APPETIZER_PLATE_DIAMETER_CM),
-					traySize: getSizeFromCm(measB.APPETIZER_PLATE_DIAMETER_CM * TRAY_SCALE, measB.APPETIZER_PLATE_DIAMETER_CM * TRAY_SCALE),
-					positionPercent: basePositions["appetizer-plate"],
-					image: saladPlaceholder.src,
-				},
-				"soup-bowl": {
-					name: "Soup Bowl",
-					color: "#fef5e7",
-					size: getSizeFromCm(measB.SOUP_BOWL_DIAMETER_CM, measB.SOUP_BOWL_DIAMETER_CM),
-					traySize: getSizeFromCm(measB.SOUP_BOWL_DIAMETER_CM * TRAY_SCALE, measB.SOUP_BOWL_DIAMETER_CM * TRAY_SCALE),
-					positionPercent: basePositions["soup-bowl"],
-					image: fruitPlaceholder.src,
-				},
-				"bread-plate": {
-					name: "Bread Plate",
-					color: "#fef3c7",
-					size: getSizeFromCm(measB.BREAD_PLATE_DIAMETER_CM, measB.BREAD_PLATE_DIAMETER_CM),
-					traySize: getSizeFromCm(measB.BREAD_PLATE_DIAMETER_CM * TRAY_SCALE, measB.BREAD_PLATE_DIAMETER_CM * TRAY_SCALE),
-					positionPercent: basePositions["bread-plate"],
-					image: breadPlaceholder.src,
-				},
-				"dessert-plate": {
-					name: "Dessert Plate",
-					color: "#e0e7ff",
-					size: getSizeFromCm(measB.DESSERT_PLATE_DIAMETER_CM, measB.DESSERT_PLATE_DIAMETER_CM),
-					traySize: getSizeFromCm(measB.DESSERT_PLATE_DIAMETER_CM * TRAY_SCALE, measB.DESSERT_PLATE_DIAMETER_CM * TRAY_SCALE),
-					positionPercent: basePositions["dessert-plate"],
-					image: saladPlaceholder.src,
-				},
-				utensils: {
-					name: "Utensils",
-					color: "#d1d5db",
-					size: getSizeFromCm(measB.UTENSILS_WIDTH_CM, measB.UTENSILS_HEIGHT_CM),
-					traySize: getSizeFromCm(measB.UTENSILS_WIDTH_CM * TRAY_SCALE, measB.UTENSILS_HEIGHT_CM * TRAY_SCALE),
-					positionPercent: basePositions["utensils"],
-					image: utensilPlaceholder.src,
-				},
-				"water-glass": {
-					name: "Water Glass",
-					color: "#dbeafe",
-					size: getSizeFromCm(measB.WATER_GLASS_DIAMETER_CM, measB.WATER_GLASS_DIAMETER_CM),
-					traySize: getSizeFromCm(measB.WATER_GLASS_DIAMETER_CM * TRAY_SCALE, measB.WATER_GLASS_DIAMETER_CM * TRAY_SCALE),
-					positionPercent: basePositions["water-glass"],
-					image: waterPlaceholder.src,
-				},
-				"wine-glass": {
-					name: "Wine Glass",
-					color: "#e9d5ff",
-					size: getSizeFromCm(measB.WINE_GLASS_DIAMETER_CM, measB.WINE_GLASS_DIAMETER_CM),
-					traySize: getSizeFromCm(measB.WINE_GLASS_DIAMETER_CM * TRAY_SCALE, measB.WINE_GLASS_DIAMETER_CM * TRAY_SCALE),
-					positionPercent: basePositions["wine-glass"],
-					image: winePlaceholder.src,
-				},
-				napkin: {
-					name: "Napkin",
-					color: "#f0f9ff",
-					size: getSizeFromCm(measB.NAPKIN_WIDTH_CM, measB.NAPKIN_HEIGHT_CM),
-					traySize: getSizeFromCm(measB.NAPKIN_WIDTH_CM * TRAY_SCALE, measB.NAPKIN_HEIGHT_CM * TRAY_SCALE),
-					positionPercent: basePositions["napkin"],
-					image: saltpepperPlaceholder.src,
-				},
-				"condiment-tray": {
-					name: "Condiment Tray",
-					color: "#f7fafc",
-					size: getSizeFromCm(measB.CONDIMENT_TRAY_WIDTH_CM, measB.CONDIMENT_TRAY_HEIGHT_CM),
-					traySize: getSizeFromCm(measB.CONDIMENT_TRAY_WIDTH_CM * TRAY_SCALE, measB.CONDIMENT_TRAY_HEIGHT_CM * TRAY_SCALE),
-					positionPercent: basePositions["condiment-tray"],
-					image: butterPlaceholder.src,
-				},
-			};
-		}
-	}, []);
+		// All possible item definitions
+		const ALL_ITEMS: Record<string, { name: string; color: string; image: string; meas: { width?: number; height?: number; diameter?: number } }> = {
+			"main-plate": {
+				name: "Main Plate",
+				color: "#e5e7eb",
+				image: mainPlaceholder.src,
+				meas: ITEM_MEASUREMENTS.MAIN_PLATE,
+			},
+			"salad-bowl": {
+				name: "Salad Bowl",
+				color: "#fecaca",
+				image: saladPlaceholder.src,
+				meas: ITEM_MEASUREMENTS.SALAD_BOWL,
+			},
+			"bread-plate": {
+				name: "Bread Plate",
+				color: "#fef3c7",
+				image: breadPlaceholder.src,
+				meas: ITEM_MEASUREMENTS.BREAD_PLATE,
+			},
+			"dessert-bowl": {
+				name: "Dessert Bowl",
+				color: "#e0e7ff",
+				image: fruitPlaceholder.src,
+				meas: ITEM_MEASUREMENTS.DESSERT_BOWL,
+			},
+			"water-glass": {
+				name: "Water Glass",
+				color: "#dbeafe",
+				image: waterPlaceholder.src,
+				meas: ITEM_MEASUREMENTS.WATER_GLASS,
+			},
+			"wine-glass": {
+				name: "Wine Glass",
+				color: "#e9d5ff",
+				image: winePlaceholder.src,
+				meas: ITEM_MEASUREMENTS.WINE_GLASS,
+			},
+			"salt-pepper": {
+				name: "Salt & Pepper",
+				color: "#9ca3af",
+				image: saltpepperPlaceholder.src,
+				meas: ITEM_MEASUREMENTS.SALT_PEPPER,
+			},
+			utensils: {
+				name: "Utensils",
+				color: "#d1d5db",
+				image: utensilPlaceholder.src,
+				meas: ITEM_MEASUREMENTS.UTENSILS,
+			},
+			"butter-dish": {
+				name: "Butter Dish",
+				color: "#fecaca",
+				image: butterPlaceholder.src,
+				meas: ITEM_MEASUREMENTS.BUTTER_DISH,
+			},
+		};
 
-	const updateCorrectPositions = useCallback((): void => {
-		if (!dropZoneRef.current) return;
+		const TRAY_SCALE = 0.22;
+		const itemsForType = TYPE_ITEMS[currentTrayType];
+		const positions = POSITIONS[currentTrayType];
+
+		// Build config only for items used by this type
+		const config: ItemsConfig = {};
+		itemsForType.forEach((itemId) => {
+			const itemDef = ALL_ITEMS[itemId];
+			if (!itemDef || !positions[itemId]) return;
+
+			const { meas } = itemDef;
+			const width = meas.width || meas.diameter || 0;
+			const height = meas.height || meas.diameter || 0;
+
+			config[itemId] = {
+				name: itemDef.name,
+				color: itemDef.color,
+				size: getSizeFromCm(width, height),
+				traySize: getSizeFromCm(width * TRAY_SCALE, height * TRAY_SCALE),
+				positionPercent: positions[itemId],
+				image: itemDef.image,
+			};
+		});
+
+		console.log(`Config generated with ${Object.keys(config).length} items for Type ${currentTrayType}`);
+		return config;
+	};
+
+	const updateCorrectPositions = useCallback((config: ItemsConfig): void => {
+		if (!dropZoneRef.current || Object.keys(config).length === 0) return;
 
 		const dropZoneRect = dropZoneRef.current.getBoundingClientRect();
 		const newCorrectPositions: CorrectPositions = {};
 
-		Object.entries(ITEMS_CONFIG).forEach(([itemId, config]) => {
-			const { xPercent, yPercent } = config.positionPercent;
+		Object.entries(config).forEach(([itemId, itemConfig]) => {
+			const { xPercent, yPercent } = itemConfig.positionPercent;
 			const x = (dropZoneRect.width * xPercent) / 100;
 			const y = (dropZoneRect.height * yPercent) / 100;
-			const itemWidthPx = parseFloat(config.size.width) * 16;
-			const itemHeightPx = parseFloat(config.size.height) * 16;
+			const itemWidthPx = parseFloat(itemConfig.size.width) * 16;
+			const itemHeightPx = parseFloat(itemConfig.size.height) * 16;
 
 			newCorrectPositions[itemId] = {
 				x: x - itemWidthPx / 2,
@@ -338,60 +261,82 @@ const BusinessClass: React.FC<BusinessClassProps> = () => {
 		});
 
 		setCorrectPositions(newCorrectPositions);
-	}, [ITEMS_CONFIG]);
+	}, []);
 
+	// Initialize on mount only
 	useEffect(() => {
-		const checkOrientation = (): void => {
-			if (typeof window === "undefined") return;
+		if (!isInitialized) {
+			console.log("Initializing BusinessClass component...");
+			// Generate config immediately - don't wait for refs
+			const config = getBaseItemConfig(trayType);
+			console.log("Config generated with", Object.keys(config).length, "items");
+			setItemsConfig(config);
+			setIsInitialized(true);
+		}
+	}, [isInitialized, trayType]);
 
-			const isLandscapeMode = window.innerWidth > window.innerHeight;
-			setIsLandscape(isLandscapeMode);
+	// Update correct positions when refs become available
+	useEffect(() => {
+		if (isInitialized && Object.keys(ITEMS_CONFIG).length > 0 && dropZoneRef.current) {
+			console.log("Refs are ready, updating correct positions...");
+			updateCorrectPositions(ITEMS_CONFIG);
+		}
+	}, [isInitialized, ITEMS_CONFIG]);
 
-			const newConfig = getBaseItemConfig(trayType);
-			setItemsConfig(newConfig);
+	// Handle ESC key to close modal
+	useEffect(() => {
+		const handleEscape = (e: KeyboardEvent) => {
+			if (e.key === 'Escape' && feedback) {
+				setFeedback("");
+			}
+		};
+		
+		window.addEventListener('keydown', handleEscape);
+		return () => window.removeEventListener('keydown', handleEscape);
+	}, [feedback]);
 
-			setTimeout(() => {
-				updateCorrectPositions();
-			}, 100);
+	// Handle resize events
+	useEffect(() => {
+		if (!isInitialized) return;
+
+		let resizeTimer: NodeJS.Timeout;
+		
+		const handleResize = () => {
+			clearTimeout(resizeTimer);
+			resizeTimer = setTimeout(() => {
+				const config = getBaseItemConfig(trayType);
+				setItemsConfig(config);
+				updateCorrectPositions(config);
+			}, 250);
 		};
 
-		checkOrientation();
+		window.addEventListener("resize", handleResize);
+		window.addEventListener("orientationchange", handleResize);
 
-		if (typeof window !== "undefined") {
-			window.addEventListener("resize", checkOrientation);
-			window.addEventListener("orientationchange", checkOrientation);
-
-			return () => {
-				window.removeEventListener("resize", checkOrientation);
-				window.removeEventListener("orientationchange", checkOrientation);
-			};
-		}
-	}, [trayType, getBaseItemConfig, updateCorrectPositions]);
-
-	useEffect(() => {
-		const initialConfig = getBaseItemConfig(trayType);
-		setItemsConfig(initialConfig);
-	}, [trayType, getBaseItemConfig]);
-
-	useEffect(() => {
-		if (dropZoneRef.current && Object.keys(ITEMS_CONFIG).length > 0) {
-			updateCorrectPositions();
-		}
-	}, [ITEMS_CONFIG, updateCorrectPositions]);
+		return () => {
+			clearTimeout(resizeTimer);
+			window.removeEventListener("resize", handleResize);
+			window.removeEventListener("orientationchange", handleResize);
+		};
+	}, [isInitialized, trayType, updateCorrectPositions]);
 
 	const handleDragStart = (e: React.DragEvent<HTMLDivElement>, itemId: string): void => {
 		setDraggedItem(itemId);
 		e.dataTransfer.effectAllowed = "move";
+		console.log("Drag started:", itemId);
 	};
 
 	const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>, itemId: string): void => {
 		setDraggedItem(itemId);
-		e.preventDefault();
+		console.log("Touch started:", itemId);
+		// Don't preventDefault - let CSS touch-action handle it
 	};
 
 	const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>): void => {
-		e.preventDefault();
 		if (!draggedItem || !dropZoneRef.current) return;
+		
+		// Don't preventDefault - it won't work in passive listeners
+		// CSS touch-action: none will prevent scrolling instead
 
 		const touch = e.touches[0];
 		const config = ITEMS_CONFIG[draggedItem];
@@ -417,7 +362,10 @@ const BusinessClass: React.FC<BusinessClassProps> = () => {
 	};
 
 	const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>): void => {
-		if (!draggedItem || !tableSurfaceRef.current) return;
+		if (!draggedItem || !tableSurfaceRef.current) {
+			setDraggedItem(null);
+			return;
+		}
 
 		const touch = e.changedTouches[0];
 		const tableSurfaceRect = tableSurfaceRef.current.getBoundingClientRect();
@@ -447,7 +395,12 @@ const BusinessClass: React.FC<BusinessClassProps> = () => {
 
 	const handleDrop = (e: React.DragEvent<HTMLDivElement>): void => {
 		e.preventDefault();
-		if (!draggedItem || !dropZoneRef.current || !tableSurfaceRef.current) return;
+		console.log("Drop event triggered");
+		
+		if (!draggedItem || !dropZoneRef.current || !tableSurfaceRef.current) {
+			console.log("Drop cancelled - missing refs or draggedItem");
+			return;
+		}
 
 		const dropZoneRect = dropZoneRef.current.getBoundingClientRect();
 		const tableSurfaceRect = tableSurfaceRef.current.getBoundingClientRect();
@@ -462,6 +415,8 @@ const BusinessClass: React.FC<BusinessClassProps> = () => {
 			e.clientY >= tableSurfaceRect.top &&
 			e.clientY <= tableSurfaceRect.bottom;
 
+		console.log("Drop within table surface:", isWithinTableSurface);
+
 		if (isWithinTableSurface) {
 			let x = e.clientX - dropZoneRect.left - widthPx / 2;
 			let y = e.clientY - dropZoneRect.top - heightPx / 2;
@@ -474,11 +429,14 @@ const BusinessClass: React.FC<BusinessClassProps> = () => {
 			const minY = 0;
 			y = Math.max(minY, Math.min(maxY, y));
 
+			console.log("Placing item at:", { x, y });
+
 			setPlacedItems((prev) => ({
 				...prev,
 				[draggedItem]: { x, y },
 			}));
 		} else {
+			console.log("Item dropped outside table surface - removing from placed items");
 			setPlacedItems((prev) => {
 				const newItems = { ...prev };
 				delete newItems[draggedItem];
@@ -492,6 +450,7 @@ const BusinessClass: React.FC<BusinessClassProps> = () => {
 
 	const handleDragEnd = (): void => {
 		if (draggedItem) {
+			console.log("Drag ended:", draggedItem);
 			setDraggedItem(null);
 		}
 	};
@@ -548,32 +507,43 @@ const BusinessClass: React.FC<BusinessClassProps> = () => {
 
 	const handleTrayTypeChange = (newTrayType: TrayType): void => {
 		setTrayType(newTrayType);
-		const newConfig = getBaseItemConfig(newTrayType);
-		setItemsConfig(newConfig);
 		setPlacedItems({});
-		setCorrectPositions({});
 		setFeedback("");
 		setShowCorrectPositions(false);
+		
+		// Update config for new tray type
+		const config = getBaseItemConfig(newTrayType);
+		setItemsConfig(config);
+		
 		setTimeout(() => {
-			updateCorrectPositions();
+			updateCorrectPositions(config);
 		}, 100);
 	};
 
-	if (!isLandscape) {
+	// Don't render until initialized
+	if (!isInitialized || Object.keys(ITEMS_CONFIG).length === 0) {
+		console.log("Loading state - isInitialized:", isInitialized, "ITEMS_CONFIG keys:", Object.keys(ITEMS_CONFIG).length);
 		return (
 			<div className={styles.businessClassContainer}>
 				<Navbar />
-				<div className={styles.rotationPrompt}>
-					<Image
-						src={rotateDevice}
-						alt="Rotate Device"
-						className={styles.rotationGif}
-						width={300}
-						height={200}
-						priority
-					/>
-					<p>請旋轉至橫向模式</p>
-					<p>Please rotate to landscape mode</p>
+				<div className={styles.container}>
+					<div style={{ 
+						display: 'flex', 
+						flexDirection: 'column',
+						justifyContent: 'center', 
+						alignItems: 'center', 
+						height: '100vh',
+						gap: '1rem'
+					}}>
+						<p style={{ fontSize: '1.5rem' }}>Loading Business Class Training...</p>
+						<p style={{ fontSize: '0.9rem', color: '#666' }}>
+							{!isInitialized ? 'Initializing component...' : 'Loading configuration...'}
+						</p>
+						{/* Debug info - remove in production */}
+						<p style={{ fontSize: '0.8rem', color: '#999' }}>
+							Check console (F12) for debug info
+						</p>
+					</div>
 				</div>
 			</div>
 		);
@@ -583,27 +553,44 @@ const BusinessClass: React.FC<BusinessClassProps> = () => {
 		<div className={styles.businessClassContainer}>
 			<Navbar />
 			<div className={styles.container}>
-				<div className={styles.header}>
-					<div className={styles.headerContent}>
-						<div className={styles.trayTypeToggle}>
-							<span className={styles.trayTypeLabel}>Tray Type:</span>
-							<div className={styles.toggleButtons}>
-								<button
-									onClick={() => handleTrayTypeChange("A")}
-									className={`${styles.toggleButton} ${trayType === "A" ? styles.active : ""}`}
-								>
-									Type A
-								</button>
-								<button
-									onClick={() => handleTrayTypeChange("B")}
-									className={`${styles.toggleButton} ${trayType === "B" ? styles.active : ""}`}
-								>
-									Type B
-								</button>
-							</div>
-						</div>
+				{/* Top Controls - Game-inspired UI */}
+				<div className={styles.topControls}>
+					<div className={styles.trayTypeSelector}>
+						<button
+							onClick={() => handleTrayTypeChange("A")}
+							className={`${styles.trayTypeBtn} ${trayType === "A" ? styles.activeTray : ""}`}
+						>
+							<span className={styles.trayLabel}>A</span>
+						</button>
+						<button
+							onClick={() => handleTrayTypeChange("B")}
+							className={`${styles.trayTypeBtn} ${trayType === "B" ? styles.activeTray : ""}`}
+						>
+							<span className={styles.trayLabel}>B</span>
+						</button>
 					</div>
-				</div>				
+					{trayType === "B" && (
+						<div className={styles.typeBRemark}>
+							<span className={styles.remarkIcon}>ℹ️</span>
+							<span className={styles.remarkText}>除台中出發往返航班，(S/P)無須主動擺設</span>
+						</div>
+					)}
+
+					<div className={styles.actionButtons}>
+						<button onClick={checkPlacement} className={`${styles.gameBtn} ${styles.submitBtn}`}>
+							<span className={styles.btnIcon}>✓</span>
+							<span className={styles.btnText}>Submit</span>
+						</button>
+						<button onClick={resetPlacement} className={`${styles.gameBtn} ${styles.resetBtn}`}>
+							<span className={styles.btnIcon}>↻</span>
+							<span className={styles.btnText}>Reset</span>
+						</button>
+						<button onClick={toggleCorrectPositions} className={`${styles.gameBtn} ${styles.hintBtn}`}>
+							<span className={styles.btnIcon}>💡</span>
+							<span className={styles.btnText}>{showCorrectPositions ? "Hide" : "Hint"}</span>
+						</button>
+					</div>
+				</div>
 
 				<div className={styles.mainContent}>
 					<div className={styles.dropZoneContainer}>
@@ -615,6 +602,7 @@ const BusinessClass: React.FC<BusinessClassProps> = () => {
 							{showCorrectPositions &&
 								Object.entries(correctPositions).map(([itemId, position]) => {
 									const config = ITEMS_CONFIG[itemId];
+									if (!config) return null;
 									return (
 										<div
 											key={`correct-${itemId}`}
@@ -633,6 +621,7 @@ const BusinessClass: React.FC<BusinessClassProps> = () => {
 
 							{Object.entries(placedItems).map(([itemId, position]) => {
 								const config = ITEMS_CONFIG[itemId];
+								if (!config) return null;
 								return (
 									<div
 										key={`placed-${itemId}`}
@@ -666,22 +655,23 @@ const BusinessClass: React.FC<BusinessClassProps> = () => {
 						</div>
 					</div>
 
-					<div className={styles.controlButtons}>
-						<button onClick={checkPlacement} className={`${styles.button} ${styles.submitButton}`}>
-							Submit & Check
-						</button>
-						<button onClick={resetPlacement} className={`${styles.button} ${styles.resetButton}`}>
-							Reset
-						</button>
-						<button onClick={toggleCorrectPositions} className={`${styles.button} ${styles.toggleButton}`}>
-							{showCorrectPositions ? "Hide" : "Show"} Correct Positions
-						</button>
-					</div>
-
 					{feedback && (
-						<div className={styles.feedback}>
-							<h3 className={styles.feedbackTitle}>Results:</h3>
-							<pre className={styles.feedbackText}>{feedback}</pre>
+						<div className={styles.feedbackModal} onClick={() => setFeedback("")}>
+							<div className={styles.feedbackModalContent} onClick={(e) => e.stopPropagation()}>
+								<div className={styles.feedbackHeader}>
+									<h3 className={styles.feedbackTitle}>Results</h3>
+									<button 
+										className={styles.feedbackClose}
+										onClick={() => setFeedback("")}
+										title="Close"
+									>
+										✕
+									</button>
+								</div>
+								<div className={styles.feedbackBody}>
+									<pre className={styles.feedbackText}>{feedback}</pre>
+								</div>
+							</div>
 						</div>
 					)}
 

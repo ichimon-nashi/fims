@@ -1,7 +1,8 @@
-// src/components/common/NavigationDrawer.tsx - Updated with single entry point for oral-test
+// src/components/common/NavigationDrawer.tsx - Fixed to prevent infinite re-renders
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
+import { useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Avatar from "@/components/ui/Avatar/Avatar";
 import styles from "./NavigationDrawer.module.css";
@@ -26,10 +27,6 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 	const router = useRouter();
 	const pathname = usePathname();
 	const { user, logout } = useAuth();
-
-	// Debug logging
-	console.log("NavigationDrawer - User data:", user);
-	console.log("NavigationDrawer - User authentication_level:", user?.authentication_level);
 
 	const navigationItems: NavigationItem[] = [
 		{
@@ -95,58 +92,54 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 		return user.authentication_level >= item.minAuthLevel;
 	};
 
-	// Get base display info for color scheme
-	const getBaseInfo = () => {
+	// Memoize base info to prevent recalculation on every render
+	const baseInfo = useMemo(() => {
 		if (!user) {
-			console.log("No user data available");
 			return { name: "Unknown", icon: "✈️", colorScheme: "default" };
 		}
 
 		if (user.employee_id === "admin") {
-			console.log("Admin user detected");
 			return { name: "ADMIN", icon: "🔒", colorScheme: "admin" };
 		}
 
 		const base = user.base?.toUpperCase();
-		console.log("User base (uppercase):", base);
 
 		switch (base) {
 			case "KHH":
 			case "KAOHSIUNG":
-				console.log("KHH base detected");
 				return { name: "KHH", icon: "✈️", colorScheme: "khh" };
 			case "TSA":
-			case "TAOYUAN":
-				console.log("TSA base detected");
+			case "SONGSHAN":
 				return { name: "TSA", icon: "✈️", colorScheme: "tsa" };
 			case "RMQ":
 			case "TAICHUNG":
-				console.log("RMQ base detected");
 				return { name: "RMQ", icon: "✈️", colorScheme: "rmq" };
 			default:
-				console.log("Default base, using:", user.base);
 				return {
 					name: user.base || "Unknown",
 					icon: "✈️",
 					colorScheme: "default",
 				};
 		}
-	};
+	}, [user]);
 
-	const baseInfo = getBaseInfo();
-	console.log("BaseInfo result:", baseInfo);
+	// Memoize user display info
+	const userDisplayInfo = useMemo(() => {
+		return {
+			employeeId: user?.employee_id || "",
+			fullName: user?.full_name || "",
+			displayName: user?.full_name || user?.employee_id || "Unknown User",
+			rank: user?.rank || "教師",
+		};
+	}, [user]);
 
-	// Extract employee ID and full name using correct User type properties
-	const employeeId = user?.employee_id || "";
-	const fullName = user?.full_name || "";
-
-	console.log("Avatar props:", { employeeId, fullName });
+	// Memoize accessible items
+	const accessibleItems = useMemo(() => {
+		return navigationItems.filter(item => hasAccess(item));
+	}, [user?.authentication_level]);
 
 	// Don't render if drawer is closed
 	if (!isOpen) return null;
-
-	// Filter navigation items based on user permissions
-	const accessibleItems = navigationItems.filter(item => hasAccess(item));
 
 	return (
 		<>
@@ -164,10 +157,8 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 					<div className={styles.userProfile}>
 						{user ? (
 							<Avatar
-								employeeId={employeeId}
-								fullName={
-									fullName || employeeId || "Unknown User"
-								}
+								employeeId={userDisplayInfo.employeeId}
+								fullName={userDisplayInfo.displayName}
 								size="medium"
 								className="drawerAvatar"
 							/>
@@ -176,17 +167,17 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 						)}
 						<div className={styles.userDetails}>
 							<div className={styles.userName}>
-								{fullName || employeeId || "Unknown User"}
+								{userDisplayInfo.displayName}
 							</div>
 							<div className={styles.userRole}>
-								{user?.rank || "教師"}
+								{userDisplayInfo.rank}
 							</div>
 							<div className={styles.userBaseContainer}>
 								<div className={styles.userBase}>
 									{baseInfo.icon} {baseInfo.name}
 								</div>
 							</div>
-							{user?.authentication_level && (
+							{user?.authentication_level !== undefined && (
 								<span
 									className={`${styles.authLevel} ${
 										styles[baseInfo.colorScheme]
@@ -204,49 +195,52 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 
 				{/* Navigation Items */}
 				<div className={styles.navigationList}>
-					{accessibleItems.map((item) => (
-						<div key={item.id} className={styles.navigationGroup}>
-							<div
-								className={`${styles.navigationItem} ${
-									pathname.startsWith(item.path.split('/')[1]) 
-										? styles.navigationItemActive
-										: ""
-								}`}
-								onClick={() => handleNavigation(item.path)}
-							>
-								<div className={styles.navigationIcon}>
-									{item.icon}
-								</div>
-								<div className={styles.navigationContent}>
-									<div className={styles.navigationTitle}>
-										{item.title}
-										{item.badge && (
-											<span
-												className={
-													styles.navigationBadge
-												}
-											>
-												{item.badge}
-											</span>
+					{accessibleItems.map((item) => {
+						const isActive = pathname.startsWith(item.path) || 
+							(item.path !== '/dashboard' && pathname.includes(item.path.split('/')[1]));
+						
+						return (
+							<div key={item.id} className={styles.navigationGroup}>
+								<div
+									className={`${styles.navigationItem} ${
+										isActive ? styles.navigationItemActive : ""
+									}`}
+									onClick={() => handleNavigation(item.path)}
+								>
+									<div className={styles.navigationIcon}>
+										{item.icon}
+									</div>
+									<div className={styles.navigationContent}>
+										<div className={styles.navigationTitle}>
+											{item.title}
+											{item.badge && (
+												<span
+													className={
+														styles.navigationBadge
+													}
+												>
+													{item.badge}
+												</span>
+											)}
+										</div>
+										<div
+											className={styles.navigationDescription}
+										>
+											{item.description}
+										</div>
+										{item.minAuthLevel && user && user.authentication_level < item.minAuthLevel && (
+											<div className={styles.accessDenied}>
+												需要權限等級 {item.minAuthLevel}+
+											</div>
 										)}
 									</div>
-									<div
-										className={styles.navigationDescription}
-									>
-										{item.description}
+									<div className={styles.navigationArrow}>
+										→
 									</div>
-									{item.minAuthLevel && user && user.authentication_level < item.minAuthLevel && (
-										<div className={styles.accessDenied}>
-											需要權限等級 {item.minAuthLevel}+
-										</div>
-									)}
-								</div>
-								<div className={styles.navigationArrow}>
-									→
 								</div>
 							</div>
-						</div>
-					))}
+						);
+					})}
 				</div>
 
 				{/* Footer */}
