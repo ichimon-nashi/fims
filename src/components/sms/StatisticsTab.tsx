@@ -405,7 +405,7 @@ export default function StatisticsTab() {
 			saveAs(blob, `SRM統計報表_${selectedYear}.xlsx`);
 
 			alert(
-				"✅ Excel 檔案已匯出！\n\n💡 請按照說明建立圖表"
+				"✅ Excel 檔案已匯出！\n💡 請按照說明建立圖表"
 			);
 		} catch (error) {
 			console.error("Export error:", error);

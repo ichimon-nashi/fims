@@ -199,7 +199,6 @@ export default function SMSPage() {
           )}
           {activeTab === 'statistics' && (
             <StatisticsTab 
-              currentYear={currentYear}
             />
           )}
         </div>
