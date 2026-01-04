@@ -405,7 +405,7 @@ export default function StatisticsTab() {
 			saveAs(blob, `SRM統計報表_${selectedYear}.xlsx`);
 
 			alert(
-				"✅ Excel 檔案已匯出！\n💡 請按照說明建立圖表"
+				"✅ Excel 檔案已匯出！\n💡 按照說明即可快速建立圖表"
 			);
 		} catch (error) {
 			console.error("Export error:", error);
@@ -424,7 +424,7 @@ export default function StatisticsTab() {
 				scale: 2,
 				logging: false,
 				useCORS: true,
-			});
+			} as any);
 			const link = document.createElement("a");
 			link.download = `SRM統計_${selectedYear}_${new Date()
 				.toISOString()
