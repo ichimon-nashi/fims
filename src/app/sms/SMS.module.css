@@ -1,0 +1,226 @@
+/* src/app/sms/SMS.module.css */
+
+.smsContainer {
+	padding: 2rem;
+	min-height: 100vh;
+	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+	color: #e8e9ed;
+}
+
+.loadingContainer {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-height: 100vh;
+	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+	color: #e8e9ed;
+}
+
+.spinner {
+	width: 50px;
+	height: 50px;
+	border: 4px solid rgba(255, 255, 255, 0.1);
+	border-top-color: #4a9eff;
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+	margin-bottom: 1rem;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.accessDenied {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-height: 100vh;
+	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+	color: #e8e9ed;
+	text-align: center;
+	padding: 2rem;
+}
+
+.accessDenied h2 {
+	color: #ef4444;
+	margin-bottom: 1rem;
+	font-size: 2rem;
+}
+
+.header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 2rem;
+	padding: 1.5rem;
+	background: rgba(255, 255, 255, 0.05);
+	border-radius: 12px;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.headerLeft h1 {
+	font-size: 1.8rem;
+	margin: 0 0 0.25rem 0;
+	color: #4a9eff;
+	font-weight: 600;
+	text-shadow: 0 2px 4px rgba(74, 158, 255, 0.3);
+}
+
+.subtitle {
+	margin: 0;
+	font-size: 0.9rem;
+	color: #a0aec0;
+	font-weight: 400;
+}
+
+.headerRight {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.headerRight label {
+	font-size: 0.9rem;
+	color: #a0aec0;
+	font-weight: 500;
+}
+
+.yearSelect {
+	padding: 0.5rem 1rem;
+	font-size: 1rem;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.1);
+	color: #e8e9ed;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	min-width: 100px;
+}
+
+.yearSelect:hover {
+	background: rgba(255, 255, 255, 0.15);
+	border-color: #4a9eff;
+}
+
+.yearSelect:focus {
+	outline: none;
+	border-color: #4a9eff;
+	box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2);
+}
+
+.yearSelect option {
+	background: #1a1f35;
+	color: #e8e9ed;
+	padding: 0.5rem;
+}
+
+.tabs {
+	display: flex;
+	gap: 0.5rem;
+	margin-bottom: 1.5rem;
+	border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+	padding-bottom: 0;
+}
+
+.tab {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 1rem 2rem;
+	background: rgba(255, 255, 255, 0.05);
+	border: none;
+	border-top-left-radius: 8px;
+	border-top-right-radius: 8px;
+	color: #a0aec0;
+	font-size: 1rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	position: relative;
+	border-bottom: 3px solid transparent;
+}
+
+.tab:hover {
+	background: rgba(255, 255, 255, 0.08);
+	color: #e8e9ed;
+}
+
+.tab.activeTab {
+	background: rgba(74, 158, 255, 0.15);
+	color: #4a9eff;
+	border-bottom-color: #4a9eff;
+	box-shadow: 0 -2px 8px rgba(74, 158, 255, 0.2);
+}
+
+.tabSubtitle {
+	font-size: 0.75rem;
+	font-weight: 400;
+	margin-top: 0.25rem;
+	opacity: 0.7;
+}
+
+.tabContent {
+	background: rgba(255, 255, 255, 0.03);
+	border-radius: 12px;
+	padding: 2rem;
+	min-height: 500px;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+	.smsContainer {
+		padding: 1rem;
+	}
+
+	.header {
+		flex-direction: column;
+		gap: 1rem;
+		align-items: flex-start;
+	}
+
+	.headerLeft h1 {
+		font-size: 1.5rem;
+	}
+
+	.headerRight {
+		width: 100%;
+		justify-content: space-between;
+	}
+
+	.tabs {
+		flex-wrap: wrap;
+	}
+
+	.tab {
+		padding: 0.75rem 1rem;
+		font-size: 0.9rem;
+		flex: 1;
+		min-width: 120px;
+	}
+
+	.tabContent {
+		padding: 1rem;
+	}
+}
+
+/* MacBook Air optimized (1440x900) */
+@media (min-width: 1400px) and (max-width: 1500px) {
+	.smsContainer {
+		max-width: 1400px;
+		margin: 0 auto;
+	}
+
+	.header {
+		padding: 1.25rem;
+	}
+
+	.tabContent {
+		min-height: 600px;
+	}
+}

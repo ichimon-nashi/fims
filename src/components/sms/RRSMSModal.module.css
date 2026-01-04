@@ -1,0 +1,250 @@
+/* src/components/sms/RRSMSModal.module.css */
+
+.modalOverlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.7);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+	padding: 1rem;
+	backdrop-filter: blur(4px);
+}
+
+.modal {
+	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+	border-radius: 16px;
+	width: 100%;
+	max-width: 700px;
+	max-height: 90vh;
+	overflow-y: auto;
+	box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modalHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1.5rem;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	background: rgba(255, 255, 255, 0.03);
+	position: sticky;
+	top: 0;
+	z-index: 10;
+}
+
+.modalHeader h2 {
+	margin: 0;
+	color: #4a9eff;
+	font-size: 1.4rem;
+	font-weight: 600;
+}
+
+.closeButton {
+	background: rgba(255, 255, 255, 0.1);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	color: white;
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	cursor: pointer;
+	font-size: 1.5rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.2s;
+}
+
+.closeButton:hover {
+	background: rgba(239, 68, 68, 0.3);
+	border-color: #ef4444;
+	transform: rotate(90deg);
+}
+
+.form {
+	padding: 1.5rem;
+}
+
+.formRow {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 1rem;
+	margin-bottom: 1rem;
+}
+
+.formGroup {
+	margin-bottom: 1rem;
+}
+
+.formGroup label {
+	display: block;
+	margin-bottom: 0.5rem;
+	color: #a0aec0;
+	font-weight: 500;
+	font-size: 0.9rem;
+}
+
+.formGroup small {
+	display: block;
+	margin-top: 0.25rem;
+	color: #6b7280;
+	font-size: 0.8rem;
+}
+
+.required {
+	color: #ef4444;
+	margin-left: 0.25rem;
+}
+
+.input,
+.select {
+	width: 100%;
+	padding: 0.75rem;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.05);
+	color: #e8e9ed;
+	font-size: 0.95rem;
+	transition: all 0.2s;
+}
+
+.input:focus,
+.select:focus {
+	outline: none;
+	border-color: #4a9eff;
+	background: rgba(255, 255, 255, 0.08);
+	box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2);
+}
+
+.select {
+	cursor: pointer;
+}
+
+/* Fix optgroup label color for better readability */
+.select optgroup {
+	color: #4a9eff;
+	font-weight: 700;
+	background: rgba(255, 255, 255, 0.1);
+	font-size: 0.95rem;
+}
+
+.select option {
+	color: #e8e9ed;
+	background: #1a1f35;
+	padding: 0.5rem;
+}
+
+.rrNumberInput {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.smallInput {
+	width: 70px;
+	padding: 0.75rem;
+	text-align: center;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.05);
+	color: #e8e9ed;
+	font-size: 1rem;
+	font-weight: 600;
+	font-family: "Courier New", monospace;
+}
+
+.smallInput:focus {
+	outline: none;
+	border-color: #4a9eff;
+	background: rgba(255, 255, 255, 0.08);
+	box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2);
+}
+
+.separator {
+	color: #718096;
+	font-size: 1.2rem;
+	font-weight: bold;
+}
+
+.rrText {
+	color: #4a9eff;
+	font-weight: 600;
+	font-size: 0.9rem;
+}
+
+.hintGreen {
+	color: #10b981 !important;
+	font-weight: 500;
+}
+
+.modalFooter {
+	padding: 1rem 1.5rem;
+	border-top: 1px solid rgba(255, 255, 255, 0.1);
+	display: flex;
+	justify-content: flex-end;
+	gap: 1rem;
+	background: rgba(255, 255, 255, 0.02);
+	position: sticky;
+	bottom: 0;
+}
+
+.cancelButton,
+.saveButton {
+	padding: 0.75rem 1.5rem;
+	border-radius: 8px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s;
+	border: none;
+}
+
+.cancelButton {
+	background: rgba(255, 255, 255, 0.1);
+	color: #e8e9ed;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.cancelButton:hover {
+	background: rgba(255, 255, 255, 0.15);
+	transform: translateY(-2px);
+}
+
+.saveButton {
+	background: linear-gradient(135deg, #4a9eff, #357abd);
+	color: white;
+}
+
+.saveButton:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(74, 158, 255, 0.4);
+}
+
+.saveButton:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+	.modal {
+		max-width: 95vw;
+	}
+
+	.formRow {
+		grid-template-columns: 1fr;
+	}
+
+	.modalFooter {
+		flex-direction: column;
+	}
+
+	.cancelButton,
+	.saveButton {
+		width: 100%;
+	}
+}

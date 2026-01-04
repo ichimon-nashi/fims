@@ -190,6 +190,13 @@ const Dashboard = () => {
       color: "#10b981"
     },
     {
+      title: "SMS 安全管理",
+      description: "Safety Management System",
+      icon: "🛡️",
+      href: "/sms",
+      color: "#ef4444"
+    },
+    {
       title: "口試系統",
       description: "口試題目與管理",
       icon: "🎯",

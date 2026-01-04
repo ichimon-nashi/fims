@@ -37,7 +37,7 @@ const navigationItems: NavigationItem[] = [
 		title: "排班管理",
 		icon: "📅",
 		path: "/roster",
-		description: "飛行教師排班系統",
+		description: "空服教師排班系統",
 	},
 	{
 		id: "tasks",
@@ -47,11 +47,19 @@ const navigationItems: NavigationItem[] = [
 		description: "Kanban 任務看板",
 	},
 	{
+		id: "sms",
+		title: "SMS 安全管理",
+		icon: "🛡️",
+		path: "/sms",
+		description: "Safety Management System",
+		minAuthLevel: 1,
+	},
+	{
 		id: "oral-test",
 		title: "口試系統",
 		icon: "🎯",
 		path: "/oral-test/dashboard",
-		description: "口試題目管理與紀錄",
+		description: "複訓翻書口試管理系統",
 		minAuthLevel: 1,
 	},
 	{
@@ -254,7 +262,7 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 					</button>
 					<div className={styles.footerInfo}>
 						<div className={styles.appVersion}>
-							豪神教師管理系統 v2.2.1
+							豪神教師管理系統 v2.3.1
 						</div>
 						<div className={styles.lastUpdate}>
 							最後更新: {new Date().toLocaleDateString("zh-TW")}

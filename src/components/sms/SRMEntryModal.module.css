@@ -1,0 +1,532 @@
+/* src/components/sms/SRMEntryModal.module.css */
+
+.modalOverlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.7);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+	padding: 1rem;
+	backdrop-filter: blur(4px);
+}
+
+.modal {
+	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+	border-radius: 16px;
+	width: 100%;
+	max-width: 800px;
+	max-height: 90vh;
+	overflow-y: auto;
+	box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 900px) {
+	.modal {
+		max-width: 95vw;
+	}
+}
+
+@media (max-width: 600px) {
+	.modal {
+		max-width: 98vw;
+		max-height: 95vh;
+		border-radius: 12px;
+	}
+}
+
+.modalHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1.5rem;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	background: rgba(255, 255, 255, 0.03);
+}
+
+.modalHeader h2 {
+	margin: 0;
+	color: #4a9eff;
+	font-size: 1.5rem;
+	font-weight: 600;
+}
+
+.closeButton {
+	background: rgba(255, 255, 255, 0.1);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	color: white;
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 1.5rem;
+	line-height: 1;
+	padding: 0;
+	transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+	background: rgba(239, 68, 68, 0.3);
+	border-color: #ef4444;
+	transform: rotate(90deg);
+}
+
+.form {
+	padding: 1.5rem;
+}
+
+.formRow {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 1rem;
+	margin-bottom: 1rem;
+}
+
+.formRow {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 1rem;
+	margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+	.formRow {
+		grid-template-columns: 1fr;
+	}
+}
+
+.formGroup {
+	margin-bottom: 1rem;
+}
+
+.formGroup label {
+	display: block;
+	margin-bottom: 0.5rem;
+	color: #a0aec0;
+	font-weight: 500;
+	font-size: 0.9rem;
+}
+
+.formGroup small {
+	display: block;
+	color: #6b7280;
+	font-size: 0.75rem;
+	margin-top: 0.25rem;
+}
+
+.required {
+	color: #ef4444;
+}
+
+.input,
+.select,
+.textarea {
+	width: 100%;
+	padding: 0.75rem;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-radius: 8px;
+	color: #e8e9ed;
+	font-size: 0.95rem;
+	transition: all 0.2s ease;
+	font-family: inherit;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+	outline: none;
+	background: rgba(255, 255, 255, 0.08);
+	border-color: #4a9eff;
+	box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2);
+}
+
+.textarea {
+	resize: vertical;
+	min-height: 80px;
+}
+
+.modalActions {
+	display: flex;
+	gap: 1rem;
+	justify-content: flex-end;
+	margin-top: 1.5rem;
+	padding-top: 1.5rem;
+	border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.cancelButton,
+.saveButton {
+	padding: 0.75rem 1.5rem;
+	border-radius: 8px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	border: none;
+}
+
+.cancelButton {
+	background: rgba(255, 255, 255, 0.05);
+	color: #a0aec0;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.cancelButton:hover:not(:disabled) {
+	background: rgba(255, 255, 255, 0.1);
+	color: #e8e9ed;
+}
+
+.saveButton {
+	background: linear-gradient(135deg, #4a9eff, #357abd);
+	color: white;
+	box-shadow: 0 2px 4px rgba(74, 158, 255, 0.3);
+}
+
+.saveButton:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 8px rgba(74, 158, 255, 0.4);
+}
+
+.saveButton:disabled,
+.cancelButton:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+	.modal {
+		max-height: 95vh;
+	}
+
+	.modalHeader {
+		padding: 1rem;
+	}
+
+	.form {
+		padding: 1rem;
+	}
+
+	.formRow {
+		grid-template-columns: 1fr;
+	}
+
+	.modalActions {
+		flex-direction: column;
+	}
+
+	.cancelButton,
+	.saveButton {
+		width: 100%;
+	}
+}
+
+/* Fix dropdown option visibility */
+.select option {
+	color: #e8e9ed;
+	background: #1a1f35;
+	padding: 0.5rem;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+	.modalHeader,
+	.form {
+		padding: 1rem;
+	}
+
+	.formRow {
+		grid-template-columns: 1fr;
+	}
+
+	.modalFooter {
+		padding: 1rem;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.cancelButton,
+	.submitButton {
+		width: 100%;
+	}
+}
+
+@media (max-width: 480px) {
+	.modalHeader h2 {
+		font-size: 1.1rem;
+	}
+
+	.form {
+		padding: 0.75rem;
+	}
+}
+
+/* Risk Mitigation Measures - Multiple Entries */
+.sectionHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 1rem;
+}
+
+.sectionHeader label {
+	color: #a0aec0;
+	font-weight: 500;
+	font-size: 0.9rem;
+}
+
+.addButton {
+	background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
+	color: white;
+	border: none;
+	padding: 0.5rem 1rem;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 0.85rem;
+	font-weight: 500;
+	transition: all 0.2s ease;
+	box-shadow: 0 2px 8px rgba(74, 158, 255, 0.3);
+}
+
+.addButton:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(74, 158, 255, 0.4);
+	background: linear-gradient(135deg, #5aa8ff 0%, #4086cd 100%);
+}
+
+.addButton:active {
+	transform: translateY(0);
+}
+
+.measureItem {
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	padding: 1rem;
+	margin-bottom: 1rem;
+}
+
+.measureHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 0.75rem;
+	padding-bottom: 0.5rem;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.measureHeader span {
+	color: #4a9eff;
+	font-weight: 600;
+	font-size: 0.9rem;
+}
+
+.removeButton {
+	background: rgba(220, 38, 38, 0.1);
+	color: #ef4444;
+	border: 1px solid rgba(220, 38, 38, 0.3);
+	width: 28px;
+	height: 28px;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 1.2rem;
+	line-height: 1;
+	transition: all 0.2s ease;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.removeButton:hover {
+	background: rgba(220, 38, 38, 0.2);
+	border-color: rgba(220, 38, 38, 0.5);
+	transform: scale(1.05);
+}
+
+/* Grid layout for measure fields */
+.measureFields {
+	display: grid;
+	grid-template-columns: 2fr 1fr 1fr;
+	gap: 1rem;
+	align-items: start;
+}
+
+.measureFields .formGroup {
+	margin-bottom: 0;
+}
+
+.measureFields .formGroup label {
+	display: block;
+	margin-bottom: 0.5rem;
+	color: #a0aec0;
+	font-weight: 500;
+	font-size: 0.85rem;
+}
+
+.measureFields textarea,
+.measureFields input {
+	width: 100%;
+	padding: 0.75rem;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-radius: 8px;
+	color: #e8e9ed;
+	font-size: 0.95rem;
+	transition: all 0.2s ease;
+	font-family: inherit;
+}
+
+.measureFields textarea:focus,
+.measureFields input:focus {
+	outline: none;
+	background: rgba(255, 255, 255, 0.08);
+	border-color: #4a9eff;
+	box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2);
+}
+
+.measureFields textarea {
+	min-height: 80px;
+	resize: vertical;
+}
+
+.measureFields input {
+	height: 80px;
+}
+
+@media (max-width: 900px) {
+	.measureFields {
+		grid-template-columns: 1fr;
+		gap: 0.75rem;
+	}
+
+	.measureFields textarea,
+	.measureFields input {
+		min-height: 60px;
+		height: auto;
+	}
+}
+
+@media (max-width: 768px) {
+	.sectionHeader {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.5rem;
+	}
+
+	.addButton {
+		width: 100%;
+	}
+
+	.measureItem {
+		padding: 0.75rem;
+	}
+
+	.measureFields textarea,
+	.measureFields input {
+		min-height: 50px;
+	}
+}
+
+/* Modal Body - Scrollable container */
+.modalBody {
+	padding: 1.5rem;
+	/* Remove max-height and overflow to prevent double scrollbar */
+}
+
+@media (max-width: 768px) {
+	.modalBody {
+		padding: 1rem;
+	}
+}
+
+/* Modal Footer */
+.modalFooter {
+	display: flex;
+	justify-content: flex-end;
+	gap: 1rem;
+	padding: 1.5rem;
+	border-top: 1px solid rgba(255, 255, 255, 0.1);
+	background: rgba(255, 255, 255, 0.03);
+}
+
+@media (max-width: 768px) {
+	.modalFooter {
+		padding: 1rem;
+		flex-direction: column-reverse;
+	}
+
+	.modalFooter button {
+		width: 100%;
+	}
+}
+
+.submitButton {
+	background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
+	color: white;
+	border: none;
+	padding: 0.75rem 2rem;
+	border-radius: 8px;
+	cursor: pointer;
+	font-weight: 600;
+	font-size: 1rem;
+	transition: all 0.2s ease;
+	box-shadow: 0 2px 8px rgba(74, 158, 255, 0.3);
+}
+
+.submitButton:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(74, 158, 255, 0.4);
+	background: linear-gradient(135deg, #5aa8ff 0%, #4086cd 100%);
+}
+
+.submitButton:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.cancelButton {
+	background: rgba(255, 255, 255, 0.05);
+	color: #a0aec0;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	padding: 0.75rem 2rem;
+	border-radius: 8px;
+	cursor: pointer;
+	font-weight: 600;
+	font-size: 1rem;
+	transition: all 0.2s ease;
+}
+
+.cancelButton:hover:not(:disabled) {
+	background: rgba(255, 255, 255, 0.1);
+	border-color: rgba(255, 255, 255, 0.3);
+	color: white;
+}
+
+.cancelButton:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+/* Three-column row for 檔案日期, 編號, 資料來源 */
+.formRow[style*="gridTemplateColumns: '1fr 1fr 1fr'"] {
+	grid-template-columns: 1fr 1fr 1fr !important;
+}
+
+/* Four-column row for 檔案日期, 編號, 資料來源, 事件月份 */
+.formRow[style*="gridTemplateColumns: '1fr 1fr 1fr 1fr'"] {
+	grid-template-columns: 1fr 1fr 1fr 1fr !important;
+}
+
+@media (max-width: 900px) {
+	.formRow[style*="gridTemplateColumns"] {
+		grid-template-columns: 1fr !important;
+	}
+}

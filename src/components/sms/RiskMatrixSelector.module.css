@@ -1,0 +1,238 @@
+/* src/components/sms/RiskMatrixSelector.module.css */
+
+.container {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.container label {
+	display: block;
+	margin-bottom: 0.25rem;
+	color: #a0aec0;
+	font-weight: 500;
+	font-size: 0.9rem;
+}
+
+.inputGroup {
+	display: flex;
+	gap: 0.5rem;
+}
+
+.input {
+	flex: 1;
+	padding: 0.75rem;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-radius: 8px;
+	color: #e8e9ed;
+	font-size: 0.95rem;
+	text-transform: uppercase;
+}
+
+.input:focus {
+	outline: none;
+	background: rgba(255, 255, 255, 0.08);
+	border-color: #4a9eff;
+}
+
+.matrixButton {
+	padding: 0.75rem 1rem;
+	background: rgba(74, 158, 255, 0.2);
+	border: 1px solid rgba(74, 158, 255, 0.3);
+	border-radius: 8px;
+	color: #4a9eff;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s;
+	white-space: nowrap;
+}
+
+.matrixButton:hover {
+	background: rgba(74, 158, 255, 0.3);
+	transform: translateY(-1px);
+}
+
+.matrixPanel {
+	margin-top: 0.5rem;
+	padding: 0.75rem;
+	background: rgba(0, 0, 0, 0.3);
+	border: 1px solid rgba(74, 158, 255, 0.2);
+	border-radius: 8px;
+	max-width: 100%;
+	overflow-x: auto;
+}
+
+.matrixGrid {
+	display: grid;
+	grid-template-columns: 75px repeat(5, minmax(60px, 1fr));
+	gap: 3px;
+	max-width: fit-content;
+}
+
+.matrixCorner {
+	grid-column: 1;
+	grid-row: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	font-size: 0.75rem;
+	color: #a0aec0;
+	padding: 0.5rem;
+}
+
+.matrixHeader {
+	padding: 0.4rem 0.25rem;
+	background: rgba(74, 158, 255, 0.2);
+	text-align: center;
+	font-weight: 600;
+	color: #4a9eff;
+	border-radius: 4px;
+	grid-row: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+}
+
+.matrixRowHeader {
+	padding: 0.4rem 0.25rem;
+	background: rgba(74, 158, 255, 0.2);
+	text-align: center;
+	font-weight: 600;
+	color: #4a9eff;
+	border-radius: 4px;
+	grid-column: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+}
+
+.headerNum {
+	font-size: 0.9rem;
+	font-weight: 700;
+}
+
+.headerLabel {
+	font-size: 0.65rem;
+	opacity: 0.85;
+	font-weight: 500;
+	line-height: 1.1;
+}
+
+.matrixCell {
+	padding: 0.5rem 0.25rem;
+	border: 2px solid transparent;
+	border-radius: 4px;
+	color: white;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 0.15rem;
+	min-height: 50px;
+}
+
+.cellCode {
+	font-size: 0.9rem;
+	font-weight: 700;
+}
+
+.cellScore {
+	font-size: 0.7rem;
+	opacity: 0.9;
+}
+
+.matrixCell:hover {
+	transform: scale(1.05);
+	border-color: white;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.matrixCell.selected {
+	border-color: white;
+	box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+	transform: scale(1.1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+	.matrixGrid {
+		grid-template-columns: 60px repeat(5, 1fr);
+		gap: 2px;
+	}
+
+	.matrixCell {
+		padding: 0.5rem;
+		font-size: 0.8rem;
+	}
+}
+
+/* Mobile responsive improvements */
+@media (max-width: 768px) {
+	.matrixGrid {
+		grid-template-columns: 60px repeat(5, 1fr);
+		gap: 2px;
+	}
+
+	.matrixCell {
+		padding: 0.5rem 0.25rem;
+		font-size: 0.8rem;
+	}
+
+	.cellCode {
+		font-size: 0.85rem;
+	}
+
+	.cellScore {
+		font-size: 0.65rem;
+	}
+
+	.headerNum {
+		font-size: 0.85rem;
+	}
+
+	.headerLabel {
+		font-size: 0.6rem;
+	}
+
+	.matrixCorner {
+		font-size: 0.65rem;
+		padding: 0.25rem;
+	}
+}
+
+@media (max-width: 480px) {
+	.matrixPanel {
+		padding: 0.5rem;
+	}
+
+	.matrixGrid {
+		grid-template-columns: 50px repeat(5, 1fr);
+		gap: 1px;
+	}
+
+	.matrixCell {
+		padding: 0.4rem 0.2rem;
+	}
+
+	.cellCode {
+		font-size: 0.75rem;
+	}
+
+	.cellScore {
+		font-size: 0.6rem;
+	}
+
+	.headerNum {
+		font-size: 0.75rem;
+	}
+
+	.headerLabel {
+		font-size: 0.55rem;
+	}
+}
