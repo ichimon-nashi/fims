@@ -117,8 +117,21 @@ export default function SRMEntryModal({
 			const occurrenceMonth =
 				formData.occurrence_month || formData.file_date.slice(0, 7); // YYYY-MM format from file_date
 
-			const payload = {
+
+			// Clean data before saving
+			const cleanedData = {
 				...formData,
+				// 編號: remove all spaces and capitalize all letters
+				number: formData.number.replace(/\s+/g, '').toUpperCase(),
+				// Text fields: trim trailing whitespace and newlines
+				hazard_description: formData.hazard_description.trimEnd(),
+				possible_cause: formData.possible_cause.trimEnd(),
+				hazard_impact: formData.hazard_impact.trimEnd(),
+				existing_measures: formData.existing_measures.trimEnd(),
+			};
+
+			const payload = {
+				...cleanedData,
 				year,
 				occurrence_month: occurrenceMonth,
 				human_factors_codes: humanFactorsCodes,

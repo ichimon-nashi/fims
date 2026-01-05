@@ -164,15 +164,23 @@ export default function SRMTableTab({
 		const yearGroupsArray = Object.keys(groups)
 			.map((year) => ({
 				year: parseInt(year),
-				entries: groups[parseInt(year)].sort(
-					(a, b) =>
-						new Date(b.file_date).getTime() -
-						new Date(a.file_date).getTime()
-				),
+					entries: groups[parseInt(year)].sort((a, b) => {
+						// First sort by file_date (newest first = oldest at bottom)
+						const dateA = new Date(a.file_date).getTime();
+						const dateB = new Date(b.file_date).getTime();
+						if (dateB !== dateA) {
+							return dateB - dateA; // Newer dates first
+						}
+						// If same date, sort by number (larger number first = smaller at bottom)
+						return b.number.localeCompare(a.number);
+					}),
 			}))
 			.sort((a, b) => b.year - a.year);
 
 		setYearGroups(yearGroupsArray);
+		// Expand all years by default
+		const allYears = new Set(yearGroupsArray.map(g => g.year));
+		setExpandedYears(allYears);
 	};
 
 	const toggleYear = (year: number) => {

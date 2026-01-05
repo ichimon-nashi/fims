@@ -530,3 +530,27 @@
 		grid-template-columns: 1fr !important;
 	}
 }
+
+/* Radio Group - Center alignment for 資料來源 */
+.radioGroup {
+	display: flex;
+	gap: 1.5rem;
+	justify-content: center;
+	align-items: center;
+	padding: 0.5rem 0;
+}
+
+.radioGroup label {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	cursor: pointer;
+	color: #e8e9ed;
+	font-weight: 500;
+}
+
+.radioGroup input[type="radio"] {
+	cursor: pointer;
+	width: 18px;
+	height: 18px;
+}
