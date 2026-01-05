@@ -101,15 +101,26 @@ export default function RRSMSTab({
 		const yearGroupsArray = Object.keys(groups)
 			.map((year) => ({
 				year: parseInt(year),
-				entries: groups[parseInt(year)].sort(
-					(a, b) =>
-						new Date(b.last_review!).getTime() -
-						new Date(a.last_review!).getTime()
-				),
+			entries: groups[parseInt(year)].sort((a, b) => {
+				// Sort by days remaining (smallest/closest to deadline first)
+				const daysA = getDaysUntilReview(a.next_review);
+				const daysB = getDaysUntilReview(b.next_review);
+				
+				// Handle null cases (entries without next_review go to bottom)
+				if (daysA === null && daysB === null) return 0;
+				if (daysA === null) return 1;
+				if (daysB === null) return -1;
+				
+				// Sort by days remaining ascending (smallest first)
+				return daysA - daysB;
+			}),
 			}))
 			.sort((a, b) => b.year - a.year); // Newest year first
 
 		setYearGroups(yearGroupsArray);
+		// Expand all years by default
+		const allYears = new Set(yearGroupsArray.map(g => g.year));
+		setExpandedYears(allYears);
 	};
 
 	const toggleYear = (year: number) => {

@@ -643,10 +643,6 @@ export default function StatisticsTab() {
 							</tbody>
 						</table>
 					</div>
-					<div className={styles.tableHint}>
-						💡 提示: 數字旁的 (n) 表示有 n
-						個不同資料來源，將滑鼠移到格子上可查看來源
-					</div>
 				</div>
 
 				<div className={styles.section}>
