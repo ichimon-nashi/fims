@@ -50,9 +50,17 @@ export async function PUT(
     const updates: any = {};
     if (body.rr_number !== undefined) updates.rr_number = body.rr_number;
     if (body.srm_table_link_id !== undefined) updates.srm_table_link_id = body.srm_table_link_id;
+    // OLD fields
     if (body.risk_id_barrier !== undefined) updates.risk_id_barrier = body.risk_id_barrier;
     if (body.last_review !== undefined) updates.last_review = body.last_review;
     if (body.next_review !== undefined) updates.next_review = body.next_review;
+    // NEW fields
+    if (body.risk_id !== undefined) updates.risk_id = body.risk_id;
+    if (body.risk_last_review !== undefined) updates.risk_last_review = body.risk_last_review;
+    if (body.risk_next_review !== undefined) updates.risk_next_review = body.risk_next_review;
+    if (body.barrier_id !== undefined) updates.barrier_id = body.barrier_id;
+    if (body.barrier_last_review !== undefined) updates.barrier_last_review = body.barrier_last_review;
+    if (body.barrier_next_review !== undefined) updates.barrier_next_review = body.barrier_next_review;
 
     const entry = await updateRRSMSEntry(id, updates);
 

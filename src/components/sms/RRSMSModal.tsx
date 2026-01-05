@@ -1,711 +1,457 @@
-// src/components/sms/RRSMSTab.tsx
+// src/components/sms/RRSMSModal.tsx
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import styles from "./RRSMSTab.module.css";
-import RRSMSModal from "./RRSMSModal";
+import { useState, useEffect } from "react";
+import styles from "./RRSMSModal.module.css";
 import { RRSMSEntry } from "@/lib/sms.types";
 
-interface RRSMSTabProps {
-	currentYear: number;
+interface RRSMSModalProps {
+	entry: RRSMSEntry | null;
 	userId: string;
-	isAdmin: boolean;
+	currentYear: number;
+	onClose: () => void;
+	onSave: () => void;
+}
+
+interface SRMListItem {
+	id: string;
+	number: string;
+	hazard_description?: string;
+	file_date: string;
+	year: number;
 }
 
 interface YearGroup {
 	year: number;
-	entries: RRSMSEntry[];
+	items: SRMListItem[];
 }
 
-export default function RRSMSTab({
-	currentYear,
+export default function RRSMSModal({
+	entry,
 	userId,
-	isAdmin,
-}: RRSMSTabProps) {
-	const [allEntries, setAllEntries] = useState<RRSMSEntry[]>([]);
-	const [yearGroups, setYearGroups] = useState<YearGroup[]>([]);
-	const [expandedYears, setExpandedYears] = useState<Set<number>>(
-		new Set([currentYear])
-	);
-	const [loading, setLoading] = useState(true);
-	const [showModal, setShowModal] = useState(false);
-	const [editingEntry, setEditingEntry] = useState<RRSMSEntry | null>(null);
-	const [searchTerm, setSearchTerm] = useState("");
+	currentYear,
+	onClose,
+	onSave,
+}: RRSMSModalProps) {
+	const [formData, setFormData] = useState({
+		num1: "",
+		num2: "",
+		srm_table_link_id: "",
+		risk_id: "",
+		risk_last_review: "",
+		risk_next_review: "",
+		barrier_id: "",
+		barrier_last_review: "",
+		barrier_next_review: "",
+	});
 
-	// Column resizing state
-	const [columnWidths, setColumnWidths] = useState<{ [key: string]: number }>(
-		() => {
-			if (typeof window !== "undefined") {
-				const saved = localStorage.getItem("rrSmsColumnWidths");
-				return saved ? JSON.parse(saved) : {};
-			}
-			return {};
-		}
-	);
-	const [resizing, setResizing] = useState<{
-		column: string;
-		startX: number;
-		startWidth: number;
-	} | null>(null);
+	const [srmYearGroups, setSrmYearGroups] = useState<YearGroup[]>([]);
+	const [srmSearchTerm, setSrmSearchTerm] = useState("");
+	const [loadingSrmList, setLoadingSrmList] = useState(false);
+	const [loading, setLoading] = useState(false);
 
 	useEffect(() => {
-		fetchAllEntries();
+		if (entry) {
+			const parts = entry.rr_number.split("/");
+			if (parts.length === 3) {
+				setFormData({
+					num1: parts[0],
+					num2: parts[2],
+					srm_table_link_id: entry.srm_table_link_id || "",
+					risk_id: entry.risk_id || "",
+					risk_last_review: entry.risk_last_review || "",
+					risk_next_review: entry.risk_next_review || "",
+					barrier_id: entry.barrier_id || "",
+					barrier_last_review: entry.barrier_last_review || "",
+					barrier_next_review: entry.barrier_next_review || "",
+				});
+			}
+		}
+	}, [entry]);
+
+	useEffect(() => {
+		fetchSrmList();
 	}, []);
 
-	useEffect(() => {
-		if (typeof window !== "undefined") {
-			localStorage.setItem(
-				"rrSmsColumnWidths",
-				JSON.stringify(columnWidths)
-			);
-		}
-	}, [columnWidths]);
-
-	const fetchAllEntries = async () => {
+	const fetchSrmList = async () => {
+		setLoadingSrmList(true);
 		try {
-			setLoading(true);
 			const token = localStorage.getItem("token");
-
-			// Fetch ALL entries (no year filter)
-			const response = await fetch("/api/sms/rr-entries", {
-				headers: {
-					Authorization: `Bearer ${token}`,
-				},
+			const response = await fetch("/api/sms/srm-entries", {
+				headers: { Authorization: `Bearer ${token}` },
 			});
-
-			if (!response.ok) throw new Error("Failed to fetch entries");
+			if (!response.ok) throw new Error("Failed to fetch SRM list");
 
 			const data = await response.json();
-			setAllEntries(data);
-			groupEntriesByYear(data);
+
+			// Group by year
+			const groups: { [year: number]: SRMListItem[] } = {};
+			data.forEach((item: SRMListItem) => {
+				if (!groups[item.year]) groups[item.year] = [];
+				groups[item.year].push(item);
+			});
+
+			const yearGroups = Object.keys(groups)
+				.map((year) => ({
+					year: parseInt(year),
+					items: groups[parseInt(year)].sort(
+						(a, b) =>
+							new Date(b.file_date).getTime() -
+							new Date(a.file_date).getTime()
+					),
+				}))
+				.sort((a, b) => b.year - a.year);
+
+			setSrmYearGroups(yearGroups);
 		} catch (error) {
-			console.error("Error fetching RR SMS entries:", error);
+			console.error("Error fetching SRM list:", error);
+		} finally {
+			setLoadingSrmList(false);
+		}
+	};
+
+	const handleChange = (
+		e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+	) => {
+		const { name, value } = e.target;
+
+		// Auto-calculate risk_next_review when risk_last_review changes
+		if (name === "risk_last_review" && value) {
+			const lastReviewDate = new Date(value);
+			const nextReviewDate = new Date(lastReviewDate);
+			nextReviewDate.setFullYear(nextReviewDate.getFullYear() + 1);
+			const nextReviewStr = nextReviewDate.toISOString().split("T")[0];
+			setFormData((prev) => ({
+				...prev,
+				risk_last_review: value,
+				risk_next_review: nextReviewStr,
+			}));
+		}
+		// Auto-calculate barrier_next_review when barrier_last_review changes
+		else if (name === "barrier_last_review" && value) {
+			const lastReviewDate = new Date(value);
+			const nextReviewDate = new Date(lastReviewDate);
+			nextReviewDate.setFullYear(nextReviewDate.getFullYear() + 1);
+			const nextReviewStr = nextReviewDate.toISOString().split("T")[0];
+			setFormData((prev) => ({
+				...prev,
+				barrier_last_review: value,
+				barrier_next_review: nextReviewStr,
+			}));
+		} else {
+			setFormData((prev) => ({ ...prev, [name]: value }));
+		}
+	};
+
+	const handleSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
+		setLoading(true);
+
+		// Validate RR number parts
+		if (!formData.num1 || !formData.num2) {
+			alert("請輸入完整的 RR 編號");
+			setLoading(false);
+			return;
+		}
+
+		if (
+			formData.num1.length !== 2 ||
+			(formData.num2.length !== 2 && formData.num2.length !== 3)
+		) {
+			alert("RR 編號格式: XX/RR/XX 或 XX/RR/XXX");
+			setLoading(false);
+			return;
+		}
+
+		const rr_number = `${formData.num1}/RR/${formData.num2}`;
+
+		try {
+			const token = localStorage.getItem("token");
+
+			// Extract year from risk_last_review or barrier_last_review
+			const year = formData.risk_last_review
+				? new Date(formData.risk_last_review).getFullYear()
+				: formData.barrier_last_review
+				? new Date(formData.barrier_last_review).getFullYear()
+				: currentYear;
+
+			// Auto-calculate risk_next_review if blank but risk_last_review exists
+			let riskNextReview = formData.risk_next_review;
+			if (!riskNextReview && formData.risk_last_review) {
+				const lastReviewDate = new Date(formData.risk_last_review);
+				const nextReviewDate = new Date(lastReviewDate);
+				nextReviewDate.setFullYear(nextReviewDate.getFullYear() + 1);
+				riskNextReview = nextReviewDate.toISOString().split("T")[0];
+			}
+
+			// Auto-calculate barrier_next_review if blank but barrier_last_review exists
+			let barrierNextReview = formData.barrier_next_review;
+			if (!barrierNextReview && formData.barrier_last_review) {
+				const lastReviewDate = new Date(formData.barrier_last_review);
+				const nextReviewDate = new Date(lastReviewDate);
+				nextReviewDate.setFullYear(nextReviewDate.getFullYear() + 1);
+				barrierNextReview = nextReviewDate.toISOString().split("T")[0];
+			}
+
+			const payload = {
+				rr_number,
+				srm_table_link_id: formData.srm_table_link_id || null,
+				risk_id: formData.risk_id || null,
+				risk_last_review: formData.risk_last_review || null,
+				risk_next_review: riskNextReview || null,
+				barrier_id: formData.barrier_id || null,
+				barrier_last_review: formData.barrier_last_review || null,
+				barrier_next_review: barrierNextReview || null,
+				year,
+				created_by: userId,
+			};
+
+			const url = entry
+				? `/api/sms/rr-entries/${entry.id}`
+				: "/api/sms/rr-entries";
+
+			const method = entry ? "PUT" : "POST";
+
+			const response = await fetch(url, {
+				method,
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify(payload),
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.error || "Failed to save entry");
+			}
+
+			onSave();
+			onClose();
+		} catch (error: any) {
+			console.error("Error saving RR entry:", error);
+			alert(error.message || "儲存失敗，請重試");
 		} finally {
 			setLoading(false);
 		}
 	};
 
-	const groupEntriesByYear = (entries: RRSMSEntry[]) => {
-		const groups: { [year: number]: RRSMSEntry[] } = {};
-
-		entries.forEach((entry) => {
-			if (entry.last_review) {
-				const year = new Date(entry.last_review).getFullYear();
-				if (!groups[year]) {
-					groups[year] = [];
-				}
-				groups[year].push(entry);
-			}
-		});
-
-		const yearGroupsArray = Object.keys(groups)
-			.map((year) => ({
-				year: parseInt(year),
-				entries: groups[parseInt(year)].sort(
-					(a, b) =>
-						new Date(b.last_review!).getTime() -
-						new Date(a.last_review!).getTime()
-				),
-			}))
-			.sort((a, b) => b.year - a.year); // Newest year first
-
-		setYearGroups(yearGroupsArray);
-		// Expand all years by default
-		const allYears = new Set(yearGroupsArray.map(g => g.year));
-		setExpandedYears(allYears);
-	};
-
-	const toggleYear = (year: number) => {
-		const newExpanded = new Set(expandedYears);
-		if (newExpanded.has(year)) {
-			newExpanded.delete(year);
-		} else {
-			newExpanded.add(year);
-		}
-		setExpandedYears(newExpanded);
-	};
-
-	const handleAdd = () => {
-		setEditingEntry(null);
-		setShowModal(true);
-	};
-
-	const handleEdit = (entry: RRSMSEntry) => {
-		setEditingEntry(entry);
-		setShowModal(true);
-	};
-
-	const handleDelete = async (entry: RRSMSEntry) => {
-		if (!confirm(`確定要刪除 ${entry.rr_number} 嗎？`)) return;
-
-		try {
-			const token = localStorage.getItem("token");
-			const response = await fetch(`/api/sms/rr-entries/${entry.id}`, {
-				method: "DELETE",
-				headers: {
-					Authorization: `Bearer ${token}`,
-				},
-			});
-
-			if (!response.ok) throw new Error("Failed to delete");
-
-			alert("刪除成功");
-			fetchAllEntries();
-		} catch (error) {
-			console.error("Error deleting entry:", error);
-			alert("刪除失敗");
-		}
-	};
-
-	const handleSave = () => {
-		fetchAllEntries();
-	};
-
-	const formatDate = (dateString?: string) => {
-		if (!dateString) return "-";
-		const date = new Date(dateString);
-		return date.toLocaleDateString("zh-TW", {
-			year: "numeric",
-			month: "2-digit",
-			day: "2-digit",
-		});
-	};
-
-	const getDaysUntilReview = (dateString?: string) => {
-		if (!dateString) return null;
-		const today = new Date();
-		const reviewDate = new Date(dateString);
-		const diffTime = reviewDate.getTime() - today.getTime();
-		const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-		return diffDays;
-	};
-
-	const getReviewStatus = (dateString?: string) => {
-		const days = getDaysUntilReview(dateString);
-		if (days === null) return { className: "", text: "" };
-
-		if (days < 0) return { className: styles.overdue, text: "逾期" };
-		if (days === 0) return { className: styles.dueToday, text: "今日到期" };
-		if (days <= 7) return { className: styles.dueSoon, text: `${days}天` };
-		if (days <= 30)
-			return { className: styles.upcoming, text: `${days}天` };
-		return { className: "", text: `${days}天` };
-	};
-
-	const extractRiskId = (riskIdBarrier?: string) => {
-		if (!riskIdBarrier) return "-";
-		return (
-			riskIdBarrier
-				.split(/[,;/\n]/)
-				.map((s) => s.trim())
-				.filter((s) => s.startsWith("R"))
-				.join(", ") || "-"
-		);
-	};
-
-	const extractBarrierId = (riskIdBarrier?: string) => {
-		if (!riskIdBarrier) return "-";
-		return (
-			riskIdBarrier
-				.split(/[,;/\n]/)
-				.map((s) => s.trim())
-				.filter((s) => s.startsWith("B"))
-				.join(", ") || "-"
-		);
-	};
-
-	const getFilteredEntries = (entries: RRSMSEntry[]) => {
-		if (!searchTerm) return entries;
-		const search = searchTerm.toLowerCase();
-		return entries.filter(
-			(entry) =>
-				entry.rr_number.toLowerCase().includes(search) ||
-				entry.srm_table_link?.number.toLowerCase().includes(search) ||
-				entry.srm_table_link?.hazard_description
-					?.toLowerCase()
-					.includes(search) ||
-				entry.risk_id_barrier?.toLowerCase().includes(search)
-		);
-	};
-
-	// Column resizing handlers
-	const handleMouseDown = (
-		e: React.MouseEvent,
-		column: string,
-		currentWidth: number
-	) => {
-		e.preventDefault();
-		setResizing({ column, startX: e.clientX, startWidth: currentWidth });
-	};
-
-	const handleMouseMove = (e: MouseEvent) => {
-		if (!resizing) return;
-
-		const diff = e.clientX - resizing.startX;
-		const newWidth = Math.max(
-			80,
-			Math.min(500, resizing.startWidth + diff)
-		);
-
-		setColumnWidths((prev) => ({
-			...prev,
-			[resizing.column]: newWidth,
-		}));
-	};
-
-	const handleMouseUp = () => {
-		setResizing(null);
-	};
-
-	useEffect(() => {
-		if (resizing) {
-			document.addEventListener("mousemove", handleMouseMove);
-			document.addEventListener("mouseup", handleMouseUp);
-			return () => {
-				document.removeEventListener("mousemove", handleMouseMove);
-				document.removeEventListener("mouseup", handleMouseUp);
-			};
-		}
-	}, [resizing]);
-
-	const getColumnStyle = (column: string, defaultWidth: number) => {
-		return { width: columnWidths[column] || defaultWidth };
-	};
-
-	if (loading) {
-		return (
-			<div className={styles.loading}>
-				<div className={styles.spinner}></div>
-				<p>載入中...</p>
-			</div>
-		);
-	}
-
 	return (
-		<div className={styles.rrSmsTab}>
-			<div className={styles.toolbar}>
-				<div className={styles.searchBar}>
-					<input
-						type="text"
-						placeholder="搜尋 RR 編號、管控表或風險..."
-						value={searchTerm}
-						onChange={(e) => setSearchTerm(e.target.value)}
-						className={styles.searchInput}
-					/>
-				</div>
-				<div className={styles.stats}>
-					共 {allEntries.length} 筆記錄，{yearGroups.length} 個年度
-				</div>
-				{isAdmin && (
-					<button onClick={handleAdd} className={styles.addButton}>
-						+ 新增 RR 項目
+		<div className={styles.modalOverlay} onClick={onClose}>
+			<div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+				<div className={styles.modalHeader}>
+					<h2>{entry ? "編輯 RR SMS 項目" : "新增 RR SMS 項目"}</h2>
+					<button className={styles.closeButton} onClick={onClose}>
+						×
 					</button>
-				)}
-			</div>
+				</div>
 
-			<div className={styles.accordionContainer}>
-				{yearGroups.length === 0 ? (
-					<div className={styles.emptyState}>
-						<p>尚無任何 RR SMS 項目</p>
-						{isAdmin && (
-							<button
-								onClick={handleAdd}
-								className={styles.addButton}
-							>
-								新增第一筆
-							</button>
-						)}
-					</div>
-				) : (
-					yearGroups.map(({ year, entries }) => {
-						const isExpanded = expandedYears.has(year);
-						const isCurrentYear = year === currentYear;
-						const filteredEntries = getFilteredEntries(entries);
-
-						return (
-							<div
-								key={year}
-								className={`${styles.yearGroup} ${
-									isCurrentYear ? styles.currentYear : ""
-								}`}
-							>
-								<div
-									className={styles.yearHeader}
-									onClick={() => toggleYear(year)}
-								>
-									<div className={styles.yearHeaderLeft}>
-										<span className={styles.expandIcon}>
-											{isExpanded ? "▼" : "▶"}
-										</span>
-										<h3>{year} 年度</h3>
-										<span className={styles.yearCount}>
-											({filteredEntries.length} 筆
-											{searchTerm &&
-												` / ${entries.length} 總數`}
-											)
-										</span>
-									</div>
-								</div>
-
-								{isExpanded && (
-									<div className={styles.yearContent}>
-										<div className={styles.tableWrapper}>
-											<table className={styles.table}>
-												<thead>
-													<tr>
-														<th
-															style={getColumnStyle(
-																"rr_number",
-																130
-															)}
-														>
-															RR編號
-															<div
-																className={
-																	styles.resizeHandle
-																}
-																onMouseDown={(
-																	e
-																) =>
-																	handleMouseDown(
-																		e,
-																		"rr_number",
-																		columnWidths[
-																			"rr_number"
-																		] || 130
-																	)
-																}
-															/>
-														</th>
-														<th
-															style={getColumnStyle(
-																"srm_link",
-																200
-															)}
-														>
-															管控表Link
-															<div
-																className={
-																	styles.resizeHandle
-																}
-																onMouseDown={(
-																	e
-																) =>
-																	handleMouseDown(
-																		e,
-																		"srm_link",
-																		columnWidths[
-																			"srm_link"
-																		] || 200
-																	)
-																}
-															/>
-														</th>
-														<th
-															style={getColumnStyle(
-																"risk_id",
-																120
-															)}
-														>
-															Risk ID
-															<div
-																className={
-																	styles.resizeHandle
-																}
-																onMouseDown={(
-																	e
-																) =>
-																	handleMouseDown(
-																		e,
-																		"risk_id",
-																		columnWidths[
-																			"risk_id"
-																		] || 120
-																	)
-																}
-															/>
-														</th>
-														<th
-															style={getColumnStyle(
-																"barrier_id",
-																120
-															)}
-														>
-															Barrier ID
-															<div
-																className={
-																	styles.resizeHandle
-																}
-																onMouseDown={(
-																	e
-																) =>
-																	handleMouseDown(
-																		e,
-																		"barrier_id",
-																		columnWidths[
-																			"barrier_id"
-																		] || 120
-																	)
-																}
-															/>
-														</th>
-														<th
-															style={getColumnStyle(
-																"last_review",
-																120
-															)}
-														>
-															Last Review
-															<div
-																className={
-																	styles.resizeHandle
-																}
-																onMouseDown={(
-																	e
-																) =>
-																	handleMouseDown(
-																		e,
-																		"last_review",
-																		columnWidths[
-																			"last_review"
-																		] || 120
-																	)
-																}
-															/>
-														</th>
-														<th
-															style={getColumnStyle(
-																"next_review",
-																120
-															)}
-														>
-															Next Review
-															<div
-																className={
-																	styles.resizeHandle
-																}
-																onMouseDown={(
-																	e
-																) =>
-																	handleMouseDown(
-																		e,
-																		"next_review",
-																		columnWidths[
-																			"next_review"
-																		] || 120
-																	)
-																}
-															/>
-														</th>
-														<th
-															style={getColumnStyle(
-																"status",
-																100
-															)}
-														>
-															剩餘天數
-															<div
-																className={
-																	styles.resizeHandle
-																}
-																onMouseDown={(
-																	e
-																) =>
-																	handleMouseDown(
-																		e,
-																		"status",
-																		columnWidths[
-																			"status"
-																		] || 100
-																	)
-																}
-															/>
-														</th>
-														{isAdmin && (
-															<th
-																style={{
-																	width: 100,
-																}}
-															>
-																操作
-															</th>
-														)}
-													</tr>
-												</thead>
-												<tbody>
-													{filteredEntries.length ===
-													0 ? (
-														<tr>
-															<td
-																colSpan={
-																	isAdmin
-																		? 8
-																		: 7
-																}
-																className={
-																	styles.emptyState
-																}
-															>
-																{searchTerm
-																	? "沒有符合搜尋的項目"
-																	: "本年度尚無項目"}
-															</td>
-														</tr>
-													) : (
-														filteredEntries.map(
-															(entry) => {
-																const status =
-																	getReviewStatus(
-																		entry.next_review
-																	);
-																return (
-																	<tr
-																		key={
-																			entry.id
-																		}
-																	>
-																		<td
-																			className={
-																				styles.rrNumber
-																			}
-																		>
-																			{
-																				entry.rr_number
-																			}
-																		</td>
-																		<td
-																			className={
-																				styles.srmLink
-																			}
-																		>
-																			{entry.srm_table_link ? (
-																				<div>
-																					<div
-																						className={
-																							styles.srmNumber
-																						}
-																					>
-																						{
-																							entry
-																								.srm_table_link
-																								.number
-																						}
-																					</div>
-																					<div
-																						className={
-																							styles.srmDesc
-																						}
-																					>
-																						{entry.srm_table_link.hazard_description?.substring(
-																							0,
-																							40
-																						)}
-																						{(entry
-																							.srm_table_link
-																							.hazard_description
-																							?.length ||
-																							0) >
-																						40
-																							? "..."
-																							: ""}
-																					</div>
-																				</div>
-																			) : (
-																				"-"
-																			)}
-																		</td>
-																		<td>
-																			{extractRiskId(
-																				entry.risk_id_barrier
-																			)}
-																		</td>
-																		<td>
-																			{extractBarrierId(
-																				entry.risk_id_barrier
-																			)}
-																		</td>
-																		<td>
-																			{formatDate(
-																				entry.last_review
-																			)}
-																		</td>
-																		<td>
-																			{formatDate(
-																				entry.next_review
-																			)}
-																		</td>
-																		<td>
-																			{status.text && (
-																				<span
-																					className={`${styles.statusBadge} ${status.className}`}
-																				>
-																					{
-																						status.text
-																					}
-																				</span>
-																			)}
-																		</td>
-																		{isAdmin && (
-																			<td>
-																				<div
-																					className={
-																						styles.actions
-																					}
-																				>
-																					<button
-																						onClick={() =>
-																							handleEdit(
-																								entry
-																							)
-																						}
-																						className={
-																							styles.editButton
-																						}
-																						title="編輯"
-																					>
-																						📝
-																					</button>
-																					<button
-																						onClick={() =>
-																							handleDelete(
-																								entry
-																							)
-																						}
-																						className={
-																							styles.deleteButton
-																						}
-																						title="刪除"
-																					>
-																						❌
-																					</button>
-																				</div>
-																			</td>
-																		)}
-																	</tr>
-																);
-															}
-														)
-													)}
-												</tbody>
-											</table>
-										</div>
-									</div>
-								)}
+				<form onSubmit={handleSubmit} className={styles.form}>
+					<div className={styles.formRow}>
+						<div className={styles.formGroup}>
+							<label>
+								RR編號{" "}
+								<span className={styles.required}>*</span>
+							</label>
+							<div className={styles.rrNumberInput}>
+								<input
+									type="text"
+									name="num1"
+									value={formData.num1}
+									onChange={handleChange}
+									placeholder="XX"
+									maxLength={2}
+									required
+									className={styles.smallInput}
+								/>
+								<span className={styles.separator}>/</span>
+								<span className={styles.rrText}>RR</span>
+								<span className={styles.separator}>/</span>
+								<input
+									type="text"
+									name="num2"
+									value={formData.num2}
+									onChange={handleChange}
+									placeholder="XX"
+									maxLength={3}
+									required
+									className={styles.smallInput}
+								/>
 							</div>
-						);
-					})
-				)}
-			</div>
+							<small>
+								年份 2 碼，序號 2-3 碼 (例如: 26/RR/01 或
+								26/RR/123)
+							</small>
+						</div>
+					</div>
 
-			{showModal && (
-				<RRSMSModal
-					entry={editingEntry}
-					userId={userId}
-					currentYear={currentYear}
-					onClose={() => setShowModal(false)}
-					onSave={handleSave}
-				/>
-			)}
+					<div className={styles.formGroup}>
+						<label>管控表Link</label>
+						<input
+							type="text"
+							placeholder="搜尋管控表編號或描述..."
+							value={srmSearchTerm}
+							onChange={(e) => setSrmSearchTerm(e.target.value)}
+							className={styles.input}
+						/>
+						<select
+							name="srm_table_link_id"
+							value={formData.srm_table_link_id}
+							onChange={handleChange}
+							className={styles.select}
+						>
+							<option value="">選擇管控表條目</option>
+							{loadingSrmList ? (
+								<option disabled>載入中...</option>
+							) : (
+								srmYearGroups.map(({ year, items }) => {
+									const filteredItems = items.filter(
+										(item) => {
+											if (!srmSearchTerm) return true;
+											const search =
+												srmSearchTerm.toLowerCase();
+											return (
+												item.number
+													.toLowerCase()
+													.includes(search) ||
+												item.hazard_description
+													?.toLowerCase()
+													.includes(search)
+											);
+										}
+									);
+
+									if (filteredItems.length === 0) return null;
+
+									return (
+										<optgroup
+											key={year}
+											label={`${year}年`}
+										>
+											{filteredItems.map((item) => (
+												<option
+													key={item.id}
+													value={item.id}
+												>
+													{item.number} -{" "}
+													{item.hazard_description?.substring(
+														0,
+														50
+													) || "無描述"}
+												</option>
+											))}
+										</optgroup>
+									);
+								})
+							)}
+						</select>
+					</div>
+
+					{/* Risk ID Section */}
+					<div className={styles.sectionDivider}>
+						<h3>Risk ID</h3>
+					</div>
+
+					<div className={styles.formGroup}>
+						<label>Risk ID</label>
+						<input
+							type="text"
+							name="risk_id"
+							value={formData.risk_id}
+							onChange={handleChange}
+							placeholder="例如: R1, R2 (用逗號分隔)"
+							className={styles.input}
+						/>
+						<small>Risk ID 以 R 開頭</small>
+					</div>
+
+					<div className={styles.formRow}>
+						<div className={styles.formGroup}>
+							<label>Risk 最後審查</label>
+							<input
+								type="date"
+								name="risk_last_review"
+								value={formData.risk_last_review}
+								onChange={handleChange}
+								className={styles.input}
+							/>
+						</div>
+
+						<div className={styles.formGroup}>
+							<label>Risk 下次審查</label>
+							<input
+								type="date"
+								name="risk_next_review"
+								value={formData.risk_next_review}
+								onChange={handleChange}
+								className={styles.input}
+							/>
+							<small>留空自動計算（最後審查 + 1年）</small>
+						</div>
+					</div>
+
+					{/* Barrier ID Section */}
+					<div className={styles.sectionDivider}>
+						<h3>Barrier ID</h3>
+					</div>
+
+					<div className={styles.formGroup}>
+						<label>Barrier ID</label>
+						<input
+							type="text"
+							name="barrier_id"
+							value={formData.barrier_id}
+							onChange={handleChange}
+							placeholder="例如: B1, B2 (用逗號分隔)"
+							className={styles.input}
+						/>
+						<small>Barrier ID 以 B 開頭</small>
+					</div>
+
+					<div className={styles.formRow}>
+						<div className={styles.formGroup}>
+							<label>Barrier 最後審查</label>
+							<input
+								type="date"
+								name="barrier_last_review"
+								value={formData.barrier_last_review}
+								onChange={handleChange}
+								className={styles.input}
+							/>
+						</div>
+
+						<div className={styles.formGroup}>
+							<label>Barrier 下次審查</label>
+							<input
+								type="date"
+								name="barrier_next_review"
+								value={formData.barrier_next_review}
+								onChange={handleChange}
+								className={styles.input}
+							/>
+							<small>留空自動計算（最後審查 + 1年）</small>
+						</div>
+					</div>
+
+					<div className={styles.modalActions}>
+						<button
+							type="button"
+							onClick={onClose}
+							className={styles.cancelButton}
+							disabled={loading}
+						>
+							取消
+						</button>
+						<button
+							type="submit"
+							className={styles.saveButton}
+							disabled={loading}
+						>
+							{loading ? "儲存中..." : "儲存"}
+						</button>
+					</div>
+				</form>
+			</div>
 		</div>
 	);
 }

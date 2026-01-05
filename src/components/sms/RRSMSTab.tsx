@@ -85,12 +85,33 @@ export default function RRSMSTab({
 		}
 	};
 
+	// Helper: Get the primary review date (prefer risk, fallback to barrier, then old format)
+	const getReviewDate = (
+		entry: RRSMSEntry,
+		type: "last" | "next"
+	): string | undefined => {
+		if (type === "last") {
+			return (
+				entry.risk_last_review ||
+				entry.barrier_last_review ||
+				entry.last_review
+			);
+		} else {
+			return (
+				entry.risk_next_review ||
+				entry.barrier_next_review ||
+				entry.next_review
+			);
+		}
+	};
+
 	const groupEntriesByYear = (entries: RRSMSEntry[]) => {
 		const groups: { [year: number]: RRSMSEntry[] } = {};
 
 		entries.forEach((entry) => {
-			if (entry.last_review) {
-				const year = new Date(entry.last_review).getFullYear();
+			const lastReview = getReviewDate(entry, "last");
+			if (lastReview) {
+				const year = new Date(lastReview).getFullYear();
 				if (!groups[year]) {
 					groups[year] = [];
 				}
@@ -101,25 +122,26 @@ export default function RRSMSTab({
 		const yearGroupsArray = Object.keys(groups)
 			.map((year) => ({
 				year: parseInt(year),
-			entries: groups[parseInt(year)].sort((a, b) => {
-				// Sort by days remaining (smallest/closest to deadline first)
-				const daysA = getDaysUntilReview(a.next_review);
-				const daysB = getDaysUntilReview(b.next_review);
-				
-				// Handle null cases (entries without next_review go to bottom)
-				if (daysA === null && daysB === null) return 0;
-				if (daysA === null) return 1;
-				if (daysB === null) return -1;
-				
-				// Sort by days remaining ascending (smallest first)
-				return daysA - daysB;
-			}),
+				entries: groups[parseInt(year)].sort((a, b) => {
+					// Sort by days remaining (smallest/closest to deadline first)
+					const nextReviewA = getReviewDate(a, "next");
+					const nextReviewB = getReviewDate(b, "next");
+					const daysA = getDaysUntilReview(nextReviewA);
+					const daysB = getDaysUntilReview(nextReviewB);
+
+					// Handle null cases
+					if (daysA === null && daysB === null) return 0;
+					if (daysA === null) return 1;
+					if (daysB === null) return -1;
+
+					return daysA - daysB;
+				}),
 			}))
 			.sort((a, b) => b.year - a.year); // Newest year first
 
 		setYearGroups(yearGroupsArray);
 		// Expand all years by default
-		const allYears = new Set(yearGroupsArray.map(g => g.year));
+		const allYears = new Set(yearGroupsArray.map((g) => g.year));
 		setExpandedYears(allYears);
 	};
 
@@ -166,6 +188,7 @@ export default function RRSMSTab({
 	};
 
 	const handleSave = () => {
+		setShowModal(false);
 		fetchAllEntries();
 	};
 
@@ -562,9 +585,14 @@ export default function RRSMSTab({
 													) : (
 														filteredEntries.map(
 															(entry) => {
+																const nextReview =
+																	getReviewDate(
+																		entry,
+																		"next"
+																	);
 																const status =
 																	getReviewStatus(
-																		entry.next_review
+																		nextReview
 																	);
 																return (
 																	<tr
@@ -623,23 +651,28 @@ export default function RRSMSTab({
 																			)}
 																		</td>
 																		<td>
-																			{extractRiskId(
-																				entry.risk_id_barrier
-																			)}
+																			{entry.risk_id ||
+																				extractRiskId(
+																					entry.risk_id_barrier
+																				)}
 																		</td>
 																		<td>
-																			{extractBarrierId(
-																				entry.risk_id_barrier
+																			{entry.barrier_id ||
+																				extractBarrierId(
+																					entry.risk_id_barrier
+																				)}
+																		</td>
+																		<td>
+																			{formatDate(
+																				getReviewDate(
+																					entry,
+																					"last"
+																				)
 																			)}
 																		</td>
 																		<td>
 																			{formatDate(
-																				entry.last_review
-																			)}
-																		</td>
-																		<td>
-																			{formatDate(
-																				entry.next_review
+																				nextReview
 																			)}
 																		</td>
 																		<td>

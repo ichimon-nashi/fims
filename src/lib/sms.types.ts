@@ -6,9 +6,21 @@ export interface RRSMSEntry {
 	srm_table_link_id?: string;
 	srm_table_link?: SRMTableEntry; // Populated when fetched with join
 	rr_number: string; // Format: XX/RR/XX
+	
+	// OLD fields (deprecated but kept for backward compatibility)
 	risk_id_barrier?: string;
 	last_review?: string; // ISO date string
 	next_review?: string; // ISO date string
+	
+	// NEW fields (use these going forward)
+	risk_id?: string;
+	risk_last_review?: string;
+	risk_next_review?: string;
+	barrier_id?: string;
+	barrier_last_review?: string;
+	barrier_next_review?: string;
+	
+	year?: number;
 	created_at: string;
 	updated_at: string;
 	created_by?: string;
