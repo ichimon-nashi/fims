@@ -142,7 +142,7 @@ export default function SMSPage() {
     return (
       <div className={styles.accessDenied}>
         <h2>Access Denied</h2>
-        <p>You do not have permission to access the Safety Management System.</p>
+        <p>權限不夠! 請聯絡豪神</p>
       </div>
     );
   }

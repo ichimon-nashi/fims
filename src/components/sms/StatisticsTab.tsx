@@ -91,7 +91,13 @@ export default function StatisticsTab() {
 					years.add(year);
 				}
 			});
-			setAvailableYears(Array.from(years).sort((a, b) => b - a));
+			const yearsArray = Array.from(years).sort((a, b) => b - a);
+			setAvailableYears(yearsArray);
+
+			// Set selectedYear to first available year (or current year if no data)
+			if (yearsArray.length > 0) {
+				setSelectedYear(yearsArray[0]);
+			}
 		} catch (error) {
 			console.error("Error fetching entries:", error);
 		} finally {
@@ -404,9 +410,7 @@ export default function StatisticsTab() {
 			});
 			saveAs(blob, `SRM統計報表_${selectedYear}.xlsx`);
 
-			alert(
-				"✅ Excel 檔案已匯出！\n💡 按照說明即可快速建立圖表"
-			);
+			alert("✅ Excel 檔案已匯出！\n💡 按照說明即可快速建立圖表");
 		} catch (error) {
 			console.error("Export error:", error);
 			alert("匯出失敗：" + (error as Error).message);

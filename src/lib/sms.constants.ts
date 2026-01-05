@@ -455,7 +455,7 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 					{
 						code: "P3-02",
 						description:
-							"客艙行李(CBBG)包裝、固定、其他作業規範等，未符合報局核准計劃",
+							"客艙行李(CBBG)包裝、固定、其他作業規範等,未符合報局核准計劃",
 					},
 					{
 						code: "P3-03",
@@ -605,30 +605,39 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 						code: "P9-02",
 						description: "一般保安清艙檢查執行不確實、時機不正確",
 					},
-					{ code: "P9-03", description: "提升保安清艙檢查未執行" },
+					{
+						code: "P9-03",
+						description: "保安相關表單操作，未符合作業標準",
+					},
 					{
 						code: "P9-04",
-						description: "提升保安清艙檢查執行不確實、時機不正確",
+						description: "槍砲武器進入客艙未符合作業標準",
 					},
 					{
 						code: "P9-05",
-						description: "可疑人、物未能辨識、報告、處理不確實",
+						description: "地停期間人員留守未符合保安規定",
 					},
 					{
 						code: "P9-06",
 						description:
-							"安全區及非限制區作業規範未符合規定、進入及出入時機不正確",
+							"航機於地面有旅客在機上時，未保留法規規定組員人數",
 					},
 					{
 						code: "P9-07",
-						description:
-							"機場限制區證件管理、使用及穿著標準未符合規範",
+						description: "遣返旅客作業未符合保安規定",
 					},
 					{
 						code: "P9-08",
-						description: "駕駛艙門保安規定未符合作業規範",
+						description: "地面人員上機未配戴保安規定之有效證件",
 					},
-					{ code: "P9-09", description: "其他保安規定未符合規範" },
+					{
+						code: "P9-09",
+						description: "駕駛艙門保安控管未符合作業標準",
+					},
+					{
+						code: "P9-10",
+						description: "加油作業未有人員執行保安監控",
+					},
 				],
 			},
 			{
@@ -638,30 +647,25 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 					{
 						code: "P10-01",
 						description:
-							"關門前組員／旅客總人數清點未確實符合簽派需求",
+							"關門前法規規定應備文件不全、不正確、檢查不確實",
 					},
-					{
-						code: "P10-02",
-						description:
-							"關門前飛機各區域、設施、設備、各項安全檢查未確實符合規範",
-					},
+					{ code: "P10-02", description: "關門前客艙置物櫃未關妥" },
 					{
 						code: "P10-03",
-						description:
-							"關門後各項客艙、旅客、設施、設備、安全檢查未執行、時機不正確",
+						description: "關門前地勤人員離機廣播未執行",
 					},
 					{
 						code: "P10-04",
-						description: "關門前後各項標準廣播未執行或執行不確實",
+						description: "關門後電子用品禁用廣播、宣告未執行",
 					},
 					{
 						code: "P10-05",
-						description:
-							"關門前後組員座椅未坐妥、未繫安全帶或關門後未確實固定",
+						description: "關門之艙門操作未符合標準程序",
 					},
+					{ code: "P10-06", description: "關門未獲機長許可" },
 					{
-						code: "P10-06",
-						description: "關門前後艙門未確實鎖妥或處於備用狀態",
+						code: "P10-07",
+						description: "艙門關妥未獲機外人員確認及回應",
 					},
 				],
 			},
@@ -671,17 +675,19 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				subcodes: [
 					{
 						code: "P11-01",
-						description:
-							"開門前後確認窗外、走道是否淨空、防撞塊位置是否確實",
+						description: "開門之艙門操作未符合標準程序",
 					},
 					{
 						code: "P11-02",
-						description:
-							"開門前滑梯未確實解除備用、依標準程序執行開門作業",
+						description: "艙門開啟未獲機外人員確認及回應",
 					},
 					{
 						code: "P11-03",
-						description: "開門後組員未確實固定艙門、疏散滑梯未收妥",
+						description: "開門未獲許可(機長、座艙長)",
+					},
+					{
+						code: "P11-04",
+						description: "離機前組員未複查艙門設定正確",
 					},
 				],
 			},
@@ -689,18 +695,22 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				code: "P12",
 				name: "服務用車作業",
 				subcodes: [
-					{
-						code: "P12-01",
-						description:
-							"滑行、起飛、降落、亂流時服務車未鎖妥、未定位",
-					},
+					{ code: "P12-01", description: "服務用車閒置時未有人看管" },
 					{
 						code: "P12-02",
-						description: "服務車輪剎未操作正確、未加裝固定物",
+						description: "服務用車定位時剎車未踩、門鎖未鎖妥",
 					},
 					{
 						code: "P12-03",
-						description: "使用服務車過程未符合安全規範",
+						description: "服務用車、箱故障處理未符合標準",
+					},
+					{
+						code: "P12-04",
+						description: "航機下降時未儘速將服務用車就定位放妥",
+					},
+					{
+						code: "P12-05",
+						description: "服務用車故障、規格不符、未符合檢查標準",
 					},
 				],
 			},
@@ -708,22 +718,12 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				code: "P13",
 				name: "客艙缺點紀錄簿",
 				subcodes: [
-					{
-						code: "P13-01",
-						description: "客艙缺點未登錄、通報、時機不正確",
-					},
+					{ code: "P13-01", description: "CLB/DD檢查未執行" },
 					{
 						code: "P13-02",
-						description: "客艙缺點紀錄簿用字遣詞未確實、未符合規範",
+						description: "CLB檢查未落實、缺點未處置",
 					},
-					{
-						code: "P13-03",
-						description: "客艙缺點紀錄簿書寫非工整、不易辨識",
-					},
-					{
-						code: "P13-04",
-						description: "客艙缺點報告（離線缺點）未符合規範",
-					},
+					{ code: "P13-03", description: "CLB使用、紀錄未符合標準" },
 				],
 			},
 			{
@@ -732,51 +732,77 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				subcodes: [
 					{
 						code: "P14-01",
-						description: "任務通知接獲未能確認報到時間及地點",
+						description: "地勤作業旅客人數或身份不符",
 					},
 					{
 						code: "P14-02",
-						description:
-							"個人證件、許可或執照缺少、未隨身攜帶、逾期",
+						description: "重覆劃位、劃位疏失、未符合作業標準",
 					},
 					{
 						code: "P14-03",
-						description: "簡報／任務前資訊未充分獲得及了解",
+						description: "地勤登機查驗不確實、旅客上錯飛機",
 					},
 					{
 						code: "P14-04",
-						description: "服勤前飛機相關資訊未充分獲得、了解",
+						description: "地勤作業旅客登機未獲機組員同意",
 					},
 					{
 						code: "P14-05",
-						description:
-							"上下機動線（登機門、機坪）交通路線不熟悉或未清楚",
+						description: "地勤作業相關飛行文件及表單不全、不正確",
 					},
 					{
 						code: "P14-06",
-						description: "乘客登機、下機未適時掌握及通報",
+						description: "地勤機外人員未遵守標準開門程序",
 					},
 					{
 						code: "P14-07",
-						description: "機艙登機路線未能清楚、未能有效引導旅客",
+						description: "地勤機外人員未遵守標準關門程序",
 					},
 					{
 						code: "P14-08",
-						description: "地面裝備、設備未能正確使用",
+						description: "空地訊息交接未執行、執行不確實",
 					},
+					{ code: "P14-09", description: "地勤裝載與平衡表不符" },
+					{
+						code: "P14-10",
+						description: "地勤標準裝載作業未符合標準",
+					},
+					{
+						code: "P14-11",
+						description: "地面作業CARGO DOOR操作力道過大",
+					},
+					{
+						code: "P14-12",
+						description: "地勤作業未經許可放行他航ACM組員上機",
+					},
+					{ code: "P14-13", description: "地勤人員未遵守SOP" },
 				],
 			},
 			{
 				code: "P15",
 				name: "違規旅客處理",
 				subcodes: [
-					{
-						code: "P15-01",
-						description: "違規旅客辨識、報告、處理未確實",
-					},
+					{ code: "P15-01", description: "旅客違規三階段程序未執行" },
 					{
 						code: "P15-02",
-						description: "違規旅客處理紀錄未符合規範",
+						description: "旅客違規三階段程序執行不確實",
+					},
+					{
+						code: "P15-03",
+						description: "旅客違規處理未符合標準程序引發其他事件",
+					},
+					{ code: "P15-04", description: "旅客於機內違規吸煙" },
+					{
+						code: "P15-05",
+						description: "旅客於機內滋擾其他乘客或組員",
+					},
+					{
+						code: "P15-06",
+						description: "旅客違規使用電子用品、經勸導仍不願配合",
+					},
+					{
+						code: "P15-07",
+						description: "旅客違規使用電子用品干擾飛行系統",
 					},
 				],
 			},
@@ -784,60 +810,34 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				code: "P16",
 				name: "其他異常作業",
 				subcodes: [
+					{ code: "P16-01", description: "旅客上機後放棄搭乘" },
 					{
-						code: "P16-01",
-						description: "航機延遲或提前作業未符合程序規範",
+						code: "P16-02",
+						description: "機內有旅客實施加、缷油造成安全事件",
 					},
-					{ code: "P16-02", description: "轉降或備降未符合程序規範" },
-					{
-						code: "P16-03",
-						description: "緊急疏散作業(含客、貨艙)未符合程序規範",
-					},
-					{
-						code: "P16-04",
-						description: "客貨艙失火作業未符合程序規範",
-					},
-					{ code: "P16-05", description: "釋壓作業未符合程序規範" },
-					{
-						code: "P16-06",
-						description: "水上迫降作業未符合程序規範",
-					},
-					{
-						code: "P16-07",
-						description: "非法干擾作業未符合程序規範",
-					},
-					{
-						code: "P16-08",
-						description: "生病/受傷旅客處理未符合程序規範",
-					},
-					{
-						code: "P16-09",
-						description: "空中事故處理未符合程序規範",
-					},
+					{ code: "P16-03", description: "發生飛航中人員死亡" },
+					{ code: "P16-04", description: "發生客艙失火" },
+					{ code: "P16-05", description: "發生客艙失壓" },
+					{ code: "P16-06", description: "發生劫機" },
+					{ code: "P16-07", description: "發生無主物及爆裂物威脅" },
+					{ code: "P16-08", description: "發生組員失能事件" },
+					{ code: "P16-09", description: "旅客霸機、滯留於機內" },
 					{
 						code: "P16-10",
-						description: "死亡事件處理未符合程序規範",
+						description: "班機延遲長時間延誤、滯留、轉降",
 					},
-					{
-						code: "P16-11",
-						description:
-							"緊急醫療設備操作未符合作業程序規範或使用時機不當",
-					},
-					{
-						code: "P16-12",
-						description: "其他異常程序作業未符合規範",
-					},
+					{ code: "P16-11", description: "旅客於機內受傷" },
+					{ code: "P16-12", description: "旅客於機內急救" },
+					{ code: "P16-13", description: "乘員於機上急症" },
 				],
 			},
 			{
 				code: "P17",
 				name: "緊急程序",
 				subcodes: [
-					{ code: "P17-01", description: "緊急程序不熟悉" },
-					{
-						code: "P17-02",
-						description: "緊急裝備使用時機或方法不確實",
-					},
+					{ code: "P17-01", description: "發生無預警緊急情況" },
+					{ code: "P17-02", description: "發生陸上迫降" },
+					{ code: "P17-03", description: "發生水上迫降" },
 				],
 			},
 			{
@@ -846,10 +846,48 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				subcodes: [
 					{
 						code: "P18-01",
-						description:
-							"組員未於執勤前有充分休息並保持最佳執勤狀態",
+						description: "派遣人員未遵守疲勞管理法規造成違法事件",
 					},
-					{ code: "P18-02", description: "飛航組員工作時間超時" },
+					{
+						code: "P18-02",
+						description: "客艙組員未遵守疲勞管理法規規定造成違法",
+					},
+					{ code: "P18-03", description: "客艙組員疲勞評估中度風險" },
+					{ code: "P18-04", description: "客艙組員疲勞評估高度風險" },
+					{
+						code: "P18-05",
+						description: "客艙組員因疲勞原因，主動提報取消任務",
+					},
+					{
+						code: "P18-06",
+						description: "客艙組員因疲勞原因，被動取消任務",
+					},
+					{
+						code: "P18-07",
+						description: "因疲勞致使逃生滑梯無預警充氣",
+					},
+					{
+						code: "P18-08",
+						description: "因疲勞而未依標準程序作業，造成違反內規",
+					},
+					{
+						code: "P18-09",
+						description: "因疲勞而未依標準程序規定作業，違法事件",
+					},
+					{
+						code: "P18-10",
+						description: "因疲勞造成人員操作設備不當，致人、物損傷",
+					},
+					{ code: "P18-11", description: "疲勞管理系統缺失" },
+					{
+						code: "P18-12",
+						description: "客艙組員疲勞違規未自主管理、主動提報",
+					},
+					{ code: "P18-13", description: "作業人員疲勞管理輸入錯誤" },
+					{
+						code: "P18-14",
+						description: "疲勞管理因外在不可抗力之因素違規",
+					},
 				],
 			},
 			{
@@ -858,9 +896,13 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				subcodes: [
 					{
 						code: "P19-01",
-						description: "客艙內部破損、毀壞或影響旅客安全",
+						description: "客艙組員座椅乘坐人員資格未符合規定",
 					},
-					{ code: "P19-02", description: "其他影響客艙作業安全規範" },
+					{
+						code: "P19-02",
+						description:
+							"旅客/訂位/客服人員未遵守標準作業，有安全風險",
+					},
 				],
 			},
 			{
@@ -869,12 +911,41 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				subcodes: [
 					{
 						code: "P20-01",
-						description: "PED使用時機管制未符合程序規範",
+						description: "組員無法辨識PED標示、圖示",
 					},
 					{
 						code: "P20-02",
-						description: "PED使用辨識未符合程序規範",
+						description: "組員未勸阻違規旅客使用PED",
 					},
+					{
+						code: "P20-03",
+						description: "旅客未遵守組員PED安全要求",
+					},
+					{ code: "P20-04", description: "PED引起冒煙，失火" },
+					{ code: "P20-05", description: "耳機線阻礙逃生路線" },
+					{
+						code: "P20-06",
+						description: "旅客在關鍵飛航階段起身開置物櫃拿PED",
+					},
+					{ code: "P20-07", description: "PED使用造成人員受傷" },
+					{ code: "P20-08", description: "PED使用造成飛機受損" },
+					{ code: "P20-09", description: "PED未符合STOWED規定" },
+					{ code: "P20-10", description: "PED未符合SECURED規定" },
+					{ code: "P20-11", description: "PED使用干擾飛航通訊設備" },
+					{ code: "P20-12", description: "PED使用引發滋擾事件" },
+					{
+						code: "P20-13",
+						description: "PED開放及限制時機未明確廣播及宣導",
+					},
+					{
+						code: "P20-14",
+						description: "前後艙PED溝通未符合作業程序",
+					},
+					{
+						code: "P20-15",
+						description: "新科技PED未有標準作業程序",
+					},
+					{ code: "P20-16", description: "滅火輔助設備使用" },
 				],
 			},
 		],
@@ -889,65 +960,56 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				subcodes: [
 					{
 						code: "E1-01",
-						description: "救生衣/Life vest安全檢查不符規定",
+						description: "緊急燈光功能故障、未符合檢查標準",
 					},
 					{
 						code: "E1-02",
-						description: "逃生繩/Escape Rope安全檢查不符規定",
+						description: "廚房緊急電源功能故障、未符合檢查標準",
 					},
 					{
 						code: "E1-03",
-						description: "疏散/逃生滑梯安全檢查不符規定",
+						description: "手電筒短缺、故障、未符合檢查標準",
 					},
 					{
 						code: "E1-04",
-						description: "救生筏/Life raft安全檢查不符規定",
+						description: "急救醫謢裝備短缺、失效、未符合檢查標準",
 					},
 					{
 						code: "E1-05",
-						description: "滅火瓶/Fire Ext安全檢查不符規定",
+						description: "滅火器短缺、失效、未符合檢查標準",
 					},
 					{
 						code: "E1-06",
-						description: "防煙面罩/Smoke Hood安全檢查不符規定",
+						description: "PBE短缺、失效、符合檢查標準",
 					},
 					{
 						code: "E1-07",
-						description: "手套/Gloves安全檢查不符規定",
+						description: "ELT短缺、失效、未符合檢查標準",
 					},
 					{
 						code: "E1-08",
-						description: "手電筒/Flashlight安全檢查不符規定",
+						description: "手提式擴音器短缺、失效、未符合檢查標準",
 					},
 					{
 						code: "E1-09",
-						description: "小扳手/Axe安全檢查不符規定",
+						description: "POB短缺、失效、未符合檢查標準",
 					},
 					{
 						code: "E1-10",
-						description: "擴音器/Megaphone安全檢查不符規定",
+						description: "救生衣短缺、失效、未符合檢查標準",
 					},
 					{
 						code: "E1-11",
-						description: "醫療箱/First aid kit安全檢查不符規定",
+						description: "客艙氧氣系統掉落、使用、未符合檢查標準",
 					},
 					{
 						code: "E1-12",
-						description: "急救包/FAK安全檢查不符規定",
+						description: "逃生滑梯壓力異常、檢查未符合檢查標準",
 					},
 					{
 						code: "E1-13",
-						description: "緊急醫療箱/EMK安全檢查不符規定",
+						description: "MDT/MRT故障、短缺、未符合檢查標準",
 					},
-					{
-						code: "E1-14",
-						description: "自動體外電擊器/AED安全檢查不符規定",
-					},
-					{
-						code: "E1-15",
-						description: "氧氣瓶/Oxygen Bottle安全檢查不符規定",
-					},
-					{ code: "E1-16", description: "其他緊急裝備狀況不正常" },
 				],
 			},
 			{
@@ -956,55 +1018,37 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				subcodes: [
 					{
 						code: "E2-01",
-						description: "客艙組員椅安全檢查不符規定",
+						description:
+							"旅客座椅及安全配件失效、未符合檢查標準。(安全帶、扶手、椅背、檔桿)",
 					},
 					{
 						code: "E2-02",
-						description: "旅客座椅、客艙座位安全檢查不符規定",
+						description: "客艙信號故障、失效、未符合檢查標準",
 					},
 					{
 						code: "E2-03",
-						description: "安全帶/Seat Belt安全檢查不符規定",
+						description: "窗戶蓋功能故障、未符合檢查標準",
 					},
 					{
 						code: "E2-04",
-						description: "客艙門/Door安全檢查不符規定",
+						description: "客艙置物櫃功能故障，未符合檢查標準",
 					},
 					{
 						code: "E2-05",
-						description: "緊急門Emergency Exit安全檢查不符規定",
+						description: "艙門設備故障、失效、未符合檢查標準",
 					},
 					{
 						code: "E2-06",
-						description: "駕駛艙門/Cockpit Door安全檢查不符規定",
+						description: "逃生窗故障、失效、未符合檢查標準",
 					},
 					{
 						code: "E2-07",
-						description: "緊急出口燈/Exit Sign安全檢查不符規定",
+						description: "組員座椅及安全配件失效、未符合檢查標準",
 					},
 					{
 						code: "E2-08",
-						description: "安全須知/Safety Card安全檢查不符規定",
+						description: "客艙PANEL故障、失效、未符合檢查標準",
 					},
-					{
-						code: "E2-09",
-						description: "行李櫃/Overhead Bin安全檢查不符規定",
-					},
-					{
-						code: "E2-10",
-						description:
-							"洗手間煙霧偵測器/Smoke Detector安全檢查不符規定",
-					},
-					{
-						code: "E2-11",
-						description: "洗手間沖水功能/Flush安全檢查不符規定",
-					},
-					{
-						code: "E2-12",
-						description: "客艙通話系統/Interphone安全檢查不符規定",
-					},
-					{ code: "E2-13", description: "客艙內部有破損及安全疑慮" },
-					{ code: "E2-14", description: "其他客艙裝備狀況不正常" },
 				],
 			},
 			{
@@ -1013,24 +1057,33 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				subcodes: [
 					{
 						code: "E3-01",
-						description: "廚房門/Galley Door安全檢查不符規定",
+						description: "電氣設備故障、失效、未符合檢查標準",
 					},
 					{
 						code: "E3-02",
-						description: "廚房鎖/Galley Lock安全檢查不符規定",
+						description: "斷電器故障、失效、未符合檢查標準",
 					},
 					{
 						code: "E3-03",
-						description: "餐車/Service Cart安全檢查不符規定",
+						description: "垃圾筒門蓋故障、失效、未符合檢查標準",
 					},
-					{ code: "E3-04", description: "烤箱/Oven安全檢查不符規定" },
+					{
+						code: "E3-04",
+						description: "廚房置物櫃故障、失效、未符合檢查標準",
+					},
 					{
 						code: "E3-05",
-						description:
-							"咖啡機、煮水機/Coffee Maker, Water Boiler安全檢查不符規定",
+						description: "廚房鐵製手提箱故障、未符合檢查標準",
 					},
-					{ code: "E3-06", description: "廚房內部有破損及安全疑慮" },
-					{ code: "E3-07", description: "其他廚房裝備狀況不正常" },
+					{
+						code: "E3-06",
+						description: "烤架變形、規格不符、未符合檢查標準",
+					},
+					{
+						code: "E3-07",
+						description:
+							"餐車、箱、櫃、門、LOCK/LATCH功能故障或未符合檢查標準",
+					},
 				],
 			},
 			{
@@ -1039,16 +1092,25 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				subcodes: [
 					{
 						code: "E4-01",
-						description:
-							"廁所門鎖/Lavatory Door Lock安全檢查不符規定",
+						description: "洗手間煙霧偵測器故障、未符合檢查標準",
 					},
 					{
 						code: "E4-02",
-						description:
-							"廁所內滅火瓶/Fire Ext in Lavatory安全檢查不符規定",
+						description: "廁所煙灰缸短缺、故障、未符合檢查標準",
 					},
-					{ code: "E4-03", description: "廁所內部有破損及安全疑慮" },
-					{ code: "E4-04", description: "其他洗手間裝備狀況不正常" },
+					{
+						code: "E4-03",
+						description:
+							"廁所燈號及信號標誌短缺、故障、未符合檢查標準",
+					},
+					{
+						code: "E4-04",
+						description: "廁所門板及門鎖故障、未符合檢查標準",
+					},
+					{
+						code: "E4-05",
+						description: "廁所置物櫃功能故障、未符合檢查標準",
+					},
 				],
 			},
 			{
@@ -1058,41 +1120,25 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 					{
 						code: "E5-01",
 						description:
-							"安全帶燈號/Seat Belt Sign安全檢查不符規定",
+							"機內各項安全標誌及標示模糊、短缺、未符合檢查標準",
 					},
 					{
 						code: "E5-02",
-						description: "禁菸燈號/No Smoking Sign安全檢查不符規定",
+						description: "客艙燈號故障、失效、未符合檢查標準",
 					},
 					{
 						code: "E5-03",
-						description:
-							"返回座位燈號/Return to Seat Sign安全檢查不符規定",
+						description: "客艙信號及聲響異常、故障、未符合檢查標準",
 					},
-					{
-						code: "E5-04",
-						description:
-							"客艙燈光照明/Cabin Lighting安全檢查不符規定",
-					},
-					{
-						code: "E5-05",
-						description:
-							"組員呼叫鈴/Crew Call Chime安全檢查不符規定",
-					},
-					{ code: "E5-06", description: "其他客艙燈號/信號不正常" },
 				],
 			},
 			{
 				code: "E6",
 				name: "飛機狀況",
 				subcodes: [
-					{ code: "E6-01", description: "客艙有異味、異聲" },
-					{ code: "E6-02", description: "客艙空調溫度異常" },
-					{ code: "E6-03", description: "客艙氣壓異常" },
-					{
-						code: "E6-04",
-						description: "飛機顛簸或其他飛機異常狀況",
-					},
+					{ code: "E6-01", description: "飛機有重油味" },
+					{ code: "E6-02", description: "飛機有異常聲響" },
+					{ code: "E6-03", description: "飛機有蟑螂出沒" },
 				],
 			},
 			{
@@ -1101,19 +1147,12 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				subcodes: [
 					{
 						code: "E7-01",
-						description: "娛樂系統/IFE System狀況不正常",
+						description:
+							"ATR 後貨艙防煙簾故障、失效、未符合檢查標準",
 					},
 					{
 						code: "E7-02",
-						description: "公共廣播系統/PA System狀況不正常",
-					},
-					{
-						code: "E7-03",
-						description: "客艙服務用品短缺或不符規定",
-					},
-					{
-						code: "E7-04",
-						description: "其他非安全類客艙裝備狀況不正常",
+						description: "備用安全帶短缺、失效、未符合檢查標準",
 					},
 				],
 			},
@@ -1123,18 +1162,29 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				subcodes: [
 					{
 						code: "E8-01",
-						description:
-							"登機門設施/Boarding Gate Facility狀況不正常",
+						description: "登機梯設備故障、未符合需求、操作不當",
 					},
 					{
 						code: "E8-02",
-						description: "空橋/Passenger Boarding Bridge狀況不正常",
+						description: "餐服車設備故障、未符合需求、操作不當",
 					},
 					{
 						code: "E8-03",
-						description: "登機梯/Boarding Stairs狀況不正常",
+						description: "空橋設備故障、未符合需求、操作不當",
 					},
-					{ code: "E8-04", description: "其他機場設施狀況不正常" },
+					{
+						code: "E8-04",
+						description:
+							"連結航機裝備故障、未符合檢查標準、操作不當 (推車、檔桿)",
+					},
+					{
+						code: "E8-05",
+						description: "機場其他設備因施工、改變，造成損失或傷害",
+					},
+					{
+						code: "E8-06",
+						description: "航站交通車故障、操作不當，造成損失或傷害",
+					},
 				],
 			},
 		],
@@ -1149,7 +1199,35 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				subcodes: [
 					{
 						code: "C1-01",
-						description: "駕艙對客艙溝通不確實、時機不正確",
+						description: "駕艙任務簡報未執行、未符合標準",
+					},
+					{
+						code: "C1-02",
+						description: "駕艙10000呎通知未執行、未符合標準",
+					},
+					{
+						code: "C1-03",
+						description: "駕艙準備起飛指示未執行、未符合標準",
+					},
+					{
+						code: "C1-04",
+						description: "駕艙亂流開始及結束通知未執行、未符合標準",
+					},
+					{
+						code: "C1-05",
+						description: "駕艙地面滑行速度太快造成乘員受傷",
+					},
+					{
+						code: "C1-06",
+						description: "駕艙一般狀況通知、指示未執行未符合標準",
+					},
+					{
+						code: "C1-07",
+						description: "駕艙異常狀況通知、指示，未執行未符合標準",
+					},
+					{
+						code: "C1-08",
+						description: "駕艙緊急狀況通知、指示未執行未符合標準",
 					},
 				],
 			},
@@ -1159,7 +1237,24 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				subcodes: [
 					{
 						code: "C2-01",
-						description: "客艙對駕艙溝通不確實、時機不正確",
+						description: "客艙CABIN READY通報未執行、未符合標準",
+					},
+					{ code: "C2-02", description: "客艙檢查結果未通知駕艙" },
+					{
+						code: "C2-03",
+						description: "客艙逃生滑梯設定完成未通報駕艙、未合標準",
+					},
+					{
+						code: "C2-04",
+						description: "客艙一般狀況通知駕艙，未執行、未符合標準",
+					},
+					{
+						code: "C2-05",
+						description: "客艙異常狀況通知駕艙，未執行、未符合標準",
+					},
+					{
+						code: "C2-06",
+						description: "客艙緊急狀況通知駕艙，未執行、未符合標準",
 					},
 				],
 			},
@@ -1169,7 +1264,23 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				subcodes: [
 					{
 						code: "C3-01",
-						description: "客艙內溝通不確實、時機不正確",
+						description: "客艙任務簡報未執行、未符合標準",
+					},
+					{
+						code: "C3-02",
+						description: "客艙各項檢查回報未執行、未符合標準",
+					},
+					{
+						code: "C3-03",
+						description: "客艙一般狀況通知，未執行、未符合標準",
+					},
+					{
+						code: "C3-04",
+						description: "客艙異常狀況通知，未執行、未符合標準",
+					},
+					{
+						code: "C3-05",
+						description: "客艙緊急狀況通知，未執行、未符合標準",
 					},
 				],
 			},
@@ -1177,8 +1288,18 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				code: "C4",
 				name: "駕駛艙門控管",
 				subcodes: [
-					{ code: "C4-01", description: "進入駕駛艙控管不當" },
-					{ code: "C4-02", description: "駕駛艙內部監視不確實" },
+					{
+						code: "C4-01",
+						description: "乘坐OBS人員資格確認，未執行、未符合標準",
+					},
+					{
+						code: "C4-02",
+						description: "駕駛艙門控管，未執行、未符合標準",
+					},
+					{
+						code: "C4-03",
+						description: "靜默駕艙未執行、未符合標準",
+					},
 				],
 			},
 			{
@@ -1187,8 +1308,11 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				subcodes: [
 					{
 						code: "C5-01",
-						description:
-							"駕駛艙餐點服務不符標準、時機不正確、過程有安全疑慮",
+						description: "客艙未提供駕艙餐飲服務、未符合標準",
+					},
+					{
+						code: "C5-02",
+						description: "提供駕艙服務用品擺放未符合安全規定",
 					},
 				],
 			},
@@ -1204,62 +1328,52 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				subcodes: [
 					{
 						code: "I1-01",
-						description:
-							"客艙組員制服穿著、儀容、外觀、配件不符公司規定",
+						description: "組員證照未攜帶、不全、無效",
 					},
 					{
 						code: "I1-02",
-						description:
-							"客艙組員未攜帶執行職務所需之證照、文件或有效期限不足",
+						description: "組員手冊未攜帶、非最新版次、維護不正確",
 					},
 					{
 						code: "I1-03",
-						description:
-							"客艙組員未經許可攜帶違反規定之物品（含寵物、危險品等）",
+						description: "組員服儀及裝備不全、未符合標準",
 					},
-					{
-						code: "I1-04",
-						description: "客艙組員於客艙內使用電子用品未符合規定",
-					},
-					{
-						code: "I1-05",
-						description: "客艙組員未依規定就座並繫妥安全帶或固定",
-					},
+					{ code: "I1-04", description: "組員安全及公告抽問未合格" },
+					{ code: "I1-05", description: "組員酒測、藥測未合於標準" },
 					{
 						code: "I1-06",
-						description: "客艙組員未依規定使用組員休息區",
+						description: "組員因個人行為不當影響派遣",
 					},
 					{
 						code: "I1-07",
-						description: "客艙組員酒測或藥物反應測試未通過",
+						description: "組員因個人行為不當違反內規",
 					},
 					{
 						code: "I1-08",
-						description:
-							"客艙組員身體狀況不適任（含生病、懷孕）執勤",
+						description: "組員因個人行為不當違反法規",
 					},
 					{
 						code: "I1-09",
-						description:
-							"客艙組員執勤時儀態不適當、服務技巧不佳、應對能力不足",
+						description: "組員因個人未遵守紀律影響派遣或違反內規",
 					},
 					{
 						code: "I1-10",
-						description: "客艙組員值勤時睡覺、休息不當",
+						description: "組員因個人未遵守紀律影響派遣或違反法規",
 					},
 					{
 						code: "I1-11",
 						description:
-							"客艙組員服勤時違反公司安全、保安、紀律、作業規定或有違職務規範之行為",
+							"組員因個人操作設備不當，致人員、公司、設備損傷",
 					},
 					{
 						code: "I1-12",
-						description: "客艙組員執勤時與旅客或同事有爭執、衝突",
+						description:
+							"組員因個人未依標準程序規定作業，造成損(傷)害、違法事件",
 					},
-					{ code: "I1-13", description: "客艙組員於服勤時受傷" },
 					{
-						code: "I1-14",
-						description: "其他客艙組員工作職責、行為不符規定",
+						code: "I1-13",
+						description:
+							"組員因個人未依標準程序規定作業，造成違反內規",
 					},
 				],
 			},
@@ -1267,27 +1381,38 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				code: "I2",
 				name: "客艙領導人行為",
 				subcodes: [
-					{ code: "I2-01", description: "艙內組員編組未符合規定" },
+					{
+						code: "I2-01",
+						description: "PR/LF證照未檢查、檢查不確實",
+					},
 					{
 						code: "I2-02",
-						description: "艙內組員派位未符合規定或標準作業不清楚",
+						description: "PR/LF公告及抽問未執行、未符合標準",
 					},
 					{
 						code: "I2-03",
-						description: "艙內組員工作分配不當，造成工作負荷過重",
+						description: "PR/LF任務提示未執行、未符合標準",
 					},
 					{
 						code: "I2-04",
-						description: "艙內組員簡報未執行或執行不確實",
+						description: "PR/LF服儀及裝備檢查不全、未符合標準",
 					},
 					{
 						code: "I2-05",
-						description: "艙內組員管理監督、指揮調度不當",
+						description: "PR/LF因未盡職責落實檢查，造成違反內規",
 					},
-					{ code: "I2-06", description: "艙內組員協調、溝通不良" },
+					{
+						code: "I2-06",
+						description: "PR/LF因未盡職責落實檢查，造成違反法規",
+					},
 					{
 						code: "I2-07",
-						description: "其他客艙領導人工作職責、行為不符規定",
+						description:
+							"PR/LF因個人因素無法達成職務要求，造成損傷或違紀事件",
+					},
+					{
+						code: "I2-08",
+						description: "待命組員未確實維護公告及訊息傳遞",
 					},
 				],
 			},
@@ -1301,9 +1426,33 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				code: "T1",
 				name: "機上用品",
 				subcodes: [
-					{ code: "T1-01", description: "機上用品短缺" },
-					{ code: "T1-02", description: "機上用品種類錯誤" },
-					{ code: "T1-03", description: "機上用品品質不佳" },
+					{ code: "T1-01", description: "機上食品過期、檢驗不合格" },
+					{ code: "T1-02", description: "機上食品異物危害安全" },
+					{
+						code: "T1-03",
+						description: "機上食品衛生不良、效期標示不全",
+					},
+					{
+						code: "T1-04",
+						description: "機上廚具品質不良有安全疑慮",
+					},
+					{
+						code: "T1-05",
+						description: "機上閱讀物品質不良致旅客受傷(釘書針)",
+					},
+					{
+						code: "T1-06",
+						description: "機上服務用品包裝不當有安全疑慮",
+					},
+					{
+						code: "T1-07",
+						description: "機上服務用品短缺造成違法(安全須知卡)",
+					},
+					{ code: "T1-08", description: "機上裝載不適當有安全疑慮" },
+					{
+						code: "T1-09",
+						description: "空廚人員未符合安全作業規範",
+					},
 				],
 			},
 			{
@@ -1312,10 +1461,12 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				subcodes: [
 					{
 						code: "T2-01",
-						description:
-							"接送時間、路線規劃不當，造成組員無法準時報到",
+						description: "公司安排交通設備延遲以致影響派遣",
 					},
-					{ code: "T2-02", description: "交通安全有疑慮" },
+					{
+						code: "T2-02",
+						description: "公司安排交通異常，影響派遣、造成人員受傷",
+					},
 				],
 			},
 			{
@@ -1324,11 +1475,11 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				subcodes: [
 					{
 						code: "T3-01",
-						description: "外站休息住宿環境不佳，影響休息品質",
+						description: "公司安排住宿因軟硬體設備問題，影響派遣",
 					},
 					{
 						code: "T3-02",
-						description: "外站休息住宿環境有安全疑慮",
+						description: "公司安排住宿因公共安全影響派遣、人員受傷",
 					},
 				],
 			},
@@ -1342,14 +1493,17 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				code: "O1",
 				name: "客艙清潔/衛生",
 				subcodes: [
-					{ code: "O1-01", description: "客艙清潔不佳" },
+					{
+						code: "O1-01",
+						description: "地毯磨損嚴重、脫線，有絆倒乘員或安全疑慮",
+					},
 					{
 						code: "O1-02",
-						description: "客艙衛生有疑慮（含機上供餐衛生）",
+						description: "客艙清潔未符合標準，有安全疑慮",
 					},
 					{
 						code: "O1-03",
-						description: "客艙有害蟲（蚊蟲、蟑螂等）",
+						description: "清潔人員將毛毯完全覆蓋安全帶",
 					},
 				],
 			},
@@ -1357,7 +1511,38 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				code: "O2",
 				name: "工作習慣",
 				subcodes: [
-					{ code: "O2-01", description: "工作習慣不良，有安全疑慮" },
+					{
+						code: "O2-01",
+						description: "起降、滑行時未保持工作檯面淨空",
+					},
+					{
+						code: "O2-02",
+						description: "起降、滑行時未保持緊急出口周圍淨空",
+					},
+					{
+						code: "O2-03",
+						description: "起降、滑行時未將垃圾筒蓋關妥",
+					},
+					{
+						code: "O2-04",
+						description: "緊急裝備區域有行李混置未檢查、檢查不確實",
+					},
+					{
+						code: "O2-05",
+						description: "起降、滑行時提供非安全相關服務",
+					},
+					{
+						code: "O2-06",
+						description: "客艙組員座椅置放個人物品，影響安全",
+					},
+					{
+						code: "O2-07",
+						description: "組員未隨手關妥未使用之設備以致人員受傷",
+					},
+					{
+						code: "O2-08",
+						description: "組員廚房作業未正確維護自身安全",
+					},
 				],
 			},
 			{
@@ -1366,20 +1551,18 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				subcodes: [
 					{
 						code: "O3-01",
-						description: "使用熱水、咖啡或熱飲時造成燙傷",
+						description: "乘員燙傷，歸責為個人因素所致",
 					},
 					{
 						code: "O3-02",
-						description: "使用烤箱等加熱設備時造成燙傷",
+						description: "乘員燙傷，歸責為非個人因素所致",
 					},
 				],
 			},
 			{
 				code: "O4",
 				name: "其他類",
-				subcodes: [
-					{ code: "O4-01", description: "其他未列於上述分類之事件" },
-				],
+				subcodes: [{ code: "O4-01", description: "其他類" }],
 			},
 		],
 	},
@@ -1391,14 +1574,14 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 				code: "M1",
 				name: "改變管理",
 				subcodes: [
-					{
-						code: "M1-01",
-						description: "公司政策、程序改變未能及時宣導、溝通",
-					},
-					{
-						code: "M1-02",
-						description: "新設備、裝備導入未能妥善規劃及訓練",
-					},
+					{ code: "M1-01", description: "程序改變" },
+					{ code: "M1-02", description: "政策改變" },
+					{ code: "M1-03", description: "法規改變" },
+					{ code: "M1-04", description: "設備改變" },
+					{ code: "M1-05", description: "航線改變" },
+					{ code: "M1-06", description: "緊急應變" },
+					{ code: "M1-07", description: "組織改變" },
+					{ code: "M1-08", description: "機隊改變" },
 				],
 			},
 		],

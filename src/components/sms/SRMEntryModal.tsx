@@ -113,10 +113,9 @@ export default function SRMEntryModal({
 			// Extract year from file_date
 			const year = new Date(formData.file_date).getFullYear();
 
-			// If occurrence_month is empty, default to year/month of created_at (current date)
+			// If occurrence_month is empty, default to year/month of file_date (not current date)
 			const occurrenceMonth =
-				formData.occurrence_month ||
-				new Date().toISOString().slice(0, 7); // YYYY-MM format
+				formData.occurrence_month || formData.file_date.slice(0, 7); // YYYY-MM format from file_date
 
 			const payload = {
 				...formData,
