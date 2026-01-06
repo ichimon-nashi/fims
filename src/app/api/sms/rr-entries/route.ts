@@ -84,11 +84,7 @@ export async function POST(request: NextRequest) {
     const entry = await createRRSMSEntry({
       rr_number: body.rr_number,
       srm_table_link_id: body.srm_table_link_id,
-      // OLD fields (backward compatibility)
-      risk_id_barrier: body.risk_id_barrier,
-      last_review: body.last_review,
-      next_review: body.next_review,
-      // NEW fields
+      // NEW split fields only
       risk_id: body.risk_id,
       risk_last_review: body.risk_last_review,
       risk_next_review: body.risk_next_review,
