@@ -5,6 +5,9 @@
 	min-height: 100vh;
 	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
 	color: #e8e9ed;
+	width: 100%;
+	max-width: 100vw;
+	box-sizing: border-box;
 }
 
 .loadingContainer {
@@ -167,9 +170,11 @@
 .tabContent {
 	background: rgba(255, 255, 255, 0.03);
 	border-radius: 12px;
-	padding: 2rem;
+	padding: 1.5rem;
 	min-height: 500px;
 	border: 1px solid rgba(255, 255, 255, 0.1);
+	width: 100%;
+	box-sizing: border-box;
 }
 
 /* Responsive Design */
@@ -209,15 +214,10 @@
 	}
 }
 
-/* MacBook Air optimized (1440x900) */
-@media (min-width: 1400px) and (max-width: 1500px) {
+/* MacBook Air and larger screens - NO max-width constraint */
+@media (min-width: 1400px) {
 	.smsContainer {
-		max-width: 1400px;
-		margin: 0 auto;
-	}
-
-	.header {
-		padding: 1.25rem;
+		width: 100%;
 	}
 
 	.tabContent {

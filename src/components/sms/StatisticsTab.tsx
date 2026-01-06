@@ -646,7 +646,7 @@ export default function StatisticsTab() {
 				</div>
 
 				<div className={styles.section}>
-					<h3>🥧 {selectedYear}年 類別分析</h3>
+					<h3>🗃️ {selectedYear}年 類別分析</h3>
 					<div className={styles.pieChartContainer}>
 						<div className={styles.pieChart}>
 							{Object.entries(EF_CATEGORIES).map(
@@ -679,7 +679,7 @@ export default function StatisticsTab() {
 														backgroundColor: color,
 													}}
 												></span>
-												<span>{name}</span>
+												<span className={styles.pieLabelText}>{name}</span>
 											</div>
 											<div className={styles.pieStats}>
 												<span
@@ -716,34 +716,35 @@ export default function StatisticsTab() {
 								);
 								const percentage =
 									maxCount > 0 ? (count / maxCount) * 100 : 0;
-								return (
-									<div key={code} className={styles.barItem}>
-										<div className={styles.barTrack}>
-											<div
-												className={styles.barFill}
-												style={{
-													height: `${percentage}%`,
-													width: `${percentage}%`,
-												}}
-											>
-												<span
-													className={styles.barValue}
+								const pixelHeight = (percentage / 100) * 280; // 380px chart - 52px info - 48px top padding
+									return (
+										<div key={code} className={styles.barItem}>
+											<div className={styles.barInfo}>
+												<div className={styles.barCode}>
+													{code}
+												</div>
+												<div className={styles.barDescription}>
+													{efCodeDescriptions[code] ||
+														code}
+												</div>
+											</div>
+											<div className={styles.barTrack}>
+												<div
+													className={styles.barFill}
+													style={{
+														height: `${pixelHeight}px`,
+														['--percentage' as any]: `${percentage}%`,
+													}}
 												>
-													{count}
-												</span>
+													<span
+														className={styles.barValue}
+													>
+														{count}
+													</span>
+												</div>
 											</div>
 										</div>
-										<div className={styles.barInfo}>
-											<span className={styles.barCode}>
-												{code}
-											</span>
-											<span className={styles.barDesc}>
-												{efCodeDescriptions[code] ||
-													code}
-											</span>
-										</div>
-									</div>
-								);
+									);
 							})}
 					</div>
 				</div>
