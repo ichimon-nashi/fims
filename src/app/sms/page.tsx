@@ -57,7 +57,7 @@ export default function SMSPage() {
 
         if (!adminStatus) {
           // Non-admin users can't access SMS
-          alert('You do not have permission to access the SMS system.');
+          alert('權限不夠！');
           router.push('/dashboard');
           return;
         }

@@ -105,6 +105,122 @@ export default function RRSMSTab({
 		}
 	};
 
+	// Helper: Expand entries into separate Risk and Barrier rows (or combined if dates match)
+	interface ExpandedRow {
+		entry: RRSMSEntry;
+		reviewType: "Risk" | "Barrier" | "Risk+Barrier";
+		rowId: string;
+		reviewId: string;
+		lastReview?: string;
+		nextReview?: string;
+		daysRemaining: number | null;
+	}
+
+	const expandToRows = (entries: RRSMSEntry[]): ExpandedRow[] => {
+		const rows: ExpandedRow[] = [];
+
+		entries.forEach((entry) => {
+			const hasRisk = !!(
+				entry.risk_id ||
+				entry.risk_last_review ||
+				entry.risk_next_review
+			);
+			const hasBarrier = !!(
+				entry.barrier_id ||
+				entry.barrier_last_review ||
+				entry.barrier_next_review
+			);
+
+			// Check if dates are identical
+			const sameLastReview =
+				entry.risk_last_review === entry.barrier_last_review;
+			const sameNextReview =
+				entry.risk_next_review === entry.barrier_next_review;
+			const datesMatch =
+				sameLastReview &&
+				sameNextReview &&
+				entry.risk_last_review &&
+				entry.risk_next_review;
+
+			// If both exist and dates match, combine into one row
+			if (hasRisk && hasBarrier && datesMatch) {
+				const riskId =
+					entry.risk_id || extractRiskId(entry.risk_id_barrier) || "";
+				const barrierId =
+					entry.barrier_id ||
+					extractBarrierId(entry.risk_id_barrier) ||
+					"";
+
+				rows.push({
+					entry,
+					reviewType: "Risk+Barrier",
+					rowId: `${entry.id}-combined`,
+					reviewId: [riskId, barrierId].filter(Boolean).join(", "),
+					lastReview: entry.risk_last_review,
+					nextReview: entry.risk_next_review,
+					daysRemaining: getDaysUntilReview(entry.risk_next_review),
+				});
+			} else {
+				// Create separate rows when dates differ or only one exists
+
+				// Add Risk row
+				if (hasRisk) {
+					rows.push({
+						entry,
+						reviewType: "Risk",
+						rowId: `${entry.id}-risk`,
+						reviewId:
+							entry.risk_id ||
+							extractRiskId(entry.risk_id_barrier) ||
+							"-",
+						lastReview: entry.risk_last_review,
+						nextReview: entry.risk_next_review,
+						daysRemaining: getDaysUntilReview(entry.risk_next_review),
+					});
+				}
+
+				// Add Barrier row
+				if (hasBarrier) {
+					rows.push({
+						entry,
+						reviewType: "Barrier",
+						rowId: `${entry.id}-barrier`,
+						reviewId:
+							entry.barrier_id ||
+							extractBarrierId(entry.risk_id_barrier) ||
+							"-",
+						lastReview: entry.barrier_last_review,
+						nextReview: entry.barrier_next_review,
+						daysRemaining: getDaysUntilReview(
+							entry.barrier_next_review
+						),
+					});
+				}
+			}
+
+			// Fallback: if no split fields, show as Risk with old fields
+			if (!hasRisk && !hasBarrier) {
+				rows.push({
+					entry,
+					reviewType: "Risk",
+					rowId: entry.id,
+					reviewId: extractRiskId(entry.risk_id_barrier) || "-",
+					lastReview: entry.last_review,
+					nextReview: entry.next_review,
+					daysRemaining: getDaysUntilReview(entry.next_review),
+				});
+			}
+		});
+
+		// Sort by days remaining (most urgent first)
+		return rows.sort((a, b) => {
+			if (a.daysRemaining === null && b.daysRemaining === null) return 0;
+			if (a.daysRemaining === null) return 1;
+			if (b.daysRemaining === null) return -1;
+			return a.daysRemaining - b.daysRemaining;
+		});
+	};
+
 	const groupEntriesByYear = (entries: RRSMSEntry[]) => {
 		const groups: { [year: number]: RRSMSEntry[] } = {};
 
@@ -240,7 +356,7 @@ export default function RRSMSTab({
 			riskIdBarrier
 				.split(/[,;/\n]/)
 				.map((s) => s.trim())
-				.filter((s) => s.startsWith("B"))
+				.filter((s) => s.toUpperCase().startsWith("B") )
 				.join(", ") || "-"
 		);
 	};
@@ -438,7 +554,7 @@ export default function RRSMSTab({
 																120
 															)}
 														>
-															Risk ID
+															類型
 															<div
 																className={
 																	styles.resizeHandle
@@ -462,7 +578,7 @@ export default function RRSMSTab({
 																120
 															)}
 														>
-															Barrier ID
+															ID
 															<div
 																className={
 																	styles.resizeHandle
@@ -564,169 +680,89 @@ export default function RRSMSTab({
 													</tr>
 												</thead>
 												<tbody>
-													{filteredEntries.length ===
-													0 ? (
-														<tr>
-															<td
-																colSpan={
-																	isAdmin
-																		? 8
-																		: 7
-																}
-																className={
-																	styles.emptyState
-																}
-															>
-																{searchTerm
-																	? "沒有符合搜尋的項目"
-																	: "本年度尚無項目"}
-															</td>
-														</tr>
-													) : (
-														filteredEntries.map(
-															(entry) => {
-																const nextReview =
-																	getReviewDate(
-																		entry,
-																		"next"
-																	);
-																const status =
-																	getReviewStatus(
-																		nextReview
-																	);
-																return (
-																	<tr
-																		key={
-																			entry.id
-																		}
+													{(() => {
+														const expandedRows = expandToRows(filteredEntries);
+														
+														if (expandedRows.length === 0) {
+															return (
+																<tr>
+																	<td
+																		colSpan={isAdmin ? 7 : 6}
+																		className={styles.emptyState}
 																	>
-																		<td
-																			className={
-																				styles.rrNumber
-																			}
-																		>
-																			{
-																				entry.rr_number
-																			}
-																		</td>
-																		<td
-																			className={
-																				styles.srmLink
-																			}
-																		>
-																			{entry.srm_table_link ? (
-																				<div>
-																					<div
-																						className={
-																							styles.srmNumber
-																						}
-																					>
-																						{
-																							entry
-																								.srm_table_link
-																								.number
-																						}
-																					</div>
-																					<div
-																						className={
-																							styles.srmDesc
-																						}
-																					>
-																						{entry.srm_table_link.hazard_description?.substring(
-																							0,
-																							40
-																						)}
-																						{(entry
-																							.srm_table_link
-																							.hazard_description
-																							?.length ||
-																							0) >
-																						40
-																							? "..."
-																							: ""}
-																					</div>
-																				</div>
-																			) : (
-																				"-"
-																			)}
-																		</td>
-																		<td>
-																			{entry.risk_id ||
-																				extractRiskId(
-																					entry.risk_id_barrier
-																				)}
-																		</td>
-																		<td>
-																			{entry.barrier_id ||
-																				extractBarrierId(
-																					entry.risk_id_barrier
-																				)}
-																		</td>
-																		<td>
-																			{formatDate(
-																				getReviewDate(
-																					entry,
-																					"last"
-																				)
-																			)}
-																		</td>
-																		<td>
-																			{formatDate(
-																				nextReview
-																			)}
-																		</td>
-																		<td>
-																			{status.text && (
-																				<span
-																					className={`${styles.statusBadge} ${status.className}`}
-																				>
-																					{
-																						status.text
-																					}
-																				</span>
-																			)}
-																		</td>
-																		{isAdmin && (
-																			<td>
-																				<div
-																					className={
-																						styles.actions
-																					}
-																				>
-																					<button
-																						onClick={() =>
-																							handleEdit(
-																								entry
-																							)
-																						}
-																						className={
-																							styles.editButton
-																						}
-																						title="編輯"
-																					>
-																						📝
-																					</button>
-																					<button
-																						onClick={() =>
-																							handleDelete(
-																								entry
-																							)
-																						}
-																						className={
-																							styles.deleteButton
-																						}
-																						title="刪除"
-																					>
-																						❌
-																					</button>
-																				</div>
-																			</td>
-																		)}
-																	</tr>
-																);
+																		{searchTerm ? "沒有符合搜尋的項目" : "本年度尚無項目"}
+																	</td>
+																</tr>
+															);
+														}
+														
+														return expandedRows.map((row) => {
+															const status = getReviewStatus(row.nextReview);
+															
+															let typeColor = "#4a9eff";
+															if (row.reviewType === "Barrier") {
+																typeColor = "#10b981";
+															} else if (row.reviewType === "Risk+Barrier") {
+																typeColor = "#8b5cf6";
 															}
-														)
-													)}
+															
+															return (
+																<tr key={row.rowId}>
+																	<td className={styles.rrNumber}>{row.entry.rr_number}</td>
+																	<td className={styles.srmLink}>
+																		{row.entry.srm_table_link ? (
+																			<div>
+																				<div className={styles.srmNumber}>
+																					{row.entry.srm_table_link.number}
+																				</div>
+																				<div className={styles.srmDesc}>
+																					{row.entry.srm_table_link.hazard_description?.substring(0, 40)}
+																					{(row.entry.srm_table_link.hazard_description?.length || 0) > 40 ? "..." : ""}
+																				</div>
+																			</div>
+																		) : (
+																			"-"
+																		)}
+																	</td>
+																	<td>
+																		<span style={{ color: typeColor, fontWeight: 600, fontSize: "0.85rem" }}>
+																			{row.reviewType}
+																		</span>
+																	</td>
+																	<td style={{ fontSize: "0.85rem" }}>{row.reviewId}</td>
+																	<td>{formatDate(row.lastReview)}</td>
+																	<td>{formatDate(row.nextReview)}</td>
+																	<td>
+																		{status.text && (
+																			<span className={`${styles.statusBadge} ${status.className}`}>
+																				{status.text}
+																			</span>
+																		)}
+																	</td>
+																	{isAdmin && (
+																		<td>
+																			<div className={styles.actions}>
+																				<button
+																					onClick={() => handleEdit(row.entry)}
+																					className={styles.editButton}
+																					title="編輯"
+																				>
+																					📝
+																				</button>
+																				<button
+																					onClick={() => handleDelete(row.entry)}
+																					className={styles.deleteButton}
+																					title="刪除"
+																				>
+																					❌
+																				</button>
+																			</div>
+																		</td>
+																	)}
+																</tr>
+															);
+														});
+													})()}
 												</tbody>
 											</table>
 										</div>
