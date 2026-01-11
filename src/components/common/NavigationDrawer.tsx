@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useMemo, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Avatar from "@/components/ui/Avatar/Avatar";
+import { FaRunning } from "react-icons/fa";
 import styles from "./NavigationDrawer.module.css";
 
 interface NavigationDrawerProps {
@@ -16,7 +17,7 @@ interface NavigationDrawerProps {
 interface NavigationItem {
 	id: string;
 	title: string;
-	icon: string;
+	icon: string | JSX.Element;
 	path: string;
 	description: string;
 	minAuthLevel?: number;
@@ -34,7 +35,7 @@ const navigationItems: NavigationItem[] = [
 	},
 	{
 		id: "roster",
-		title: "排班管理",
+		title: "教師班表",
 		icon: "📅",
 		path: "/roster",
 		description: "空服教師排班系統",
@@ -48,7 +49,7 @@ const navigationItems: NavigationItem[] = [
 	},
 	{
 		id: "sms",
-		title: "SMS 安全管理",
+		title: "SMS",
 		icon: "🛡️",
 		path: "/sms",
 		description: "Safety Management System",
@@ -56,7 +57,7 @@ const navigationItems: NavigationItem[] = [
 	},
 	{
 		id: "oral-test",
-		title: "口試系統",
+		title: "翻書口試",
 		icon: "🎯",
 		path: "/oral-test/dashboard",
 		description: "複訓翻書口試管理系統",
@@ -64,10 +65,17 @@ const navigationItems: NavigationItem[] = [
 	},
 	{
 		id: "business-training",
-		title: "商務艙訓練",
+		title: "B/C訓練",
 		icon: "🍴",
 		path: "/bc-training",
-		description: "商務艙服務訓練系統",
+		description: "商務艙服務訓練",
+	},
+	{
+		id: "mdafaat",
+		title: "情境演練",
+		icon: <FaRunning style={{ fontSize: '1.25rem' }} />,
+		path: "/mdafaat",
+		description: "緊急撤離演練",
 	},
 ];
 

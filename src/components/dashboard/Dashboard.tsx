@@ -6,6 +6,7 @@ import Navbar from "@/components/common/Navbar";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { useWeather } from "@/hooks/useWeather";
+import { FaRunning } from "react-icons/fa";
 import styles from "./Dashboard.module.css";
 
 interface DashboardStats {
@@ -176,15 +177,15 @@ const Dashboard = () => {
 
   const quickActions = [
     {
-      title: "班表",
-      description: "檢視本月飛行排班",
+      title: "教師班表",
+      description: "空服教師排班系統",
       icon: "🗓️",
       href: "/roster",
       color: "#3b82f6"
     },
     {
       title: "任務管理",
-      description: "管理工作任務清單",
+      description: "Kanban 任務看板",
       icon: "📋",
       href: "/tasks",
       color: "#10b981"
@@ -197,8 +198,8 @@ const Dashboard = () => {
       color: "#ef4444"
     },
     {
-      title: "口試系統",
-      description: "口試題目與管理",
+      title: "翻書口試",
+      description: "複訓翻書口試管理系統",
       icon: "🎯",
       href: "/oral-test/dashboard",
       color: "#f59e0b"
@@ -209,6 +210,13 @@ const Dashboard = () => {
       icon: "🍴",
       href: "/bc-training",
       color: "#8b5cf6"
+    },
+    {
+      title: "情境演練",
+      description: "緊急撤離演練",
+      icon: <FaRunning />,
+      href: "/mdafaat",
+      color: "#ec4899"
     }
   ];
 
