@@ -34,34 +34,122 @@ export default function ResultsPage() {
   }
 
   return (
-    <div className="container">
-      <div className="fade-in">
-        <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{ 
-            fontSize: '2.5rem', 
-            fontWeight: 'bold', 
-            color: '#2d3748',
-            textAlign: 'center',
-            marginBottom: '0.5rem'
-          }}>
+    <>
+    <style jsx>{`
+        .test-page-container {
+          padding: 0;
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .test-page-content {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .test-page-header {
+          padding: 1rem 1.5rem 0.75rem 1.5rem;
+          background: rgba(255, 255, 255, 0.03);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          flex-shrink: 0;
+        }
+
+        .test-page-title {
+          font-size: 3rem;
+          font-weight: bold;
+          color: #4a9eff;
+          text-align: center;
+          margin-bottom: 0.35rem;
+          text-shadow: 0 2px 4px rgba(74, 158, 255, 0.3);
+        }
+
+        .test-page-subtitle {
+          text-align: center;
+          color: #a0aec0;
+          font-size: 1.2rem;
+        }
+
+        .test-page-nav {
+          padding: 0.5rem 1rem;
+          flex-shrink: 0;
+        }
+
+        .test-interface-wrapper {
+          flex: 1;
+        }
+
+        /* DESKTOP ONLY - Overflow Hidden & Fixed Height */
+        @media (min-width: 1025px) {
+
+
+          .test-page-content {
+            height: 100%;
+
+          }
+
+          .test-interface-wrapper {
+            min-height: 0;
+
+          }
+        }
+
+        /* MOBILE & TABLET - Natural Scroll */
+        @media (max-width: 1024px) {
+          .test-page-container {
+            min-height: auto;
+            overflow: visible;
+          }
+
+          .test-page-content {
+            min-height: auto;
+            overflow: visible;
+          }
+
+          .test-interface-wrapper {
+            min-height: auto;
+            overflow: visible;
+          }
+
+          .test-page-header {
+            padding: 1.5rem 1.5rem 1rem 1.5rem;
+          }
+
+          .test-page-title {
+            font-size: 2.25rem;
+            margin-bottom: 0.5rem;
+          }
+
+          .test-page-subtitle {
+            font-size: 1rem;
+          }
+
+          .test-page-nav {
+            padding: 0.75rem 1rem;
+          }
+        }
+      `}</style>
+    <div className="test-page-container">
+      <div className="test-page-content fade-in">
+        <div className='test-page-header'>
+          <h1 className='test-page-title'>
             成績查詢
           </h1>
-          <p style={{
-            textAlign: 'center',
-            color: '#718096',
-            fontSize: '1.1rem'
-          }}>
+          <p className="test-page-subtitle">
             Test Results & Analytics
           </p>
         </div>
 
+<div className="test-page-nav">
         <OralTestNavigation currentPath="/oral-test/results" />
+      </div>
 
         {/* Results Table Component */}
-        <div style={{ marginTop: '2rem' }}>
+        <div className="test-interface-wrapper">
           <ResultsTable />
         </div>
       </div>
     </div>
+    </>
   );
 }

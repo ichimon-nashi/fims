@@ -1,9 +1,9 @@
-/* src/components/oral-test/OralTestNavigation/OralTestNavigation.module.css */
+/* src/components/oral-test/OralTestNavigation/OralTestNavigation.module.css - COMPACT TABLET */
 .navigation {
-  background: white;
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 1rem;
   margin-bottom: 2rem;
 }
@@ -20,10 +20,10 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  border: 2px solid #e2e8f0;
+  border: 2px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  background: white;
-  color: #4a5568;
+  background: rgba(255, 255, 255, 0.05);
+  color: #a0aec0;
   text-decoration: none;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -33,33 +33,33 @@
 }
 
 .navItem:hover:not(.disabled) {
-  background: #f7fafc;
-  border-color: #667eea;
-  color: #667eea;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: #4a9eff;
+  color: #4a9eff;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+  box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);
 }
 
 .navItem.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-color: #667eea;
+  background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
+  border-color: #4a9eff;
   color: white;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+  box-shadow: 0 4px 12px rgba(74, 158, 255, 0.4);
 }
 
 .navItem.disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
-  background: #f8fafc;
-  border-color: #e2e8f0;
-  color: #9ca3af;
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.05);
+  color: #4b5563;
 }
 
 .navItem.disabled:hover {
   transform: none;
   box-shadow: none;
-  background: #f8fafc;
-  border-color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.05);
 }
 
 .icon {
@@ -79,7 +79,7 @@
 }
 
 /* Mobile responsive */
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .navContainer {
     flex-direction: column;
     align-items: stretch;
@@ -100,17 +100,32 @@
   }
 }
 
-/* Tablet responsive */
-@media (min-width: 769px) and (max-width: 1024px) {
+/* TABLET - COMPACT SINGLE ROW */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .navigation {
+    padding: 0.65rem;
+    margin-bottom: 0.5rem;
+  }
+  
   .navContainer {
-    justify-content: flex-start;
-    gap: 0.75rem;
+    justify-content: center;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
   }
   
   .navItem {
-    flex: 1;
-    justify-content: center;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.85rem;
+    flex: 0 1 auto;
     min-width: 0;
+  }
+  
+  .icon {
+    font-size: 1rem;
+  }
+  
+  .label {
+    font-size: 0.85rem;
   }
 }
 

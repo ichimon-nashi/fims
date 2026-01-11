@@ -115,7 +115,7 @@ const UserManagement = () => {
 						return user.employee_id !== "admin";
 					});
 
-					// Sort users to show admin at top when logged in as admin
+					// Sort users by employee_id ascending, with admin at top if viewing as admin
 					const sortedUsers = filteredUsers.sort(
 						(a: User, b: User) => {
 							// If current user is admin, put admin user at the top
@@ -123,8 +123,10 @@ const UserManagement = () => {
 								if (a.employee_id === "admin") return -1;
 								if (b.employee_id === "admin") return 1;
 							}
-							// Otherwise sort alphabetically by full name
-							return a.full_name.localeCompare(b.full_name);
+							// Sort by employee_id numerically (handle string numbers)
+							const aId = parseInt(a.employee_id) || 0;
+							const bId = parseInt(b.employee_id) || 0;
+							return aId - bId;
 						}
 					);
 
@@ -429,31 +431,31 @@ const UserManagement = () => {
 		// Map specific authentication levels to CSS classes
 		switch (level) {
 			case 1:
-				return "auth1";
+				return "authLevel1";
 			case 2:
-				return "auth2";
+				return "authLevel2";
 			case 3:
-				return "auth3";
+				return "authLevel3";
 			case 4:
-				return "auth4";
+				return "authLevel4";
 			case 5:
-				return "auth5";
+				return "authLevel5";
 			case 10:
-				return "auth10";
+				return "authLevel10";
 			case 20:
-				return "auth20";
+				return "authLevel20";
 			case 99:
 				return "auth99";
 			default:
 				// For any other levels, map to closest
 				if (level >= 99) return "auth99";
-				if (level >= 20) return "auth20";
-				if (level >= 10) return "auth10";
-				if (level >= 5) return "auth5";
-				if (level >= 4) return "auth4";
-				if (level >= 3) return "auth3";
-				if (level >= 2) return "auth2";
-				return "auth1";
+				if (level >= 20) return "authLevel20";
+				if (level >= 10) return "authLevel10";
+				if (level >= 5) return "authLevel5";
+				if (level >= 4) return "authLevel4";
+				if (level >= 3) return "authLevel3";
+				if (level >= 2) return "authLevel2";
+				return "authLevel1";
 		}
 	};
 
@@ -487,6 +489,7 @@ const UserManagement = () => {
 		const parts = rank.split(" - ");
 		return parts[0];
 	};
+
 
 	// Build columns based on user permissions
 	const columns = [
@@ -627,7 +630,7 @@ const UserManagement = () => {
 	return (
 		<div className={styles.userManagement}>
 			<div className={styles.header}>
-				<h1>User Management</h1>
+				<h1> </h1>
 				{/* Show admin status if current user is admin */}
 				{currentUser?.employee_id === "admin" && (
 					<div className={styles.adminStatus}>
@@ -722,6 +725,7 @@ const UserManagement = () => {
 					onSelectionChange={setSelectedUsers}
 					selectedItems={selectedUsers}
 					rowKey="id"
+					pageSize={20}
 					// NEW: Enable pagination preservation
 					preservePagination={true}
 					currentPage={currentPage}

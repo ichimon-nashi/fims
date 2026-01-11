@@ -64,7 +64,7 @@ const Navbar = () => {
           {/* Logo/Brand */}
           <div className={styles.brand}>
             <span className={styles.brandText}>
-              {baseInfo.icon} 豪神教師管理系統
+              {baseInfo.icon} 豪神 INSTRUCTOR
             </span>
           </div>
 
@@ -93,7 +93,7 @@ const Navbar = () => {
                 className={styles.logoutButton}
                 title="登出"
               >
-                🚪 登出
+                ➜]
               </button>
             </div>
           </div>

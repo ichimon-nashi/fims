@@ -1,4 +1,4 @@
-// src/app/api/users/[id]/route.ts
+// src/app/api/users/[id]/route.ts - FIXED UPDATE QUERY
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { verifyToken, extractTokenFromHeader, hashPassword } from "@/lib/auth";
@@ -164,9 +164,12 @@ export async function PUT(
 		}
 
 		const supabase = await createClient();
+		
+		// CRITICAL FIX: Added .eq("id", id) to specify which user to update
 		const { data: updatedUser, error } = await supabase
 			.from("users")
 			.update(updateData)
+			.eq("id", id)  // THIS WAS MISSING!
 			.select("*")
 			.single();
 

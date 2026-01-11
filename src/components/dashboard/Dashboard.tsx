@@ -176,7 +176,7 @@ const Dashboard = () => {
 
   const quickActions = [
     {
-      title: "查看排班表",
+      title: "班表",
       description: "檢視本月飛行排班",
       icon: "🗓️",
       href: "/roster",
@@ -190,7 +190,7 @@ const Dashboard = () => {
       color: "#10b981"
     },
     {
-      title: "SMS 安全管理",
+      title: "SMS",
       description: "Safety Management System",
       icon: "🛡️",
       href: "/sms",
@@ -204,7 +204,7 @@ const Dashboard = () => {
       color: "#f59e0b"
     },
     {
-      title: "商務艙訓練",
+      title: "B/C訓練",
       description: "商務艙服務訓練",
       icon: "🍴",
       href: "/bc-training",

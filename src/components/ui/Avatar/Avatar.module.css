@@ -1,10 +1,10 @@
-/* src/components/ui/Avatar/Avatar.module.css */
+/* src/components/ui/Avatar/Avatar.module.css - OPTIMIZED FOR TEST INTERFACE */
 .avatar {
 	border-radius: 50%;
 	overflow: hidden;
 	position: relative;
 	flex-shrink: 0;
-	box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+	box-shadow: 0 4px 16px rgba(74, 158, 255, 0.4);
 	transition: all 0.3s ease;
 	display: flex;
 	align-items: center;
@@ -13,8 +13,8 @@
 }
 
 .avatar:hover {
-	transform: scale(1.05);
-	box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+	transform: scale(1.03);
+	box-shadow: 0 6px 20px rgba(74, 158, 255, 0.5);
 }
 
 /* Size variants */
@@ -33,10 +33,10 @@
 }
 
 .large {
-	width: 6rem;
-	height: 6rem;
-	min-width: 6rem;
-	min-height: 6rem;
+	width: 5rem;
+	height: 5rem;
+	min-width: 5rem;
+	min-height: 5rem;
 }
 
 /* Avatar image styling */
@@ -49,9 +49,9 @@
 	display: block;
 }
 
-/* Letter avatar fallback styling */
+/* Letter avatar fallback styling - SMS THEME */
 .letterAvatar {
-	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -70,7 +70,7 @@
 }
 
 .large.letterAvatar {
-	font-size: 2.5rem;
+	font-size: 2rem;
 }
 
 /* Loading state shimmer effect */
@@ -96,20 +96,13 @@
 }
 
 @keyframes shimmer {
-	0% {
-		transform: translateX(-100%);
-	}
-	100% {
-		transform: translateX(100%);
-	}
+	0% { transform: translateX(-100%); }
+	100% { transform: translateX(100%); }
 }
 
 /* High contrast mode support */
 @media (prefers-contrast: high) {
-	.avatar {
-		border: 2px solid currentColor;
-	}
-	
+	.avatar { border: 2px solid currentColor; }
 	.letterAvatar {
 		text-shadow: none;
 		border: 2px solid white;
@@ -118,87 +111,51 @@
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
-	.avatar {
-		transition: none;
-	}
-	
-	.avatar:hover {
-		transform: none;
-	}
-	
-	.avatar::before {
-		animation: none;
-	}
+	.avatar { transition: none; }
+	.avatar:hover { transform: none; }
+	.avatar::before { animation: none; }
 }
 
-/* Tablet landscape (iPad: 768px - 1024px) */
+/* Tablet (768px - 1024px) */
 @media (min-width: 768px) and (max-width: 1024px) {
-	.small {
-		width: 2.25rem;
-		height: 2.25rem;
-		min-width: 2.25rem;
-		min-height: 2.25rem;
-	}
-
-	.medium {
-		width: 3.5rem;
-		height: 3.5rem;
-		min-width: 3.5rem;
-		min-height: 3.5rem;
-	}
-
-	.large {
-		width: 5.5rem;
-		height: 5.5rem;
-		min-width: 5.5rem;
-		min-height: 5.5rem;
-	}
-
-	.small.letterAvatar {
-		font-size: 0.8rem;
-	}
-
-	.medium.letterAvatar {
-		font-size: 1.4rem;
-	}
-
-	.large.letterAvatar {
-		font-size: 2.2rem;
-	}
-}
-
-/* Mobile (iPhone: up to 767px) */
-@media (max-width: 767px) {
-	.small {
-		width: 2rem;
-		height: 2rem;
-		min-width: 2rem;
-		min-height: 2rem;
-	}
-
-	.medium {
-		width: 3rem;
-		height: 3rem;
-		min-width: 3rem;
-		min-height: 3rem;
-	}
-
 	.large {
 		width: 4.5rem;
 		height: 4.5rem;
 		min-width: 4.5rem;
 		min-height: 4.5rem;
 	}
+	.large.letterAvatar { font-size: 1.8rem; }
+}
 
-	.small.letterAvatar {
-		font-size: 0.75rem;
+/* MacBook Air (1025px - 1439px) */
+@media (min-width: 1025px) and (max-width: 1439px) {
+	.large {
+		width: 5rem;
+		height: 5rem;
+		min-width: 5rem;
+		min-height: 5rem;
 	}
+	.large.letterAvatar { font-size: 2rem; }
+}
 
-	.medium.letterAvatar {
-		font-size: 1.2rem;
+/* Wide screen (1440px+) */
+@media (min-width: 1440px) {
+	.large {
+		width: 6rem;
+		height: 6rem;
+		min-width: 6rem;
+		min-height: 6rem;
 	}
+	.large.letterAvatar { font-size: 2.5rem; }
+}
 
-	.large.letterAvatar {
-		font-size: 1.8rem;
+/* Mobile (up to 767px) */
+@media (max-width: 767px) {
+	.large {
+		width: 4rem;
+		height: 4rem;
+		min-width: 4rem;
+		min-height: 4rem;
 	}
+	.large.letterAvatar { font-size: 1.6rem; }
 }

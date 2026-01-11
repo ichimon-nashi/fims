@@ -39,7 +39,7 @@ const DataTable = ({
 	rowKey,
 	searchable = true,
 	paginated = true,
-	pageSize = 10,
+	pageSize = 20,
 	// NEW: External pagination props with defaults
 	currentPage: externalCurrentPage,
 	onPageChange,

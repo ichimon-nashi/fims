@@ -767,7 +767,7 @@ const ResultsTable = () => {
 	return (
 		<div className={styles.resultsTable}>
 			<div className={styles.header}>
-				<h1>Test Results</h1>
+				<h1> </h1>
 				<div className={styles.actions}>
 					<button
 						className="btn btn-secondary"

@@ -42,23 +42,23 @@
 }
 
 .drawerHeader.default {
-	background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+	background: linear-gradient(135deg, #2563eb, #1e40af);
 }
 
 .drawerHeader.admin {
-	background: linear-gradient(135deg, #ef4444, #dc2626);
+	background: linear-gradient(135deg, #dc2626, #7f1d1d);
 }
 
 .drawerHeader.khh {
-	background: linear-gradient(135deg, #06b6d4, #0891b2);
+	background: linear-gradient(135deg, #06b6d4, #0e7490);
 }
 
 .drawerHeader.tsa {
-	background: linear-gradient(135deg, #10b981, #059669);
+	background: linear-gradient(135deg, #10b981, #065f46);
 }
 
 .drawerHeader.rmq {
-	background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+	background: linear-gradient(135deg, #8b5cf6, #4c1d95);
 }
 
 .userProfile {

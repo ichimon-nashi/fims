@@ -817,7 +817,7 @@ ${errorMessages}`);
 	return (
 		<div className={styles.questionManagement}>
 			<div className={styles.header}>
-				<h1>Question Management</h1>
+				<h1> </h1>
 				<div className={styles.actions}>
 					<button
 						className="btn btn-primary"
@@ -932,7 +932,6 @@ ${errorMessages}`);
 						style={{
 							marginTop: "1rem",
 							padding: "0.5rem",
-							background: "#e3f2fd",
 							borderRadius: "4px",
 						}}
 					>
@@ -974,6 +973,7 @@ ${errorMessages}`);
 					onSelectionChange={setSelectedQuestions}
 					selectedItems={selectedQuestions}
 					rowKey="id"
+					pageSize={20}
 					// NEW: Enable pagination preservation
 					preservePagination={true}
 					currentPage={currentPage}

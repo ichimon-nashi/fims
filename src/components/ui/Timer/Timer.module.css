@@ -1,4 +1,4 @@
-/* src/components/ui/Timer/Timer.module.css */
+/* src/components/ui/Timer/Timer.module.css - LARGER RECTANGULAR TIMER */
 .timerContainer {
 	display: flex;
 	flex-direction: column;
@@ -9,12 +9,17 @@
 	border-radius: 16px;
 	transition: all 0.3s ease;
 	width: 100%;
+	height: 100%;
+	justify-content: center;
 }
 
+/* LARGER RECTANGULAR TIMER - MORE SPACE AVAILABLE */
 .timerDisplay {
-	width: 13rem;
-	height: 13rem;
-	border-radius: 50%;
+	width: 100%;
+	max-width: 500px;
+	min-width: 320px;
+	height: 180px;
+	border-radius: 16px;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -23,7 +28,7 @@
 	transition: all 0.3s ease;
 	border: 10px solid;
 	background: radial-gradient(
-		circle,
+		ellipse,
 		rgba(255, 255, 255, 0.95) 0%,
 		rgba(248, 250, 252, 0.95) 100%
 	);
@@ -40,7 +45,7 @@
 	left: 0;
 	right: 0;
 	bottom: 0;
-	border-radius: 50%;
+	border-radius: 8px;
 	opacity: 0.1;
 	transition: opacity 0.3s ease;
 }
@@ -50,48 +55,48 @@
 }
 
 .timerDisplay:active {
-	transform: scale(0.97);
+	transform: scale(0.98);
 }
 
 /* Timer color states */
 .normal {
-	border-color: #f1c40f;
-	color: #f39c12;
+	border-color: #f59e0b;
+	color: #d97706;
 }
 
 .normal::before {
-	background: linear-gradient(45deg, #f1c40f, #f39c12);
+	background: linear-gradient(135deg, #f59e0b, #d97706);
 }
 
 .warning {
-	border-color: #e67e22;
-	color: #d35400;
+	border-color: #f97316;
+	color: #ea580c;
 	animation: pulse 1.5s ease-in-out infinite;
 }
 
 .warning::before {
-	background: linear-gradient(45deg, #e67e22, #d35400);
+	background: linear-gradient(135deg, #f97316, #ea580c);
 }
 
 .critical {
-	border-color: #e74c3c;
-	color: #c0392b;
+	border-color: #ef4444;
+	color: #dc2626;
 	animation: urgentPulse 0.8s ease-in-out infinite;
 }
 
 .critical::before {
-	background: linear-gradient(45deg, #e74c3c, #c0392b);
+	background: linear-gradient(135deg, #ef4444, #dc2626);
 }
 
 @keyframes pulse {
 	0%,
 	100% {
 		transform: scale(1);
-		box-shadow: 0 8px 32px rgba(230, 126, 34, 0.4);
+		box-shadow: 0 8px 32px rgba(249, 115, 22, 0.4);
 	}
 	50% {
-		transform: scale(1.05);
-		box-shadow: 0 8px 40px rgba(230, 126, 34, 0.2);
+		transform: scale(1.02);
+		box-shadow: 0 8px 40px rgba(249, 115, 22, 0.2);
 	}
 }
 
@@ -99,16 +104,16 @@
 	0%,
 	100% {
 		transform: scale(1);
-		box-shadow: 0 8px 32px rgba(231, 76, 60, 0.6);
+		box-shadow: 0 8px 32px rgba(239, 68, 68, 0.6);
 	}
 	50% {
-		transform: scale(1.08);
-		box-shadow: 0 8px 48px rgba(231, 76, 60, 0.3);
+		transform: scale(1.03);
+		box-shadow: 0 8px 48px rgba(239, 68, 68, 0.3);
 	}
 }
 
 .timeText {
-	font-size: 3.5rem;
+	font-size: 5rem;
 	font-weight: bold;
 	font-family: "Courier New", monospace;
 	text-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
@@ -116,9 +121,9 @@
 }
 
 .statusText {
-	font-size: 0.7rem;
+	font-size: 0.95rem;
 	font-weight: 600;
-	margin-top: 0.5rem;
+	margin-top: 0.6rem;
 	opacity: 0.85;
 	text-align: center;
 	line-height: 1.2;
@@ -132,9 +137,9 @@
 
 .controlButton {
 	padding: 0.75rem 1.5rem;
-	border: 2px solid #667eea;
+	border: 2px solid #4a9eff;
 	background: white;
-	color: #667eea;
+	color: #4a9eff;
 	border-radius: 8px;
 	font-size: 0.9rem;
 	font-weight: 600;
@@ -146,10 +151,10 @@
 }
 
 .controlButton:hover:not(:disabled) {
-	background: #667eea;
+	background: #4a9eff;
 	color: white;
 	transform: translateY(-2px);
-	box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+	box-shadow: 0 4px 15px rgba(74, 158, 255, 0.3);
 }
 
 .controlButton:disabled {
@@ -160,8 +165,8 @@
 
 .instructions {
 	text-align: center;
-	color: #666;
-	font-size: 0.8rem;
+	color: #a0aec0;
+	font-size: 0.85rem;
 	line-height: 1.4;
 	max-width: 300px;
 }
@@ -178,53 +183,10 @@
 	}
 
 	.timerDisplay {
-		width: 11rem;
-		height: 11rem;
+		height: 140px;
 		border-width: 8px;
-	}
-
-	.timeText {
-		font-size: 3rem;
-	}
-
-	.statusText {
-		font-size: 0.65rem;
-	}
-}
-
-/* Desktop (MacBook Air: 1025px - 1439px) */
-@media (min-width: 1025px) and (max-width: 1439px) {
-	.timerContainer {
-		padding: 0.75rem;
-		gap: 1rem;
-	}
-
-	.timerDisplay {
-		width: 13rem;
-		height: 13rem;
-		border-width: 10px;
-	}
-
-	.timeText {
-		font-size: 3.5rem;
-	}
-
-	.statusText {
-		font-size: 0.7rem;
-	}
-}
-
-/* Wide screen (1440px+) */
-@media (min-width: 1440px) {
-	.timerContainer {
-		padding: 1rem;
-		gap: 1.25rem;
-	}
-
-	.timerDisplay {
-		width: 15rem;
-		height: 15rem;
-		border-width: 12px;
+		max-width: 400px;
+		min-width: 280px;
 	}
 
 	.timeText {
@@ -236,6 +198,52 @@
 	}
 }
 
+/* Desktop (MacBook Air: 1025px - 1439px) */
+@media (min-width: 1025px) and (max-width: 1439px) {
+	.timerContainer {
+		padding: 0.75rem;
+		gap: 1rem;
+	}
+
+	.timerDisplay {
+		height: 180px;
+		border-width: 10px;
+		max-width: 500px;
+		min-width: 320px;
+	}
+
+	.timeText {
+		font-size: 5rem;
+	}
+
+	.statusText {
+		font-size: 0.95rem;
+	}
+}
+
+/* Wide screen (1440px+) */
+@media (min-width: 1440px) {
+	.timerContainer {
+		padding: 1rem;
+		gap: 1.25rem;
+	}
+
+	.timerDisplay {
+		height: 200px;
+		border-width: 12px;
+		max-width: 600px;
+		min-width: 360px;
+	}
+
+	.timeText {
+		font-size: 5.5rem;
+	}
+
+	.statusText {
+		font-size: 1.05rem;
+	}
+}
+
 /* Mobile (iPhone: up to 767px) */
 @media (max-width: 767px) {
 	.timerContainer {
@@ -243,17 +251,18 @@
 	}
 
 	.timerDisplay {
-		width: 10rem;
-		height: 10rem;
+		height: 120px;
 		border-width: 7px;
+		max-width: 100%;
+		min-width: 260px;
 	}
 
 	.timeText {
-		font-size: 2.5rem;
+		font-size: 3.5rem;
 	}
 
 	.statusText {
-		font-size: 0.7rem;
+		font-size: 0.8rem;
 	}
 
 	.timerControls {
