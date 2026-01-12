@@ -533,8 +533,16 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 										</div>
 									</div>
 									
-									{/* Subtask Rows */}
-									{subtasks.map((subtask) => (
+									{/* Subtask Rows - FIXED: Sort by start_date */}
+									{subtasks
+										.sort((a, b) => {
+											// Sort by start_date: oldest first, newest at bottom
+											if (!a.start_date && !b.start_date) return 0;
+											if (!a.start_date) return 1;
+											if (!b.start_date) return -1;
+											return new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
+										})
+										.map((subtask) => (
 										<div key={subtask.id} style={{ 
 											minHeight: '60px', 
 											borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
@@ -766,8 +774,16 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 													)}
 												</div>
 												
-												{/* Subtask Timeline Bars */}
-												{subtasks.map((subtask) => {
+											{/* Subtask Timeline Bars - FIXED: Sort by start_date */}
+											{subtasks
+												.sort((a, b) => {
+													// Sort by start_date: oldest first, newest at bottom
+													if (!a.start_date && !b.start_date) return 0;
+													if (!a.start_date) return 1;
+													if (!b.start_date) return -1;
+													return new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
+												})
+												.map((subtask) => {
 													const subtaskColor = getTaskColor(subtask.id);
 													
 													return (

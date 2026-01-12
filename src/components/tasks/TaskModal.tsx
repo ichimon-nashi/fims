@@ -52,10 +52,10 @@ const TaskModal: React.FC<TaskModalProps> = ({
 		);
 	};
 
-	// Handle task status update
+	// Handle task status update - FIXED: Use selectedTask instead of task prop
 	const updateTaskStatus = async (newColumnId: string) => {
 		const currentColumnId = columns.find((col) =>
-			col.tasks.some((t) => t.id === task.id)
+			col.tasks.some((t) => t.id === selectedTask.id)
 		)?.id;
 		if (!currentColumnId || currentColumnId === newColumnId) return;
 
@@ -64,7 +64,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
 			const { error } = await supabase
 				.from("tasks")
 				.update({ status: newColumnId })
-				.eq("id", task.id);
+				.eq("id", selectedTask.id);
 			if (error)
 				console.error("Error updating task status in database:", error);
 
@@ -72,7 +72,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
 				return prevColumns.map((column) => {
 					if (column.id === currentColumnId) {
 						const newTasks = column.tasks.filter(
-							(t) => t.id !== task.id
+							(t) => t.id !== selectedTask.id
 						);
 						return {
 							...column,
@@ -82,11 +82,16 @@ const TaskModal: React.FC<TaskModalProps> = ({
 					}
 					if (column.id === newColumnId) {
 						const updatedTask = {
-							...task,
+							...selectedTask,
 							status: newColumnId as any,
 							updated_at: new Date().toISOString(),
 						};
 						const newTasks = [...column.tasks, updatedTask];
+						
+						// FIXED: Update selectedTask and editTask to reflect new status
+						setSelectedTask(updatedTask);
+						setEditTask(updatedTask);
+						
 						return {
 							...column,
 							tasks: newTasks,
@@ -97,7 +102,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
 				});
 			});
 
-			onClose();
+			// FIXED: Don't close modal - allow user to continue editing
+			// onClose();
 		} catch (error) {
 			console.error("Error updating task status:", error);
 		}
@@ -803,7 +809,15 @@ const TaskModal: React.FC<TaskModalProps> = ({
 										{getSubtasks(
 											allTasks,
 											selectedTask.id
-										).map((subtask) => (
+										)
+										.sort((a, b) => {
+											// Sort by start_date: oldest first, newest at bottom
+											if (!a.start_date && !b.start_date) return 0;
+											if (!a.start_date) return 1; // Tasks without dates go to bottom
+											if (!b.start_date) return -1;
+											return new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
+										})
+										.map((subtask) => (
 											<div
 												key={subtask.id}
 												style={{
