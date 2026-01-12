@@ -1,4 +1,4 @@
-// src/components/tasks/TimelineControls.tsx - Fixed with proper dateRangeLength prop
+// src/components/tasks/TimelineControls.tsx - UPDATED: SMS Dark Theme styling
 import React from "react";
 import { ZoomLevel } from "@/lib/task.types";
 
@@ -9,7 +9,7 @@ interface TimelineControlsProps {
 	onNavigateNext: () => void;
 	onGoToToday: () => void;
 	taskCount: number;
-	dateRangeLength: number; // FIXED: Added missing prop
+	dateRangeLength: number;
 }
 
 const TimelineControls: React.FC<TimelineControlsProps> = ({
@@ -19,7 +19,7 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
 	onNavigateNext,
 	onGoToToday,
 	taskCount,
-	dateRangeLength, // FIXED: Destructured the prop
+	dateRangeLength,
 }) => {
 	const getNavigationLabel = () => {
 		switch (zoomLevel) {
@@ -42,12 +42,12 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
 				display: "flex",
 				justifyContent: "space-between",
 				alignItems: "center",
-				padding: "1rem",
-				borderBottom: "1px solid #e5e7eb",
-				background: "#f9fafb",
+				gap: "1rem",
+				flexWrap: "wrap",
+				flex: 1,
 			}}
 		>
-			<div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+			<div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
 				{/* Navigation Controls */}
 				<div
 					style={{
@@ -59,22 +59,26 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
 					<button
 						onClick={onNavigatePrevious}
 						style={{
-							background: "#f3f4f6",
-							border: "1px solid #d1d5db",
-							borderRadius: "0.375rem",
+							background: "rgba(51, 65, 85, 0.5)",
+							border: "1px solid rgba(148, 163, 184, 0.3)",
+							borderRadius: "0.5rem",
 							padding: "0.5rem 0.75rem",
 							cursor: "pointer",
 							fontSize: "0.875rem",
+							color: "#cbd5e1",
 							display: "flex",
 							alignItems: "center",
 							gap: "0.5rem",
 							transition: "all 0.2s",
+							fontWeight: "600",
 						}}
 						onMouseEnter={(e) => {
-							e.currentTarget.style.background = "#e5e7eb";
+							e.currentTarget.style.background = "rgba(71, 85, 105, 0.6)";
+							e.currentTarget.style.borderColor = "rgba(148, 163, 184, 0.5)";
 						}}
 						onMouseLeave={(e) => {
-							e.currentTarget.style.background = "#f3f4f6";
+							e.currentTarget.style.background = "rgba(51, 65, 85, 0.5)";
+							e.currentTarget.style.borderColor = "rgba(148, 163, 184, 0.3)";
 						}}
 					>
 						← Previous {getNavigationLabel()}
@@ -83,21 +87,24 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
 					<button
 						onClick={onGoToToday}
 						style={{
-							background: "#3b82f6",
+							background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
 							color: "white",
 							border: "none",
-							borderRadius: "0.375rem",
+							borderRadius: "0.5rem",
 							padding: "0.5rem 0.75rem",
 							cursor: "pointer",
 							fontSize: "0.875rem",
 							fontWeight: "600",
 							transition: "all 0.2s",
+							boxShadow: "0 2px 8px rgba(59, 130, 246, 0.3)",
 						}}
 						onMouseEnter={(e) => {
-							e.currentTarget.style.background = "#2563eb";
+							e.currentTarget.style.transform = "translateY(-1px)";
+							e.currentTarget.style.boxShadow = "0 4px 12px rgba(59, 130, 246, 0.4)";
 						}}
 						onMouseLeave={(e) => {
-							e.currentTarget.style.background = "#3b82f6";
+							e.currentTarget.style.transform = "translateY(0)";
+							e.currentTarget.style.boxShadow = "0 2px 8px rgba(59, 130, 246, 0.3)";
 						}}
 					>
 						Today
@@ -106,22 +113,26 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
 					<button
 						onClick={onNavigateNext}
 						style={{
-							background: "#f3f4f6",
-							border: "1px solid #d1d5db",
-							borderRadius: "0.375rem",
+							background: "rgba(51, 65, 85, 0.5)",
+							border: "1px solid rgba(148, 163, 184, 0.3)",
+							borderRadius: "0.5rem",
 							padding: "0.5rem 0.75rem",
 							cursor: "pointer",
 							fontSize: "0.875rem",
+							color: "#cbd5e1",
 							display: "flex",
 							alignItems: "center",
 							gap: "0.5rem",
 							transition: "all 0.2s",
+							fontWeight: "600",
 						}}
 						onMouseEnter={(e) => {
-							e.currentTarget.style.background = "#e5e7eb";
+							e.currentTarget.style.background = "rgba(71, 85, 105, 0.6)";
+							e.currentTarget.style.borderColor = "rgba(148, 163, 184, 0.5)";
 						}}
 						onMouseLeave={(e) => {
-							e.currentTarget.style.background = "#f3f4f6";
+							e.currentTarget.style.background = "rgba(51, 65, 85, 0.5)";
+							e.currentTarget.style.borderColor = "rgba(148, 163, 184, 0.3)";
 						}}
 					>
 						Next {getNavigationLabel()} →
@@ -132,9 +143,10 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
 				<div
 					style={{
 						display: "flex",
-						background: "#f1f5f9",
+						background: "rgba(51, 65, 85, 0.5)",
 						borderRadius: "0.5rem",
 						padding: "0.25rem",
+						border: "1px solid rgba(148, 163, 184, 0.2)",
 					}}
 				>
 					{(
@@ -153,13 +165,13 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
 								transition: "all 0.2s",
 								background:
 									zoomLevel === level
-										? "white"
+										? "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)"
 										: "transparent",
 								color:
-									zoomLevel === level ? "#3b82f6" : "#6b7280",
+									zoomLevel === level ? "white" : "#94a3b8",
 								boxShadow:
 									zoomLevel === level
-										? "0 1px 2px rgba(0,0,0,0.1)"
+										? "0 2px 8px rgba(59, 130, 246, 0.3)"
 										: "none",
 								textTransform: "capitalize",
 							}}
@@ -170,21 +182,22 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
 				</div>
 			</div>
 
-			{/* Info Display - FIXED: Proper conditional rendering */}
-			<div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-				<div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-					View: {zoomLevel} • {taskCount} main tasks
+			{/* Info Display */}
+			<div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
+				<div style={{ fontSize: "0.875rem", color: "#94a3b8", fontWeight: "600" }}>
+					View: {zoomLevel} • {taskCount} tasks
 				</div>
 
-				{/* View Range Indicator - FIXED: Proper conditional and variable usage */}
+				{/* View Range Indicator */}
 				<div
 					style={{
-						background: "#e5e7eb",
+						background: "rgba(51, 65, 85, 0.5)",
 						borderRadius: "0.375rem",
 						padding: "0.25rem 0.5rem",
 						fontSize: "0.75rem",
-						color: "#6b7280",
-						fontWeight: "500",
+						color: "#cbd5e1",
+						fontWeight: "600",
+						border: "1px solid rgba(148, 163, 184, 0.2)",
 					}}
 				>
 					{dateRangeLength > 0 ? (
@@ -195,7 +208,6 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
 							{zoomLevel === "quarters" && `${dateRangeLength} quarters`}
 						</>
 					) : (
-						// Fallback to show current zoom level
 						`View: ${zoomLevel}`
 					)}
 				</div>

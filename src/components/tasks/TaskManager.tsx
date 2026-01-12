@@ -26,7 +26,7 @@ const TaskManager = () => {
   const [currentView, setCurrentView] = useState<ViewType>('board');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  // Custom hooks - FIXED: Get refreshTasks function
+  // Custom hooks
   const { availableUsers, loadingUsers, loadingTasks, columns, setColumns, refreshTasks } = useTasks(selectedYear);
   
   // Constants
@@ -58,13 +58,13 @@ const TaskManager = () => {
     return (
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%)',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         fontSize: '1.25rem',
         fontWeight: '600',
-        color: '#424242'
+        color: '#e2e8f0'
       }}>
         Loading...
       </div>
@@ -83,8 +83,14 @@ const TaskManager = () => {
             <div className={styles.headerLeft}>
               <h1 className={styles.boardTitle}>任務管理系統</h1>
               
-              {/* View Switcher */}
-              <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '0.5rem', padding: '0.25rem' }}>
+              {/* View Switcher - UPDATED: Dark theme */}
+              <div style={{ 
+                display: 'flex', 
+                background: 'rgba(51, 65, 85, 0.5)', 
+                borderRadius: '0.5rem', 
+                padding: '0.25rem',
+                border: '1px solid rgba(148, 163, 184, 0.2)'
+              }}>
                 <button 
                   onClick={() => setCurrentView('board')} 
                   style={{
@@ -95,9 +101,9 @@ const TaskManager = () => {
                     border: 'none', 
                     cursor: 'pointer', 
                     transition: 'all 0.2s',
-                    background: currentView === 'board' ? 'white' : 'transparent',
-                    color: currentView === 'board' ? '#3b82f6' : '#6b7280',
-                    boxShadow: currentView === 'board' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
+                    background: currentView === 'board' ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' : 'transparent',
+                    color: currentView === 'board' ? 'white' : '#94a3b8',
+                    boxShadow: currentView === 'board' ? '0 2px 8px rgba(59, 130, 246, 0.3)' : 'none'
                   }}
                 >
                   Board
@@ -112,9 +118,9 @@ const TaskManager = () => {
                     border: 'none', 
                     cursor: 'pointer', 
                     transition: 'all 0.2s',
-                    background: currentView === 'timeline' ? 'white' : 'transparent',
-                    color: currentView === 'timeline' ? '#3b82f6' : '#6b7280',
-                    boxShadow: currentView === 'timeline' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
+                    background: currentView === 'timeline' ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' : 'transparent',
+                    color: currentView === 'timeline' ? 'white' : '#94a3b8',
+                    boxShadow: currentView === 'timeline' ? '0 2px 8px rgba(59, 130, 246, 0.3)' : 'none'
                   }}
                 >
                   Timeline
@@ -155,12 +161,12 @@ const TaskManager = () => {
             </button>
           </div>
 
-          {/* Render Current View - FIXED: Pass refreshTasks to TimelineView */}
+          {/* Render Current View */}
           {currentView === 'timeline' ? (
             <TimelineView 
               tasks={getAllTasks()} 
               onTaskClick={handleTaskClick} 
-              refreshTasks={refreshTasks} // ADDED: Pass refresh function for drag-drop reordering
+              refreshTasks={refreshTasks}
             />
           ) : (
             <BoardView 

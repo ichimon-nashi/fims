@@ -81,19 +81,12 @@ export default function TestPage() {
 
         /* DESKTOP ONLY - Overflow Hidden & Fixed Height */
         @media (min-width: 1025px) {
-          .test-page-container {
-            height: calc(100vh - 64px);
-            overflow: hidden;
-          }
-
           .test-page-content {
             height: 100%;
-            overflow: hidden;
           }
 
           .test-interface-wrapper {
             min-height: 0;
-            overflow: hidden;
           }
         }
 

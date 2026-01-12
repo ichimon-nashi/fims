@@ -1,4 +1,4 @@
-// src/components/tasks/AddTaskModal.tsx
+// src/components/tasks/AddTaskModal.tsx - FIXED: Show all main tasks with getMainTasks function
 import React, { useState } from "react";
 import Avatar from "@/components/ui/Avatar/Avatar";
 import { Task, Column, AvailableUser } from "@/lib/task.types";
@@ -47,7 +47,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 		start_date: "",
 	});
 
-	// Get main tasks for parent selection
+	// Get ALL main tasks for parent selection (not filtered by column)
 	const getMainTasks = (): Task[] => {
 		return allTasks.filter((t) => t.task_type === "main");
 	};
@@ -244,7 +244,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 						</div>
 					</div>
 
-					{/* Parent Task Selection (only for subtasks) */}
+					{/* Parent Task Selection (only for subtasks) - UPDATED: Show all main tasks */}
 					{newTask.task_type === "subtask" && (
 						<div className={styles.formGroup}>
 							<label>Parent Task *</label>
@@ -258,11 +258,14 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 								}
 							>
 								<option value="">Select Parent Task</option>
-								{getMainTasks().map((task) => (
-									<option key={task.id} value={task.id}>
-										{task.title}
-									</option>
-								))}
+								{getMainTasks().map((task) => {
+									const statusLabel = columns.find(c => c.id === task.status)?.title || task.status;
+									return (
+										<option key={task.id} value={task.id}>
+											{task.title} [{statusLabel}]
+										</option>
+									);
+								})}
 							</select>
 							{getMainTasks().length === 0 && (
 								<p
@@ -273,8 +276,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 										fontStyle: "italic",
 									}}
 								>
-									No main tasks available. Create a main task
-									first.
+									No main tasks available. Create a main task first.
 								</p>
 							)}
 						</div>
@@ -318,7 +320,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 								style={{
 									padding: "1rem",
 									textAlign: "center",
-									color: "#6b7280",
+									color: "#94a3b8",
 								}}
 							>
 								Loading users...
@@ -328,7 +330,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 								style={{
 									padding: "1rem",
 									textAlign: "center",
-									color: "#6b7280",
+									color: "#94a3b8",
 								}}
 							>
 								No users available
@@ -349,25 +351,27 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 												toggleAssignee(user.id)
 											}
 										/>
-										<span className={styles.userAvatar}>
-											<Avatar
-												employeeId={user.employee_id}
-												fullName={user.full_name}
-												size="small"
-											/>
-										</span>
-										<div className={styles.userInfo}>
-											<span className={styles.userName}>
-												{user.full_name}
+										<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
+											<span className={styles.userAvatar}>
+												<Avatar
+													employeeId={user.employee_id}
+													fullName={user.full_name}
+													size="small"
+												/>
 											</span>
-											<span
-												className={styles.userDetails}
-											>
-												{user.employee_id} • {user.base}{" "}
-												•{" "}
-												{user.rank?.split(" - ")[0] ||
-													"FI"}
-											</span>
+											<div className={styles.userInfo}>
+												<span className={styles.userName}>
+													{user.full_name}
+												</span>
+												<span
+													className={styles.userDetails}
+												>
+													{user.employee_id} • {user.base}{" "}
+													•{" "}
+													{user.rank?.split(" - ")[0] ||
+														"FI"}
+												</span>
+											</div>
 										</div>
 									</label>
 								))}
@@ -378,8 +382,8 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 					{/* Selected Column Info */}
 					<div
 						style={{
-							background: "#f8fafc",
-							border: "1px solid #e5e7eb",
+							background: "rgba(51, 65, 85, 0.5)",
+							border: "1px solid rgba(148, 163, 184, 0.2)",
 							borderRadius: "0.5rem",
 							padding: "0.75rem",
 							margin: "1rem 0",
@@ -388,7 +392,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 						<div
 							style={{
 								fontSize: "0.875rem",
-								color: "#374151",
+								color: "#cbd5e1",
 								display: "flex",
 								alignItems: "center",
 								gap: "0.5rem",

@@ -275,12 +275,12 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 						className={styles.logoutButton}
 						onClick={handleLogout}
 					>
-						<span className={styles.logoutIcon}>🚪</span>
+						<span className={styles.logoutIcon}>➜]</span>
 						<span className={styles.logoutText}>登出</span>
 					</button>
 					<div className={styles.footerInfo}>
 						<div className={styles.appVersion}>
-							豪神教師管理系統 v2.3.1
+							豪神教師管理系統 v2.3.3
 						</div>
 						<div className={styles.lastUpdate}>
 							最後更新: {new Date().toLocaleDateString("zh-TW")}

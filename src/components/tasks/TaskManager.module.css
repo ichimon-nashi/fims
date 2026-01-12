@@ -1,1163 +1,834 @@
-/* Complete TaskManager.module.css with Due Date Feature and Full Viewport Width */
+/* ===========================
+   TASK MANAGER - SMS DARK THEME
+   =========================== */
 
-/* Task Cards */
-.taskCard {
-  background: white;
-  border-radius: 0.5rem;
-  padding: 1rem;
-  border: 1px solid #e5e7eb;
-  cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  position: relative;
-  border-left: 4px solid transparent;
-  animation: slideIn 0.3s ease-out;
-}
-
-.taskCard:hover {
-  border-color: #3b82f6;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
-  transform: translateY(-1px);
-}
-
-.taskCard:focus {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
-}
-
-.taskCard:active {
-  transform: rotate(5deg) scale(1.05);
-  z-index: 1000;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-}
-
-.taskCard:hover .taskTitle {
-  color: #3b82f6;
-}
-
-.taskCard:hover .assigneeAvatar {
-  transform: scale(1.1);
-  transition: transform 0.2s;
-}
-
-/* Color coding for different columns */
-.taskCardBacklog {
-  border-left-color: #3B82F6 !important;
-}
-
-.taskCardInProgress {
-  border-left-color: #907ad6 !important;
-}
-
-.taskCardReview {
-  border-left-color: #ef476f !important;
-}
-
-.taskCardComplete {
-  border-left-color: #10B981 !important;
-}
-
-.taskHeader {
-  margin-bottom: 0.75rem;
-  position: relative;
-}
-
-/* Priority Corner - positioned in top left, moved higher */
-.priorityCorner {
-  position: absolute;
-  top: -1.5rem;
-  left: -1rem;
-  z-index: 12;
-}
-
-.priorityCorner .priorityTag {
-  border-radius: 0.5rem 0 0.5rem 0;
-  font-size: 0.625rem;
-  font-weight: 600;
-  padding: 0.25rem 0.5rem;
-  color: white;
-}
-
-/* Due Date Corner - positioned in top right */
-.dueDateCorner {
-  position: absolute;
-  top: -1rem;
-  right: -1rem;
-  z-index: 11;
-}
-
-.dueDateTag {
-  background: #6b7280;
-  color: white;
-  border-radius: 0 0.5rem 0 0.5rem;
-  font-size: 0.625rem;
-  font-weight: 600;
-  padding: 0.25rem 0.5rem;
-  display: inline-block;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  min-width: 40px;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.taskTitle {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0.5rem 2.5rem 0.5rem 0.5rem;
-  line-height: 1.4;
-  padding-left: 0.5rem;
-}
-
-.taskMeta {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  font-size: 0.75rem;
-  color: #6b7280;
-  padding-left: 0.5rem;
-}
-
-.comments {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.taskFooter {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.taskAssignees {
-  display: flex;
-  align-items: center;
-  gap: -0.25rem;
-}
-
-.assigneeAvatar {
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 50%;
-  background: #e5e7eb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  border: 2px solid white;
-  margin-left: -0.25rem;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-/* Force Avatar component to fit within container */
-.assigneeAvatar > * {
-  width: 100% !important;
-  height: 100% !important;
-  max-width: 1.5rem !important;
-  max-height: 1.5rem !important;
-}
-
-.assigneeAvatar:first-child {
-  margin-left: 0;
-}
-
-.moreAssignees {
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 50%;
-  background: #f3f4f6;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.625rem;
-  font-weight: 600;
-  color: #6b7280;
-  border: 2px solid white;
-  margin-left: -0.25rem;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
-}
-
-/* Main Container - Updated for full viewport width */
+/* Main Container */
 .taskManager {
-  min-height: 100vh;
-  background: #f8fafc;
-  padding: 1rem;
+	min-height: 100vh;
+	background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+	padding-top: 60px;
 }
 
 .container {
-  width: 100%;
-  margin: 0;
-  padding: 0 1rem;
+	max-width: 1800px;
+	margin: 0 auto;
+	padding: 2rem 1.5rem;
 }
 
 /* Header */
 .header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  background: white;
-  padding: 1.5rem;
-  border-radius: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 2rem;
+	flex-wrap: wrap;
+	gap: 1rem;
+	background: rgba(30, 41, 59, 0.8);
+	backdrop-filter: blur(10px);
+	padding: 1.5rem;
+	border-radius: 1rem;
+	border: 1px solid rgba(148, 163, 184, 0.2);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .headerLeft {
-  display: flex;
-  align-items: center;
-  gap: 2rem;
+	display: flex;
+	align-items: center;
+	gap: 1.5rem;
+	flex-wrap: wrap;
 }
 
 .boardTitle {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0;
+	font-size: 1.75rem;
+	font-weight: 700;
+	color: #60a5fa;
+	margin: 0;
+	text-shadow: 0 2px 8px rgba(96, 165, 250, 0.5);
 }
 
+/* Year Selector */
 .yearSelector {
-  display: flex;
-  align-items: center;
+	position: relative;
 }
 
 .yearSelect {
-  background: #f8fafc;
-  border: 2px solid #e2e8f0;
-  border-radius: 0.5rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #374151;
-  cursor: pointer;
-  transition: all 0.2s;
-  min-width: 80px;
+	padding: 0.5rem 2rem 0.5rem 1rem;
+	border-radius: 0.5rem;
+	border: 1px solid rgba(148, 163, 184, 0.2);
+	background: rgba(30, 41, 59, 0.8);
+	color: #e2e8f0;
+	font-weight: 600;
+	cursor: pointer;
+	appearance: none;
+	transition: all 0.2s;
 }
 
 .yearSelect:hover {
-  border-color: #3b82f6;
-  background: #f1f5f9;
+	background: rgba(51, 65, 85, 0.8);
+	border-color: rgba(148, 163, 184, 0.3);
 }
 
 .yearSelect:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+	outline: none;
+	border-color: #3b82f6;
+	box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
+/* Team Avatars */
 .teamAvatars {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
 }
 
 .avatar {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 50%;
-  background: #e5e7eb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  border: 2px solid white;
-  margin-left: -0.5rem;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+	transition: transform 0.2s;
 }
 
-.avatar:first-child {
-  margin-left: 0;
+.avatar:hover {
+	transform: scale(1.1);
+	z-index: 10;
 }
 
+/* Add Task Button */
 .addTaskButton {
-  background: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+	padding: 0.75rem 1.5rem;
+	background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+	color: white;
+	border: none;
+	border-radius: 0.5rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s;
+	box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 .addTaskButton:hover {
-  background: #2563eb;
+	transform: translateY(-2px);
+	box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
 }
 
-/* Kanban Board - Updated for full viewport width */
+/* ===========================
+   BOARD VIEW (KANBAN)
+   =========================== */
+
 .kanbanBoard {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.5rem;
-  min-height: 70vh;
-  width: 100%;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+	gap: 1.5rem;
+	padding: 1rem 0;
 }
 
 .column {
-  background: #f8fafc;
-  border-radius: 0.75rem;
-  min-height: 600px;
-}
-
-.column:hover {
-  background: #f1f5f9;
+	background: rgba(30, 41, 59, 0.8);
+	backdrop-filter: blur(10px);
+	border-radius: 1rem;
+	border: 1px solid rgba(148, 163, 184, 0.2);
+	display: flex;
+	flex-direction: column;
+	max-height: calc(100vh - 200px);
+	overflow: hidden;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .columnHeader {
-  padding: 1rem;
+	padding: 1rem;
+	border-bottom: 1px solid rgba(148, 163, 184, 0.1);
 }
 
 .columnTitle {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #374151;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0.75rem 0;
-  border-top: 3px solid;
-  border-radius: 0.25rem 0.25rem 0 0;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-weight: 700;
+	font-size: 1rem;
+	color: #e2e8f0;
+	border-top: 3px solid;
+	padding-top: 0.75rem;
 }
 
 .taskCount {
-  background: #e5e7eb;
-  color: #6b7280;
-  padding: 0.25rem 0.5rem;
-  border-radius: 1rem;
-  font-size: 0.75rem;
-  font-weight: 500;
+	background: rgba(148, 163, 184, 0.2);
+	color: #cbd5e1;
+	padding: 0.25rem 0.75rem;
+	border-radius: 1rem;
+	font-size: 0.875rem;
+	font-weight: 600;
 }
 
 .taskList {
-  padding: 0 1rem 1rem 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+	flex: 1;
+	overflow-y: auto;
+	padding: 1rem;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
 }
 
+.taskList::-webkit-scrollbar {
+	width: 6px;
+}
+
+.taskList::-webkit-scrollbar-track {
+	background: rgba(15, 23, 42, 0.3);
+	border-radius: 3px;
+}
+
+.taskList::-webkit-scrollbar-thumb {
+	background: rgba(148, 163, 184, 0.3);
+	border-radius: 3px;
+}
+
+.taskList::-webkit-scrollbar-thumb:hover {
+	background: rgba(148, 163, 184, 0.5);
+}
+
+/* Task Card */
+.taskCard {
+	background: rgba(30, 41, 59, 0.8);
+	border-radius: 0.75rem;
+	padding: 1rem;
+	cursor: pointer;
+	transition: all 0.2s;
+	border-left: 4px solid;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.taskCard:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+	background: rgba(51, 65, 85, 0.8);
+}
+
+.taskHeader {
+	margin-bottom: 0.75rem;
+}
+
+.priorityCorner {
+	display: flex;
+	justify-content: flex-start;
+	margin-bottom: 0.5rem;
+}
+
+.priorityTag {
+	padding: 0.25rem 0.75rem;
+	border-radius: 0.25rem;
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: white;
+	text-transform: uppercase;
+}
+
+.dueDateCorner {
+	display: flex;
+	justify-content: flex-end;
+	margin-bottom: 0.5rem;
+}
+
+.dueDateTag {
+	padding: 0.25rem 0.75rem;
+	border-radius: 0.25rem;
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: white;
+}
+
+.taskTitle {
+	font-size: 1rem;
+	font-weight: 600;
+	color: #f1f5f9;
+	margin: 0.5rem 0;
+	line-height: 1.4;
+}
+
+.taskMeta {
+	display: flex;
+	gap: 1rem;
+	font-size: 0.75rem;
+	color: #94a3b8;
+	margin-top: 0.5rem;
+}
+
+.comments {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+}
+
+.taskFooter {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: 0.75rem;
+	padding-top: 0.75rem;
+	border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.taskAssignees {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.assigneeAvatar {
+	display: inline-flex;
+}
+
+.moreAssignees {
+	background: rgba(148, 163, 184, 0.2);
+	color: #cbd5e1;
+	padding: 0.25rem 0.5rem;
+	border-radius: 0.5rem;
+	font-size: 0.75rem;
+	font-weight: 600;
+}
+
+/* Add Task in Column Button */
 .addTaskInColumn {
-  background: transparent;
-  border: 2px dashed #d1d5db;
-  border-radius: 0.5rem;
-  padding: 1rem;
-  color: #6b7280;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  width: 100%;
+	width: 100%;
+	padding: 0.75rem;
+	background: rgba(59, 130, 246, 0.1);
+	border: 2px dashed rgba(59, 130, 246, 0.3);
+	border-radius: 0.5rem;
+	color: #60a5fa;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s;
+	margin-top: 0.5rem;
 }
 
 .addTaskInColumn:hover {
-  border-color: #9ca3af;
-  color: #374151;
-  background: #f9fafb;
+	background: rgba(59, 130, 246, 0.2);
+	border-color: rgba(59, 130, 246, 0.5);
 }
 
-/* Modal Styles - Updated for larger screens */
+/* ===========================
+   MODALS (DARK THEME)
+   =========================== */
+
 .modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 1rem;
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.7);
+	backdrop-filter: blur(4px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+	padding: 1rem;
 }
 
 .modalContent {
-  background: white;
-  border-radius: 1rem;
-  max-width: min(1400px, 90vw);
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+	background: #1e293b;
+	border-radius: 1rem;
+	width: 100%;
+	max-width: 800px;
+	max-height: 90vh;
+	overflow-y: auto;
+	box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+	border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.modalContent::-webkit-scrollbar {
+	width: 8px;
+}
+
+.modalContent::-webkit-scrollbar-track {
+	background: rgba(15, 23, 42, 0.5);
+	border-radius: 4px;
+}
+
+.modalContent::-webkit-scrollbar-thumb {
+	background: rgba(148, 163, 184, 0.4);
+	border-radius: 4px;
+}
+
+.modalContent::-webkit-scrollbar-thumb:hover {
+	background: rgba(148, 163, 184, 0.6);
 }
 
 .modalHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1.5rem;
+	border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+	background: rgba(15, 23, 42, 0.6);
+	border-radius: 1rem 1rem 0 0;
 }
 
 .modalHeader h2 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0;
-  flex: 1;
-}
-
-.editTitle {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0;
-  flex: 1;
-  border: 1px solid #d1d5db;
-  border-radius: 0.375rem;
-  padding: 0.5rem;
-  transition: all 0.2s;
-}
-
-.editTitle:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.headerActions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.editButton {
-  background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
-  border-radius: 0.375rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.editButton:hover {
-  background: #e5e7eb;
-}
-
-/* DELETE BUTTON STYLES */
-.deleteButton {
-  background: #ef4444;
-  color: white;
-  border: 1px solid #ef4444;
-  border-radius: 0.375rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.deleteButton:hover:not(:disabled) {
-  background: #dc2626;
-  border-color: #dc2626;
-}
-
-.deleteButton:disabled {
-  background: #9ca3af;
-  border-color: #9ca3af;
-  cursor: not-allowed;
-}
-
-.editActions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.editActions .saveButton,
-.editActions .cancelButton {
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.editActions .saveButton {
-  background: #10b981;
-  color: white;
-  border: 1px solid #10b981;
-}
-
-.editActions .saveButton:hover {
-  background: #059669;
-}
-
-.editActions .cancelButton {
-  background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
-}
-
-.editActions .cancelButton:hover {
-  background: #e5e7eb;
+	font-size: 1.5rem;
+	font-weight: 700;
+	color: #60a5fa;
+	margin: 0;
+	text-shadow: 0 2px 8px rgba(96, 165, 250, 0.3);
 }
 
 .closeButton {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: #6b7280;
-  cursor: pointer;
-  width: 2rem;
-  height: 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0.25rem;
-  transition: all 0.2s;
+	background: none;
+	border: none;
+	font-size: 2rem;
+	color: #94a3b8;
+	cursor: pointer;
+	transition: all 0.2s;
+	width: 2rem;
+	height: 2rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 0.5rem;
 }
 
 .closeButton:hover {
-  background: #f3f4f6;
-  color: #374151;
+	background: rgba(148, 163, 184, 0.1);
+	color: #e2e8f0;
 }
 
 .modalBody {
-  padding: 1.5rem;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
+	padding: 1.5rem;
 }
 
 .modalFooter {
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-  padding: 1.5rem;
-  border-top: 1px solid #e5e7eb;
+	display: flex;
+	justify-content: flex-end;
+	gap: 1rem;
+	padding: 1.5rem;
+	border-top: 1px solid rgba(148, 163, 184, 0.2);
+	background: rgba(15, 23, 42, 0.3);
+	border-radius: 0 0 1rem 1rem;
 }
 
-/* Form Styles */
+/* Form Elements */
 .formGroup {
-  margin-bottom: 1.5rem;
+	margin-bottom: 1.5rem;
 }
 
 .formGroup label {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 0.5rem;
+	display: block;
+	margin-bottom: 0.5rem;
+	font-weight: 600;
+	color: #cbd5e1;
+	font-size: 0.875rem;
 }
 
-.formGroup input,
-.formGroup textarea,
-.formGroup select {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  transition: all 0.2s;
-  font-family: inherit;
+.formGroup input[type="text"],
+.formGroup input[type="date"],
+.formGroup select,
+.formGroup textarea {
+	width: 100%;
+	padding: 0.75rem;
+	border: 1px solid rgba(148, 163, 184, 0.2);
+	border-radius: 0.5rem;
+	background: rgba(15, 23, 42, 0.6);
+	color: #e2e8f0;
+	font-size: 0.875rem;
+	transition: all 0.2s;
+}
+
+/* Fix date input calendar icon color */
+.formGroup input[type="date"]::-webkit-calendar-picker-indicator {
+	filter: invert(1);
+	cursor: pointer;
+}
+
+.formGroup input[type="date"]::-webkit-calendar-picker-indicator:hover {
+	filter: invert(0.8);
 }
 
 .formGroup input:focus,
-.formGroup textarea:focus,
-.formGroup select:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+.formGroup select:focus,
+.formGroup textarea:focus {
+	outline: none;
+	border-color: #3b82f6;
+	box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.formGroup input::placeholder,
+.formGroup textarea::placeholder {
+	color: #64748b;
 }
 
 .formRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 1rem;
+	margin-bottom: 1.5rem;
 }
 
-.cancelButton,
-.saveButton {
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.cancelButton {
-  background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
-}
-
-.cancelButton:hover {
-  background: #e5e7eb;
-}
-
-.saveButton {
-  background: #3b82f6;
-  color: white;
-  border: 1px solid #3b82f6;
-}
-
-.saveButton:hover {
-  background: #2563eb;
-}
-
-/* Assignee Management */
+/* Assignee List */
 .assigneeList {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 0.5rem;
-  max-height: 180px;
-  overflow-y: auto;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  padding: 0.75rem;
-  background: #f9fafb;
+	max-height: 300px;
+	overflow-y: auto;
+	border: 1px solid rgba(148, 163, 184, 0.2);
+	border-radius: 0.5rem;
+	background: rgba(15, 23, 42, 0.6);
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	gap: 0.5rem;
+	padding: 0.5rem;
+}
+
+.assigneeList::-webkit-scrollbar {
+	width: 6px;
+}
+
+.assigneeList::-webkit-scrollbar-track {
+	background: rgba(15, 23, 42, 0.3);
+	border-radius: 3px;
+}
+
+.assigneeList::-webkit-scrollbar-thumb {
+	background: rgba(148, 163, 184, 0.3);
+	border-radius: 3px;
 }
 
 .assigneeOption {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  border-radius: 0.375rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  background: white;
-  border: 1px solid #e5e7eb;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.5rem;
+	cursor: pointer;
+	transition: all 0.2s;
+	border-radius: 0.375rem;
+	background: rgba(30, 41, 59, 0.5);
 }
 
 .assigneeOption:hover {
-  background: #f3f4f6;
-  border-color: #d1d5db;
-  transform: translateY(-1px);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	background: rgba(51, 65, 85, 0.7);
 }
 
 .assigneeOption input[type="checkbox"] {
-  margin: 0;
-  cursor: pointer;
-  width: 14px;
-  height: 14px;
-  accent-color: #3b82f6;
-  flex-shrink: 0;
+	width: 1.125rem;
+	height: 1.125rem;
+	cursor: pointer;
+	accent-color: #3b82f6;
+	flex-shrink: 0;
+	margin: 0;
 }
 
 .userAvatar {
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 50%;
-  background: #e5e7eb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  flex-shrink: 0;
-  overflow: hidden;
-}
-
-/* Force Avatar component to fit within modal user avatar containers */
-.userAvatar > * {
-  width: 100% !important;
-  height: 100% !important;
-  max-width: 1.5rem !important;
-  max-height: 1.5rem !important;
+	display: flex;
+	align-items: center;
 }
 
 .userInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  flex: 1;
-  min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	flex: 1;
+	min-width: 0;
 }
 
 .userName {
-  font-size: 0.8125rem;
-  color: #1f2937;
-  font-weight: 600;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+	font-weight: 600;
+	color: #e2e8f0;
+	font-size: 0.8125rem;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .userDetails {
-  font-size: 0.6875rem;
-  color: #6b7280;
-  font-weight: 400;
-  line-height: 1.1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+	font-size: 0.7rem;
+	color: #94a3b8;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
-.assigneeInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+/* Buttons */
+.cancelButton,
+.saveButton,
+.deleteButton,
+.editButton {
+	padding: 0.75rem 1.5rem;
+	border-radius: 0.5rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s;
+	border: none;
+	font-size: 0.875rem;
 }
 
-.assigneeItem {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+.cancelButton {
+	background: rgba(148, 163, 184, 0.1);
+	color: #cbd5e1;
+	border: 1px solid rgba(148, 163, 184, 0.2);
 }
 
-.assigneeInfo .assigneeAvatar {
-  width: 2rem;
-  height: 2rem;
-  font-size: 0.875rem;
-  margin-left: 0;
-  overflow: hidden;
-  flex-shrink: 0;
+.cancelButton:hover {
+	background: rgba(148, 163, 184, 0.2);
 }
 
-/* Force Avatar component to fit within task detail assignee containers */
-.assigneeInfo .assigneeAvatar > * {
-  width: 100% !important;
-  height: 100% !important;
-  max-width: 2rem !important;
-  max-height: 2rem !important;
+.saveButton {
+	background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+	color: white;
+	box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
-/* Edit mode styles */
-.editInput,
-.editTextarea,
-.editSelect {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  font-family: inherit;
-  transition: all 0.2s;
+.saveButton:hover {
+	box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+	transform: translateY(-1px);
 }
 
-.editInput:focus,
-.editTextarea:focus,
-.editSelect:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+.saveButton:disabled,
+.cancelButton:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+	transform: none;
 }
 
-.editTextarea {
-  resize: vertical;
-  min-height: 80px;
+.deleteButton {
+	background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+	color: white;
+	box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
 }
 
-.editSelect {
-  cursor: pointer;
+.deleteButton:hover {
+	box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+	transform: translateY(-1px);
 }
 
-/* Task Detail Styles */
-.taskDetailInfo {
-  margin-bottom: 0;
+.editButton {
+	background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+	color: white;
+	box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+}
+
+.editButton:hover {
+	box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+	transform: translateY(-1px);
+}
+
+/* Task Detail Sections */
+.taskDetails {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
 }
 
 .taskDetailRow {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
 }
 
-.taskDetailRow .label {
-  font-weight: 600;
-  color: #374151;
-  min-width: 100px;
-  font-size: 0.875rem;
-  flex-shrink: 0;
-}
-
-.statusButtons {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.statusButton {
-  padding: 0.5rem 1rem;
-  border: 2px solid;
-  border-radius: 0.5rem;
-  background: white;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  color: #6b7280;
-}
-
-.statusButton:hover {
-  background: #f9fafb;
-}
-
-.statusButton:focus {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
-}
-
-.statusButton.active {
-  color: white;
-  background: var(--border-color);
-  border-color: var(--border-color);
-}
-
-.statusButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.priorityBadge {
-  padding: 0.25rem 0.75rem;
-  border-radius: 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: white;
-}
-
-/* Due Date Display Styles */
-.dueDateDisplay {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.dueDateBadge {
-  padding: 0.25rem 0.75rem;
-  border-radius: 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: white;
-  white-space: nowrap;
-}
-
-.dueDateFull {
-  color: #6b7280;
-  font-size: 0.875rem;
-}
-
-.noDueDate {
-  color: #9ca3af;
-  font-style: italic;
-  font-size: 0.875rem;
+.label {
+	font-weight: 600;
+	color: #cbd5e1;
+	font-size: 0.875rem;
 }
 
 .description {
-  color: #6b7280;
-  line-height: 1.6;
-  margin: 0;
+	color: #94a3b8;
+	line-height: 1.6;
+	font-size: 0.875rem;
+}
+
+.statusBadge,
+.priorityBadge,
+.dueDateBadge {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.5rem 1rem;
+	border-radius: 0.5rem;
+	font-weight: 600;
+	font-size: 0.875rem;
+}
+
+.noDueDate {
+	color: #64748b;
+	font-style: italic;
+	font-size: 0.875rem;
+}
+
+.assigneeInfo {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+}
+
+.assigneeItem {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	background: rgba(51, 65, 85, 0.5);
+	padding: 0.5rem 0.75rem;
+	border-radius: 0.5rem;
+	color: #e2e8f0;
+	font-size: 0.875rem;
+}
+
+/* Edit Mode */
+.editTitle,
+.editTextarea {
+	width: 100%;
+	padding: 0.75rem;
+	border: 1px solid rgba(148, 163, 184, 0.2);
+	border-radius: 0.5rem;
+	background: rgba(15, 23, 42, 0.6);
+	color: #e2e8f0;
+	font-size: 1rem;
+	font-weight: 600;
+	transition: all 0.2s;
+}
+
+.editTitle:focus,
+.editTextarea:focus {
+	outline: none;
+	border-color: #3b82f6;
+	box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 /* Comments Section */
 .commentsSection {
-  border-top: none;
-  border-left: 1px solid #e5e7eb;
-  padding-top: 0;
-  padding-left: 2rem;
+	padding-top: 1.5rem;
+	border-top: 1px solid rgba(148, 163, 184, 0.2);
 }
 
 .commentsSection h3 {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0 0 1rem 0;
+	font-size: 1.125rem;
+	font-weight: 700;
+	color: #e2e8f0;
+	margin-bottom: 1rem;
 }
 
 .addComment {
-  margin-bottom: 1.5rem;
+	margin-bottom: 1.5rem;
 }
 
 .commentTextarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  font-family: inherit;
-  resize: vertical;
-  transition: all 0.2s;
-  margin-bottom: 0.75rem;
-  min-height: 80px;
+	width: 100%;
+	padding: 0.75rem;
+	border: 1px solid rgba(148, 163, 184, 0.2);
+	border-radius: 0.5rem;
+	background: rgba(15, 23, 42, 0.6);
+	color: #e2e8f0;
+	font-size: 0.875rem;
+	resize: vertical;
+	min-height: 80px;
+	margin-bottom: 0.75rem;
 }
 
 .commentTextarea:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+	outline: none;
+	border-color: #3b82f6;
+	box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .commentActions {
-  display: flex;
-  justify-content: flex-end;
+	display: flex;
+	justify-content: flex-end;
 }
 
 .addCommentButton {
-  background: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 0.5rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
+	padding: 0.5rem 1.25rem;
+	background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+	color: white;
+	border: none;
+	border-radius: 0.5rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s;
+	font-size: 0.875rem;
 }
 
-.addCommentButton:hover:not(:disabled) {
-  background: #2563eb;
+.addCommentButton:hover {
+	box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+	transform: translateY(-1px);
 }
 
 .addCommentButton:disabled {
-  background: #9ca3af;
-  cursor: not-allowed;
+	opacity: 0.5;
+	cursor: not-allowed;
+	transform: none;
 }
 
 .commentsList {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
 }
 
 .comment {
-  background: #f8fafc;
-  border-radius: 0.5rem;
-  padding: 1rem;
-  border: 1px solid #e5e7eb;
+	background: rgba(51, 65, 85, 0.5);
+	padding: 1rem;
+	border-radius: 0.5rem;
+	border-left: 3px solid #3b82f6;
 }
 
 .commentHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 0.5rem;
 }
 
 .commentHeader strong {
-  color: #1f2937;
-  font-size: 0.875rem;
+	color: #e2e8f0;
+	font-weight: 600;
 }
 
 .commentDate {
-  color: #6b7280;
-  font-size: 0.75rem;
+	color: #94a3b8;
+	font-size: 0.75rem;
 }
 
 .commentText {
-  color: #374151;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  margin: 0;
+	color: #cbd5e1;
+	line-height: 1.6;
+	margin: 0;
+	font-size: 0.875rem;
 }
 
-/* Loading and Empty States */
-.loadingSpinner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 200px;
-  color: #6b7280;
-}
+/* ===========================
+   RESPONSIVE DESIGN
+   =========================== */
 
-.emptyState {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 200px;
-  color: #6b7280;
-  text-align: center;
-}
-
-.emptyState h3 {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-
-.emptyState p {
-  font-size: 0.875rem;
-  margin-bottom: 1rem;
-}
-
-/* Animation for new tasks */
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Responsive Design - Updated breakpoints for full width */
-@media (min-width: 1920px) {
-  .kanbanBoard {
-    grid-template-columns: repeat(5, 1fr);
-    gap: 2rem;
-  }
-}
-
-@media (max-width: 1600px) {
-  .kanbanBoard {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1.25rem;
-  }
-}
-
-@media (max-width: 1400px) {
-  .kanbanBoard {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-  }
-  
-  .modalContent {
-    max-width: min(1200px, 90vw);
-  }
-}
-
-@media (max-width: 1200px) {
-  .kanbanBoard {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-  }
-  
-  .modalContent {
-    max-width: min(1000px, 90vw);
-  }
+@media (max-width: 1024px) {
+	.kanbanBoard {
+		grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+	}
+	
+	.formRow {
+		grid-template-columns: 1fr;
+	}
 }
 
 @media (max-width: 768px) {
-  .taskManager {
-    padding: 0.5rem;
-  }
-
-  .container {
-    padding: 0 0.5rem;
-  }
-
-  .kanbanBoard {
-    grid-template-columns: 1fr;
-  }
-
-  .header {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: stretch;
-  }
-
-  .headerLeft {
-    justify-content: center;
-    gap: 1rem;
-  }
-
-  .modalContent {
-    margin: 1rem;
-    max-width: none;
-    width: calc(100vw - 2rem);
-  }
-  
-  .modalBody {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-  }
-  
-  .commentsSection {
-    border-left: none;
-    border-top: 1px solid #e5e7eb;
-    padding-left: 0;
-    padding-top: 1.5rem;
-  }
-
-  .formRow {
-    grid-template-columns: 1fr;
-  }
-
-  .statusButtons {
-    flex-direction: column;
-  }
-
-  .statusButton {
-    justify-content: center;
-  }
-
-  .teamAvatars {
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-
-  .avatar {
-    margin-left: 0.25rem;
-  }
-
-  .taskTitle {
-    margin: 0.5rem 1.5rem 0.5rem 0.5rem;
-  }
-
-  .dueDateDisplay {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
+	.header {
+		flex-direction: column;
+		align-items: stretch;
+	}
+	
+	.headerLeft {
+		flex-direction: column;
+		align-items: stretch;
+	}
+	
+	.boardTitle {
+		font-size: 1.5rem;
+	}
+	
+	.kanbanBoard {
+		grid-template-columns: 1fr;
+	}
+	
+	.modalContent {
+		max-width: 100%;
+		border-radius: 0;
+		max-height: 100vh;
+	}
+	
+	.modalHeader {
+		border-radius: 0;
+	}
+	
+	.modalFooter {
+		border-radius: 0;
+	}
 }
-
-@media (max-width: 640px) {
-  .headerLeft {
-    flex-wrap: wrap;
-    gap: 0.75rem;
-  }
-  
-  .boardTitle {
-    font-size: 1.25rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .taskCard {
-    padding: 0.75rem;
-  }
-
-  .taskTitle {
-    font-size: 0.8125rem;
-    margin: 0.5rem 1rem 0.5rem 0.5rem;
-  }
-
-  .modalHeader,
-  .modalBody,
-  .modalFooter {
-    padding: 1rem;
-  }
-
-  .dueDateTag {
-    font-size: 0.5625rem;
-    padding: 0.1875rem 0.375rem;
-    min-width: 35px;
-  }
-
-  .priorityCorner .priorityTag {
-    font-size: 0.5625rem;
-    padding: 0.1875rem 0.375rem;
-  }
-  
-  .headerLeft {
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  
-  .taskManager {
-    padding: 0.25rem;
-  }
-  
-  .container {
-    padding: 0 0.25rem;
-  }
-}
-  

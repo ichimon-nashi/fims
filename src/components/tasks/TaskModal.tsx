@@ -1,4 +1,4 @@
-// src/components/tasks/TaskModal.tsx
+// src/components/tasks/TaskModal.tsx - UPDATED: Better UI/UX with blue headings and improved button placement
 import React, { useState } from "react";
 import Avatar from "@/components/ui/Avatar/Avatar";
 import { Task, TaskComment, Column, AvailableUser } from "@/lib/task.types";
@@ -297,14 +297,9 @@ const TaskModal: React.FC<TaskModalProps> = ({
 				className={styles.modalContent}
 				onClick={(e) => e.stopPropagation()}
 			>
+				{/* UPDATED: Better header with blue title and improved button layout */}
 				<div className={styles.modalHeader}>
-					<div
-						style={{
-							display: "flex",
-							alignItems: "center",
-							gap: "0.5rem",
-						}}
-					>
+					<div style={{ flex: 1, minWidth: 0 }}>
 						{isEditing ? (
 							<input
 								className={styles.editTitle}
@@ -319,49 +314,71 @@ const TaskModal: React.FC<TaskModalProps> = ({
 								placeholder="Enter task title..."
 							/>
 						) : (
-							<h2>{selectedTask.title}</h2>
+							<h2 style={{ 
+								margin: 0, 
+								color: '#60a5fa',
+								fontSize: '1.5rem',
+								fontWeight: '700',
+								textShadow: '0 2px 8px rgba(96, 165, 250, 0.3)'
+							}}>
+								{selectedTask.title}
+							</h2>
 						)}
 					</div>
-					<div className={styles.headerActions}>
+					
+					{/* UPDATED: Better button placement - right side of header */}
+					<div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: '1rem' }}>
 						{!isEditing ? (
 							<>
 								<button
 									className={styles.editButton}
 									onClick={() => setIsEditing(true)}
+									style={{ minWidth: '80px' }}
 								>
-									Edit
+									✏️ Edit
 								</button>
 								{isAdmin() && (
 									<button
 										className={styles.deleteButton}
 										onClick={handleDeleteTask}
 										disabled={savingTask}
+										style={{ minWidth: '80px' }}
 									>
-										{savingTask ? "Deleting..." : "Delete"}
+										{savingTask ? "..." : "🗑️ Delete"}
 									</button>
 								)}
 							</>
 						) : (
-							<div className={styles.editActions}>
+							<>
 								<button
 									className={styles.saveButton}
 									onClick={handleSaveEdit}
 									disabled={savingTask}
+									style={{ minWidth: '80px' }}
 								>
-									{savingTask ? "Saving..." : "Save"}
+									{savingTask ? "..." : "💾 Save"}
 								</button>
 								<button
 									className={styles.cancelButton}
-									onClick={() => setIsEditing(false)}
+									onClick={() => {
+										setIsEditing(false);
+										setEditTask({ ...selectedTask });
+									}}
 									disabled={savingTask}
+									style={{ minWidth: '80px' }}
 								>
 									Cancel
 								</button>
-							</div>
+							</>
 						)}
 						<button
 							className={styles.closeButton}
 							onClick={onClose}
+							style={{ 
+								marginLeft: '0.5rem',
+								fontSize: '1.75rem',
+								padding: '0.25rem 0.5rem'
+							}}
 						>
 							×
 						</button>
@@ -375,7 +392,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
 							<span className={styles.label}>Task Type:</span>
 							{isEditing ? (
 								<select
-									className={styles.editSelect}
 									value={editTask?.task_type || "main"}
 									onChange={(e) =>
 										setEditTask((prev) =>
@@ -388,12 +404,20 @@ const TaskModal: React.FC<TaskModalProps> = ({
 												: prev
 										)
 									}
+									style={{
+										padding: '0.5rem',
+										borderRadius: '0.375rem',
+										border: '1px solid rgba(148, 163, 184, 0.2)',
+										background: 'rgba(15, 23, 42, 0.6)',
+										color: '#e2e8f0',
+										fontSize: '0.875rem'
+									}}
 								>
 									<option value="main">Main Task</option>
 									<option value="subtask">Subtask</option>
 								</select>
 							) : (
-								<span>
+								<span style={{ color: '#cbd5e1' }}>
 									{selectedTask.task_type === "main"
 										? "Main Task"
 										: "Subtask"}
@@ -404,99 +428,54 @@ const TaskModal: React.FC<TaskModalProps> = ({
 						{/* Status */}
 						<div className={styles.taskDetailRow}>
 							<span className={styles.label}>Status:</span>
-							<div className={styles.statusButtons}>
-								{columns.map((column) => (
-									<button
-										key={column.id}
-										className={`${styles.statusButton} ${
-											columns.find((col) =>
-												col.tasks.some(
-													(t) =>
-														t.id === selectedTask.id
-												)
-											)?.id === column.id
-												? styles.active
-												: ""
-										}`}
-										style={
-											{
-												borderColor: column.color,
-												"--border-color": column.color,
-											} as React.CSSProperties
-										}
-										onClick={() =>
-											updateTaskStatus(column.id)
-										}
-										disabled={isEditing}
-									>
-										{column.title}
-									</button>
-								))}
+							<div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+								{columns.map((column) => {
+									const isActive = columns.find((col) =>
+										col.tasks.some((t) => t.id === selectedTask.id)
+									)?.id === column.id;
+									
+									return (
+										<button
+											key={column.id}
+											onClick={() => updateTaskStatus(column.id)}
+											style={{
+												padding: '0.5rem 1rem',
+												borderRadius: '0.375rem',
+												border: isActive 
+													? `2px solid ${column.color}` 
+													: '1px solid rgba(148, 163, 184, 0.2)',
+												background: isActive 
+													? column.color 
+													: 'rgba(51, 65, 85, 0.5)',
+												color: isActive ? 'white' : '#cbd5e1',
+												fontSize: '0.875rem',
+												fontWeight: '600',
+												cursor: 'pointer',
+												transition: 'all 0.2s'
+											}}
+											onMouseEnter={(e) => {
+												if (!isActive) {
+													e.currentTarget.style.background = 'rgba(71, 85, 105, 0.7)';
+												}
+											}}
+											onMouseLeave={(e) => {
+												if (!isActive) {
+													e.currentTarget.style.background = 'rgba(51, 65, 85, 0.5)';
+												}
+											}}
+										>
+											{column.title}
+										</button>
+									);
+								})}
 							</div>
 						</div>
-
-						{/* Parent Task Selection (only for subtasks) - Show in both edit and add modes */}
-						{((isEditing && editTask?.task_type === "subtask") ||
-							(!isEditing &&
-								selectedTask.task_type === "subtask")) && (
-							<div className={styles.taskDetailRow}>
-								<span className={styles.label}>
-									Parent Task:
-								</span>
-								{isEditing ? (
-									<select
-										className={styles.editSelect}
-										value={editTask?.parent_id || ""}
-										onChange={(e) =>
-											setEditTask((prev) =>
-												prev
-													? {
-															...prev,
-															parent_id:
-																e.target.value,
-													  }
-													: prev
-											)
-										}
-									>
-										<option value="">
-											Select Parent Task
-										</option>
-										{allTasks
-											.filter(
-												(t) =>
-													t.task_type === "main" &&
-													t.id !== editTask?.id
-											)
-											.map((task) => (
-												<option
-													key={task.id}
-													value={task.id}
-												>
-													{task.title}
-												</option>
-											))}
-									</select>
-								) : (
-									<span>
-										{selectedTask.parent_id
-											? allTasks.find(
-													(t) =>
-														t.id ===
-														selectedTask.parent_id
-											  )?.title || "Unknown Parent"
-											: "No parent selected"}
-									</span>
-								)}
-							</div>
-						)}
 
 						{/* Priority */}
 						<div className={styles.taskDetailRow}>
 							<span className={styles.label}>Priority:</span>
 							{isEditing ? (
 								<select
-									className={styles.editSelect}
 									value={editTask?.priority || "medium"}
 									onChange={(e) =>
 										setEditTask((prev) =>
@@ -509,6 +488,14 @@ const TaskModal: React.FC<TaskModalProps> = ({
 												: prev
 										)
 									}
+									style={{
+										padding: '0.5rem',
+										borderRadius: '0.375rem',
+										border: '1px solid rgba(148, 163, 184, 0.2)',
+										background: 'rgba(15, 23, 42, 0.6)',
+										color: '#e2e8f0',
+										fontSize: '0.875rem'
+									}}
 								>
 									<option value="low">Low</option>
 									<option value="medium">Medium</option>
@@ -516,11 +503,14 @@ const TaskModal: React.FC<TaskModalProps> = ({
 								</select>
 							) : (
 								<span
-									className={styles.priorityBadge}
 									style={{
-										backgroundColor: getPriorityColor(
-											selectedTask.priority
-										),
+										padding: '0.5rem 1rem',
+										borderRadius: '0.375rem',
+										background: getPriorityColor(selectedTask.priority),
+										color: 'white',
+										fontSize: '0.875rem',
+										fontWeight: '600',
+										display: 'inline-block'
 									}}
 								>
 									{getPriorityLabel(selectedTask.priority)}
@@ -532,165 +522,163 @@ const TaskModal: React.FC<TaskModalProps> = ({
 						<div className={styles.taskDetailRow}>
 							<span className={styles.label}>Progress:</span>
 							{isEditing ? (
-								<div
-									style={{
-										display: "flex",
-										alignItems: "center",
-										gap: "1rem",
-									}}
-								>
+								<div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
 									<input
 										type="range"
+										min="0"
+										max="100"
 										value={editTask?.progress || 0}
 										onChange={(e) =>
 											setEditTask((prev) =>
 												prev
 													? {
 															...prev,
-															progress: Number(
+															progress: parseInt(
 																e.target.value
 															),
 													  }
 													: prev
 											)
 										}
-										min="0"
-										max="100"
 										style={{ flex: 1 }}
 									/>
-									<span
-										style={{
-											fontSize: "0.875rem",
-											color: "#6b7280",
-											minWidth: "3rem",
-										}}
-									>
+									<span style={{ 
+										color: '#60a5fa', 
+										fontWeight: '600', 
+										minWidth: '50px',
+										fontSize: '1rem'
+									}}>
 										{editTask?.progress || 0}%
 									</span>
 								</div>
 							) : (
-								<div
-									style={{
-										display: "flex",
-										alignItems: "center",
-										gap: "1rem",
-									}}
-								>
-									<div
-										style={{
-											flex: 1,
-											background: "#e5e7eb",
-											borderRadius: "0.75rem",
-											height: "0.5rem",
-											maxWidth: "200px",
-										}}
-									>
-										<div
-											style={{
-												background: "#10b981",
-												height: "0.5rem",
-												borderRadius: "0.75rem",
-												width: `${
-													selectedTask.progress || 0
-												}%`,
-											}}
-										/>
+								<div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
+									<div style={{
+										flex: 1,
+										height: '0.75rem',
+										background: 'rgba(51, 65, 85, 0.5)',
+										borderRadius: '0.5rem',
+										overflow: 'hidden',
+										border: '1px solid rgba(148, 163, 184, 0.2)'
+									}}>
+										<div style={{
+											height: '100%',
+											width: `${selectedTask.progress || 0}%`,
+											background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+											transition: 'width 0.3s ease',
+											boxShadow: '0 0 8px rgba(16, 185, 129, 0.5)'
+										}} />
 									</div>
-									<span
-										style={{
-											fontSize: "0.875rem",
-											color: "#6b7280",
-										}}
-									>
+									<span style={{ 
+										color: '#10b981', 
+										fontWeight: '700', 
+										minWidth: '50px',
+										fontSize: '1rem'
+									}}>
 										{selectedTask.progress || 0}%
 									</span>
 								</div>
 							)}
 						</div>
 
-						{/* Start Date */}
-						<div className={styles.taskDetailRow}>
-							<span className={styles.label}>Start Date:</span>
-							{isEditing ? (
-								<input
-									type="date"
-									className={styles.editInput}
-									value={editTask?.start_date || ""}
-									onChange={(e) =>
-										setEditTask((prev) =>
-											prev
-												? {
-														...prev,
-														start_date:
-															e.target.value,
-												  }
-												: prev
-										)
-									}
-								/>
-							) : (
-								<span>
-									{selectedTask.start_date
-										? new Date(
-												selectedTask.start_date
-										  ).toLocaleDateString()
-										: "Not set"}
-								</span>
-							)}
-						</div>
-
-						{/* Due Date */}
-						<div className={styles.taskDetailRow}>
-							<span className={styles.label}>Due Date:</span>
-							{isEditing ? (
-								<input
-									type="date"
-									className={styles.editInput}
-									value={editTask?.due_date || ""}
-									onChange={(e) =>
-										setEditTask((prev) =>
-											prev
-												? {
-														...prev,
-														due_date:
-															e.target.value,
-												  }
-												: prev
-										)
-									}
-								/>
-							) : selectedTask.due_date ? (
-								<div className={styles.dueDateDisplay}>
-									<span
-										className={styles.dueDateBadge}
-										style={{
-											backgroundColor: getDueDateStatus(
-												selectedTask.due_date
-											).color,
-										}}
-									>
-										{
-											getDueDateStatus(
-												selectedTask.due_date
-											).text
+						{/* Date Range */}
+						<div className={styles.formRow} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+							<div className={styles.taskDetailRow}>
+								<span className={styles.label}>Start Date:</span>
+								{isEditing ? (
+									<input
+										type="date"
+										value={editTask?.start_date || ""}
+										onChange={(e) =>
+											setEditTask((prev) =>
+												prev
+													? {
+															...prev,
+															start_date:
+																e.target.value,
+													  }
+													: prev
+											)
 										}
+										style={{
+											padding: '0.5rem',
+											borderRadius: '0.375rem',
+											border: '1px solid rgba(148, 163, 184, 0.2)',
+											background: 'rgba(15, 23, 42, 0.6)',
+											color: '#e2e8f0',
+											fontSize: '0.875rem',
+											colorScheme: 'dark'
+										}}
+									/>
+								) : (
+									<span style={{ color: '#cbd5e1' }}>
+										{selectedTask.start_date
+											? new Date(
+													selectedTask.start_date
+											  ).toLocaleDateString()
+											: "Not set"}
 									</span>
-									<span className={styles.dueDateFull}>
-										{new Date(
-											selectedTask.due_date
-										).toLocaleDateString("en-US", {
-											weekday: "long",
-											year: "numeric",
-											month: "long",
-											day: "numeric",
-										})}
+								)}
+							</div>
+
+							<div className={styles.taskDetailRow}>
+								<span className={styles.label}>Due Date:</span>
+								{isEditing ? (
+									<input
+										type="date"
+										value={editTask?.due_date || ""}
+										onChange={(e) =>
+											setEditTask((prev) =>
+												prev
+													? {
+															...prev,
+															due_date: e.target.value,
+													  }
+													: prev
+											)
+										}
+										style={{
+											padding: '0.5rem',
+											borderRadius: '0.375rem',
+											border: '1px solid rgba(148, 163, 184, 0.2)',
+											background: 'rgba(15, 23, 42, 0.6)',
+											color: '#e2e8f0',
+											fontSize: '0.875rem',
+											colorScheme: 'dark'
+										}}
+									/>
+								) : selectedTask.due_date ? (
+									<div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+										<span style={{ color: '#cbd5e1' }}>
+											{new Date(
+												selectedTask.due_date
+											).toLocaleDateString()}
+										</span>
+										<span
+											style={{
+												padding: '0.25rem 0.5rem',
+												borderRadius: '0.25rem',
+												background: getDueDateStatus(
+													selectedTask.due_date
+												).color,
+												color: 'white',
+												fontSize: '0.75rem',
+												fontWeight: '600'
+											}}
+										>
+											{
+												getDueDateStatus(
+													selectedTask.due_date
+												).text
+											}
+										</span>
+									</div>
+								) : (
+									<span style={{ color: '#64748b', fontStyle: 'italic' }}>
+										No due date set
 									</span>
-								</div>
-							) : (
-								<span className={styles.noDueDate}>
-									No due date set
-								</span>
-							)}
+								)}
+							</div>
 						</div>
 
 						{/* Assignees */}
@@ -698,17 +686,15 @@ const TaskModal: React.FC<TaskModalProps> = ({
 							<span className={styles.label}>Assignees:</span>
 							{isEditing ? (
 								loadingUsers ? (
-									<div>Loading users...</div>
+									<div style={{ color: '#94a3b8' }}>Loading users...</div>
 								) : availableUsers.length === 0 ? (
-									<div>No users available</div>
+									<div style={{ color: '#94a3b8' }}>No users available</div>
 								) : (
 									<div className={styles.assigneeList}>
 										{availableUsers.map((user) => (
 											<label
 												key={user.id}
-												className={
-													styles.assigneeOption
-												}
+												className={styles.assigneeOption}
 											>
 												<input
 													type="checkbox"
@@ -763,7 +749,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
 									</div>
 								)
 							) : (
-								<div className={styles.assigneeInfo}>
+								<div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
 									{selectedTask.assigneeNames?.map(
 										(name, index) => {
 											const employeeId =
@@ -773,24 +759,24 @@ const TaskModal: React.FC<TaskModalProps> = ({
 											return (
 												<div
 													key={index}
-													className={
-														styles.assigneeItem
-													}
+													style={{
+														display: 'flex',
+														alignItems: 'center',
+														gap: '0.5rem',
+														background: 'rgba(51, 65, 85, 0.5)',
+														padding: '0.5rem 0.75rem',
+														borderRadius: '0.5rem',
+														border: '1px solid rgba(148, 163, 184, 0.2)'
+													}}
 												>
-													<span
-														className={
-															styles.assigneeAvatar
+													<Avatar
+														employeeId={
+															employeeId
 														}
-													>
-														<Avatar
-															employeeId={
-																employeeId
-															}
-															fullName={name}
-															size="small"
-														/>
-													</span>
-													<span>{name}</span>
+														fullName={name}
+														size="small"
+													/>
+													<span style={{ color: '#e2e8f0', fontSize: '0.875rem' }}>{name}</span>
 												</div>
 											);
 										}
@@ -825,15 +811,14 @@ const TaskModal: React.FC<TaskModalProps> = ({
 													alignItems: "center",
 													gap: "0.75rem",
 													padding: "0.75rem",
-													background: "#f9fafb",
+													background: "rgba(51, 65, 85, 0.5)",
 													borderRadius: "0.5rem",
 													cursor: "pointer",
 													transition: "all 0.2s",
-													border: "1px solid #e5e7eb",
+													border: "1px solid rgba(148, 163, 184, 0.2)",
 												}}
 												onClick={(e) => {
 													e.stopPropagation();
-													// Create a new task object with updated details
 													const updatedSubtask =
 														allTasks.find(
 															(t) =>
@@ -849,15 +834,15 @@ const TaskModal: React.FC<TaskModalProps> = ({
 												}}
 												onMouseEnter={(e) => {
 													e.currentTarget.style.background =
-														"#f3f4f6";
+														"rgba(71, 85, 105, 0.7)";
 													e.currentTarget.style.borderColor =
-														"#d1d5db";
+														"rgba(148, 163, 184, 0.3)";
 												}}
 												onMouseLeave={(e) => {
 													e.currentTarget.style.background =
-														"#f9fafb";
+														"rgba(51, 65, 85, 0.5)";
 													e.currentTarget.style.borderColor =
-														"#e5e7eb";
+														"rgba(148, 163, 184, 0.2)";
 												}}
 											>
 												<div style={{ flex: 1 }}>
@@ -866,7 +851,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
 															fontWeight: "500",
 															fontSize:
 																"0.875rem",
-															color: "#1f2937",
+															color: "#e2e8f0",
 														}}
 													>
 														{subtask.title}
@@ -874,7 +859,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
 													<div
 														style={{
 															fontSize: "0.75rem",
-															color: "#6b7280",
+															color: "#94a3b8",
 														}}
 													>
 														{subtask.progress || 0}%
@@ -888,10 +873,11 @@ const TaskModal: React.FC<TaskModalProps> = ({
 												</div>
 												<div
 													style={{
-														background: "#e5e7eb",
+														background: "rgba(51, 65, 85, 0.7)",
 														borderRadius: "0.75rem",
 														height: "0.5rem",
 														width: "4rem",
+														overflow: 'hidden'
 													}}
 												>
 													<div
@@ -919,7 +905,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
 							<span className={styles.label}>Description:</span>
 							{isEditing ? (
 								<textarea
-									className={styles.editTextarea}
 									value={editTask?.description || ""}
 									onChange={(e) =>
 										setEditTask((prev) =>
@@ -933,11 +918,22 @@ const TaskModal: React.FC<TaskModalProps> = ({
 										)
 									}
 									placeholder="Enter task description..."
-									rows={3}
+									rows={4}
+									style={{
+										width: '100%',
+										padding: '0.75rem',
+										borderRadius: '0.5rem',
+										border: '1px solid rgba(148, 163, 184, 0.2)',
+										background: 'rgba(15, 23, 42, 0.6)',
+										color: '#e2e8f0',
+										fontSize: '0.875rem',
+										resize: 'vertical',
+										fontFamily: 'inherit'
+									}}
 								/>
 							) : (
-								<p className={styles.description}>
-									{selectedTask.description}
+								<p style={{ color: '#cbd5e1', lineHeight: '1.6', margin: 0 }}>
+									{selectedTask.description || "No description provided"}
 								</p>
 							)}
 						</div>
@@ -945,7 +941,15 @@ const TaskModal: React.FC<TaskModalProps> = ({
 
 					{/* Comments Section */}
 					<div className={styles.commentsSection}>
-						<h3>Comments ({selectedTask.comments.length})</h3>
+						<h3 style={{ 
+							color: '#60a5fa', 
+							fontSize: '1.125rem',
+							fontWeight: '700',
+							marginBottom: '1rem',
+							textShadow: '0 2px 8px rgba(96, 165, 250, 0.3)'
+						}}>
+							Comments ({selectedTask.comments.length})
+						</h3>
 
 						<div className={styles.addComment}>
 							<textarea
@@ -966,7 +970,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
 								>
 									{addingComment
 										? "Adding..."
-										: "Add Comment"}
+										: "💬 Add Comment"}
 								</button>
 							</div>
 						</div>
@@ -978,7 +982,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
 									className={styles.comment}
 								>
 									<div className={styles.commentHeader}>
-										<strong>{comment.author_name}</strong>
+										<strong style={{ color: '#e2e8f0' }}>{comment.author_name}</strong>
 										<span className={styles.commentDate}>
 											{new Date(
 												comment.created_at

@@ -81,16 +81,12 @@ export default function ResultsPage() {
 
         /* DESKTOP ONLY - Overflow Hidden & Fixed Height */
         @media (min-width: 1025px) {
-
-
           .test-page-content {
             height: 100%;
-
           }
 
           .test-interface-wrapper {
             min-height: 0;
-
           }
         }
 
