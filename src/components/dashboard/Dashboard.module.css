@@ -32,6 +32,20 @@
   flex: 1;
 }
 
+.welcomeAvatar {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  margin-bottom: 4rem;
+  margin-right: 4rem;
+  padding: 0.25rem; /* Add padding to prevent extending past container */
+}
+
+.welcomeAvatar :global(.dashboardAvatar) {
+  width: 65px;
+  height: 65px;
+}
+
 .welcomeTitle {
   font-size: 2rem;
   font-weight: 700;
@@ -216,6 +230,11 @@
   flex-shrink: 0;
 }
 
+.quickActionIcon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
 .quickActionContent {
   flex: 1;
 }
@@ -388,9 +407,14 @@
   }
   
   .welcomeSection {
-    flex-direction: column;
-    text-align: center;
+    flex-direction: row;
+    text-align: left;
     gap: 1rem;
+  }
+
+  .welcomeAvatar {
+  margin-bottom: 2.5rem;
+  margin-right: 2.5rem;
   }
   
   .welcomeIcon {
@@ -416,6 +440,21 @@
   
   .welcomeSection {
     padding: 1rem;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .welcomeAvatar {
+    width: 50px;
+    height: 50px;
+    padding: 0.25rem; /* Keep padding on mobile */
+   margin-bottom: 1rem;
+  margin-right: 1rem;
+  }
+
+  .welcomeAvatar :global(.dashboardAvatar) {
+    width: 50px;
+    height: 50px;
   }
   
   .welcomeTitle {

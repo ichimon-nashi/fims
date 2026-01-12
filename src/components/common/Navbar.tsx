@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import UserSettingsModal from "./UserSettingsModal";
 import NavigationDrawer from "./NavigationDrawer";
+import { IoSettings } from "react-icons/io5";
 import styles from "./Navbar.module.css";
 
 const Navbar = () => {
@@ -85,7 +86,7 @@ const Navbar = () => {
                 className={styles.settingsButton}
                 title="設定"
               >
-                ⚙️
+                <IoSettings />
               </button>
 
               <button

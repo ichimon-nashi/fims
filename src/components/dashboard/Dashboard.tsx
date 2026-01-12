@@ -3,10 +3,13 @@
 
 import { useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/common/Navbar";
+import Avatar from "@/components/ui/Avatar/Avatar";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { useWeather } from "@/hooks/useWeather";
-import { FaRunning } from "react-icons/fa";
+import { FaRunning, FaUtensils, FaUserShield, FaClipboardList, FaCalendarAlt } from "react-icons/fa";
+import { FaBookSkull } from "react-icons/fa6";
+import { IoHome } from "react-icons/io5";
 import styles from "./Dashboard.module.css";
 
 interface DashboardStats {
@@ -179,35 +182,35 @@ const Dashboard = () => {
     {
       title: "教師班表",
       description: "空服教師排班系統",
-      icon: "🗓️",
+      icon: <FaCalendarAlt />,
       href: "/roster",
       color: "#3b82f6"
     },
     {
       title: "任務管理",
       description: "Kanban 任務看板",
-      icon: "📋",
+      icon: <FaClipboardList />,
       href: "/tasks",
       color: "#10b981"
     },
     {
       title: "SMS",
       description: "Safety Management System",
-      icon: "🛡️",
+      icon: <FaUserShield />,
       href: "/sms",
       color: "#ef4444"
     },
     {
       title: "翻書口試",
       description: "複訓翻書口試管理系統",
-      icon: "🎯",
+      icon: <FaBookSkull />,
       href: "/oral-test/dashboard",
       color: "#f59e0b"
     },
     {
       title: "B/C訓練",
       description: "商務艙服務訓練",
-      icon: "🍴",
+      icon: <FaUtensils />,
       href: "/bc-training",
       color: "#8b5cf6"
     },
@@ -244,6 +247,14 @@ const Dashboard = () => {
               <p className={styles.welcomeSubtitle}>
                 {twoLineSubtitle}
               </p>
+            </div>
+            <div className={styles.welcomeAvatar}>
+              <Avatar
+                employeeId={user?.employee_id || ""}
+                fullName={user?.full_name || user?.employee_id || "使用者"}
+                size="large"
+                className="dashboardAvatar"
+              />
             </div>
           </div>
 

@@ -196,6 +196,17 @@ const MDAfaatGame = () => {
   const [dealingAnimation, setDealingAnimation] = useState(false);
   const [shuffling, setShuffling] = useState(false);
 
+  // Calculate shuffle radius based on viewport width
+  const getShuffleRadius = () => {
+    if (typeof window !== 'undefined') {
+      const width = window.innerWidth;
+      if (width < 1024) return 120; // Mobile/Tablet
+      if (width < 1440) return 150; // MacBook Air / smaller desktops
+      return 200; // Large desktops
+    }
+    return 200;
+  };
+
   const canDrawCard = (newCard: Card, existingCards: DrawnCard[], cardType: 'emergency' | 'passenger' | 'equipment'): boolean => {
     const existingIds = existingCards
       .filter(card => card.type === cardType)
@@ -455,15 +466,26 @@ const MDAfaatGame = () => {
                     <>
                       {[...Array(8)].map((_, i) => {
                         const angle = (i * 360) / 8;
-                        const radius = 200;
+                        const radius = getShuffleRadius();
+                        const offsetX = Math.cos(angle * Math.PI / 180) * radius;
+                        const offsetY = Math.sin(angle * Math.PI / 180) * radius;
                         return (
                           <motion.div
                             key={i}
-                            className={styles.shuffleCard}
-                            initial={{ x: 0, y: 0, opacity: 0, scale: 1 }}
+                            style={{
+                              position: 'absolute',
+                              left: '50%',
+                              top: '50%',
+                            }}
+                            initial={{ 
+                              x: '-50%',
+                              y: '-50%',
+                              opacity: 0, 
+                              scale: 1 
+                            }}
                             animate={{
-                              x: [0, Math.cos(angle * Math.PI / 180) * radius, 0],
-                              y: [0, Math.sin(angle * Math.PI / 180) * radius, 0],
+                              x: ['-50%', `calc(-50% + ${offsetX}px)`, '-50%'],
+                              y: ['-50%', `calc(-50% + ${offsetY}px)`, '-50%'],
                               opacity: [0, 1, 0],
                               rotate: [0, 360 + (i * 45), 720],
                               scale: [1, 0.95, 1]

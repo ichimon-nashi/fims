@@ -5,7 +5,9 @@ import { useRouter, usePathname } from "next/navigation";
 import { useMemo, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Avatar from "@/components/ui/Avatar/Avatar";
-import { FaRunning } from "react-icons/fa";
+import { FaRunning, FaUtensils, FaUserShield, FaClipboardList, FaCalendarAlt } from "react-icons/fa";
+import { FaBookSkull } from "react-icons/fa6";
+import { IoHome } from "react-icons/io5";
 import styles from "./NavigationDrawer.module.css";
 
 interface NavigationDrawerProps {
@@ -22,6 +24,7 @@ interface NavigationItem {
 	description: string;
 	minAuthLevel?: number;
 	badge?: string;
+	iconColor?: string; // Add color class for icon styling
 }
 
 // FIXED: Move navigation items outside component to avoid recreating on every render
@@ -29,46 +32,52 @@ const navigationItems: NavigationItem[] = [
 	{
 		id: "dashboard",
 		title: "儀表板",
-		icon: "🏠",
+		icon: <IoHome style={{ fontSize: '1.25rem' }} />,
 		path: "/dashboard",
 		description: "系統總覽與快速功能",
+		iconColor: "dashboard",
 	},
 	{
 		id: "roster",
 		title: "教師班表",
-		icon: "📅",
+		icon: <FaCalendarAlt style={{ fontSize: '1.25rem' }} />,
 		path: "/roster",
 		description: "空服教師排班系統",
+		iconColor: "roster",
 	},
 	{
 		id: "tasks",
 		title: "任務管理",
-		icon: "📋",
+		icon: <FaClipboardList style={{ fontSize: '1.25rem' }} />,
 		path: "/tasks",
 		description: "Kanban 任務看板",
+		iconColor: "tasks",
 	},
 	{
 		id: "sms",
 		title: "SMS",
-		icon: "🛡️",
+		icon: <FaUserShield style={{ fontSize: '1.25rem' }} />,
 		path: "/sms",
 		description: "Safety Management System",
 		minAuthLevel: 1,
+		iconColor: "sms",
 	},
 	{
 		id: "oral-test",
 		title: "翻書口試",
-		icon: "🎯",
+		icon: <FaBookSkull style={{ fontSize: '1.25rem' }} />,
 		path: "/oral-test/dashboard",
 		description: "複訓翻書口試管理系統",
 		minAuthLevel: 1,
+		iconColor: "oralTest",
 	},
 	{
 		id: "business-training",
 		title: "B/C訓練",
-		icon: "🍴",
+		icon: <FaUtensils style={{ fontSize: '1.25rem' }} />,
 		path: "/bc-training",
 		description: "商務艙服務訓練",
+		iconColor: "bcTraining",
 	},
 	{
 		id: "mdafaat",
@@ -76,6 +85,7 @@ const navigationItems: NavigationItem[] = [
 		icon: <FaRunning style={{ fontSize: '1.25rem' }} />,
 		path: "/mdafaat",
 		description: "緊急撤離演練",
+		iconColor: "mdafaat",
 	},
 ];
 
@@ -223,7 +233,7 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 									}`}
 									onClick={() => handleNavigation(item.path)}
 								>
-									<div className={styles.navigationIcon}>
+									<div className={`${styles.navigationIcon} ${item.iconColor ? styles[item.iconColor] : ""}`}>
 										{item.icon}
 									</div>
 									<div className={styles.navigationContent}>

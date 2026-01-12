@@ -6,14 +6,19 @@
 	background: linear-gradient(135deg, #064e3b, #065f46, #047857);
 	padding: 1.5rem;
 	position: relative;
-	overflow: hidden;
+	overflow-x: hidden;
+	overflow-y: auto;
 	display: flex;
 	flex-direction: column;
 }
 
-/* Hide overflow when shuffling */
+/* Hide overflow when shuffling - prevents scrollbar */
 .container.shuffling {
-	overflow: hidden;
+	overflow: hidden !important;
+}
+
+.container.shuffling .gameArea {
+	overflow: hidden !important;
 }
 
 .background {
@@ -197,6 +202,7 @@
 	align-items: center;
 	min-height: 0;
 	overflow-y: auto;
+	overflow-x: hidden;
 	padding: 0.5rem;
 }
 
@@ -208,6 +214,7 @@
 	justify-content: center;
 	width: 100%;
 	position: relative;
+	overflow: hidden; /* Prevent shuffle animation overflow */
 }
 
 .deckContainer {
@@ -217,6 +224,8 @@
 	justify-content: center;
 	width: 18rem;
 	height: 24rem;
+	max-width: 90vw; /* Ensure it fits on small screens */
+	max-height: 60vh; /* Limit height on smaller viewports */
 }
 
 .deckBase {
@@ -225,18 +234,15 @@
 }
 
 .shuffleCard {
-	position: absolute;
-	top: 50%;
-	left: 50%;
-	transform: translate(-50%, -50%);
+	/* Positioning is handled inline via framer-motion style prop */
 	z-index: 4;
 }
 
 .statusMessage {
 	position: absolute;
-	top: -3.5rem;
+	top: 50%; /* Center vertically with deck */
 	left: 50%;
-	transform: translateX(-50%);
+	transform: translate(-50%, -50%); /* Center both axes */
 	background-color: #facc15;
 	color: black;
 	padding: 0.875rem 1.75rem;
@@ -245,8 +251,10 @@
 	font-size: 1.125rem;
 	white-space: nowrap;
 	box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-	z-index: 10;
+	z-index: 1000; /* Above deck and shuffle cards */
 	text-align: center;
+	max-width: 90vw; /* Prevent cutoff on small screens */
+	pointer-events: none; /* Allow clicks to pass through */
 }
 
 /* Cards Container - Responsive Grid */
@@ -281,8 +289,8 @@
 
 .deckCard {
 	background: transparent;
-	border-color: transparent;
-	box-shadow: 0 10px 20px -5px rgb(0 0 0 / 0.3);
+	border: none; /* Remove border */
+	box-shadow: none; /* Remove shadow */
 }
 
 .emergencyCard {
@@ -454,6 +462,19 @@
 	}
 }
 
+/* MacBook Air and smaller desktops - reduce shuffle radius */
+@media (max-width: 1440px) and (min-width: 1024px) {
+	.deckContainer {
+		width: 15rem;
+		height: 20rem;
+	}
+	
+	.card {
+		width: 15rem;
+		height: 20rem;
+	}
+}
+
 /* Responsive Design - Tablet */
 @media (max-width: 1023px) {
 	.container {
@@ -617,7 +638,6 @@
 	.statusMessage {
 		font-size: 1rem;
 		padding: 0.75rem 1.5rem;
-		top: -3rem;
 	}
 }
 
@@ -689,7 +709,6 @@
 	.statusMessage {
 		font-size: 0.875rem;
 		padding: 0.5rem 1rem;
-		top: -2.25rem;
 	}
 
 	.removeButton {
