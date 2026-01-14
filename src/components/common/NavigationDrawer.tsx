@@ -8,6 +8,7 @@ import Avatar from "@/components/ui/Avatar/Avatar";
 import { FaRunning, FaUtensils, FaUserShield, FaClipboardList, FaCalendarAlt } from "react-icons/fa";
 import { FaBookSkull } from "react-icons/fa6";
 import { IoHome } from "react-icons/io5";
+import { GiDistraction } from "react-icons/gi";
 import styles from "./NavigationDrawer.module.css";
 
 interface NavigationDrawerProps {
@@ -87,6 +88,15 @@ const navigationItems: NavigationItem[] = [
 		description: "緊急撤離演練",
 		iconColor: "mdafaat",
 	},
+	,
+	{
+		id: "ads",
+		title: "AdS",
+		icon: <GiDistraction style={{ fontSize: '1.25rem' }} />,
+		path: "/ads",
+		description: "注意力測試器",
+		iconColor: "ads",
+	}
 ];
 
 const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {

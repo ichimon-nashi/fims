@@ -1,0 +1,398 @@
+/* src/components/ads/AdS.module.css */
+
+.adsContainer {
+	max-width: 900px;
+	margin: 0 auto;
+	padding: 20px 20px;
+}
+
+.adsTitle {
+	text-align: center;
+	margin-bottom: 50px;
+}
+
+.adsTitle h1 {
+	font-size: 6rem;
+	font-weight: bold;
+	margin-bottom: 10px;
+	color: #ff006e;
+	background: linear-gradient(45deg, #ff006e, #8338ec, #3a86ff, #06ffa5);
+	background-size: 300% 300%;
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+	animation: neonGradient 3s ease infinite, flicker 4s ease-in-out infinite;
+	filter: drop-shadow(0 0 20px rgba(255, 0, 110, 0.5));
+}
+
+.adsTitle h2 {
+	font-size: 3rem;
+	color: #06ffa5;
+	filter: drop-shadow(0 0 10px rgba(6, 255, 165, 0.5));
+	animation: flicker 5s ease-in-out infinite;
+}
+
+@keyframes neonGradient {
+	0%,
+	100% {
+		background-position: 0% 50%;
+	}
+	50% {
+		background-position: 100% 50%;
+	}
+}
+
+@keyframes flicker {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	41%,
+	43% {
+		opacity: 0.8;
+	}
+	42% {
+		opacity: 0.6;
+	}
+	45%,
+	50% {
+		opacity: 1;
+	}
+	90%,
+	92% {
+		opacity: 0.85;
+	}
+	91% {
+		opacity: 0.7;
+	}
+}
+
+.fieldset {
+	background: rgba(26, 26, 46, 0.6);
+	border: 2px solid #8338ec;
+	border-radius: 15px;
+	padding: 25px;
+	margin-bottom: 30px;
+	box-shadow: 0 0 20px rgba(131, 56, 236, 0.3),
+		inset 0 0 20px rgba(131, 56, 236, 0.1);
+}
+
+.fieldsetTitle {
+	font-size: 1.5rem;
+	color: #06ffa5;
+	padding: 0 15px;
+	text-shadow: 0 0 10px rgba(6, 255, 165, 0.5);
+	background: #1a1a2e;
+}
+
+.fieldsetHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 20px;
+}
+
+.resetButton {
+	background: linear-gradient(45deg, #ff006e, #ff4d6d);
+	color: white;
+	border: none;
+	padding: 8px 20px;
+	border-radius: 8px;
+	cursor: pointer;
+	font-weight: bold;
+	transition: all 0.3s ease;
+	box-shadow: 0 0 10px rgba(255, 0, 110, 0.5);
+	font-size: 0.9rem;
+}
+
+.resetButton:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 0 20px rgba(255, 0, 110, 0.8);
+}
+
+.resetButton:active {
+	transform: translateY(0);
+}
+
+.soundsGrid {
+	display: grid;
+	grid-template-columns: repeat(5, 1fr);
+	gap: 20px;
+}
+
+.soundItem {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+}
+
+.checkboxWrapper {
+	position: relative;
+}
+
+.soundCheckbox {
+	width: 30px;
+	height: 30px;
+	cursor: pointer;
+	appearance: none;
+	background: rgba(255, 255, 255, 0.1);
+	border: 2px solid #8338ec;
+	border-radius: 5px;
+	transition: all 0.3s ease;
+}
+
+.soundCheckbox:checked {
+	background: linear-gradient(45deg, #ff006e, #8338ec);
+	box-shadow: 0 0 15px rgba(255, 0, 110, 0.8);
+}
+
+.soundCheckbox:checked::after {
+	content: "✓";
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	color: white;
+	font-size: 20px;
+	font-weight: bold;
+}
+
+.soundName {
+	color: #3a86ff;
+	font-weight: bold;
+	text-shadow: 0 0 5px rgba(58, 134, 255, 0.5);
+}
+
+.testButton {
+	background: linear-gradient(45deg, #8338ec, #3a86ff);
+	color: white;
+	border: none;
+	padding: 8px 20px;
+	border-radius: 8px;
+	cursor: pointer;
+	font-weight: bold;
+	transition: all 0.3s ease;
+	box-shadow: 0 0 10px rgba(131, 56, 236, 0.5);
+}
+
+.testButton:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 0 20px rgba(131, 56, 236, 0.8);
+}
+
+.testButton:active {
+	transform: translateY(0);
+}
+
+.settingsGrid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 40px;
+}
+
+.settingItem {
+	display: flex;
+	flex-direction: column;
+	gap: 15px;
+}
+
+.settingLabel {
+	color: #06ffa5;
+	font-size: 1.2rem;
+	font-weight: bold;
+	text-shadow: 0 0 5px rgba(6, 255, 165, 0.5);
+}
+
+.sliderContainer {
+	display: flex;
+	align-items: center;
+	gap: 15px;
+}
+
+.slider {
+	flex: 1;
+	height: 8px;
+	border-radius: 4px;
+	background: rgba(255, 255, 255, 0.1);
+	outline: none;
+	-webkit-appearance: none;
+}
+
+.slider::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	background: linear-gradient(45deg, #ff006e, #8338ec);
+	cursor: pointer;
+	box-shadow: 0 0 15px rgba(255, 0, 110, 0.8);
+}
+
+.slider::-moz-range-thumb {
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	background: linear-gradient(45deg, #ff006e, #8338ec);
+	cursor: pointer;
+	border: none;
+	box-shadow: 0 0 15px rgba(255, 0, 110, 0.8);
+}
+
+.valueDisplay {
+	background: rgba(131, 56, 236, 0.3);
+	border: 2px solid #8338ec;
+	border-radius: 8px;
+	padding: 8px 15px;
+	min-width: 80px;
+	text-align: center;
+	color: #06ffa5;
+	font-weight: bold;
+	font-size: 1.1rem;
+	box-shadow: 0 0 10px rgba(131, 56, 236, 0.3);
+}
+
+.startButtonContainer {
+	text-align: center;
+	margin-top: 40px;
+}
+
+.startButton {
+	background: linear-gradient(45deg, #06ffa5, #3a86ff);
+	color: #1a1a2e;
+	border: none;
+	padding: 20px 80px;
+	border-radius: 50px;
+	font-size: 1.5rem;
+	font-weight: bold;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	box-shadow: 0 0 30px rgba(6, 255, 165, 0.5);
+	text-transform: uppercase;
+	letter-spacing: 2px;
+}
+
+.startButton:hover {
+	transform: scale(1.05);
+	box-shadow: 0 0 40px rgba(6, 255, 165, 0.8);
+}
+
+.startButton:active {
+	transform: scale(0.98);
+}
+
+.startButton.running {
+	background: linear-gradient(45deg, #ff006e, #ff4d6d);
+	box-shadow: 0 0 30px rgba(255, 0, 110, 0.5);
+}
+
+.startButton.running:hover {
+	box-shadow: 0 0 40px rgba(255, 0, 110, 0.8);
+}
+
+.playLogContainer {
+	max-width: 900px;
+	margin: 40px auto 0;
+	background: rgba(26, 26, 46, 0.6);
+	border: 2px solid #3a86ff;
+	border-radius: 15px;
+	padding: 25px;
+	box-shadow: 0 0 20px rgba(58, 134, 255, 0.3),
+		inset 0 0 20px rgba(58, 134, 255, 0.1);
+}
+
+.playLogTitle {
+	font-size: 1.5rem;
+	color: #06ffa5;
+	margin-bottom: 20px;
+	text-shadow: 0 0 10px rgba(6, 255, 165, 0.5);
+	text-align: center;
+}
+
+.playLogList {
+	max-height: 300px;
+	overflow-y: auto;
+	scrollbar-width: thin;
+	scrollbar-color: #8338ec rgba(255, 255, 255, 0.1);
+}
+
+.playLogList::-webkit-scrollbar {
+	width: 8px;
+}
+
+.playLogList::-webkit-scrollbar-track {
+	background: rgba(255, 255, 255, 0.1);
+	border-radius: 4px;
+}
+
+.playLogList::-webkit-scrollbar-thumb {
+	background: linear-gradient(45deg, #8338ec, #3a86ff);
+	border-radius: 4px;
+}
+
+.playLogItem {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 12px 15px;
+	margin-bottom: 8px;
+	background: rgba(131, 56, 236, 0.2);
+	border-left: 4px solid #06ffa5;
+	border-radius: 8px;
+	transition: all 0.3s ease;
+}
+
+.playLogItem:hover {
+	background: rgba(131, 56, 236, 0.3);
+	transform: translateX(5px);
+}
+
+.playLogTimestamp {
+	color: #3a86ff;
+	font-family: "Courier New", monospace;
+	font-weight: bold;
+	text-shadow: 0 0 5px rgba(58, 134, 255, 0.5);
+}
+
+.playLogSound {
+	color: #ff006e;
+	font-weight: bold;
+	text-shadow: 0 0 5px rgba(255, 0, 110, 0.5);
+}
+
+.playLogEmpty {
+	text-align: center;
+	color: rgba(255, 255, 255, 0.5);
+	font-style: italic;
+	padding: 20px;
+}
+
+@media (max-width: 768px) {
+	.adsContainer {
+		padding: 0rem;
+	}
+
+	.settingsGrid {
+		grid-template-columns: 1fr;
+		gap: 30px;
+	}
+
+	.adsTitle h1 {
+		font-size: 4rem;
+	}
+
+	.adsTitle h2 {
+		font-size: 1.3rem;
+	}
+
+	.soundsGrid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+@media (max-width: 480px) {
+	.soundsGrid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}

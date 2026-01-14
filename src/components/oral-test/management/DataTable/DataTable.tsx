@@ -119,13 +119,6 @@ const DataTable = ({
 		}
 	}, [totalPages, currentPage, preservePagination, onPageChange]);
 
-	// NEW: Reset search when data changes significantly (optional)
-	useEffect(() => {
-		if (searchTerm && filteredData.length === 0 && data.length > 0) {
-			setSearchTerm("");
-		}
-	}, [data.length, filteredData.length, searchTerm]);
-
 	const handleSort = (columnKey: string) => {
 		const column = columns.find((col) => col.key === columnKey);
 		if (!column?.sortable) return;

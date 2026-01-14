@@ -195,6 +195,7 @@ const MDAfaatGame = () => {
   const [availableCards] = useState<CardData>(cardData);
   const [dealingAnimation, setDealingAnimation] = useState(false);
   const [shuffling, setShuffling] = useState(false);
+  const [cardTypeFilter, setCardTypeFilter] = useState<'all' | 'emergency' | 'passenger' | 'equipment'>('emergency');
 
   // Calculate shuffle radius based on viewport width
   const getShuffleRadius = () => {
@@ -242,7 +243,17 @@ const MDAfaatGame = () => {
   };
 
   const drawRandomCard = () => {
-    const allAvailable = getAllAvailableCards();
+    let allAvailable: (Card & { type: 'emergency' | 'passenger' | 'equipment' })[];
+    
+    if (cardTypeFilter === 'all') {
+      allAvailable = getAllAvailableCards();
+    } else {
+      // Filter by selected card type
+      allAvailable = getAvailableCardsForType(cardTypeFilter).map(card => ({ 
+        ...card, 
+        type: cardTypeFilter 
+      }));
+    }
 
     if (allAvailable.length === 0) {
       return;
@@ -423,13 +434,59 @@ const MDAfaatGame = () => {
 
             <div className={styles.buttonDivider}></div>
 
+            <div className={styles.cardTypeSelector}>
+              <button
+                onClick={() => setCardTypeFilter('all')}
+                className={`${styles.filterButton} ${cardTypeFilter === 'all' ? styles.filterActive : ''}`}
+                title="全部卡牌"
+              >
+                全部
+              </button>
+              <button
+                onClick={() => setCardTypeFilter('emergency')}
+                className={`${styles.filterButton} ${styles.filterEmergency} ${cardTypeFilter === 'emergency' ? styles.filterActive : ''}`}
+                title="僅緊急情況"
+              >
+                ♦
+              </button>
+              <button
+                onClick={() => setCardTypeFilter('passenger')}
+                className={`${styles.filterButton} ${styles.filterPassenger} ${cardTypeFilter === 'passenger' ? styles.filterActive : ''}`}
+                title="僅旅客問題"
+              >
+                ♠
+              </button>
+              <button
+                onClick={() => setCardTypeFilter('equipment')}
+                className={`${styles.filterButton} ${styles.filterEquipment} ${cardTypeFilter === 'equipment' ? styles.filterActive : ''}`}
+                title="僅設備故障"
+              >
+                ♣
+              </button>
+            </div>
+
+            <div className={styles.buttonDivider}></div>
+
             <button
               onClick={drawRandomCard}
-              disabled={getAllAvailableCards().length === 0}
-              className={`${styles.button} ${styles.startButton} ${getAllAvailableCards().length === 0 ? styles.disabled : ''}`}
+              disabled={
+                cardTypeFilter === 'all' 
+                  ? getAllAvailableCards().length === 0
+                  : getAvailableCardsForType(cardTypeFilter).length === 0
+              }
+              className={`${styles.button} ${styles.startButton} ${
+                (cardTypeFilter === 'all' 
+                  ? getAllAvailableCards().length === 0
+                  : getAvailableCardsForType(cardTypeFilter).length === 0
+                ) ? styles.disabled : ''
+              }`}
             >
               <Plus className={styles.buttonIcon} />
-              抽牌 ({getAllAvailableCards().length})
+              抽牌 ({
+                cardTypeFilter === 'all' 
+                  ? getAllAvailableCards().length
+                  : getAvailableCardsForType(cardTypeFilter).length
+              })
             </button>
 
             {allDrawnCards.length > 0 && (

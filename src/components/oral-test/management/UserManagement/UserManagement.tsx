@@ -71,6 +71,7 @@ const UserManagement = () => {
 	const [users, setUsers] = useState<User[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
+	const [successMessage, setSuccessMessage] = useState("");
 	const [editingUser, setEditingUser] = useState<User | null>(null);
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
@@ -201,6 +202,13 @@ const UserManagement = () => {
 				setEditingUser(null);
 				setShowAddForm(false);
 				setError("");
+				setSuccessMessage(
+					editingUser
+						? "User updated successfully!"
+						: "User created successfully!"
+				);
+				// Clear success message after 3 seconds
+				setTimeout(() => setSuccessMessage(""), 3000);
 				// NOTE: currentPage state is preserved automatically
 			} else {
 				const errorData = await response.json();
@@ -676,7 +684,10 @@ const UserManagement = () => {
 				</div>
 			</div>
 
-			{error && <div className="alert alert-error">{error}</div>}
+			{error && <div className={styles.alertError}>{error}</div>}
+			{successMessage && (
+				<div className={styles.alertSuccess}>{successMessage}</div>
+			)}
 
 			<div className={styles.importHelp}>
 				<details>
@@ -968,6 +979,23 @@ const UserForm = ({
 								}
 								required
 								placeholder="e.g., KHH"
+							/>
+						</div>
+
+						<div className={styles.formGroup}>
+							<label className={styles.formLabel}>Email *</label>
+							<input
+								type="email"
+								className={styles.formInput}
+								value={formData.email}
+								onChange={(e) =>
+									setFormData((prev) => ({
+										...prev,
+										email: e.target.value,
+									}))
+								}
+								required
+								placeholder="user@example.com"
 							/>
 						</div>
 

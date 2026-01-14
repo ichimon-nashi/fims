@@ -10,6 +10,7 @@ import { useWeather } from "@/hooks/useWeather";
 import { FaRunning, FaUtensils, FaUserShield, FaClipboardList, FaCalendarAlt } from "react-icons/fa";
 import { FaBookSkull } from "react-icons/fa6";
 import { IoHome } from "react-icons/io5";
+import { GiDistraction } from "react-icons/gi";
 import styles from "./Dashboard.module.css";
 
 interface DashboardStats {
@@ -220,6 +221,14 @@ const Dashboard = () => {
       icon: <FaRunning />,
       href: "/mdafaat",
       color: "#ec4899"
+    }
+    ,
+    {
+      title: "AdS",
+      description: "注意力測試器",
+      icon: <GiDistraction />,
+      href: "/ads",
+      color: "#14b8a6"
     }
   ];
 

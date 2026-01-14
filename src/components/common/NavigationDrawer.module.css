@@ -227,8 +227,8 @@
 
 /* Icon colors matching Dashboard */
 .navigationIcon.dashboard {
-	background: rgba(59, 130, 246, 0.1);
-	color: #ad6a6c;
+	background: rgba(161, 98, 7, 0.1);
+	color: #a16207;
 }
 
 .navigationIcon.roster {
@@ -475,4 +475,9 @@
 
 .drawerOpen {
 	animation: slideIn 0.3s ease-out;
+}
+
+.navigationIcon.ads {
+	background: rgba(20, 184, 166, 0.1);
+	color: #14b8a6;
 }

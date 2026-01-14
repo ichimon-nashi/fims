@@ -192,10 +192,12 @@
 
 .quickActionsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 1rem;
   flex: 1;
   align-content: start;
+  overflow: hidden; /* Prevent overflow */
+  padding-top: 0.25rem; /* Prevent hover border cutoff on top row */
 }
 
 .quickActionCard {

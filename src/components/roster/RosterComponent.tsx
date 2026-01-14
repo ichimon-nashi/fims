@@ -19,8 +19,8 @@ const ADMIN_ACCOUNTS = ["admin", "21986", "51892"];
 const MANUAL_ORDER = [
 	"21986",
 	"22018",
-	"39426",
 	"36639",
+	"39426",
 	"51892",
 	"22119",
 	// Add more employee IDs here in your desired sequence
