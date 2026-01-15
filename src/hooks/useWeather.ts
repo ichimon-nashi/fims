@@ -89,7 +89,7 @@ export const useWeather = (base: string) => {
       setError(errorMessage);
       
       // Set fallback weather
-      const locationName = targetBase === 'KHH' ? '高雄' : targetBase === 'RMQ' ? '台中' : '松山';
+      const locationName = targetBase === 'KHH' ? '高雄' : targetBase === 'RMQ' ? '台中' : 'TSA';
       const fallbackWeather = {
         location: locationName,
         temperature: 28,

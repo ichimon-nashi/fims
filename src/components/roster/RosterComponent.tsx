@@ -21,6 +21,7 @@ const MANUAL_ORDER = [
 	"22018",
 	"36639",
 	"39426",
+	"39462",
 	"51892",
 	"22119",
 	// Add more employee IDs here in your desired sequence
@@ -352,7 +353,8 @@ const RosterComponent: React.FC = () => {
 						user.rank === "SC - Section Chief" ||
 						getEmployeeIdentifier(user) === "21701" ||
 						getEmployeeIdentifier(user) === "22119" ||
-						getEmployeeIdentifier(user) === "36639"
+						getEmployeeIdentifier(user) === "39462"
+
 				);
 
 				const sortedInstructors = sortInstructors(filteredInstructors);
