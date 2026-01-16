@@ -223,6 +223,7 @@
 .navigationIcon svg {
 	width: 1.25rem;
 	height: 1.25rem;
+	color: inherit;
 }
 
 /* Icon colors matching Dashboard */
@@ -259,6 +260,16 @@
 .navigationIcon.mdafaat {
 	background: rgba(236, 72, 153, 0.1);
 	color: #ec4899;
+}
+
+.navigationIcon.ads {
+	background: rgba(20, 184, 166, 0.1);
+	color: #14b8a6;
+}
+
+.navigationIcon.ccomReview {
+	background: rgba(251, 146, 60, 0.1);
+	color: #fb923c;
 }
 
 .navigationItem:hover .navigationIcon {
@@ -475,9 +486,4 @@
 
 .drawerOpen {
 	animation: slideIn 0.3s ease-out;
-}
-
-.navigationIcon.ads {
-	background: rgba(20, 184, 166, 0.1);
-	color: #14b8a6;
 }

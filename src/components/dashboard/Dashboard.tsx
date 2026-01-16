@@ -9,7 +9,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useWeather } from "@/hooks/useWeather";
 import { FaRunning, FaUtensils, FaUserShield, FaClipboardList, FaCalendarAlt } from "react-icons/fa";
 import { FaBookSkull } from "react-icons/fa6";
-import { IoHome } from "react-icons/io5";
+import { IoHome, IoBookSharp } from "react-icons/io5";
 import { GiDistraction } from "react-icons/gi";
 import styles from "./Dashboard.module.css";
 
@@ -229,6 +229,13 @@ const Dashboard = () => {
       icon: <GiDistraction />,
       href: "/ads",
       color: "#14b8a6"
+    },
+    {
+      title: "CCOM抽問",
+      description: "新生用CCOM翻書抽問",
+      icon: <IoBookSharp />,
+      href: "/ccom-review",
+      color: "#fb923c"
     }
   ];
 

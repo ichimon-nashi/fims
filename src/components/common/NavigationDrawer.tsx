@@ -7,7 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import Avatar from "@/components/ui/Avatar/Avatar";
 import { FaRunning, FaUtensils, FaUserShield, FaClipboardList, FaCalendarAlt } from "react-icons/fa";
 import { FaBookSkull } from "react-icons/fa6";
-import { IoHome } from "react-icons/io5";
+import { IoHome, IoBookSharp } from "react-icons/io5";
 import { GiDistraction } from "react-icons/gi";
 import styles from "./NavigationDrawer.module.css";
 
@@ -96,6 +96,14 @@ const navigationItems: NavigationItem[] = [
 		path: "/ads",
 		description: "注意力測試器",
 		iconColor: "ads",
+	},
+	{
+		id: "ccom-review",
+		title: "CCOM抽問",
+		icon: <IoBookSharp style={{ fontSize: '1.25rem' }} />,
+		path: "/ccom-review",
+		description: "新生用CCOM翻書抽問",
+		iconColor: "ccomReview",
 	}
 ];
 
