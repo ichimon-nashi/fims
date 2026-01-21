@@ -51,11 +51,11 @@ export default function StatisticsTab() {
 	const EF_CATEGORIES: { [key: string]: string } = {
 		P: "安全程序/訓練",
 		E: "設備/工作區域",
-		C: "乘員溝通因應",
+		C: "組員溝通協調",
 		I: "個人/行為影響",
 		T: "技術/知識/技巧/經驗",
 		O: "其他",
-		M: "改善管理",
+		M: "改變管理",
 	};
 
 	const efCodeDescriptions = useMemo(() => {
