@@ -103,7 +103,7 @@
 .checkboxLabelCompact {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
   color: #e8e9ed;
   cursor: pointer;
   padding: 4px;
@@ -124,6 +124,11 @@
   height: 14px;
   cursor: pointer;
   accent-color: #4a9eff;
+  flex-shrink: 0;
+}
+
+.checkboxLabelCompact span {
+  margin-left: 6px;
 }
 
 /* Game Area */
