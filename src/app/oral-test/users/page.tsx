@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import UserManagement from "@/components/oral-test/management/UserManagement/UserManagement";
 import OralTestNavigation from "@/components/oral-test/OralTestNavigation/OralTestNavigation";
+import Image from 'next/image';
 
 export default function UsersPage() {
 	const { user } = useAuth();
@@ -21,18 +22,37 @@ export default function UsersPage() {
 	// Show loading or redirect if insufficient permissions
 	if (!user || user.authentication_level < 5) {
 		return (
-			<div
-				style={{
-					display: "flex",
-					justifyContent: "center",
-					alignItems: "center",
-					height: "50vh",
-					flexDirection: "column",
-					gap: "1rem",
-				}}
-			>
-				<div className="loading-spinner"></div>
-				<p>Checking permissions...</p>
+			<div style={{ 
+				height: '100vh', 
+				display: 'flex',
+				flexDirection: 'column',
+				alignItems: 'center', 
+				justifyContent: 'center',
+				background: 'linear-gradient(135deg, #1a1f35 0%, #2d3651 100%)'
+			}}>
+				<div style={{
+					marginBottom: '2rem',
+					position: 'relative',
+					width: '350px',
+					height: '350px'
+				}}>
+					<Image
+						src="/K-dogmatic.png"
+						alt="Loading"
+						fill
+						style={{ objectFit: 'contain' }}
+						priority
+						unoptimized
+					/>
+				</div>
+				<div style={{ 
+					color: '#e8e9ed', 
+					textAlign: 'center',
+					fontSize: '1.5rem',
+					fontWeight: 'bold'
+				}}>
+					豪神FIMS載入中...
+				</div>
 			</div>
 		);
 	}

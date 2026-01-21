@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import ResultsTable from '@/components/oral-test/results/ResultsTable/ResultsTable';
 import OralTestNavigation from '@/components/oral-test/OralTestNavigation/OralTestNavigation';
+import Image from 'next/image';
 
 export default function ResultsPage() {
   const { user } = useAuth();
@@ -20,15 +21,36 @@ export default function ResultsPage() {
   if (!user || user.authentication_level < 2) {
     return (
       <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center',
-        height: '50vh',
+        height: '100vh', 
+        display: 'flex',
         flexDirection: 'column',
-        gap: '1rem'
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #1a1f35 0%, #2d3651 100%)'
       }}>
-        <div className="loading-spinner"></div>
-        <p>Checking permissions...</p>
+        <div style={{
+          marginBottom: '2rem',
+          position: 'relative',
+          width: '350px',
+          height: '350px'
+        }}>
+          <Image
+            src="/K-dogmatic.png"
+            alt="Loading"
+            fill
+            style={{ objectFit: 'contain' }}
+            priority
+            unoptimized
+          />
+        </div>
+        <div style={{ 
+          color: '#e8e9ed', 
+          textAlign: 'center',
+          fontSize: '1.5rem',
+          fontWeight: 'bold'
+        }}>
+          豪神FIMS載入中...
+        </div>
       </div>
     );
   }
@@ -136,9 +158,9 @@ export default function ResultsPage() {
           </p>
         </div>
 
-<div className="test-page-nav">
-        <OralTestNavigation currentPath="/oral-test/results" />
-      </div>
+        <div className="test-page-nav">
+          <OralTestNavigation currentPath="/oral-test/results" />
+        </div>
 
         {/* Results Table Component */}
         <div className="test-interface-wrapper">

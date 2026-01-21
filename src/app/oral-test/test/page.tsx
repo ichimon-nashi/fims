@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import TestInterface from '@/components/oral-test/test/TestInterface/TestInterface';
 import OralTestNavigation from '@/components/oral-test/OralTestNavigation/OralTestNavigation';
+import Image from 'next/image';
 
 export default function TestPage() {
   const { user } = useAuth();
@@ -20,15 +21,36 @@ export default function TestPage() {
   if (!user || user.authentication_level < 3) {
     return (
       <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center',
-        height: '50vh',
+        height: '100vh', 
+        display: 'flex',
         flexDirection: 'column',
-        gap: '1rem'
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #1a1f35 0%, #2d3651 100%)'
       }}>
-        <div className="loading-spinner"></div>
-        <p style={{ color: '#a0aec0' }}>Checking permissions...</p>
+        <div style={{
+          marginBottom: '2rem',
+          position: 'relative',
+          width: '350px',
+          height: '350px'
+        }}>
+          <Image
+            src="/K-dogmatic.png"
+            alt="Loading"
+            fill
+            style={{ objectFit: 'contain' }}
+            priority
+            unoptimized
+          />
+        </div>
+        <div style={{ 
+          color: '#e8e9ed', 
+          textAlign: 'center',
+          fontSize: '1.5rem',
+          fontWeight: 'bold'
+        }}>
+          豪神FIMS載入中...
+        </div>
       </div>
     );
   }
