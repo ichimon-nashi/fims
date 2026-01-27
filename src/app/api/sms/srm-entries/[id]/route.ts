@@ -1,47 +1,21 @@
 // src/app/api/sms/srm-entries/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth';
-import { getUserById } from '@/lib/database';
+import { checkSMSPermissions } from '@/lib/smsPermissions';
 import { updateSRMTableEntry, deleteSRMTableEntry } from '@/lib/smsDatabase';
-
-const ADMIN_ACCOUNTS = ["admin", "21986", "51892"];
-
-async function checkAdminAccess(authHeader: string | null) {
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return { isAdmin: false, error: 'Unauthorized', status: 401 };
-  }
-
-  const token = authHeader.substring(7);
-  const decoded = verifyToken(token);
-
-  // Get user from database to check employee_id
-  const user = await getUserById(decoded.userId);
-  
-  if (!user) {
-    return { isAdmin: false, error: 'User not found', status: 404 };
-  }
-
-  // Check if user is admin using employee_id
-  const isAdmin = ADMIN_ACCOUNTS.includes(user.employee_id) || 
-                 ADMIN_ACCOUNTS.includes(user.email);
-
-  if (!isAdmin) {
-    return { isAdmin: false, error: 'Access denied', status: 403 };
-  }
-
-  return { isAdmin: true, userId: decoded.userId };
-}
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Verify authentication and admin status
-    const authCheck = await checkAdminAccess(request.headers.get('authorization'));
+    // Check SMS permissions - need EDIT access
+    const permissions = await checkSMSPermissions(request.headers.get('authorization'));
     
-    if (!authCheck.isAdmin) {
-      return NextResponse.json({ error: authCheck.error }, { status: authCheck.status });
+    if (!permissions.canEdit) {
+      return NextResponse.json(
+        { error: 'Access denied: Edit permission required' },
+        { status: 403 }
+      );
     }
 
     const { id } = await params;
@@ -80,11 +54,14 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Verify authentication and admin status
-    const authCheck = await checkAdminAccess(request.headers.get('authorization'));
+    // Check SMS permissions - need EDIT access
+    const permissions = await checkSMSPermissions(request.headers.get('authorization'));
     
-    if (!authCheck.isAdmin) {
-      return NextResponse.json({ error: authCheck.error }, { status: authCheck.status });
+    if (!permissions.canEdit) {
+      return NextResponse.json(
+        { error: 'Access denied: Edit permission required' },
+        { status: 403 }
+      );
     }
 
     const { id } = await params;

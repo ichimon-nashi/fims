@@ -28,6 +28,13 @@ export async function GET(request: NextRequest) {
 			);
 		}
 
+		// DEBUG: Log app_permissions
+		console.log('=== AUTH VERIFY DEBUG ===');
+		console.log('User ID:', user.id);
+		console.log('Employee ID:', user.employee_id);
+		console.log('Has app_permissions:', !!user.app_permissions);
+		console.log('App permissions:', JSON.stringify(user.app_permissions, null, 2));
+
 		// Remove password from user object
 		const { password_hash, ...userWithoutPassword } = user;
 

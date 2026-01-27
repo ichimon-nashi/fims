@@ -444,7 +444,7 @@ ${errorMessages}`);
 				Line: question.question_line,
 				// FIXED: Include difficulty for level 10+ users in export
 				...(currentUser &&
-					currentUser.authentication_level >= 10 && {
+					currentUser?.employee_id === 'admin' && {
 						"Difficulty Level": question.difficulty_level || 3,
 					}),
 			}));
@@ -776,7 +776,7 @@ ${errorMessages}`);
 			filterable: false,
 		},
 		// Difficulty Level - only visible to level 10+
-		...(currentUser && currentUser.authentication_level >= 10
+		...(currentUser && currentUser?.employee_id === 'admin'
 			? [
 					{
 						key: "difficulty_level",
@@ -911,7 +911,7 @@ ${errorMessages}`);
 							<small>Example: 10</small>
 						</li>
 						{currentUser &&
-							currentUser.authentication_level >= 10 && (
+							currentUser?.employee_id === 'admin' && (
 								<li>
 									<strong>Difficulty Level</strong> (or
 									&quot;difficulty_level&quot;) - Optional
@@ -1057,7 +1057,7 @@ const QuestionForm = ({
 
 	// FIXED: Determine if difficulty selector should be shown
 	const showDifficulty =
-		currentUser && currentUser.authentication_level >= 10;
+		currentUser && currentUser?.employee_id === 'admin';
 
 	return (
 		<div className={styles.modal}>

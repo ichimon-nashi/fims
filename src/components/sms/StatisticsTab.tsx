@@ -30,7 +30,11 @@ interface YearlyStats {
 	[efCode: string]: number;
 }
 
-export default function StatisticsTab() {
+interface StatisticsTabProps {
+	isAdmin: boolean;
+}
+
+export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 	const [entries, setEntries] = useState<SRMEntry[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [exporting, setExporting] = useState(false);
@@ -479,22 +483,24 @@ export default function StatisticsTab() {
 						</select>
 					</div>
 
-					<div className={styles.buttonGroup}>
-						<button
-							onClick={captureScreenshot}
-							className={styles.screenshotButton}
-							disabled={capturing}
-						>
-							{capturing ? "⏳ 截圖中..." : "📸 截圖"}
-						</button>
-						<button
-							onClick={exportToExcel}
-							className={styles.exportButton}
-							disabled={exporting}
-						>
-							{exporting ? "⏳ 匯出中..." : "📊 匯出 Excel"}
-						</button>
-					</div>
+					{isAdmin && (
+						<div className={styles.buttonGroup}>
+							<button
+								onClick={captureScreenshot}
+								className={styles.screenshotButton}
+								disabled={capturing}
+							>
+								{capturing ? "⏳ 截圖中..." : "📸 截圖"}
+							</button>
+							<button
+								onClick={exportToExcel}
+								className={styles.exportButton}
+								disabled={exporting}
+							>
+								{exporting ? "⏳ 匯出中..." : "📊 匯出 Excel"}
+							</button>
+						</div>
+					)}
 				</div>
 
 				<div className={styles.summary}>

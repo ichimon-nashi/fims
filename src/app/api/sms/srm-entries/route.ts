@@ -1,49 +1,19 @@
 // src/app/api/sms/srm-entries/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { verifyToken } from "@/lib/auth";
-import { getUserById } from "@/lib/database";
+import { checkSMSPermissions } from "@/lib/smsPermissions";
 import { getSRMTableEntries } from "@/lib/smsDatabase";
-
-const ADMIN_ACCOUNTS = ["admin", "21986", "51892"];
-
-async function checkAdminAccess(authHeader: string | null) {
-	if (!authHeader || !authHeader.startsWith("Bearer ")) {
-		return { isAdmin: false, error: "Unauthorized", status: 401 };
-	}
-
-	const token = authHeader.substring(7);
-	const decoded = verifyToken(token);
-
-	// Get user from database to check employee_id
-	const user = await getUserById(decoded.userId);
-
-	if (!user) {
-		return { isAdmin: false, error: "User not found", status: 404 };
-	}
-
-	// Check if user is admin using employee_id
-	const isAdmin =
-		ADMIN_ACCOUNTS.includes(user.employee_id) ||
-		ADMIN_ACCOUNTS.includes(user.email);
-
-	if (!isAdmin) {
-		return { isAdmin: false, error: "Access denied", status: 403 };
-	}
-
-	return { isAdmin: true, userId: decoded.userId };
-}
 
 export async function GET(request: NextRequest) {
 	try {
-		// Verify authentication and admin status
-		const authCheck = await checkAdminAccess(
+		// Check SMS permissions - need VIEW access
+		const permissions = await checkSMSPermissions(
 			request.headers.get("authorization")
 		);
 
-		if (!authCheck.isAdmin) {
+		if (!permissions.canView) {
 			return NextResponse.json(
-				{ error: authCheck.error },
-				{ status: authCheck.status }
+				{ error: permissions.error },
+				{ status: permissions.status || 403 }
 			);
 		}
 
@@ -74,15 +44,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
 	try {
-		// Verify authentication and admin status
-		const authCheck = await checkAdminAccess(
+		// Check SMS permissions - need EDIT access
+		const permissions = await checkSMSPermissions(
 			request.headers.get("authorization")
 		);
 
-		if (!authCheck.isAdmin) {
+		if (!permissions.canEdit) {
 			return NextResponse.json(
-				{ error: authCheck.error },
-				{ status: authCheck.status }
+				{ error: "Access denied: Edit permission required" },
+				{ status: 403 }
 			);
 		}
 
@@ -118,7 +88,7 @@ export async function POST(request: NextRequest) {
 			post_mitigation_assessment: body.post_mitigation_assessment,
 			human_factors_codes: body.human_factors_codes,
 			ef_attribute_codes: body.ef_attribute_codes,
-			created_by: authCheck.userId!,
+			created_by: permissions.userId!,
 		});
 
 		return NextResponse.json(entry, { status: 201 });

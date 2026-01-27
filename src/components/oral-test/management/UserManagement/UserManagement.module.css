@@ -42,6 +42,10 @@
 	margin-bottom: 1rem;
 }
 
+.loading p {
+	color: #FFFF;
+}
+
 /* Admin status indicator */
 .adminIndicator {
 	background: linear-gradient(135deg, #ff6b6b, #ffa500);

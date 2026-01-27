@@ -1,44 +1,42 @@
-// src/app/api/users/[id]/route.ts - FIXED UPDATE QUERY
+// src/app/api/users/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { verifyToken, extractTokenFromHeader, hashPassword } from "@/lib/auth";
+import { checkOralTestPermissions } from "@/lib/oralTestPermissions";
+import { hashPassword } from "@/lib/auth";
 
 export async function GET(
 	request: NextRequest,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
-		const token = extractTokenFromHeader(
+		// Check Oral Test permissions - need MANAGE_USERS permission
+		const permissions = await checkOralTestPermissions(
 			request.headers.get("authorization")
 		);
 
-		if (!token) {
+		if (!permissions.canManageUsers) {
 			return NextResponse.json(
-				{ message: "No token provided" },
-				{ status: 401 }
+				{ message: "Access denied: Permission to manage users required" },
+				{ status: 403 }
 			);
 		}
 
-		const decoded = verifyToken(token);
 		const { id } = await params;
-
 		console.log("Looking up user with ID:", id);
 
 		const supabase = await createClient();
 
-		// Try by employee_id first since that's what examinees probably use
+		// Try by employee_id first
 		let { data: user, error } = await supabase
 			.from("users")
 			.select("*")
 			.eq("employee_id", id)
 			.single();
 
-		// If not found, try by UUID (only if id looks like a UUID)
+		// If not found, try by UUID
 		if (
 			error &&
-			/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-				id
-			)
+			/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
 		) {
 			console.log("User not found by employee_id, trying UUID:", id);
 			const result = await supabase
@@ -67,26 +65,8 @@ export async function GET(
 		// Remove password hash from response
 		const { password_hash, ...userWithoutPassword } = user;
 
-		// IMPORTANT: Keep employee_id for oral test interface
-		// The avatar and test interface need employee_id to function properly
-		// Always include both employee_id and employeeID for compatibility
+		// Add employeeID for compatibility
 		userWithoutPassword.employeeID = userWithoutPassword.employee_id;
-
-		// Hide sensitive fields based on auth level
-		if (decoded.authLevel < 10) {
-			delete userWithoutPassword.handicap_level;
-		}
-
-		if (decoded.authLevel < 20) {
-			delete userWithoutPassword.authentication_level;
-		}
-
-		// NOTE: employee_id is now always visible for all auth levels
-		// This is necessary for:
-		// 1. Avatar loading in test interface
-		// 2. Roster management
-		// 3. Test result tracking
-		// Employee ID is not sensitive information in this context
 
 		return NextResponse.json(userWithoutPassword);
 	} catch (error: any) {
@@ -106,22 +86,14 @@ export async function PUT(
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
-		const token = extractTokenFromHeader(
+		// Check Oral Test permissions - need MANAGE_USERS permission
+		const permissions = await checkOralTestPermissions(
 			request.headers.get("authorization")
 		);
 
-		if (!token) {
+		if (!permissions.canManageUsers) {
 			return NextResponse.json(
-				{ message: "No token provided" },
-				{ status: 401 }
-			);
-		}
-
-		const decoded = verifyToken(token);
-
-		if (decoded.authLevel < 5) {
-			return NextResponse.json(
-				{ message: "Insufficient permissions" },
+				{ message: "Access denied: Permission to manage users required" },
 				{ status: 403 }
 			);
 		}
@@ -129,12 +101,7 @@ export async function PUT(
 		const { id } = await params;
 		const updateData = await request.json();
 
-		console.log(
-			"Updating user:",
-			id,
-			"with data:",
-			Object.keys(updateData)
-		);
+		console.log("Updating user:", id, "with data:", Object.keys(updateData));
 
 		// Remove fields that shouldn't be updated directly
 		delete updateData.id;
@@ -148,28 +115,20 @@ export async function PUT(
 			delete updateData.password;
 		}
 
-		// Restrict auth level changes to high-level users
-		if (updateData.authentication_level && decoded.authLevel < 20) {
+		// Users with manage_users can only set auth levels 1-3
+		if (updateData.authentication_level && updateData.authentication_level > 3) {
 			delete updateData.authentication_level;
 		}
 
-		// Restrict handicap level changes to mid-level users
-		if (updateData.handicap_level && decoded.authLevel < 10) {
-			delete updateData.handicap_level;
-		}
-
-		// Only allow employee_id changes for level 99 users
-		if (updateData.employee_id && decoded.authLevel < 99) {
-			delete updateData.employee_id;
-		}
+		// Don't allow changing employee_id
+		delete updateData.employee_id;
 
 		const supabase = await createClient();
 		
-		// CRITICAL FIX: Added .eq("id", id) to specify which user to update
 		const { data: updatedUser, error } = await supabase
 			.from("users")
 			.update(updateData)
-			.eq("id", id)  // THIS WAS MISSING!
+			.eq("id", id)
 			.select("*")
 			.single();
 
@@ -209,22 +168,14 @@ export async function DELETE(
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
-		const token = extractTokenFromHeader(
+		// Check Oral Test permissions - need MANAGE_USERS permission
+		const permissions = await checkOralTestPermissions(
 			request.headers.get("authorization")
 		);
 
-		if (!token) {
+		if (!permissions.canManageUsers) {
 			return NextResponse.json(
-				{ message: "No token provided" },
-				{ status: 401 }
-			);
-		}
-
-		const decoded = verifyToken(token);
-
-		if (decoded.authLevel < 5) {
-			return NextResponse.json(
-				{ message: "Insufficient permissions" },
+				{ message: "Access denied: Permission to manage users required" },
 				{ status: 403 }
 			);
 		}

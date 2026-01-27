@@ -3,14 +3,18 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
+import AccessControlPanel from "@/components/admin/AccessControlPanel/AccessControlPanel";
 import styles from "./UserSettingsModal.module.css";
 
 interface UserSettingsModalProps {
   onClose: () => void;
 }
 
+type TabType = "personal" | "permissions";
+
 const UserSettingsModal = ({ onClose }: UserSettingsModalProps) => {
   const { user, token } = useAuth();
+  const [activeTab, setActiveTab] = useState<TabType>("personal");
   const [formData, setFormData] = useState({
     email: user?.email || "",
     currentPassword: "",
@@ -20,6 +24,10 @@ const UserSettingsModal = ({ onClose }: UserSettingsModalProps) => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  // Check if user can access permissions tab
+  const canAccessPermissions = 
+    user?.employee_id === "admin" || user?.employee_id === "51892";
 
   useEffect(() => {
     if (user) {
@@ -115,109 +123,133 @@ const UserSettingsModal = ({ onClose }: UserSettingsModalProps) => {
 
   return (
     <div className={styles.modalBackdrop} onClick={handleBackdropClick}>
-      <div className={styles.modal}>
+      <div className={`${styles.modal} ${activeTab === "permissions" && canAccessPermissions ? styles.wide : ""}`}>
         <div className={styles.modalHeader}>
-          <h2 className={styles.modalTitle}>個人設定</h2>
+          <div className={styles.headerContent}>
+            <h2 className={styles.modalTitle}>設定</h2>
+            {canAccessPermissions && (
+              <div className={styles.tabs}>
+                <button
+                  className={`${styles.tab} ${activeTab === "personal" ? styles.tabActive : ""}`}
+                  onClick={() => setActiveTab("personal")}
+                >
+                  個人設定
+                </button>
+                <button
+                  className={`${styles.tab} ${activeTab === "permissions" ? styles.tabActive : ""}`}
+                  onClick={() => setActiveTab("permissions")}
+                >
+                  權限設定
+                </button>
+              </div>
+            )}
+          </div>
           <button onClick={onClose} className={styles.closeButton}>
             ✕
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <div className={styles.userInfo}>
-            <div className={styles.infoRow}>
-              <span className={styles.label}>員工編號:</span>
-              <span className={styles.value}>{user?.employee_id}</span>
-            </div>
-            <div className={styles.infoRow}>
-              <span className={styles.label}>姓名:</span>
-              <span className={styles.value}>{user?.full_name}</span>
-            </div>
-            <div className={styles.infoRow}>
-              <span className={styles.label}>職稱:</span>
-              <span className={styles.value}>{user?.rank}</span>
-            </div>
-            <div className={styles.infoRow}>
-              <span className={styles.label}>基地:</span>
-              <span className={styles.value}>{user?.base}</span>
-            </div>
-          </div>
-
-          <div className={styles.formGroup}>
-            <label htmlFor="email" className={styles.formLabel}>
-              電子信箱:
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              className={styles.formInput}
-              required
-            />
-          </div>
-
-          <div className={styles.passwordSection}>
-            <h3 className={styles.sectionTitle}>變更密碼</h3>
-            <p className={styles.sectionNote}>如不需要變更密碼，請留空</p>
-
-            <div className={styles.formGroup}>
-              <label htmlFor="newPassword" className={styles.formLabel}>
-                新密碼:
-              </label>
-              <input
-                type="password"
-                id="newPassword"
-                name="newPassword"
-                value={formData.newPassword}
-                onChange={handleInputChange}
-                className={styles.formInput}
-                minLength={6}
-              />
+        {activeTab === "personal" ? (
+          <form onSubmit={handleSubmit} className={styles.form}>
+            <div className={styles.userInfo}>
+              <div className={styles.infoRow}>
+                <span className={styles.label}>員工編號:</span>
+                <span className={styles.value}>{user?.employee_id}</span>
+              </div>
+              <div className={styles.infoRow}>
+                <span className={styles.label}>姓名:</span>
+                <span className={styles.value}>{user?.full_name}</span>
+              </div>
+              <div className={styles.infoRow}>
+                <span className={styles.label}>職稱:</span>
+                <span className={styles.value}>{user?.rank}</span>
+              </div>
+              <div className={styles.infoRow}>
+                <span className={styles.label}>基地:</span>
+                <span className={styles.value}>{user?.base}</span>
+              </div>
             </div>
 
             <div className={styles.formGroup}>
-              <label htmlFor="confirmPassword" className={styles.formLabel}>
-                確認新密碼:
+              <label htmlFor="email" className={styles.formLabel}>
+                電子信箱:
               </label>
               <input
-                type="password"
-                id="confirmPassword"
-                name="confirmPassword"
-                value={formData.confirmPassword}
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
                 onChange={handleInputChange}
                 className={styles.formInput}
-                minLength={6}
+                required
               />
             </div>
+
+            <div className={styles.passwordSection}>
+              <h3 className={styles.sectionTitle}>變更密碼</h3>
+              <p className={styles.sectionNote}>如不需要變更密碼，請留空</p>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="newPassword" className={styles.formLabel}>
+                  新密碼:
+                </label>
+                <input
+                  type="password"
+                  id="newPassword"
+                  name="newPassword"
+                  value={formData.newPassword}
+                  onChange={handleInputChange}
+                  className={styles.formInput}
+                  minLength={6}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="confirmPassword" className={styles.formLabel}>
+                  確認新密碼:
+                </label>
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  className={styles.formInput}
+                  minLength={6}
+                />
+              </div>
+            </div>
+
+            {message && (
+              <div className={styles.successMessage}>{message}</div>
+            )}
+
+            {error && (
+              <div className={styles.errorMessage}>{error}</div>
+            )}
+
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                onClick={onClose}
+                className={styles.cancelButton}
+              >
+                取消
+              </button>
+              <button
+                type="submit"
+                className={styles.saveButton}
+                disabled={loading}
+              >
+                {loading ? "儲存中..." : "儲存變更"}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className={styles.permissionsContent}>
+            <AccessControlPanel />
           </div>
-
-          {message && (
-            <div className={styles.successMessage}>{message}</div>
-          )}
-
-          {error && (
-            <div className={styles.errorMessage}>{error}</div>
-          )}
-
-          <div className={styles.modalActions}>
-            <button
-              type="button"
-              onClick={onClose}
-              className={styles.cancelButton}
-            >
-              取消
-            </button>
-            <button
-              type="submit"
-              className={styles.saveButton}
-              disabled={loading}
-            >
-              {loading ? "儲存中..." : "儲存變更"}
-            </button>
-          </div>
-        </form>
+        )}
       </div>
     </div>
   );

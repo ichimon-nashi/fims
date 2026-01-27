@@ -1,37 +1,25 @@
 // src/app/api/users/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { verifyToken, extractTokenFromHeader, hashPassword } from "@/lib/auth";
+import { checkOralTestPermissions } from "@/lib/oralTestPermissions";
+import { hashPassword } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
 	try {
-		const token = extractTokenFromHeader(
+		// Check Oral Test permissions - need MANAGE_USERS permission to view all users
+		const permissions = await checkOralTestPermissions(
 			request.headers.get("authorization")
 		);
 
-		if (!token) {
+		if (!permissions.canManageUsers) {
+			console.log("Access denied: manage_users permission required");
 			return NextResponse.json(
-				{ message: "No token provided" },
-				{ status: 401 }
+				{ message: "Access denied: Permission to manage users required" },
+				{ status: 403 }
 			);
 		}
 
-		let decoded;
-		try {
-			decoded = verifyToken(token);
-		} catch (tokenError: unknown) {
-			console.error("Token verification failed:", tokenError);
-			return NextResponse.json(
-				{
-					message: "Invalid token",
-					debug: {
-						error: tokenError instanceof Error ? tokenError.message : String(tokenError),
-						tokenPreview: token.substring(0, 20) + "..."
-					}
-				},
-				{ status: 401 }
-			);
-		}
+		console.log("User has manage_users permission:", permissions.userId);
 
 		const supabase = await createClient();
 
@@ -49,26 +37,12 @@ export async function GET(request: NextRequest) {
 			);
 		}
 
-		// Filter and clean user data based on authentication level
+		// Filter and clean user data
 		const cleanedUsers = users.map((user) => {
 			// Remove password hash from all responses
 			const { password_hash, ...userWithoutPassword } = user;
 
 			// Add employeeID for frontend compatibility
-			userWithoutPassword.employeeID = userWithoutPassword.employee_id;
-
-			// Hide sensitive fields based on auth level
-			if (decoded.authLevel < 10) {
-				delete userWithoutPassword.handicap_level;
-			}
-
-			if (decoded.authLevel < 20) {
-				delete userWithoutPassword.authentication_level;
-			}
-
-			// REMOVED: Employee ID hiding - make employee_id visible for all users
-			// This ensures the roster functionality works for all instructors
-			// Keep both formats for all users
 			userWithoutPassword.employeeID = userWithoutPassword.employee_id;
 
 			return userWithoutPassword;
@@ -89,32 +63,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
 	try {
-		const token = extractTokenFromHeader(
+		// Check Oral Test permissions - need MANAGE_USERS permission to create users
+		const permissions = await checkOralTestPermissions(
 			request.headers.get("authorization")
 		);
 
-		if (!token) {
+		if (!permissions.canManageUsers) {
+			console.log("Access denied: manage_users permission required for creation");
 			return NextResponse.json(
-				{ message: "No token provided" },
-				{ status: 401 }
-			);
-		}
-
-		let decoded;
-		try {
-			decoded = verifyToken(token);
-		} catch (tokenError: unknown) {
-			console.error("Token verification failed:", tokenError);
-			return NextResponse.json(
-				{ message: "Invalid token" },
-				{ status: 401 }
-			);
-		}
-
-		// Check permissions for creating users
-		if (decoded.authLevel < 5) {
-			return NextResponse.json(
-				{ message: "Insufficient permissions to create users" },
+				{ message: "Access denied: Permission to manage users required" },
 				{ status: 403 }
 			);
 		}
@@ -167,7 +124,7 @@ export async function POST(request: NextRequest) {
 			authentication_level: userData.authentication_level || 1,
 		};
 
-		// Hash password if provided - THIS IS THE FIX
+		// Hash password if provided
 		if (userData.password) {
 			newUser.password_hash = await hashPassword(userData.password);
 		} else if (userData.password_hash) {
@@ -175,13 +132,9 @@ export async function POST(request: NextRequest) {
 			newUser.password_hash = userData.password_hash;
 		}
 
-		// Restrict certain field modifications based on auth level
-		if (newUser.authentication_level && decoded.authLevel < 20) {
-			newUser.authentication_level = 1; // Default for low-level users
-		}
-
-		if (newUser.handicap_level && decoded.authLevel < 10) {
-			newUser.handicap_level = 0; // Default for low-level users
+		// Users with manage_users can only set auth level 1-3
+		if (newUser.authentication_level && newUser.authentication_level > 3) {
+			newUser.authentication_level = 1; // Default for safety
 		}
 
 		const { data: createdUser, error } = await supabase

@@ -4,6 +4,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import PermissionGuard from '@/components/common/PermissionGuard';
 import RosterComponent from '@/components/roster/RosterComponent';
 import Image from 'next/image';
 
@@ -58,7 +59,11 @@ function RosterPageContent() {
     return null; // Will redirect to login
   }
 
-  return <RosterComponent />;
+  return (
+    <PermissionGuard app="roster">
+      <RosterComponent />
+    </PermissionGuard>
+  );
 }
 
 export default function RosterPage() {

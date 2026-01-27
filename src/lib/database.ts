@@ -19,6 +19,8 @@ export const getAllUsers = async (): Promise<User[]> => {
 				filter,
 				handicap_level,
 				authentication_level,
+				app_permissions,
+				gender,
 				password_hash,
 				created_at,
 				updated_at
@@ -163,7 +165,7 @@ export async function getFIInstructors(): Promise<User[]> {
 	
 	const { data, error } = await supabase
 		.from("users")
-		.select("id, employee_id, full_name, rank, base, email, filter, handicap_level, authentication_level, created_at, updated_at")
+		.select("id, employee_id, full_name, rank, base, email, filter, handicap_level, authentication_level, app_permissions, gender, created_at, updated_at")
 		.eq("rank", "FI")
 		.eq("employee_id", "22119")
 		.order("full_name");

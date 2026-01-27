@@ -1,0 +1,1078 @@
+/* src/components/admin/AccessControlPanel/AccessControlPanel.module.css */
+
+.container {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+	padding: 1.5rem 1rem;
+	height: 100%;
+	width: 100%;
+	box-sizing: border-box;
+	overflow: hidden;
+}
+
+/* Search Section */
+.searchSection {
+	background: rgba(26, 31, 53, 0.5);
+	border: 1px solid rgba(96, 165, 250, 0.2);
+	border-radius: 0.5rem;
+	padding: 1rem;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.searchHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 0.75rem;
+}
+
+.searchTitle {
+	font-size: 1rem;
+	font-weight: 600;
+	color: #e8e9ed;
+	margin: 0;
+}
+
+.userCount {
+	font-size: 0.75rem;
+	color: #60a5fa;
+	background: rgba(96, 165, 250, 0.1);
+	padding: 0.25rem 0.75rem;
+	border-radius: 1rem;
+	font-weight: 500;
+}
+
+.searchInput {
+	width: 100%;
+	padding: 0.75rem 1rem;
+	background: rgba(26, 31, 53, 0.8);
+	border: 1px solid rgba(96, 165, 250, 0.3);
+	border-radius: 0.375rem;
+	font-size: 0.875rem;
+	color: #e8e9ed;
+	transition: all 0.2s;
+	box-sizing: border-box;
+}
+
+.searchInput:focus {
+	outline: none;
+	border-color: #60a5fa;
+	box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+	background: rgba(26, 31, 53, 1);
+}
+
+.searchInput::placeholder {
+	color: #6b7280;
+}
+
+/* Content Section */
+.contentSection {
+	flex: 1;
+	background: rgba(26, 31, 53, 0.3);
+	border: 1px solid rgba(96, 165, 250, 0.1);
+	border-radius: 0.5rem;
+	padding: 1rem;
+	width: 100%;
+	box-sizing: border-box;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+}
+
+/* Split Layout */
+.splitLayout {
+	display: grid;
+	grid-template-columns: 32% 68%;
+	gap: 2rem;
+	height: 100%;
+	flex: 1;
+	overflow: hidden;
+}
+
+.userListColumn {
+	display: flex;
+	flex-direction: column;
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding-right: 0.75rem;
+	padding-top: 0.5rem;
+	height: 100%;
+}
+
+.permissionsColumn {
+	display: flex;
+	flex-direction: column;
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding-left: 1rem;
+	padding-right: 2.5rem;
+	padding-top: 0.5rem;
+	border-left: 2px solid rgba(96, 165, 250, 0.2);
+	height: 100%;
+}
+
+/* Responsive adjustments */
+@media (min-width: 1440px) {
+	.splitLayout {
+		grid-template-columns: 30% 70%;
+		gap: 2.5rem;
+	}
+}
+
+@media (max-width: 1400px) {
+	.splitLayout {
+		grid-template-columns: 35% 65%;
+		gap: 1.75rem;
+	}
+}
+
+@media (max-width: 1200px) {
+	.splitLayout {
+		grid-template-columns: 38% 62%;
+		gap: 1.5rem;
+	}
+}
+
+@media (max-width: 1024px) {
+	.container {
+		padding: 1rem 0.5rem;
+	}
+
+	.splitLayout {
+		grid-template-columns: 1fr;
+		gap: 0;
+		min-height: auto;
+	}
+
+	.userListColumn {
+		max-height: 45vh;
+		overflow-y: auto;
+		padding-right: 0;
+		margin-bottom: 1rem;
+		border-bottom: 2px solid rgba(96, 165, 250, 0.2);
+		padding-bottom: 1rem;
+	}
+
+	.permissionsColumn {
+		border-left: none;
+		padding-left: 0;
+		max-height: none;
+	}
+
+	.selectedUserSection {
+		padding: 1rem;
+	}
+
+	.permissionsEditor {
+		gap: 1rem;
+	}
+
+	.authLevelSection,
+	.appPermissionsSection {
+		padding: 0.75rem;
+	}
+}
+
+@media (max-width: 768px) {
+	.container {
+		padding: 0.75rem 0.25rem;
+	}
+
+	.searchSection {
+		padding: 0.75rem;
+	}
+
+	.contentSection {
+		padding: 0.75rem;
+	}
+
+	.userCard {
+		padding: 0.75rem;
+	}
+
+	.userCardBody {
+		font-size: 0.813rem;
+	}
+
+	.selectedUserSection {
+		padding: 0.875rem;
+	}
+
+	.selectedUserHeader {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.75rem;
+	}
+
+	.resetPasswordButton {
+		width: 100%;
+		justify-content: center;
+	}
+
+	.authLevelSection,
+	.appPermissionsSection {
+		padding: 0.625rem;
+	}
+
+	.authLevelSelector {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.authLevelPreview {
+		align-self: center;
+	}
+}
+
+/* Loading State */
+.loadingState {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 3rem 1rem;
+	color: #9ca3af;
+}
+
+.spinner {
+	width: 40px;
+	height: 40px;
+	border: 3px solid rgba(96, 165, 250, 0.2);
+	border-top-color: #60a5fa;
+	border-radius: 50%;
+	animation: spin 0.8s linear infinite;
+	margin-bottom: 1rem;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Error State */
+.errorState {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 3rem 1rem;
+}
+
+.errorIcon {
+	font-size: 3rem;
+	margin-bottom: 1rem;
+	opacity: 0.7;
+}
+
+.errorText {
+	color: #ef4444;
+	font-size: 0.875rem;
+	margin: 0 0 1rem 0;
+}
+
+.retryButton {
+	padding: 0.5rem 1rem;
+	background: #3b82f6;
+	color: white;
+	border: 1px solid #3b82f6;
+	border-radius: 0.375rem;
+	font-size: 0.875rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s;
+}
+
+.retryButton:hover {
+	background: #2563eb;
+	border-color: #2563eb;
+	box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+}
+
+/* Empty State */
+.emptyState {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 3rem 1rem;
+}
+
+.emptyIcon {
+	font-size: 3rem;
+	margin-bottom: 1rem;
+	opacity: 0.5;
+}
+
+.emptyText {
+	color: #9ca3af;
+	font-size: 0.875rem;
+	margin: 0;
+}
+
+/* User List */
+.userList {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	width: 100%;
+}
+
+/* User Card */
+.userCard {
+	background: rgba(26, 31, 53, 0.6);
+	border: 1px solid rgba(96, 165, 250, 0.2);
+	border-radius: 0.5rem;
+	padding: 1rem;
+	cursor: pointer;
+	transition: all 0.2s;
+	width: 100%;
+	box-sizing: border-box;
+	overflow: visible;
+}
+
+.userCard:hover {
+	background: rgba(26, 31, 53, 0.9);
+	border-color: #60a5fa;
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.userCardSelected {
+	background: rgba(96, 165, 250, 0.15) !important;
+	border-color: #60a5fa !important;
+	box-shadow: 0 0 20px rgba(96, 165, 250, 0.3);
+}
+
+.userCardHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 0.75rem;
+}
+
+.userBasicInfo {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	flex: 1;
+	min-width: 0;
+}
+
+.userAvatarContainer {
+	position: relative;
+	width: 72px;
+	height: 72px;
+	flex-shrink: 0;
+}
+
+.userAvatar {
+	width: 72px;
+	height: 72px;
+	border: 2px solid rgba(96, 165, 250, 0.3);
+	border-radius: 50%;
+	object-fit: cover;
+	background: rgba(26, 31, 53, 0.5);
+}
+
+.avatarFallback {
+	width: 72px;
+	height: 72px;
+	border: 2px solid rgba(96, 165, 250, 0.3);
+	border-radius: 50%;
+	background: linear-gradient(
+		135deg,
+		rgba(96, 165, 250, 0.2),
+		rgba(59, 130, 246, 0.3)
+	);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 2rem;
+	font-weight: 600;
+	color: #60a5fa;
+	text-transform: uppercase;
+}
+
+.userNameSection {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	flex: 1;
+	min-width: 0;
+}
+
+.userName {
+	font-size: 1rem;
+	font-weight: 600;
+	color: #e8e9ed;
+}
+
+.authLevelBadge {
+	position: absolute;
+	bottom: 0;
+	right: 0;
+	width: 36px;
+	height: 36px;
+	background: rgba(26, 31, 53, 0.95);
+	border: 2px solid rgba(96, 165, 250, 0.5);
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+	z-index: 10;
+}
+
+.authLevelGif {
+	width: 85%;
+	height: 85%;
+	object-fit: contain;
+}
+
+.userEmployeeId {
+	font-size: 0.75rem;
+	color: #9ca3af;
+}
+
+.selectIndicator {
+	font-size: 1.25rem;
+	color: #60a5fa;
+	font-weight: 600;
+	transition: all 0.2s;
+}
+
+.userCard:hover .selectIndicator {
+	transform: translateX(4px);
+}
+
+.userCardSelected .selectIndicator {
+	transform: scale(1.2);
+}
+
+.userCardBody {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	padding-top: 0.75rem;
+	border-top: 1px solid rgba(96, 165, 250, 0.1);
+}
+
+.userDetail {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-size: 0.813rem;
+}
+
+.detailLabel {
+	color: #9ca3af;
+	font-weight: 500;
+}
+
+.detailValue {
+	color: #e8e9ed;
+	font-weight: 600;
+}
+
+/* Selected User Section */
+.selectedUserSection {
+	background: rgba(26, 31, 53, 0.5);
+	border: 1px solid rgba(96, 165, 250, 0.3);
+	border-radius: 0.5rem;
+	padding: 1rem;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	box-sizing: border-box;
+}
+
+.selectedUserHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 1rem;
+	margin-bottom: 1.25rem;
+	padding-bottom: 0.875rem;
+	border-bottom: 1px solid rgba(96, 165, 250, 0.2);
+	flex-shrink: 0;
+	flex-wrap: wrap;
+}
+
+.selectedUserTitle {
+	font-size: 1.063rem;
+	font-weight: 600;
+	color: #e8e9ed;
+	margin: 0;
+	flex: 1;
+	min-width: 200px;
+}
+
+.resetPasswordButton {
+	padding: 0.5rem 1rem;
+	background: rgba(96, 165, 250, 0.15);
+	color: #60a5fa;
+	border: 1px solid rgba(96, 165, 250, 0.3);
+	border-radius: 0.375rem;
+	font-size: 0.875rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+.resetPasswordButton:hover {
+	background: rgba(96, 165, 250, 0.25);
+	border-color: #60a5fa;
+	box-shadow: 0 0 15px rgba(96, 165, 250, 0.3);
+}
+
+/* Permissions Editor */
+.permissionsEditor {
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
+	flex: 1;
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding-right: 0.25rem;
+}
+
+.sectionLabel {
+	display: block;
+	font-size: 0.938rem;
+	font-weight: 600;
+	color: #e8e9ed;
+	margin-bottom: 0.5rem;
+}
+
+.sectionHint {
+	font-size: 0.75rem;
+	color: #9ca3af;
+	margin: 0 0 0.75rem 0;
+	font-style: italic;
+}
+
+/* Authentication Level Section */
+.authLevelSection {
+	background: rgba(26, 31, 53, 0.3);
+	border: 1px solid rgba(96, 165, 250, 0.15);
+	border-radius: 0.5rem;
+	padding: 0.875rem;
+	box-sizing: border-box;
+}
+
+.authLevelSelector {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.authLevelDropdown {
+	flex: 1;
+	padding: 0.625rem;
+	background: rgba(26, 31, 53, 0.8);
+	border: 1px solid rgba(96, 165, 250, 0.3);
+	border-radius: 0.375rem;
+	color: #e8e9ed;
+	font-size: 0.813rem;
+	cursor: pointer;
+	transition: all 0.2s;
+	box-sizing: border-box;
+}
+
+.authLevelDropdown:focus {
+	outline: none;
+	border-color: #60a5fa;
+	box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+}
+
+.authLevelPreview {
+	width: 44px;
+	height: 44px;
+	background: rgba(26, 31, 53, 0.95);
+	border: 2px solid rgba(96, 165, 250, 0.5);
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+	flex-shrink: 0;
+}
+
+.authLevelPreviewGif {
+	width: 85%;
+	height: 85%;
+	object-fit: contain;
+}
+
+/* App Permissions Section */
+.appPermissionsSection {
+	background: rgba(26, 31, 53, 0.3);
+	border: 1px solid rgba(96, 165, 250, 0.15);
+	border-radius: 0.5rem;
+	padding: 0.875rem;
+	box-sizing: border-box;
+}
+
+.appPermissionsList {
+	display: flex;
+	flex-direction: column;
+	gap: 0.625rem;
+}
+
+.appPermissionCard {
+	background: rgba(26, 31, 53, 0.5);
+	border: 1px solid rgba(96, 165, 250, 0.2);
+	border-radius: 0.375rem;
+	padding: 0.625rem;
+	transition: all 0.2s;
+	box-sizing: border-box;
+}
+
+.appPermissionCard:hover {
+	background: rgba(26, 31, 53, 0.8);
+	border-color: #60a5fa;
+}
+
+.appPermissionHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.appPermissionLabel {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	cursor: pointer;
+	flex: 1;
+}
+
+.appCheckbox {
+	width: 18px;
+	height: 18px;
+	cursor: pointer;
+	accent-color: #60a5fa;
+}
+
+.appCheckbox:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.appName {
+	font-size: 0.875rem;
+	font-weight: 500;
+	color: #e8e9ed;
+}
+
+.appSubPermissions {
+	margin-top: 0.75rem;
+	padding-top: 0.75rem;
+	border-top: 1px solid rgba(96, 165, 250, 0.1);
+}
+
+.subPermissionNote {
+	font-size: 0.75rem;
+	color: #9ca3af;
+	margin: 0;
+	font-style: italic;
+}
+
+/* Permission Actions */
+.permissionActions {
+	display: flex;
+	justify-content: flex-end;
+	padding-top: 1rem;
+	border-top: 1px solid rgba(96, 165, 250, 0.1);
+}
+
+.savePermissionsButton {
+	padding: 0.75rem 1.5rem;
+	background: #3b82f6;
+	color: white;
+	border: 1px solid #3b82f6;
+	border-radius: 0.375rem;
+	font-size: 0.875rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.savePermissionsButton:hover {
+	background: #2563eb;
+	border-color: #2563eb;
+	box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+}
+
+/* No Selection State */
+.noSelectionState {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	min-height: 400px;
+	text-align: center;
+	padding: 2rem;
+}
+
+.noSelectionIcon {
+	font-size: 4rem;
+	margin-bottom: 1rem;
+	opacity: 0.5;
+}
+
+.noSelectionTitle {
+	font-size: 1.25rem;
+	font-weight: 600;
+	color: #e8e9ed;
+	margin: 0 0 0.5rem 0;
+}
+
+.noSelectionText {
+	font-size: 0.938rem;
+	color: #9ca3af;
+	margin: 0;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+	.container {
+		padding: 1rem;
+		gap: 1rem;
+	}
+
+	.searchSection {
+		padding: 0.75rem;
+	}
+
+	.searchHeader {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.5rem;
+	}
+
+	.userCard {
+		padding: 0.75rem;
+	}
+
+	.userCardHeader {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.5rem;
+	}
+
+	.userBasicInfo {
+		width: 100%;
+	}
+
+	.selectIndicator {
+		align-self: flex-end;
+	}
+
+	.userCardBody {
+		gap: 0.75rem;
+	}
+
+	.userDetail {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.25rem;
+	}
+
+	.selectedUserSection {
+		padding: 1rem;
+	}
+}
+
+@media (max-width: 480px) {
+	.container {
+		padding: 0.75rem;
+	}
+
+	.searchInput {
+		font-size: 0.813rem;
+		padding: 0.625rem 0.875rem;
+	}
+
+	.userName {
+		font-size: 0.938rem;
+	}
+
+	.userAvatarContainer {
+		width: 60px;
+		height: 60px;
+	}
+
+	.userAvatar,
+	.avatarFallback {
+		width: 60px;
+		height: 60px;
+	}
+
+	.avatarFallback {
+		font-size: 1.5rem;
+	}
+
+	.authLevelBadge {
+		width: 30px;
+		height: 30px;
+		bottom: 0;
+		right: 0;
+	}
+
+	.userName {
+		font-size: 0.938rem;
+	}
+}
+
+/* Password Reset Modal */
+.modalBackdrop {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.7);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 2000;
+	padding: 1rem;
+}
+
+.passwordModal {
+	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+	border: 1px solid rgba(96, 165, 250, 0.3);
+	border-radius: 0.75rem;
+	width: 100%;
+	max-width: 450px;
+	box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.passwordModalHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1.5rem;
+	border-bottom: 1px solid rgba(96, 165, 250, 0.2);
+}
+
+.passwordModalTitle {
+	font-size: 1.125rem;
+	font-weight: 600;
+	color: #e8e9ed;
+	margin: 0;
+}
+
+.passwordModalClose {
+	background: none;
+	border: none;
+	font-size: 1.5rem;
+	color: #9ca3af;
+	cursor: pointer;
+	padding: 0.25rem;
+	border-radius: 0.25rem;
+	transition: all 0.2s;
+	width: 2rem;
+	height: 2rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.passwordModalClose:hover {
+	background: rgba(96, 165, 250, 0.1);
+	color: #e8e9ed;
+}
+
+.passwordModalBody {
+	padding: 1.5rem;
+}
+
+.passwordFormGroup {
+	margin-bottom: 1rem;
+}
+
+.passwordFormGroup:last-of-type {
+	margin-bottom: 0;
+}
+
+.passwordLabel {
+	display: block;
+	font-size: 0.875rem;
+	font-weight: 500;
+	color: #e8e9ed;
+	margin-bottom: 0.5rem;
+}
+
+.passwordInput {
+	width: 100%;
+	padding: 0.75rem;
+	background: rgba(26, 31, 53, 0.5);
+	border: 1px solid rgba(96, 165, 250, 0.2);
+	border-radius: 0.375rem;
+	font-size: 0.875rem;
+	color: #e8e9ed;
+	transition: all 0.2s;
+	box-sizing: border-box;
+}
+
+.passwordInput:focus {
+	outline: none;
+	border-color: #60a5fa;
+	box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+	background: rgba(26, 31, 53, 0.8);
+}
+
+.passwordInput::placeholder {
+	color: #6b7280;
+}
+
+.passwordError {
+	background: rgba(239, 68, 68, 0.15);
+	border: 1px solid rgba(239, 68, 68, 0.3);
+	color: #ef4444;
+	padding: 0.75rem;
+	border-radius: 0.375rem;
+	margin-top: 1rem;
+	font-size: 0.875rem;
+	font-weight: 500;
+}
+
+.passwordSuccess {
+	background: rgba(16, 185, 129, 0.15);
+	border: 1px solid rgba(16, 185, 129, 0.3);
+	color: #10b981;
+	padding: 0.75rem;
+	border-radius: 0.375rem;
+	margin-top: 1rem;
+	font-size: 0.875rem;
+	font-weight: 500;
+}
+
+.passwordModalActions {
+	display: flex;
+	gap: 0.75rem;
+	padding: 1rem 1.5rem 1.5rem 1.5rem;
+	border-top: 1px solid rgba(96, 165, 250, 0.1);
+}
+
+.passwordCancelButton {
+	flex: 1;
+	padding: 0.75rem;
+	background: rgba(26, 31, 53, 0.5);
+	color: #e8e9ed;
+	border: 1px solid rgba(96, 165, 250, 0.2);
+	border-radius: 0.375rem;
+	font-size: 0.875rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s;
+}
+
+.passwordCancelButton:hover:not(:disabled) {
+	background: rgba(26, 31, 53, 0.8);
+	border-color: #60a5fa;
+}
+
+.passwordCancelButton:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.passwordConfirmButton {
+	flex: 1;
+	padding: 0.75rem;
+	background: #3b82f6;
+	color: white;
+	border: 1px solid #3b82f6;
+	border-radius: 0.375rem;
+	font-size: 0.875rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s;
+}
+
+.passwordConfirmButton:hover:not(:disabled) {
+	background: #2563eb;
+	border-color: #2563eb;
+	box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+}
+
+.passwordConfirmButton:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+/* Oral Test Sub-Permissions */
+.subPermissionItem {
+	padding: 0.5rem 0;
+	border-bottom: 1px solid rgba(96, 165, 250, 0.05);
+}
+
+.subPermissionItem:last-child {
+	border-bottom: none;
+}
+
+.subPermissionLabel {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	cursor: pointer;
+	font-size: 0.813rem;
+	color: #e8e9ed;
+	padding-left: 0.5rem;
+}
+
+.subPermissionLabel span {
+	color: #e8e9ed;
+}
+
+.subCheckbox {
+	width: 16px;
+	height: 16px;
+	cursor: pointer;
+	accent-color: #60a5fa;
+}
+
+.subCheckbox:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+/* Success and Error Messages */
+.successMessage {
+	background: rgba(16, 185, 129, 0.15);
+	border: 1px solid rgba(16, 185, 129, 0.3);
+	color: #10b981;
+	padding: 0.75rem;
+	border-radius: 0.375rem;
+	margin-bottom: 1rem;
+	font-size: 0.875rem;
+	font-weight: 500;
+}
+
+.errorMessage {
+	background: rgba(239, 68, 68, 0.15);
+	border: 1px solid rgba(239, 68, 68, 0.3);
+	color: #ef4444;
+	padding: 0.75rem;
+	border-radius: 0.375rem;
+	margin-bottom: 1rem;
+	font-size: 0.875rem;
+	font-weight: 500;
+}

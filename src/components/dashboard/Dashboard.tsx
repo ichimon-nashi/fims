@@ -2,10 +2,11 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import Navbar from "@/components/common/Navbar";
 import Avatar from "@/components/ui/Avatar/Avatar";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useWeather } from "@/hooks/useWeather";
 import { FaRunning, FaUtensils, FaUserShield, FaClipboardList, FaCalendarAlt } from "react-icons/fa";
 import { FaBookSkull } from "react-icons/fa6";
@@ -22,6 +23,7 @@ interface DashboardStats {
 
 const Dashboard = () => {
   const { user, loading, token } = useAuth();
+  const permissions = usePermissions();
   const router = useRouter();
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
     monthlyScheduleCount: 0,
@@ -120,29 +122,7 @@ const Dashboard = () => {
     }
   }, [token, user, fetchDashboardStats]);
 
-  // Show loading while checking auth
-  if (loading) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '1.25rem',
-        fontWeight: '600',
-        color: '#424242'
-      }}>
-        載入中...
-      </div>
-    );
-  }
-
-  // Don't render if no user (will redirect)
-  if (!user || !token) {
-    return null;
-  }
-
+  // Prepare all data BEFORE conditional returns (React Hooks rules)
   const currentHour = new Date().getHours();
   const greeting = 
     currentHour < 12 ? "早安" : 
@@ -179,8 +159,10 @@ const Dashboard = () => {
     }
   ];
 
-  const quickActions = [
+  // All possible quick actions
+  const allQuickActions = [
     {
+      id: "roster",
       title: "教師班表",
       description: "空服教師排班系統",
       icon: <FaCalendarAlt />,
@@ -188,6 +170,7 @@ const Dashboard = () => {
       color: "#3b82f6"
     },
     {
+      id: "tasks",
       title: "任務管理",
       description: "Kanban 任務看板",
       icon: <FaClipboardList />,
@@ -195,6 +178,7 @@ const Dashboard = () => {
       color: "#10b981"
     },
     {
+      id: "sms",
       title: "SMS",
       description: "Safety Management System",
       icon: <FaUserShield />,
@@ -202,6 +186,7 @@ const Dashboard = () => {
       color: "#ef4444"
     },
     {
+      id: "oral_test",
       title: "翻書口試",
       description: "複訓翻書口試管理系統",
       icon: <FaBookSkull />,
@@ -209,6 +194,7 @@ const Dashboard = () => {
       color: "#f59e0b"
     },
     {
+      id: "bc_training",
       title: "B/C訓練",
       description: "商務艙服務訓練",
       icon: <FaUtensils />,
@@ -216,14 +202,15 @@ const Dashboard = () => {
       color: "#8b5cf6"
     },
     {
+      id: "mdafaat",
       title: "情境演練",
       description: "緊急撤離演練",
       icon: <FaRunning />,
       href: "/mdafaat",
       color: "#ec4899"
-    }
-    ,
+    },
     {
+      id: "ads",
       title: "AdS",
       description: "注意力測試器",
       icon: <GiDistraction />,
@@ -231,6 +218,7 @@ const Dashboard = () => {
       color: "#14b8a6"
     },
     {
+      id: "ccom_review",
       title: "CCOM抽問",
       description: "新生用CCOM翻書抽問",
       icon: <IoBookSharp />,
@@ -239,7 +227,14 @@ const Dashboard = () => {
     }
   ];
 
-  // Create two-line subtitle text
+  // Filter quick actions based on permissions
+  const quickActions = useMemo(() => {
+    return allQuickActions.filter(action => {
+      // Map action IDs to app permission keys
+      return permissions.hasAppAccess(action.id as any);
+    });
+  }, [permissions]);
+
   const dateString = new Date().toLocaleDateString('zh-TW', {
     year: 'numeric',
     month: 'long', 
@@ -248,6 +243,29 @@ const Dashboard = () => {
   });
 
   const twoLineSubtitle = `歡迎使用豪神FIMS\n今天是 ${dateString}`;
+
+  // Show loading while checking auth
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '1.25rem',
+        fontWeight: '600',
+        color: '#424242'
+      }}>
+        載入中...
+      </div>
+    );
+  }
+
+  // Don't render if no user (will redirect)
+  if (!user || !token) {
+    return null;
+  }
 
   return (
     <>

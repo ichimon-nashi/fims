@@ -1,24 +1,19 @@
-// File: src/app/oral-test/results/page.tsx
+// src/app/oral-test/results/page.tsx
 'use client';
 
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import PermissionGuard from '@/components/common/PermissionGuard';
 import ResultsTable from '@/components/oral-test/results/ResultsTable/ResultsTable';
 import OralTestNavigation from '@/components/oral-test/OralTestNavigation/OralTestNavigation';
 import Image from 'next/image';
 
-export default function ResultsPage() {
+function ResultsPageContent() {
   const { user } = useAuth();
-  const router = useRouter();
 
-  useEffect(() => {
-    if (user && user.authentication_level < 2) {
-      router.push('/oral-test/dashboard');
-    }
-  }, [user, router]);
+  // Results page only needs basic oral_test access - no special permission check needed
+  // PermissionGuard already handles the oral_test.access check
 
-  if (!user || user.authentication_level < 2) {
+  if (!user) {
     return (
       <div style={{ 
         height: '100vh', 
@@ -169,5 +164,13 @@ export default function ResultsPage() {
       </div>
     </div>
     </>
+  );
+}
+
+export default function ResultsPage() {
+  return (
+    <PermissionGuard app="oral_test">
+      <ResultsPageContent />
+    </PermissionGuard>
   );
 }

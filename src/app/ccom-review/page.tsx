@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
+import PermissionGuard from '@/components/common/PermissionGuard';
 import Navbar from '@/components/common/Navbar';
 import styles from './CcomReview.module.css';
 import data from './data';
@@ -12,7 +13,7 @@ interface QuestionItem {
   type: 'chapter' | 'title';
 }
 
-const CcomReview = () => {
+const CcomReviewContent = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(10);
@@ -158,145 +159,151 @@ const CcomReview = () => {
   const currentItem = shuffledData[currentIndex];
 
   return (
-    <>
-      <Navbar />
-      <div className={styles.container}>
-        {/* Audio element */}
-        <audio ref={audioRef} src="/audio/beep-0s.mp3" preload="auto" />
-        
-        <div className={styles.gameLayout}>
-          {/* Left Sidebar - Settings */}
-          <div className={styles.settingsSidebar}>
-            <h3 className={styles.settingsTitle}>⚙️ Settings</h3>
-            
-            <div className={styles.settingGroupCompact}>
-              <label>Timer (sec)</label>
-              <input 
-                type="number" 
-                value={timerDuration}
-                onChange={(e) => setTimerDuration(Number(e.target.value))}
-                min={5}
-                max={60}
-                className={styles.inputCompact}
-              />
-            </div>
-            
-            <div className={styles.settingGroupCompact}>
-              <label>Quiz Mode</label>
-              <select 
-                value={quizMode} 
-                onChange={(e) => setQuizMode(e.target.value as 'ALL' | 'CHAPTER' | 'TITLE')} 
-                className={styles.selectCompact}
-              >
-                <option value="ALL">Random</option>
-                <option value="CHAPTER">Chapter → Title</option>
-                <option value="TITLE">Title → Chapter</option>
-              </select>
-            </div>
-
-            <div className={styles.settingGroupCompact}>
-              <label>Chapters</label>
-              <div className={styles.chapterActionsCompact}>
-                <button className={styles.btnTiny} onClick={selectAllChapters}>All</button>
-                <button className={styles.btnTiny} onClick={deselectAllChapters}>None</button>
-              </div>
-              <div className={styles.checkboxCompact}>
-                {allChapters.map(chapter => (
-                  <label key={chapter} className={styles.checkboxLabelCompact}>
-                    <input
-                      type="checkbox"
-                      checked={selectedChapters[chapter]}
-                      onChange={() => handleChapterToggle(chapter)}
-                    />
-                    <span>{chapter}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
+    <div className={styles.container}>
+      {/* Audio element */}
+      <audio ref={audioRef} src="/audio/beep-0s.mp3" preload="auto" />
+      
+      <div className={styles.gameLayout}>
+        {/* Left Sidebar - Settings */}
+        <div className={styles.settingsSidebar}>
+          <h3 className={styles.settingsTitle}>⚙️ Settings</h3>
+          
+          <div className={styles.settingGroupCompact}>
+            <label>Timer (sec)</label>
+            <input 
+              type="number" 
+              value={timerDuration}
+              onChange={(e) => setTimerDuration(Number(e.target.value))}
+              min={5}
+              max={60}
+              className={styles.inputCompact}
+            />
+          </div>
+          
+          <div className={styles.settingGroupCompact}>
+            <label>Quiz Mode</label>
+            <select 
+              value={quizMode} 
+              onChange={(e) => setQuizMode(e.target.value as 'ALL' | 'CHAPTER' | 'TITLE')} 
+              className={styles.selectCompact}
+            >
+              <option value="ALL">Random</option>
+              <option value="CHAPTER">Chapter → Title</option>
+              <option value="TITLE">Title → Chapter</option>
+            </select>
           </div>
 
-          {/* Main Game Area */}
-          <div className={styles.gameArea}>
-            <h1 className={styles.gameTitle}>新生用CCOM抽問</h1>
-            
-            {!hasSelectedChapters ? (
-              <div className={styles.warningBox}>
-                <p>⚠️ Please select at least one chapter</p>
-              </div>
-            ) : !gameStarted ? (
-              <div className={styles.startScreen}>
-                <div className={styles.startInfo}>
-                  <p className={styles.readyCount}>{shuffledData.length} questions ready</p>
-                  <p className={styles.readyMode}>
-                    Mode: {quizMode === 'ALL' ? 'Random' : quizMode === 'CHAPTER' ? 'Chapter → Title' : 'Title → Chapter'}
-                  </p>
-                </div>
-                <button className={styles.btnStart} onClick={startGame}>
-                  🚀 開始抽問
-                </button>
-              </div>
-            ) : (
-              <>
-                {/* Timer and Counter */}
-                <div className={styles.gameHeader}>
-                  <div className={styles.timerDisplay}>
-                    <div className={`${styles.timerCircle} ${timeRemaining <= 3 ? styles.timerWarning : ''}`}>
-                      {timeRemaining}
-                    </div>
-                    <div className={styles.timerControls}>
-                      <button className={`${styles.btnTimerControl} ${styles.stop}`} onClick={stopTimer}>⏸</button>
-                    </div>
-                  </div>
-                  
-                  <div className={styles.progressDisplay}>
-                    <span className={styles.progressText}>{currentIndex + 1} / {shuffledData.length}</span>
-                    <div className={styles.progressBar}>
-                      <div 
-                        className={styles.progressFill} 
-                        style={{ width: `${((currentIndex + 1) / shuffledData.length) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Question Card */}
-                <div className={styles.questionCard}>
-                  <div className={styles.questionTypeBadge}>
-                    {currentItem.type === 'chapter' ? '📖 Chapter' : '📝 Title'}
-                  </div>
-                  <div className={styles.questionContent}>
-                    <h2>{currentItem.question}</h2>
-                  </div>
-
-                  {showAnswer && (
-                    <div className={styles.answerReveal}>
-                      <div className={styles.answerLabel}>Answer:</div>
-                      <div className={styles.answerContent}>{currentItem.answer}</div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Controls */}
-                <div className={styles.gameControls}>
-                  <button className={styles.btnControl} onClick={handlePrevious}>
-                    ← Prev
-                  </button>
-                  
-                  <button className={`${styles.btnControl} ${styles.btnPrimary}`} onClick={toggleAnswer}>
-                    {showAnswer ? '🙈 Hide' : '👁️ Show'}
-                  </button>
-                  
-                  <button className={styles.btnControl} onClick={handleNext}>
-                    Next →
-                  </button>
-                </div>
-              </>
-            )}
+          <div className={styles.settingGroupCompact}>
+            <label>Chapters</label>
+            <div className={styles.chapterActionsCompact}>
+              <button className={styles.btnTiny} onClick={selectAllChapters}>All</button>
+              <button className={styles.btnTiny} onClick={deselectAllChapters}>None</button>
+            </div>
+            <div className={styles.checkboxCompact}>
+              {allChapters.map(chapter => (
+                <label key={chapter} className={styles.checkboxLabelCompact}>
+                  <input
+                    type="checkbox"
+                    checked={selectedChapters[chapter]}
+                    onChange={() => handleChapterToggle(chapter)}
+                  />
+                  <span>{chapter}</span>
+                </label>
+              ))}
+            </div>
           </div>
         </div>
+
+        {/* Main Game Area */}
+        <div className={styles.gameArea}>
+          <h1 className={styles.gameTitle}>新生用CCOM抽問</h1>
+          
+          {!hasSelectedChapters ? (
+            <div className={styles.warningBox}>
+              <p>⚠️ Please select at least one chapter</p>
+            </div>
+          ) : !gameStarted ? (
+            <div className={styles.startScreen}>
+              <div className={styles.startInfo}>
+                <p className={styles.readyCount}>{shuffledData.length} questions ready</p>
+                <p className={styles.readyMode}>
+                  Mode: {quizMode === 'ALL' ? 'Random' : quizMode === 'CHAPTER' ? 'Chapter → Title' : 'Title → Chapter'}
+                </p>
+              </div>
+              <button className={styles.btnStart} onClick={startGame}>
+                🚀 開始抽問
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Timer and Counter */}
+              <div className={styles.gameHeader}>
+                <div className={styles.timerDisplay}>
+                  <div className={`${styles.timerCircle} ${timeRemaining <= 3 ? styles.timerWarning : ''}`}>
+                    {timeRemaining}
+                  </div>
+                  <div className={styles.timerControls}>
+                    <button className={`${styles.btnTimerControl} ${styles.stop}`} onClick={stopTimer}>⏸</button>
+                  </div>
+                </div>
+                
+                <div className={styles.progressDisplay}>
+                  <span className={styles.progressText}>{currentIndex + 1} / {shuffledData.length}</span>
+                  <div className={styles.progressBar}>
+                    <div 
+                      className={styles.progressFill} 
+                      style={{ width: `${((currentIndex + 1) / shuffledData.length) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Question Card */}
+              <div className={styles.questionCard}>
+                <div className={styles.questionTypeBadge}>
+                  {currentItem.type === 'chapter' ? '📖 Chapter' : '📝 Title'}
+                </div>
+                <div className={styles.questionContent}>
+                  <h2>{currentItem.question}</h2>
+                </div>
+
+                {showAnswer && (
+                  <div className={styles.answerReveal}>
+                    <div className={styles.answerLabel}>Answer:</div>
+                    <div className={styles.answerContent}>{currentItem.answer}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Controls */}
+              <div className={styles.gameControls}>
+                <button className={styles.btnControl} onClick={handlePrevious}>
+                  ← Prev
+                </button>
+                
+                <button className={`${styles.btnControl} ${styles.btnPrimary}`} onClick={toggleAnswer}>
+                  {showAnswer ? '🙈 Hide' : '👁️ Show'}
+                </button>
+                
+                <button className={styles.btnControl} onClick={handleNext}>
+                  Next →
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
-    </>
+    </div>
   );
 };
 
-export default CcomReview;
+export default function CcomReview() {
+  return (
+    <>
+      <Navbar />
+      <PermissionGuard app="ccom_review">
+        <CcomReviewContent />
+      </PermissionGuard>
+    </>
+  );
+}

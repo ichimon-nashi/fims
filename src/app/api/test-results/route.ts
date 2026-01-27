@@ -1,7 +1,7 @@
 // src/app/api/test-results/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { verifyToken, extractTokenFromHeader } from "@/lib/auth";
+import { checkOralTestPermissions } from "@/lib/oralTestPermissions";
 
 // Define interfaces for type safety
 interface QuestionDetail {
@@ -24,33 +24,22 @@ export async function GET(request: NextRequest) {
 	try {
 		console.log("=== TEST RESULTS API DEBUG ===");
 
-		const token = extractTokenFromHeader(
+		// Check Oral Test permissions - need VIEW access (anyone with oral_test.access can view results)
+		const permissions = await checkOralTestPermissions(
 			request.headers.get("authorization")
 		);
 
-		if (!token) {
-			console.log("No token provided");
+		if (!permissions.canView) {
+			console.log("Access denied:", permissions.error);
 			return NextResponse.json(
-				{ message: "No token provided" },
-				{ status: 401 }
+				{ message: permissions.error || "Access denied" },
+				{ status: permissions.status || 403 }
 			);
 		}
 
-		const decoded = verifyToken(token);
-		console.log("Token decoded successfully:", {
-			userId: decoded.userId,
-			authLevel: decoded.authLevel,
-		});
-
-		if (decoded.authLevel < 2) {
-			console.log("Insufficient permissions:", decoded.authLevel);
-			return NextResponse.json(
-				{ message: "Insufficient permissions" },
-				{ status: 403 }
-			);
-		}
-
+		console.log("User has Oral Test access:", permissions.userId);
 		console.log("Fetching test results with question details...");
+		
 		const supabase = await createClient();
 
 		// First, get all test results
@@ -178,31 +167,15 @@ export async function POST(request: NextRequest) {
 	try {
 		console.log("=== CREATE TEST RESULT API DEBUG ===");
 
-		const token = extractTokenFromHeader(
+		// Check Oral Test permissions - need CONDUCT_TEST permission
+		const permissions = await checkOralTestPermissions(
 			request.headers.get("authorization")
 		);
 
-		if (!token) {
-			console.log("No token provided for test result creation");
+		if (!permissions.canConductTest) {
+			console.log("Access denied: conduct_test permission required");
 			return NextResponse.json(
-				{ message: "No token provided" },
-				{ status: 401 }
-			);
-		}
-
-		const decoded = verifyToken(token);
-		console.log("Token decoded successfully for test result creation:", {
-			userId: decoded.userId,
-			authLevel: decoded.authLevel,
-		});
-
-		if (decoded.authLevel < 3) {
-			console.log(
-				"Insufficient permissions for test result creation:",
-				decoded.authLevel
-			);
-			return NextResponse.json(
-				{ message: "Insufficient permissions" },
+				{ message: "Access denied: Permission to conduct tests required" },
 				{ status: 403 }
 			);
 		}

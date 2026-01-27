@@ -1,4 +1,6 @@
 // src/lib/types.ts
+import { AppPermissions } from './appPermissions.types';
+
 export interface User {
 	id: string;
 	employee_id: string;
@@ -9,6 +11,8 @@ export interface User {
 	filter: string[];
 	handicap_level: number;
 	authentication_level: number;
+	app_permissions?: AppPermissions; // NEW: Granular app access control
+	gender?: 'm' | 'f'; // NEW: For GIF avatar selection
 	password?: string;
 	password_hash?: string;
 	created_at?: string;

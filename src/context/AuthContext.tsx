@@ -4,18 +4,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import WeatherService from '@/services/weatherService';
-
-interface User {
-	id: string;
-	employee_id: string;
-	full_name: string;
-	rank: string;
-	base: string;
-	email: string;
-	filter: string[];
-	handicap_level: number;
-	authentication_level: number;
-}
+import { User } from '@/lib/types'; // Import User type from types.ts
 
 interface AuthContextType {
 	user: User | null;

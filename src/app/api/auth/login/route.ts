@@ -128,7 +128,7 @@ function checkUserAccess(user: any): boolean {
 	const adminEmployeeIds = ["51892", "admin", "21986"];
 	
 	// Special employee IDs with access - ADD YOUR NEW IDs HERE
-	const specialEmployeeIds = ["22119", "59976", "21701", "39426", "36639"];
+	const specialEmployeeIds = ["22119", "60549", "21701", "39462"];
 	
 	// Allowed ranks
 	const allowedRanks = [

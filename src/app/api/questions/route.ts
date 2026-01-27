@@ -1,40 +1,28 @@
 // src/app/api/questions/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { verifyToken, extractTokenFromHeader } from "@/lib/auth";
+import { checkOralTestPermissions } from "@/lib/oralTestPermissions";
 
 export async function GET(request: NextRequest) {
 	try {
 		console.log("=== QUESTIONS API DEBUG ===");
 		
-		const token = extractTokenFromHeader(
+		// Check Oral Test permissions - need MANAGE_QUESTIONS permission to view all questions
+		const permissions = await checkOralTestPermissions(
 			request.headers.get("authorization")
 		);
 
-		if (!token) {
-			console.log("No token provided");
+		if (!permissions.canManageQuestions) {
+			console.log("Access denied: manage_questions permission required");
 			return NextResponse.json(
-				{ message: "No token provided" },
-				{ status: 401 }
-			);
-		}
-
-		console.log("Verifying token...");
-		const decoded = verifyToken(token);
-		console.log("Token decoded successfully:", {
-			userId: decoded.userId,
-			authLevel: decoded.authLevel
-		});
-
-		if (decoded.authLevel < 4) {
-			console.log("Insufficient permissions:", decoded.authLevel);
-			return NextResponse.json(
-				{ message: "Insufficient permissions" },
+				{ message: "Access denied: Permission to manage questions required" },
 				{ status: 403 }
 			);
 		}
 
+		console.log("User has manage_questions permission:", permissions.userId);
 		console.log("Getting all questions...");
+		
 		const supabase = await createClient();
 		const { data: questions, error } = await supabase
 			.from("questions")
@@ -52,12 +40,7 @@ export async function GET(request: NextRequest) {
 
 		console.log("Questions retrieved successfully:", questions.length);
 
-		// Hide difficulty level for lower auth levels
-		if (decoded.authLevel < 10) {
-			questions.forEach((question: any) => {
-				delete question.difficulty_level;
-			});
-		}
+		// Note: difficulty_level is always included for users with manage_questions permission
 
 		return NextResponse.json(questions);
 	} catch (error: any) {
@@ -76,28 +59,15 @@ export async function POST(request: NextRequest) {
 	try {
 		console.log("=== CREATE QUESTION API DEBUG ===");
 		
-		const token = extractTokenFromHeader(
+		// Check Oral Test permissions - need MANAGE_QUESTIONS permission to create questions
+		const permissions = await checkOralTestPermissions(
 			request.headers.get("authorization")
 		);
 
-		if (!token) {
-			console.log("No token provided for question creation");
+		if (!permissions.canManageQuestions) {
+			console.log("Access denied: manage_questions permission required for creation");
 			return NextResponse.json(
-				{ message: "No token provided" },
-				{ status: 401 }
-			);
-		}
-
-		const decoded = verifyToken(token);
-		console.log("Token decoded successfully for question creation:", {
-			userId: decoded.userId,
-			authLevel: decoded.authLevel
-		});
-
-		if (decoded.authLevel < 4) {
-			console.log("Insufficient permissions for question creation:", decoded.authLevel);
-			return NextResponse.json(
-				{ message: "Insufficient permissions" },
+				{ message: "Access denied: Permission to manage questions required" },
 				{ status: 403 }
 			);
 		}
@@ -149,7 +119,7 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// CHANGED: Validate line reference (now string, just check if not empty)
+		// Validate line reference
 		if (!questionData.question_line || questionData.question_line.toString().trim() === "") {
 			return NextResponse.json(
 				{ message: "Line reference is required and cannot be empty" },
@@ -157,10 +127,9 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// Create Supabase client
 		const supabase = await createClient();
 
-		// FIXED: Check for duplicate question title first
+		// Check for duplicate question title
 		console.log("Checking for duplicate question title...");
 		const { data: existingQuestion, error: checkError } = await supabase
 			.from("questions")
@@ -184,7 +153,7 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// FIXED: Get next question number
+		// Get next question number
 		console.log("Getting next question number...");
 		const { data: maxQuestionData, error: maxError } = await supabase
 			.from("questions")
@@ -207,7 +176,7 @@ export async function POST(request: NextRequest) {
 			question_title: questionData.question_title.trim(),
 			question_chapter: questionData.question_chapter.toString().trim(),
 			question_page: parseInt(questionData.question_page),
-			question_line: questionData.question_line.toString().trim(), // CHANGED: Keep as string
+			question_line: questionData.question_line.toString().trim(),
 			difficulty_level: difficultyLevel,
 			question_number: nextQuestionNumber,
 			last_date_modified: new Date().toISOString(),
@@ -223,15 +192,13 @@ export async function POST(request: NextRequest) {
 		if (insertError) {
 			console.error("Error inserting question:", insertError);
 			
-			// Handle specific constraint violations
-			if (insertError.code === "23505") { // unique_violation
+			if (insertError.code === "23505") {
 				if (insertError.message.includes("question_title")) {
 					return NextResponse.json(
 						{ message: "A question with this title already exists" },
 						{ status: 409 }
 					);
 				} else if (insertError.message.includes("question_number")) {
-					// If question number conflicts, try again with next number
 					console.log("Question number conflict, retrying...");
 					const retryQuestionNumber = nextQuestionNumber + 1;
 					const retryData = {

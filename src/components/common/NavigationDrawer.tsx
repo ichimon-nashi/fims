@@ -2,8 +2,10 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
+import { AppName } from "@/lib/appPermissions.types";
 import Avatar from "@/components/ui/Avatar/Avatar";
 import { FaRunning, FaUtensils, FaUserShield, FaClipboardList, FaCalendarAlt } from "react-icons/fa";
 import { FaBookSkull } from "react-icons/fa6";
@@ -152,6 +154,39 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 	const router = useRouter();
 	const pathname = usePathname();
 	const { user, logout } = useAuth();
+	const permissions = usePermissions();
+
+	// TEMPORARY DEBUG: Log permissions immediately
+	useEffect(() => {
+		console.log('=== NAVIGATION DRAWER MOUNTED ===');
+		console.log('User object:', user);
+		console.log('User SMS permissions:', user?.app_permissions?.sms);
+		console.log('Can access SMS?', permissions.hasAppAccess('sms'));
+	}, [user, permissions]);
+
+	// TEMPORARY DEBUG: Log permissions when drawer opens
+	if (isOpen && user) {
+		console.log('=== NAVIGATION DRAWER OPENED ===');
+		console.log('User SMS permissions:', user.app_permissions?.sms);
+		console.log('Can access SMS?', permissions.hasAppAccess('sms'));
+		console.log('All accessible items:', navigationItems.map(item => {
+			if (item.id === 'dashboard') return { id: item.id, access: true };
+			
+			let appKey: AppName;
+			switch (item.id) {
+				case 'oral-test': appKey = 'oral_test'; break;
+				case 'business-training': appKey = 'bc_training'; break;
+				case 'ccom-review': appKey = 'ccom_review'; break;
+				default: appKey = item.id as AppName;
+			}
+			
+			return {
+				id: item.id,
+				appKey,
+				hasAccess: permissions.hasAppAccess(appKey)
+			};
+		}));
+	}
 
 	const handleNavigation = (path: string) => {
 		router.push(path);
@@ -170,12 +205,42 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 		}
 	};
 
-	// FIXED: Memoize hasAccess function
+	// FIXED: Memoize hasAccess function (kept for backward compatibility with minAuthLevel)
 	const hasAccess = useCallback((item: NavigationItem) => {
 		if (!user) return false;
 		if (!item.minAuthLevel) return true;
 		return user.authentication_level >= item.minAuthLevel;
 	}, [user]);
+
+	// NEW: Filter navigation items based on app_permissions
+	const accessibleItems = useMemo(() => {
+		return navigationItems.filter(item => {
+			// Dashboard is always accessible
+			if (item.id === 'dashboard') return true;
+			
+			// Map navigation item IDs to app permission keys
+			// "oral-test" -> "oral_test", "business-training" -> "bc_training", etc.
+			let appKey: AppName;
+			
+			switch (item.id) {
+				case 'oral-test':
+					appKey = 'oral_test';
+					break;
+				case 'business-training':
+					appKey = 'bc_training';
+					break;
+				case 'ccom-review':
+					appKey = 'ccom_review';
+					break;
+				default:
+					// For simple cases like "roster", "tasks", "sms", "mdafaat", "ads"
+					appKey = item.id as AppName;
+			}
+			
+			// Use ONLY the permissions system (no fallback to minAuthLevel)
+			return permissions.hasAppAccess(appKey);
+		});
+	}, [permissions]);
 
 	// Memoize base info to prevent recalculation on every render
 	const baseInfo = useMemo(() => {
@@ -217,11 +282,6 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 			rank: user?.rank || "教師",
 		};
 	}, [user]);
-
-	// FIXED: Include hasAccess in dependencies
-	const accessibleItems = useMemo(() => {
-		return navigationItems.filter(item => hasAccess(item));
-	}, [hasAccess]);
 
 	// Get authentication level GIF for user
 	const authLevelGif = useMemo(() => {
@@ -360,7 +420,7 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 					</button>
 					<div className={styles.footerInfo}>
 						<div className={styles.appVersion}>
-							豪神教師管理系統 v2.3.5
+							豪神教師管理系統 v2.3.7
 						</div>
 						<div className={styles.lastUpdate}>
 							最後更新: {new Date().toLocaleDateString("zh-TW")}

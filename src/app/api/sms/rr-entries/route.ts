@@ -4,41 +4,47 @@ import { verifyToken } from '@/lib/auth';
 import { getUserById } from '@/lib/database';
 import { getRRSMSEntries, createRRSMSEntry } from '@/lib/smsDatabase';
 
-const ADMIN_ACCOUNTS = ["admin", "21986", "51892"];
-
-async function checkAdminAccess(authHeader: string | null) {
+// Updated permission check function
+async function checkSMSPermissions(authHeader: string | null) {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return { isAdmin: false, error: 'Unauthorized', status: 401 };
+    return { canView: false, canEdit: false, error: 'Unauthorized', status: 401 };
   }
 
   const token = authHeader.substring(7);
   const decoded = verifyToken(token);
 
-  // Get user from database to check employee_id
+  // Get user from database
   const user = await getUserById(decoded.userId);
   
   if (!user) {
-    return { isAdmin: false, error: 'User not found', status: 404 };
+    return { canView: false, canEdit: false, error: 'User not found', status: 404 };
   }
 
-  // Check if user is admin using employee_id
-  const isAdmin = ADMIN_ACCOUNTS.includes(user.employee_id) || 
-                 ADMIN_ACCOUNTS.includes(user.email);
+  // Check SMS permissions from app_permissions
+  const smsPermissions = user.app_permissions?.sms;
 
-  if (!isAdmin) {
-    return { isAdmin: false, error: 'Access denied', status: 403 };
+  if (!smsPermissions || !smsPermissions.access) {
+    return { canView: false, canEdit: false, error: 'Access denied: No SMS permissions', status: 403 };
   }
 
-  return { isAdmin: true, userId: decoded.userId };
+  // User has SMS access - can view
+  // Check if they can also edit (view_only = false means can edit)
+  const canEdit = !smsPermissions.view_only;
+
+  return {
+    canView: true,
+    canEdit: canEdit,
+    userId: decoded.userId
+  };
 }
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify authentication and admin status
-    const authCheck = await checkAdminAccess(request.headers.get('authorization'));
+    // Check SMS permissions - need VIEW access
+    const permissions = await checkSMSPermissions(request.headers.get('authorization'));
     
-    if (!authCheck.isAdmin) {
-      return NextResponse.json({ error: authCheck.error }, { status: authCheck.status });
+    if (!permissions.canView) {
+      return NextResponse.json({ error: permissions.error }, { status: permissions.status || 403 });
     }
 
     // Get query parameters
@@ -64,11 +70,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify authentication and admin status
-    const authCheck = await checkAdminAccess(request.headers.get('authorization'));
+    // Check SMS permissions - need EDIT access
+    const permissions = await checkSMSPermissions(request.headers.get('authorization'));
     
-    if (!authCheck.isAdmin) {
-      return NextResponse.json({ error: authCheck.error }, { status: authCheck.status });
+    if (!permissions.canEdit) {
+      return NextResponse.json(
+        { error: 'Access denied: Edit permission required' },
+        { status: 403 }
+      );
     }
 
     const body = await request.json();
@@ -95,7 +104,7 @@ export async function POST(request: NextRequest) {
       barrier_id: body.barrier_id,
       barrier_last_review: body.barrier_last_review,
       barrier_next_review: body.barrier_next_review,
-      created_by: authCheck.userId!
+      created_by: permissions.userId!
     });
 
     return NextResponse.json(entry, { status: 201 });

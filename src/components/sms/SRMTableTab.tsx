@@ -1,7 +1,7 @@
 // src/components/sms/SRMTableTab.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import styles from "./SRMTableTab.module.css";
 import SRMEntryModal from "./SRMEntryModal";
 
@@ -27,6 +27,23 @@ interface SRMEntry {
 	ef_attribute_codes?: string[];
 	year: number;
 	created_at: string;
+}
+
+interface SRMTableLink {
+	id: string;
+	number: string;
+	file_date: string;
+	hazard_description?: string;
+	identification_source_type?: string;
+	year?: number;
+}
+
+interface SRMEntryRaw {
+	id: string;
+	rr_number: string;
+	srm_table_link?: SRMTableLink;
+	created_at: string;
+	// ... other RR fields
 }
 
 interface YearGroup {
@@ -141,6 +158,8 @@ export default function SRMTableTab({
 
 			const data = await response.json();
 			console.log("✅ SRM entries fetched:", data.length);
+			console.log("🔍 RAW first entry from API:", JSON.stringify(data[0], null, 2));
+			
 			setAllEntries(data);
 			groupEntriesByYear(data);
 		} catch (error) {
@@ -153,18 +172,30 @@ export default function SRMTableTab({
 	const groupEntriesByYear = (entries: SRMEntry[]) => {
 		const groups: { [year: number]: SRMEntry[] } = {};
 
-		entries.forEach((entry) => {
-			const year = entry.year;
+		entries.forEach((entry, index) => {
+			// Use year field if available, otherwise extract from file_date
+			const year = entry.year || new Date(entry.file_date).getFullYear();
+			
+			// Debug first entry
+			if (index === 0) {
+				console.log('🔍 First entry:', {
+					file_date: entry.file_date,
+					year_field: entry.year,
+					computed_year: year
+				});
+			}
+			
 			if (!groups[year]) {
 				groups[year] = [];
 			}
 			groups[year].push(entry);
 		});
 
-		const yearGroupsArray = Object.keys(groups)
-			.map((year) => ({
-				year: parseInt(year),
-					entries: groups[parseInt(year)].sort((a, b) => {
+		console.log('📊 Years found:', Object.keys(groups));
+		const yearGroupsArray = Object.entries(groups)
+			.map(([yearStr, yearEntries]) => ({
+				year: parseInt(yearStr),
+					entries: yearEntries.sort((a, b) => {
 						// First sort by file_date (newest first = oldest at bottom)
 						const dateA = new Date(a.file_date).getTime();
 						const dateB = new Date(b.file_date).getTime();
@@ -561,11 +592,8 @@ export default function SRMTableTab({
 																		entry.id
 																	);
 																return (
-																	<>
+																	<React.Fragment key={entry.id}>
 																		<tr
-																			key={
-																				entry.id
-																			}
 																			className={
 																				styles.mainRow
 																			}
@@ -613,12 +641,12 @@ export default function SRMTableTab({
 																						styles.sourceBadge
 																					} ${
 																						styles[
-																							entry.identification_source_type.toLowerCase()
+																							entry.identification_source_type?.toLowerCase() || ''
 																						]
 																					}`}
 																				>
 																					{
-																						entry.identification_source_type
+																						entry.identification_source_type || 'N/A'
 																					}
 																				</span>
 																			</td>
@@ -783,7 +811,7 @@ export default function SRMTableTab({
 																										來源類型:
 																									</strong>{" "}
 																									{
-																										entry.identification_source_type
+																										entry.identification_source_type || 'N/A'
 																									}
 																								</div>
 																							</div>
@@ -1075,7 +1103,7 @@ export default function SRMTableTab({
 																				</td>
 																			</tr>
 																		)}
-																	</>
+																	</React.Fragment>
 																);
 															}
 														)

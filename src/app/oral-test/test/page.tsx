@@ -1,24 +1,26 @@
-// File: src/app/oral-test/test/page.tsx - OVERFLOW HIDDEN DESKTOP ONLY
+// src/app/oral-test/test/page.tsx
 'use client';
 
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import PermissionGuard from '@/components/common/PermissionGuard';
 import TestInterface from '@/components/oral-test/test/TestInterface/TestInterface';
 import OralTestNavigation from '@/components/oral-test/OralTestNavigation/OralTestNavigation';
 import Image from 'next/image';
 
-export default function TestPage() {
+function TestPageContent() {
   const { user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (user && user.authentication_level < 3) {
+    // Check if user has conduct_test permission
+    if (user && !user.app_permissions?.oral_test?.conduct_test) {
       router.push('/oral-test/dashboard');
     }
   }, [user, router]);
 
-  if (!user || user.authentication_level < 3) {
+  if (!user || !user.app_permissions?.oral_test?.conduct_test) {
     return (
       <div style={{ 
         height: '100vh', 
@@ -172,5 +174,13 @@ export default function TestPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function TestPage() {
+  return (
+    <PermissionGuard app="oral_test">
+      <TestPageContent />
+    </PermissionGuard>
   );
 }

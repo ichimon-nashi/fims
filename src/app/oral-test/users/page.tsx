@@ -4,23 +4,24 @@
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import PermissionGuard from "@/components/common/PermissionGuard";
 import UserManagement from "@/components/oral-test/management/UserManagement/UserManagement";
 import OralTestNavigation from "@/components/oral-test/OralTestNavigation/OralTestNavigation";
 import Image from 'next/image';
 
-export default function UsersPage() {
+function UsersPageContent() {
 	const { user } = useAuth();
 	const router = useRouter();
 
 	useEffect(() => {
-		// Check if user has minimum access level for user management
-		if (user && user.authentication_level < 5) {
+		// Check if user has manage_users permission
+		if (user && !user.app_permissions?.oral_test?.manage_users) {
 			router.push("/oral-test/dashboard");
 		}
 	}, [user, router]);
 
 	// Show loading or redirect if insufficient permissions
-	if (!user || user.authentication_level < 5) {
+	if (!user || !user.app_permissions?.oral_test?.manage_users) {
 		return (
 			<div style={{ 
 				height: '100vh', 
@@ -171,5 +172,13 @@ export default function UsersPage() {
 				</div>
 			</div>
 		</>
+	);
+}
+
+export default function UsersPage() {
+	return (
+		<PermissionGuard app="oral_test">
+			<UsersPageContent />
+		</PermissionGuard>
 	);
 }

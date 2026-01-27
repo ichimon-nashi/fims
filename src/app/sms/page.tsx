@@ -1,8 +1,10 @@
-// src/app/sms/page.tsx
+// src/app/sms/page.tsx - DEBUG VERSION
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
+import PermissionGuard from '@/components/common/PermissionGuard';
 import Navbar from '@/components/common/Navbar';
 import styles from './SMS.module.css';
 import RRSMSTab from '@/components/sms/RRSMSTab';
@@ -11,69 +13,19 @@ import StatisticsTab from '@/components/sms/StatisticsTab';
 
 type SMSTab = 'rr-sms' | 'srm-table' | 'statistics';
 
-// Admin accounts that can access and modify SMS
-const ADMIN_ACCOUNTS = ["admin", "21986", "51892"];
-
-export default function SMSPage() {
-  const router = useRouter();
+function SMSContent() {
+  const { user, token } = useAuth();
+  const permissions = usePermissions();
   const [activeTab, setActiveTab] = useState<SMSTab>('rr-sms');
   const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear());
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [yearsWithData, setYearsWithData] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    // Check authentication and admin status
-    const checkAuth = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          router.push('/login');
-          return;
-        }
-
-        // Fetch user data
-        const response = await fetch('/api/auth/verify', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          router.push('/login');
-          return;
-        }
-
-        const data = await response.json();
-        const userData = data.user;
-        setUser(userData);
-
-        // Check if user is admin
-        const adminStatus = ADMIN_ACCOUNTS.includes(userData.employee_id) || 
-                           ADMIN_ACCOUNTS.includes(userData.email);
-        setIsAdmin(adminStatus);
-
-        if (!adminStatus) {
-          // Non-admin users can't access SMS
-          alert('權限不夠！');
-          router.push('/dashboard');
-          return;
-        }
-
-        setLoading(false);
-        
-        // Fetch available years
-        fetchAvailableYears(token);
-      } catch (error) {
-        console.error('Auth check error:', error);
-        router.push('/login');
-      }
-    };
-
-    checkAuth();
-  }, [router]);
+    if (token) {
+      fetchAvailableYears(token);
+    }
+  }, [token]);
 
   const fetchAvailableYears = async (token: string) => {
     try {
@@ -90,11 +42,9 @@ export default function SMSPage() {
         const data = await response.json();
         const yearsFromData = data.years || [];
         
-        // Show ALL years that have data, plus current and next year
         const allYears = new Set([...yearsFromData, currentYearValue, nextYearValue]);
         const sortedYears = Array.from(allYears).sort((a, b) => b - a);
         
-        // Track which years actually have data
         const yearsWithData = new Set<number>(yearsFromData);
         
         console.log('📅 Years with data:', yearsFromData);
@@ -103,7 +53,6 @@ export default function SMSPage() {
         setAvailableYears(sortedYears);
         setYearsWithData(yearsWithData);
       } else {
-        // Fallback to current and next year
         setAvailableYears([nextYearValue, currentYearValue]);
         setYearsWithData(new Set<number>());
       }
@@ -119,32 +68,19 @@ export default function SMSPage() {
     setCurrentYear(year);
   };
 
-  const generateYearOptions = () => {
-    const currentYear = new Date().getFullYear();
-    const years = [];
-    // Show years from 2020 to current year + 1
-    for (let year = 2020; year <= currentYear + 1; year++) {
-      years.push(year);
-    }
-    return years.reverse(); // Most recent first
-  };
+  // Check if user can edit SMS (not just view)
+  const canEdit = permissions.canEditSMS();
 
-  if (loading) {
-    return (
-      <div className={styles.loadingContainer}>
-        <div className={styles.spinner}></div>
-        <p>Loading SMS...</p>
-      </div>
-    );
-  }
+  // DEBUG LOGGING
+  console.log('=== SMS PAGE DEBUG ===');
+  console.log('User employee_id:', user?.employee_id);
+  console.log('User app_permissions:', user?.app_permissions);
+  console.log('SMS permissions:', user?.app_permissions?.sms);
+  console.log('canEditSMS():', canEdit);
+  console.log('canViewSMS():', permissions.canViewSMS());
 
-  if (!isAdmin) {
-    return (
-      <div className={styles.accessDenied}>
-        <h2>Access Denied</h2>
-        <p>權限不夠! 請聯絡豪神</p>
-      </div>
-    );
+  if (!user) {
+    return null;
   }
 
   return (
@@ -187,22 +123,46 @@ export default function SMSPage() {
             <RRSMSTab 
               currentYear={currentYear} 
               userId={user.id}
-              isAdmin={isAdmin}
+              isAdmin={canEdit}
             />
           )}
           {activeTab === 'srm-table' && (
             <SRMTableTab 
               currentYear={currentYear}
               userId={user.id}
-              isAdmin={isAdmin}
+              isAdmin={canEdit}
             />
           )}
           {activeTab === 'statistics' && (
-            <StatisticsTab 
-            />
+            <StatisticsTab isAdmin={canEdit} />
           )}
+        </div>
+
+        {/* DEBUG INFO */}
+        <div style={{ 
+          position: 'fixed', 
+          bottom: '10px', 
+          right: '10px', 
+          background: 'rgba(0,0,0,0.8)', 
+          color: '#fff', 
+          padding: '10px', 
+          borderRadius: '5px',
+          fontSize: '12px',
+          zIndex: 9999
+        }}>
+          <div>Employee: {user.employee_id}</div>
+          <div>Can Edit: {canEdit ? 'YES' : 'NO'}</div>
+          <div>View Only: {user.app_permissions?.sms?.view_only ? 'YES' : 'NO'}</div>
         </div>
       </div>
     </>
+  );
+}
+
+export default function SMSPage() {
+  return (
+    <PermissionGuard app="sms">
+      <SMSContent />
+    </PermissionGuard>
   );
 }

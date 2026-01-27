@@ -48,6 +48,10 @@
 	border-top-color: #4a9eff;
 }
 
+.loading p {
+	color: #FFF;
+}
+
 /* Stats cards - SMS DARK THEME */
 .statsCards {
 	display: grid;

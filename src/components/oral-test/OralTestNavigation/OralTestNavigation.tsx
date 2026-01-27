@@ -18,36 +18,47 @@ const OralTestNavigation = ({ currentPath }: OralTestNavigationProps) => {
       path: '/oral-test/dashboard',
       label: 'Dashboard',
       icon: '🏠',
-      minLevel: 1,
+      permission: 'access', // Just needs access
     },
     {
       path: '/oral-test/users',
       label: 'Users',
       icon: '👥',
-      minLevel: 5,
+      permission: 'manage_users',
     },
     {
       path: '/oral-test/questions',
       label: 'Questions',
       icon: '📚',
-      minLevel: 4,
+      permission: 'manage_questions',
     },
     {
       path: '/oral-test/test',
       label: 'Conduct Test',
       icon: '📝',
-      minLevel: 3,
+      permission: 'conduct_test',
     },
     {
       path: '/oral-test/results',
       label: 'Results',
       icon: '📊',
-      minLevel: 2,
+      permission: 'access', // Anyone with access can view results
     },
   ];
 
-  const hasAccess = (minLevel: number) => {
-    return user && user.authentication_level >= minLevel;
+  const hasAccess = (permission: string) => {
+    if (!user || !user.app_permissions?.oral_test) return false;
+    
+    const oralTestPerms = user.app_permissions.oral_test;
+    
+    // Must have basic access
+    if (!oralTestPerms.access) return false;
+    
+    // If just checking for access
+    if (permission === 'access') return true;
+    
+    // Check specific permission
+    return oralTestPerms[permission] === true;
   };
 
   const handleNavigation = (path: string) => {
@@ -59,7 +70,7 @@ const OralTestNavigation = ({ currentPath }: OralTestNavigationProps) => {
       <div className={styles.navContainer}>
         {navigationItems.map((item) => {
           const isActive = currentPath === item.path;
-          const hasPermission = hasAccess(item.minLevel);
+          const hasPermission = hasAccess(item.permission);
           
           return (
             <button
@@ -67,7 +78,7 @@ const OralTestNavigation = ({ currentPath }: OralTestNavigationProps) => {
               className={`${styles.navItem} ${isActive ? styles.active : ''} ${!hasPermission ? styles.disabled : ''}`}
               onClick={() => hasPermission && handleNavigation(item.path)}
               disabled={!hasPermission}
-              title={!hasPermission ? `Requires level ${item.minLevel}+ access` : item.label}
+              title={!hasPermission ? `Requires ${item.permission} permission` : item.label}
             >
               <span className={styles.icon}>{item.icon}</span>
               <span className={styles.label}>{item.label}</span>

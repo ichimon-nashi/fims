@@ -4,6 +4,7 @@
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import PermissionGuard from '@/components/common/PermissionGuard';
 import OralTestNavigation from '@/components/oral-test/OralTestNavigation/OralTestNavigation';
 
 interface DashboardData {
@@ -34,17 +35,13 @@ interface DashboardData {
   currentYear?: number;
 }
 
-export default function OralTestDashboard() {
+function OralTestDashboardContent() {
   const { user } = useAuth();
   const router = useRouter();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
 
-  useEffect(() => {
-    if (user && user.authentication_level < 1) {
-      router.push('/dashboard');
-    }
-  }, [user, router]);
+  // Permission check now handled by PermissionGuard wrapper
 
   useEffect(() => {
     if (user) {
@@ -512,5 +509,12 @@ export default function OralTestDashboard() {
         </div>
       </div>
     </>
+  );
+}
+export default function OralTestDashboard() {
+  return (
+    <PermissionGuard app="oral_test">
+      <OralTestDashboardContent />
+    </PermissionGuard>
   );
 }

@@ -1,7 +1,7 @@
 // src/app/api/questions/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { verifyToken, extractTokenFromHeader } from "@/lib/auth";
+import { checkOralTestPermissions } from "@/lib/oralTestPermissions";
 
 interface RouteParams {
 	params: Promise<{ id: string }>;
@@ -14,28 +14,15 @@ export async function PUT(
 	try {
 		console.log("=== UPDATE QUESTION API DEBUG ===");
 		
-		const token = extractTokenFromHeader(
+		// Check Oral Test permissions - need MANAGE_QUESTIONS permission
+		const permissions = await checkOralTestPermissions(
 			request.headers.get("authorization")
 		);
 
-		if (!token) {
-			console.log("No token provided for update");
+		if (!permissions.canManageQuestions) {
+			console.log("Access denied: manage_questions permission required for update");
 			return NextResponse.json(
-				{ message: "No token provided" },
-				{ status: 401 }
-			);
-		}
-
-		const decoded = verifyToken(token);
-		console.log("Token decoded successfully for question update:", {
-			userId: decoded.userId,
-			authLevel: decoded.authLevel
-		});
-
-		if (decoded.authLevel < 4) {
-			console.log("Insufficient permissions for update:", decoded.authLevel);
-			return NextResponse.json(
-				{ message: "Insufficient permissions" },
+				{ message: "Access denied: Permission to manage questions required" },
 				{ status: 403 }
 			);
 		}
@@ -51,8 +38,8 @@ export async function PUT(
 
 		// Remove fields that shouldn't be updated directly
 		delete updateData.id;
-		delete updateData.question_number; // Don't allow changing question number
-		delete updateData.last_date_modified; // This will be set automatically
+		delete updateData.question_number;
+		delete updateData.last_date_modified;
 
 		// Validate difficulty level if provided
 		if (
@@ -73,7 +60,7 @@ export async function PUT(
 			);
 		}
 
-		// CHANGED: Validate line reference if provided (now string)
+		// Validate line reference if provided
 		if (updateData.question_line !== undefined && updateData.question_line !== null) {
 			const lineStr = updateData.question_line.toString().trim();
 			if (lineStr === "") {
@@ -99,12 +86,10 @@ export async function PUT(
 		if (updateData.question_page) {
 			updateData.question_page = parseInt(updateData.question_page);
 		}
-		// CHANGED: Keep question_line as string
 		if (updateData.question_line !== undefined) {
 			updateData.question_line = updateData.question_line.toString().trim();
 		}
 
-		// Create Supabase client
 		const supabase = await createClient();
 		
 		// Check for duplicate title if updating title
@@ -192,214 +177,109 @@ export async function DELETE(
 ) {
 	try {
 		console.log("=== DELETE QUESTION API DEBUG ===");
-		console.log("DELETE request received");
 		
-		// Step 1: Get the ID
-		const { id } = await params;
-		console.log("Question ID to delete:", id);
-		
-		// Step 2: Check authentication header
-		const authHeader = request.headers.get("authorization");
-		console.log("Auth header present:", !!authHeader);
-		
-		if (!authHeader) {
-			console.log("No authorization header found");
+		// Check Oral Test permissions - need MANAGE_QUESTIONS permission
+		const permissions = await checkOralTestPermissions(
+			request.headers.get("authorization")
+		);
+
+		if (!permissions.canManageQuestions) {
+			console.log("Access denied: manage_questions permission required for deletion");
 			return NextResponse.json(
-				{ message: "No authorization header provided" },
-				{ status: 401 }
-			);
-		}
-		
-		// Step 3: Extract token
-		const token = extractTokenFromHeader(authHeader);
-		console.log("Token extracted successfully:", !!token);
-		
-		if (!token) {
-			console.log("Failed to extract token from header");
-			return NextResponse.json(
-				{ message: "No valid token found in authorization header" },
-				{ status: 401 }
-			);
-		}
-		
-		// Step 4: Verify token
-		let decoded;
-		try {
-			decoded = verifyToken(token);
-			console.log("Token verified successfully, auth level:", decoded.authLevel);
-		} catch (authError) {
-			console.error("Token verification failed:", authError);
-			return NextResponse.json(
-				{ 
-					message: "Invalid or expired token",
-					error: authError instanceof Error ? authError.message : "Unknown auth error"
-				},
-				{ status: 401 }
-			);
-		}
-		
-		// Step 5: Check permissions
-		if (decoded.authLevel < 4) {
-			console.log("Insufficient permissions for delete:", decoded.authLevel);
-			return NextResponse.json(
-				{ message: "Insufficient permissions. Level 4+ required for question management." },
+				{ message: "Access denied: Permission to manage questions required" },
 				{ status: 403 }
 			);
 		}
+
+		const { id } = await params;
+		console.log("Question ID to delete:", id);
 		
-		// Step 6: Create Supabase client
-		let supabase;
-		try {
-			supabase = await createClient();
-			console.log("Supabase client created successfully");
-		} catch (clientError) {
-			console.error("Failed to create Supabase client:", clientError);
-			return NextResponse.json(
-				{ 
-					message: "Database connection failed",
-					error: clientError instanceof Error ? clientError.message : "Unknown client error"
-				},
-				{ status: 500 }
-			);
-		}
+		const supabase = await createClient();
 		
-		// Step 7: Check if question exists
-		console.log("Checking if question exists in database...");
-		let existingQuestion;
-		try {
-			const { data, error: checkError } = await supabase
-				.from("questions")
-				.select("id, question_title, question_number")
-				.eq("id", id)
-				.single();
-				
-			if (checkError) {
-				if (checkError.code === 'PGRST116') {
-					console.log("Question not found in database");
-					return NextResponse.json(
-						{ message: "Question not found" },
-						{ status: 404 }
-					);
-				}
-				console.error("Error checking question existence:", checkError);
-				throw checkError;
-			}
+		// Check if question exists
+		console.log("Checking if question exists...");
+		const { data: existingQuestion, error: checkError } = await supabase
+			.from("questions")
+			.select("id, question_title, question_number")
+			.eq("id", id)
+			.single();
 			
-			existingQuestion = data;
-			console.log("Question found:", {
-				id: existingQuestion.id,
-				title: existingQuestion.question_title?.substring(0, 50) + "...",
-				number: existingQuestion.question_number
-			});
-		} catch (checkError) {
-			console.error("Error during question existence check:", checkError);
+		if (checkError) {
+			if (checkError.code === 'PGRST116') {
+				console.log("Question not found");
+				return NextResponse.json(
+					{ message: "Question not found" },
+					{ status: 404 }
+				);
+			}
+			console.error("Error checking question existence:", checkError);
 			return NextResponse.json(
-				{ 
-					message: "Failed to verify question existence",
-					error: checkError instanceof Error ? checkError.message : "Unknown check error"
-				},
+				{ message: "Failed to verify question existence", error: checkError.message },
 				{ status: 500 }
 			);
 		}
 		
-		// Step 8: Check for foreign key relationships first
-		console.log("Step 8: Checking for related test results...");
-		let relatedResults;
-		try {
-			const { data: testResults, error: fkError } = await supabase
-				.from("test_results")
-				.select("id, user_id, test_date")
-				.or(`q1_id.eq.${id},q2_id.eq.${id},q3_id.eq.${id},q4_id.eq.${id},q5_id.eq.${id}`)
-				.limit(10);
-				
-			if (fkError) {
-				console.error("Error checking for related records:", fkError);
-				// Continue anyway, let the delete operation handle it
-			} else {
-				relatedResults = testResults;
-				console.log("Found related test results:", testResults?.length || 0);
-				
-				if (testResults && testResults.length > 0) {
-					console.log("Question is referenced in test results, deletion will fail");
-					return NextResponse.json(
-						{ 
-							message: `Cannot delete question. It is referenced in ${testResults.length} test result(s).`,
-							details: "This question has been used in tests. To delete it, you must first remove all related test results or contact your administrator.",
-							relatedRecords: testResults.length,
-							action: "deletion_blocked"
-						},
-						{ status: 409 } // Conflict status
-					);
-				}
-			}
-		} catch (fkCheckError) {
-			console.error("Error during foreign key check:", fkCheckError);
-			// Continue with deletion attempt
+		console.log("Question found:", existingQuestion.question_title?.substring(0, 50));
+		
+		// Check for related test results
+		console.log("Checking for related test results...");
+		const { data: testResults, error: fkError } = await supabase
+			.from("test_results")
+			.select("id")
+			.or(`q1_id.eq.${id},q2_id.eq.${id},q3_id.eq.${id},r1_id.eq.${id},r2_id.eq.${id}`)
+			.limit(1);
+			
+		if (!fkError && testResults && testResults.length > 0) {
+			console.log("Question is referenced in test results");
+			return NextResponse.json(
+				{ 
+					message: "Cannot delete question - it is referenced in test results",
+					details: "This question has been used in tests and cannot be deleted to preserve data integrity.",
+					action: "deletion_blocked"
+				},
+				{ status: 409 }
+			);
 		}
 		
-		// Step 9: Attempt deletion (only if no foreign key conflicts)
-		console.log("Step 9: Attempting to delete question from database...");
-		try {
-			const { error: deleteError } = await supabase
-				.from("questions")
-				.delete()
-				.eq("id", id);
-				
-			if (deleteError) {
-				console.error("Supabase delete operation failed:", deleteError);
-				
-				// Handle foreign key constraint errors specifically
-				if (deleteError.code === "23503") {
-					return NextResponse.json(
-						{ 
-							message: "Cannot delete question - it is referenced in test results",
-							details: "This question has been used in tests and cannot be deleted to preserve data integrity. Contact your administrator if you need to remove this question.",
-							error: deleteError.message,
-							code: deleteError.code,
-							action: "foreign_key_violation"
-						},
-						{ status: 409 }
-					);
-				}
-				
+		// Attempt deletion
+		console.log("Attempting deletion...");
+		const { error: deleteError } = await supabase
+			.from("questions")
+			.delete()
+			.eq("id", id);
+			
+		if (deleteError) {
+			console.error("Delete operation failed:", deleteError);
+			
+			if (deleteError.code === "23503") {
 				return NextResponse.json(
 					{ 
-						message: "Failed to delete question from database",
+						message: "Cannot delete question - it is referenced in test results",
 						error: deleteError.message,
-						code: deleteError.code
+						action: "foreign_key_violation"
 					},
-					{ status: 500 }
+					{ status: 409 }
 				);
 			}
 			
-			console.log("Question deleted successfully from database");
-			
-			return NextResponse.json({ 
-				message: "Question deleted successfully",
-				deletedId: id,
-				questionNumber: existingQuestion.question_number,
-				title: existingQuestion.question_title?.substring(0, 50) + "..."
-			});
-			
-		} catch (deleteError) {
-			console.error("Unexpected error during deletion:", deleteError);
 			return NextResponse.json(
-				{ 
-					message: "Unexpected error during deletion",
-					error: deleteError instanceof Error ? deleteError.message : "Unknown delete error"
-				},
+				{ message: "Failed to delete question", error: deleteError.message },
 				{ status: 500 }
 			);
 		}
 		
-	} catch (outerError) {
-		console.error("Unexpected error in DELETE route:", outerError);
+		console.log("Question deleted successfully");
+		
+		return NextResponse.json({ 
+			message: "Question deleted successfully",
+			deletedId: id,
+			questionNumber: existingQuestion.question_number
+		});
+		
+	} catch (error: any) {
+		console.error("Delete question error:", error);
 		return NextResponse.json(
-			{
-				message: "Unexpected server error",
-				error: outerError instanceof Error ? outerError.message : "Unknown outer error",
-				stack: process.env.NODE_ENV === 'development' ? (outerError instanceof Error ? outerError.stack : undefined) : undefined
-			},
+			{ message: "Unexpected server error", error: error.message },
 			{ status: 500 }
 		);
 	}

@@ -1,5 +1,6 @@
-// src/app/tasks/page.tsx - Fixed to use global auth context
+// src/app/tasks/page.tsx - Protected with PermissionGuard
 import { Metadata } from "next";
+import PermissionGuard from "@/components/common/PermissionGuard";
 import TaskManager from "@/components/tasks/TaskManager";
 
 export const metadata: Metadata = {
@@ -8,5 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default function TasksPage() {
-	return <TaskManager />;
+	return (
+		<PermissionGuard app="tasks">
+			<TaskManager />
+		</PermissionGuard>
+	);
 }

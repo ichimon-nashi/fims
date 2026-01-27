@@ -566,7 +566,7 @@ const UserManagement = () => {
 			filterable: true,
 		},
 		// Handicap Level - only visible to level 10+
-		...(currentUser && currentUser.authentication_level >= 10
+		...(currentUser?.employee_id === 'admin'
 			? [
 					{
 						key: "handicap_level",
@@ -577,26 +577,6 @@ const UserManagement = () => {
 							<span
 								className={`${styles.handicapBadge} ${
 									styles[getHandicapClass(value)]
-								}`}
-							>
-								Level {value}
-							</span>
-						),
-					},
-			  ]
-			: []),
-		// Auth Level - only visible to level 20+
-		...(currentUser && currentUser.authentication_level >= 20
-			? [
-					{
-						key: "authentication_level",
-						label: "Auth Level",
-						sortable: true,
-						filterable: false,
-						render: (value: number) => (
-							<span
-								className={`${styles.authBadge} ${
-									styles[getAuthClass(value)]
 								}`}
 							>
 								Level {value}
@@ -786,7 +766,6 @@ const UserForm = ({
 		password: "",
 		filter: user?.filter || [],
 		handicap_level: user?.handicap_level || 3,
-		authentication_level: user?.authentication_level || 1,
 	});
 
 	// NEW: State to track which selects are open
@@ -1079,7 +1058,7 @@ const UserForm = ({
 
 						{/* Handicap Level - only for level 10+ users */}
 						{currentUser &&
-							currentUser.authentication_level >= 10 && (
+							currentUser?.employee_id === 'admin' && (
 								<div className={styles.formGroup}>
 									<label className={styles.formLabel}>
 										Handicap Level

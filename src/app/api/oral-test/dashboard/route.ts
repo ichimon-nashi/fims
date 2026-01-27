@@ -1,37 +1,26 @@
 // src/app/api/oral-test/dashboard/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { verifyToken, extractTokenFromHeader } from "@/lib/auth";
+import { checkOralTestPermissions } from "@/lib/oralTestPermissions";
 
 export async function GET(request: NextRequest) {
 	try {
 		console.log("=== ORAL TEST DASHBOARD API DEBUG ===");
 
-		const token = extractTokenFromHeader(
+		// Check Oral Test permissions - need VIEW access
+		const permissions = await checkOralTestPermissions(
 			request.headers.get("authorization")
 		);
 
-		if (!token) {
-			console.log("No token provided");
+		if (!permissions.canView) {
+			console.log("Access denied:", permissions.error);
 			return NextResponse.json(
-				{ message: "No token provided" },
-				{ status: 401 }
+				{ message: permissions.error || "Access denied" },
+				{ status: permissions.status || 403 }
 			);
 		}
 
-		const decoded = verifyToken(token);
-		console.log("Token decoded successfully:", {
-			userId: decoded.userId,
-			authLevel: decoded.authLevel,
-		});
-
-		if (decoded.authLevel < 1) {
-			console.log("Insufficient permissions:", decoded.authLevel);
-			return NextResponse.json(
-				{ message: "Insufficient permissions" },
-				{ status: 403 }
-			);
-		}
+		console.log("User has Oral Test access:", permissions.userId);
 
 		const supabase = await createClient();
 		const currentYear = new Date().getFullYear();
