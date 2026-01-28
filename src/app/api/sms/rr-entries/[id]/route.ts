@@ -1,10 +1,10 @@
-// src/app/api/sms/rr-entries/route.ts
+// src/app/api/sms/rr-entries/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { getUserById } from '@/lib/database';
-import { getRRSMSEntries, createRRSMSEntry } from '@/lib/smsDatabase';
+import { updateRRSMSEntry, deleteRRSMSEntry } from '@/lib/smsDatabase';
+import { createClient } from "@supabase/supabase-js";
 
-// Updated permission check function
 async function checkSMSPermissions(authHeader: string | null) {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return { canView: false, canEdit: false, error: 'Unauthorized', status: 401 };
@@ -12,23 +12,18 @@ async function checkSMSPermissions(authHeader: string | null) {
 
   const token = authHeader.substring(7);
   const decoded = verifyToken(token);
-
-  // Get user from database
   const user = await getUserById(decoded.userId);
   
   if (!user) {
     return { canView: false, canEdit: false, error: 'User not found', status: 404 };
   }
 
-  // Check SMS permissions from app_permissions
   const smsPermissions = user.app_permissions?.sms;
 
   if (!smsPermissions || !smsPermissions.access) {
     return { canView: false, canEdit: false, error: 'Access denied: No SMS permissions', status: 403 };
   }
 
-  // User has SMS access - can view
-  // Check if they can also edit (view_only = false means can edit)
   const canEdit = !smsPermissions.view_only;
 
   return {
@@ -38,39 +33,12 @@ async function checkSMSPermissions(authHeader: string | null) {
   };
 }
 
-export async function GET(request: NextRequest) {
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    // Check SMS permissions - need VIEW access
-    const permissions = await checkSMSPermissions(request.headers.get('authorization'));
-    
-    if (!permissions.canView) {
-      return NextResponse.json({ error: permissions.error }, { status: permissions.status || 403 });
-    }
-
-    // Get query parameters
-    const searchParams = request.nextUrl.searchParams;
-    const year = searchParams.get('year');
-
-    const filters: any = {};
-    if (year) {
-      filters.year = parseInt(year);
-    }
-
-    const entries = await getRRSMSEntries(filters);
-
-    return NextResponse.json(entries);
-  } catch (error: any) {
-    console.error('Error in GET /api/sms/rr-entries:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    // Check SMS permissions - need EDIT access
+    const { id } = await params; // Next.js 15 fix
     const permissions = await checkSMSPermissions(request.headers.get('authorization'));
     
     if (!permissions.canEdit) {
@@ -82,44 +50,121 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    // Validate required fields
-    if (!body.rr_number) {
-      return NextResponse.json(
-        { error: 'RR number is required' },
-        { status: 400 }
-      );
-    }
-
-    const entry = await createRRSMSEntry({
+    const entry = await updateRRSMSEntry(id, {
       rr_number: body.rr_number,
       srm_table_link_id: body.srm_table_link_id,
-      // OLD fields (backward compatibility)
       risk_id_barrier: body.risk_id_barrier,
       last_review: body.last_review,
       next_review: body.next_review,
-      // NEW fields
       risk_id: body.risk_id,
       risk_last_review: body.risk_last_review,
       risk_next_review: body.risk_next_review,
       barrier_id: body.barrier_id,
       barrier_last_review: body.barrier_last_review,
       barrier_next_review: body.barrier_next_review,
-      created_by: permissions.userId!
     });
 
-    return NextResponse.json(entry, { status: 201 });
+    return NextResponse.json(entry);
   } catch (error: any) {
-    console.error('Error in POST /api/sms/rr-entries:', error);
+    console.error('Error in PUT /api/sms/rr-entries/[id]:', error);
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params; // Next.js 15 fix
+    const permissions = await checkSMSPermissions(request.headers.get('authorization'));
     
-    if (error.message.includes('already exists')) {
+    if (!permissions.canEdit) {
       return NextResponse.json(
-        { error: error.message },
-        { status: 409 }
+        { error: 'Access denied: Edit permission required' },
+        { status: 403 }
       );
     }
 
+    await deleteRRSMSEntry(id);
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Error in DELETE /api/sms/rr-entries/[id]:', error);
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params; // Next.js 15 fix
+    const permissions = await checkSMSPermissions(request.headers.get('authorization'));
+    
+    if (!permissions.canEdit) {
+      return NextResponse.json(
+        { error: 'Access denied: Edit permission required' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const { is_deprecated } = body;
+
+    if (typeof is_deprecated !== 'boolean') {
+      return NextResponse.json(
+        { error: 'is_deprecated must be a boolean' },
+        { status: 400 }
+      );
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!;
+    
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+
+    const { data, error } = await supabase
+      .from('rr_sms_entries')
+      .update({
+        is_deprecated,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select(`
+        *,
+        srm_table_link:srm_table_link_id(id, number, file_date, hazard_description)
+      `)
+      .single();
+
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
+
+    if (!data) {
+      return NextResponse.json(
+        { error: 'Entry not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(data);
+  } catch (error: any) {
+    console.error('Error in PATCH /api/sms/rr-entries/[id]:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to update deprecated status' },
       { status: 500 }
     );
   }

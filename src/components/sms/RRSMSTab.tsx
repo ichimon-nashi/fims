@@ -31,6 +31,7 @@ export default function RRSMSTab({
 	const [showModal, setShowModal] = useState(false);
 	const [editingEntry, setEditingEntry] = useState<RRSMSEntry | null>(null);
 	const [searchTerm, setSearchTerm] = useState("");
+	const [showDeprecated, setShowDeprecated] = useState(true);
 
 	// Column resizing state
 	const [columnWidths, setColumnWidths] = useState<{ [key: string]: number }>(
@@ -303,6 +304,29 @@ export default function RRSMSTab({
 		}
 	};
 
+	const handleStatusChange = async (entry: RRSMSEntry, newStatus: boolean) => {
+		try {
+			const token = localStorage.getItem("token");
+			const response = await fetch(
+				`/api/sms/rr-entries/${entry.id}`,
+				{
+					method: "PATCH",
+					headers: {
+						Authorization: `Bearer ${token}`,
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({ is_deprecated: newStatus }),
+				}
+			);
+
+			if (!response.ok) throw new Error("Failed to update");
+			fetchAllEntries();
+		} catch (error) {
+			console.error("Error updating status:", error);
+			alert("更新狀態失敗");
+		}
+	};
+
 	const handleSave = () => {
 		setShowModal(false);
 		fetchAllEntries();
@@ -362,9 +386,16 @@ export default function RRSMSTab({
 	};
 
 	const getFilteredEntries = (entries: RRSMSEntry[]) => {
-		if (!searchTerm) return entries;
+		let filtered = entries;
+		
+		if (!showDeprecated) {
+			filtered = filtered.filter(entry => !entry.is_deprecated);
+		}
+		
+		if (!searchTerm) return filtered;
+		
 		const search = searchTerm.toLowerCase();
-		return entries.filter(
+		return filtered.filter(
 			(entry) =>
 				entry.rr_number.toLowerCase().includes(search) ||
 				entry.srm_table_link?.number.toLowerCase().includes(search) ||
@@ -443,6 +474,14 @@ export default function RRSMSTab({
 				<div className={styles.stats}>
 					共 {allEntries.length} 筆記錄，{yearGroups.length} 個年度
 				</div>
+				<label className={styles.filterCheckbox}>
+					<input
+						type="checkbox"
+						checked={showDeprecated}
+						onChange={(e) => setShowDeprecated(e.target.checked)}
+					/>
+					<span>顯示已棄用項目</span>
+				</label>
 				{isAdmin && (
 					<button onClick={handleAdd} className={styles.addButton}>
 						+ 新增 RR 項目
@@ -646,6 +685,30 @@ export default function RRSMSTab({
 														</th>
 														<th
 															style={getColumnStyle(
+																"deprecated_status",
+																80
+															)}
+														>
+															狀態
+															<div
+																className={
+																	styles.resizeHandle
+																}
+																onMouseDown={(
+																	e
+																) =>
+																	handleMouseDown(
+																		e,
+																		"deprecated_status",
+																		columnWidths[
+																			"deprecated_status"
+																		] || 80
+																	)
+																}
+															/>
+														</th>
+														<th
+															style={getColumnStyle(
 																"status",
 																100
 															)}
@@ -687,7 +750,7 @@ export default function RRSMSTab({
 															return (
 																<tr>
 																	<td
-																		colSpan={isAdmin ? 7 : 6}
+																		colSpan={isAdmin ? 8 : 7}
 																		className={styles.emptyState}
 																	>
 																		{searchTerm ? "沒有符合搜尋的項目" : "本年度尚無項目"}
@@ -707,7 +770,7 @@ export default function RRSMSTab({
 															}
 															
 															return (
-																<tr key={row.rowId}>
+																<tr key={row.rowId} className={row.entry.is_deprecated ? styles.deprecatedRow : ""}>
 																	<td className={styles.rrNumber}>{row.entry.rr_number}</td>
 																	<td className={styles.srmLink}>
 																		{row.entry.srm_table_link ? (
@@ -732,6 +795,28 @@ export default function RRSMSTab({
 																	<td style={{ fontSize: "0.85rem" }}>{row.reviewId}</td>
 																	<td>{formatDate(row.lastReview)}</td>
 																	<td>{formatDate(row.nextReview)}</td>
+																	<td>
+																		{isAdmin ? (
+																			<select
+																				className={styles.statusSelect}
+																				value={row.entry.is_deprecated ? "deprecated" : "active"}
+																				onChange={(e) => handleStatusChange(row.entry, e.target.value === "deprecated")}
+																			>
+																				<option value="active">有效</option>
+																				<option value="deprecated">棄用</option>
+																			</select>
+																		) : (
+																			<span
+																				className={
+																					row.entry.is_deprecated
+																						? styles.deprecatedBadge
+																						: styles.activeBadge
+																				}
+																			>
+																				{row.entry.is_deprecated ? "棄用" : "有效"}
+																			</span>
+																		)}
+																	</td>
 																	<td>
 																		{status.text && (
 																			<span className={`${styles.statusBadge} ${status.className}`}>
