@@ -714,7 +714,7 @@ const AccessControlPanel = () => {
 															styles.detailLabel
 														}
 													>
-														權限等級:
+														職業:
 													</span>
 													<span
 														className={
@@ -765,7 +765,7 @@ const AccessControlPanel = () => {
 											<label
 												className={styles.sectionLabel}
 											>
-												權限等級 (Avatar GIF)
+												職業 (Avatar GIF)
 											</label>
 											<p className={styles.sectionHint}>
 												此設定僅影響顯示的 GIF 頭像
@@ -832,10 +832,10 @@ const AccessControlPanel = () => {
 											<label
 												className={styles.sectionLabel}
 											>
-												應用程式存取權限
+												應用程式使用權限
 											</label>
 											<p className={styles.sectionHint}>
-												選擇使用者可以存取的應用程式
+												選擇使用者開放使用的應用程式
 											</p>
 
 											<div
@@ -886,7 +886,7 @@ const AccessControlPanel = () => {
 																		color: "#3b82f6",
 																	}}
 																/>{" "}
-																值勤表 (Roster)
+																教師班表 (Roster)
 															</span>
 														</label>
 													</div>
@@ -933,7 +933,7 @@ const AccessControlPanel = () => {
 																		color: "#10b981",
 																	}}
 																/>{" "}
-																任務 (Tasks)
+																任務管理 (Task Manger)
 															</span>
 														</label>
 													</div>
@@ -980,7 +980,7 @@ const AccessControlPanel = () => {
 																		color: "#ef4444",
 																	}}
 																/>{" "}
-																安全管理 (SMS)
+																SMS (Safety Management System)
 															</span>
 														</label>
 													</div>
@@ -1072,7 +1072,7 @@ const AccessControlPanel = () => {
 																		color: "#f59e0b",
 																	}}
 																/>{" "}
-																口試系統 (Oral
+																翻書口試 (Oral
 																Test)
 															</span>
 														</label>
@@ -1234,7 +1234,7 @@ const AccessControlPanel = () => {
 																/>
 																<span>
 																	Test
-																	(進行測試)
+																	(測試)
 																</span>
 															</label>
 														</div>
@@ -1321,8 +1321,7 @@ const AccessControlPanel = () => {
 																		color: "#8b5cf6",
 																	}}
 																/>{" "}
-																商務艙訓練 (BC
-																Training)
+																B/C訓練 (商務艙服務訓練)
 															</span>
 														</label>
 													</div>
@@ -1369,7 +1368,7 @@ const AccessControlPanel = () => {
 																		color: "#ec4899",
 																	}}
 																/>{" "}
-																MDAFAAT
+																情境演練 (緊急撤離演練)
 															</span>
 														</label>
 													</div>
@@ -1416,7 +1415,7 @@ const AccessControlPanel = () => {
 																		color: "#14b8a6",
 																	}}
 																/>{" "}
-																AdS
+																AdS (注意力測試器)
 															</span>
 														</label>
 													</div>
@@ -1463,8 +1462,7 @@ const AccessControlPanel = () => {
 																		color: "#fb923c",
 																	}}
 																/>{" "}
-																CCOM抽問 (CCOM
-																Review)
+																CCOM抽問 (目錄抽問)
 															</span>
 														</label>
 													</div>
@@ -1503,7 +1501,7 @@ const AccessControlPanel = () => {
 											>
 												{savingPermissions
 													? "儲存中..."
-													: "💾 儲存權限變更"}
+													: "💾 儲存"}
 											</button>
 										</div>
 									</div>
@@ -1517,7 +1515,7 @@ const AccessControlPanel = () => {
 										選擇使用者
 									</h3>
 									<p className={styles.noSelectionText}>
-										請從左側列表選擇一位使用者以編輯其權限
+										請從左側列表選擇一位使用者以編輯權限
 									</p>
 								</div>
 							)}
