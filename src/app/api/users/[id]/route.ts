@@ -1,23 +1,33 @@
 // src/app/api/users/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { checkOralTestPermissions } from "@/lib/oralTestPermissions";
-import { hashPassword } from "@/lib/auth";
+import { verifyToken, extractTokenFromHeader, hashPassword } from "@/lib/auth";
 
 export async function GET(
 	request: NextRequest,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
-		// Check Oral Test permissions - need MANAGE_USERS permission
-		const permissions = await checkOralTestPermissions(
-			request.headers.get("authorization")
+		// Extract and verify JWT token - any authenticated user can view user details
+		const token = extractTokenFromHeader(
+			request.headers.get("authorization"),
 		);
 
-		if (!permissions.canManageUsers) {
+		if (!token) {
 			return NextResponse.json(
-				{ message: "Access denied: Permission to manage users required" },
-				{ status: 403 }
+				{ message: "No token provided" },
+				{ status: 401 },
+			);
+		}
+
+		let decoded;
+		try {
+			decoded = verifyToken(token);
+		} catch (tokenError: unknown) {
+			console.error("Token verification failed:", tokenError);
+			return NextResponse.json(
+				{ message: "Invalid token" },
+				{ status: 401 },
 			);
 		}
 
@@ -86,20 +96,59 @@ export async function PUT(
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
-		// Check Oral Test permissions - need MANAGE_USERS permission
-		const permissions = await checkOralTestPermissions(
-			request.headers.get("authorization")
+		// Extract and verify JWT token
+		const token = extractTokenFromHeader(
+			request.headers.get("authorization"),
 		);
 
-		if (!permissions.canManageUsers) {
+		if (!token) {
 			return NextResponse.json(
-				{ message: "Access denied: Permission to manage users required" },
-				{ status: 403 }
+				{ message: "No token provided" },
+				{ status: 401 },
+			);
+		}
+
+		let decoded;
+		try {
+			decoded = verifyToken(token);
+		} catch (tokenError: unknown) {
+			console.error("Token verification failed:", tokenError);
+			return NextResponse.json(
+				{ message: "Invalid token" },
+				{ status: 401 },
 			);
 		}
 
 		const { id } = await params;
 		const updateData = await request.json();
+
+		const supabase = await createClient();
+		
+		// Get current user's permissions
+		const { data: currentUser, error: userError } = await supabase
+			.from("users")
+			.select("employee_id, authentication_level")
+			.eq("id", decoded.userId)
+			.single();
+
+		if (userError || !currentUser) {
+			console.error("Error fetching current user:", userError);
+			return NextResponse.json(
+				{ message: "User not found" },
+				{ status: 404 },
+			);
+		}
+
+		// Check if user is updating themselves or if they have admin privileges
+		const isSelfUpdate = decoded.userId === id;
+		const isAdmin = currentUser.employee_id === "admin" || currentUser.authentication_level >= 5;
+
+		if (!isSelfUpdate && !isAdmin) {
+			return NextResponse.json(
+				{ message: "Insufficient permissions to update other users" },
+				{ status: 403 }
+			);
+		}
 
 		console.log("Updating user:", id, "with data:", Object.keys(updateData));
 
@@ -111,20 +160,24 @@ export async function PUT(
 
 		// Hash password if provided
 		if (updateData.password) {
-			updateData.password_hash = await hashPassword(updateData.password);
-			delete updateData.password;
+			// Only allow password updates for self or admin
+			if (!isSelfUpdate && !isAdmin) {
+				delete updateData.password;
+			} else {
+				updateData.password_hash = await hashPassword(updateData.password);
+				delete updateData.password;
+			}
 		}
 
-		// Users with manage_users can only set auth levels 1-3
-		if (updateData.authentication_level && updateData.authentication_level > 3) {
+		// Only admin can change authentication_level and app_permissions
+		if (!isAdmin) {
 			delete updateData.authentication_level;
+			delete updateData.app_permissions;
 		}
 
 		// Don't allow changing employee_id
 		delete updateData.employee_id;
 
-		const supabase = await createClient();
-		
 		const { data: updatedUser, error } = await supabase
 			.from("users")
 			.update(updateData)
@@ -168,21 +221,58 @@ export async function DELETE(
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
-		// Check Oral Test permissions - need MANAGE_USERS permission
-		const permissions = await checkOralTestPermissions(
-			request.headers.get("authorization")
+		// Extract and verify JWT token
+		const token = extractTokenFromHeader(
+			request.headers.get("authorization"),
 		);
 
-		if (!permissions.canManageUsers) {
+		if (!token) {
 			return NextResponse.json(
-				{ message: "Access denied: Permission to manage users required" },
+				{ message: "No token provided" },
+				{ status: 401 },
+			);
+		}
+
+		let decoded;
+		try {
+			decoded = verifyToken(token);
+		} catch (tokenError: unknown) {
+			console.error("Token verification failed:", tokenError);
+			return NextResponse.json(
+				{ message: "Invalid token" },
+				{ status: 401 },
+			);
+		}
+
+		const supabase = await createClient();
+		
+		// Get current user's permissions
+		const { data: currentUser, error: userError } = await supabase
+			.from("users")
+			.select("employee_id, authentication_level")
+			.eq("id", decoded.userId)
+			.single();
+
+		if (userError || !currentUser) {
+			console.error("Error fetching current user:", userError);
+			return NextResponse.json(
+				{ message: "User not found" },
+				{ status: 404 },
+			);
+		}
+
+		// Only admin can delete users
+		const isAdmin = currentUser.employee_id === "admin" || currentUser.authentication_level >= 10;
+
+		if (!isAdmin) {
+			return NextResponse.json(
+				{ message: "Insufficient permissions to delete users" },
 				{ status: 403 }
 			);
 		}
 
 		const { id } = await params;
 
-		const supabase = await createClient();
 		const { error } = await supabase.from("users").delete().eq("id", id);
 
 		if (error) {

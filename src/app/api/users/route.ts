@@ -1,29 +1,38 @@
 // src/app/api/users/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { checkOralTestPermissions } from "@/lib/oralTestPermissions";
-import { hashPassword } from "@/lib/auth";
+import { verifyToken, extractTokenFromHeader, hashPassword } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
 	try {
-		// Check Oral Test permissions - need MANAGE_USERS permission to view all users
-		const permissions = await checkOralTestPermissions(
-			request.headers.get("authorization")
+		// Extract and verify JWT token - any authenticated user can view users
+		const token = extractTokenFromHeader(
+			request.headers.get("authorization"),
 		);
 
-		if (!permissions.canManageUsers) {
-			console.log("Access denied: manage_users permission required");
+		if (!token) {
 			return NextResponse.json(
-				{ message: "Access denied: Permission to manage users required" },
-				{ status: 403 }
+				{ message: "No token provided" },
+				{ status: 401 },
 			);
 		}
 
-		console.log("User has manage_users permission:", permissions.userId);
+		let decoded;
+		try {
+			decoded = verifyToken(token);
+		} catch (tokenError: unknown) {
+			console.error("Token verification failed:", tokenError);
+			return NextResponse.json(
+				{ message: "Invalid token" },
+				{ status: 401 },
+			);
+		}
+
+		console.log("Authenticated user requesting users list:", decoded.userId);
 
 		const supabase = await createClient();
 
-		// Get all users
+		// Get all users - any authenticated user can view the list
 		const { data: users, error } = await supabase
 			.from("users")
 			.select("*")
@@ -63,16 +72,55 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
 	try {
-		// Check Oral Test permissions - need MANAGE_USERS permission to create users
-		const permissions = await checkOralTestPermissions(
-			request.headers.get("authorization")
+		// Extract and verify JWT token
+		const token = extractTokenFromHeader(
+			request.headers.get("authorization"),
 		);
 
-		if (!permissions.canManageUsers) {
-			console.log("Access denied: manage_users permission required for creation");
+		if (!token) {
 			return NextResponse.json(
-				{ message: "Access denied: Permission to manage users required" },
-				{ status: 403 }
+				{ message: "No token provided" },
+				{ status: 401 },
+			);
+		}
+
+		let decoded;
+		try {
+			decoded = verifyToken(token);
+		} catch (tokenError: unknown) {
+			console.error("Token verification failed:", tokenError);
+			return NextResponse.json(
+				{ message: "Invalid token" },
+				{ status: 401 },
+			);
+		}
+
+		const supabase = await createClient();
+		
+		// Get current user's employee_id to check permissions
+		const { data: currentUser, error: userError } = await supabase
+			.from("users")
+			.select("employee_id, authentication_level")
+			.eq("id", decoded.userId)
+			.single();
+
+		if (userError || !currentUser) {
+			console.error("Error fetching current user:", userError);
+			return NextResponse.json(
+				{ message: "User not found" },
+				{ status: 404 },
+			);
+		}
+
+		// Only admin or high auth level users can create users
+		if (
+			currentUser.employee_id !== "admin" &&
+			currentUser.authentication_level < 5
+		) {
+			console.log("Access denied for user creation:", currentUser.employee_id);
+			return NextResponse.json(
+				{ message: "Insufficient permissions to create users" },
+				{ status: 403 },
 			);
 		}
 
@@ -85,8 +133,6 @@ export async function POST(request: NextRequest) {
 				{ status: 400 }
 			);
 		}
-
-		const supabase = await createClient();
 
 		// Check if user already exists
 		const { data: existingUser } = await supabase
@@ -130,11 +176,6 @@ export async function POST(request: NextRequest) {
 		} else if (userData.password_hash) {
 			// Support for already hashed passwords (e.g., imports)
 			newUser.password_hash = userData.password_hash;
-		}
-
-		// Users with manage_users can only set auth level 1-3
-		if (newUser.authentication_level && newUser.authentication_level > 3) {
-			newUser.authentication_level = 1; // Default for safety
 		}
 
 		const { data: createdUser, error } = await supabase
