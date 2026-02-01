@@ -1,4 +1,4 @@
-// src/app/api/cron/od-utils.ts
+// src/app/api/cron/od-rotation/od-utils.ts
 import { createClient } from "@supabase/supabase-js";
 
 // Create service role client (bypasses RLS)
@@ -14,10 +14,10 @@ function getServiceClient() {
 	});
 }
 
-// ✅ UPDATED: All 4 OD rotation instructors
-export const OD_INSTRUCTORS = ["22018", "36639", "39426", "51892"];
+// ✅ UPDATED: All 5 OD rotation instructors (39462 added as 5th)
+export const OD_INSTRUCTORS = ["22018", "36639", "39426", "51892", "39462"];
 
-// Base rotation state (September 2024)
+// Base rotation state (September 2024) - Keep original 4-person rotation
 const BASE_ROTATION: {
 	year: number;
 	month: number;
@@ -30,6 +30,7 @@ const BASE_ROTATION: {
 		"36639": 2,  // Week 2
 		"39426": 3,  // Week 3
 		"51892": 4   // Week 4
+		// 39462 is NOT in base rotation - will be assigned to available/random week
 	}
 };
 
@@ -45,34 +46,27 @@ export function getMonthWeeks(year: number, month: number): WeekInfo[] {
 	const weeks: WeekInfo[] = [];
 	
 	let weekNumber = 1;
-	// eslint-disable-next-line prefer-const
 	let currentDate = new Date(Date.UTC(year, month - 1, 1));
 	const lastDay = new Date(Date.UTC(year, month, 0));
 	
 	// Find all Mondays in the month
 	while (currentDate <= lastDay) {
-		// Only process if this is a Monday (day === 1) - use getUTCDay()
 		if (currentDate.getUTCDay() === 1) {
 			const weekDates: string[] = [];
 			const weekStart = new Date(currentDate);
 			
-			// Collect ONLY Monday through Friday (5 consecutive weekdays)
-			// eslint-disable-next-line prefer-const
 			let checkDate = new Date(weekStart);
 			for (let i = 0; i < 5; i++) {
-				const dayOfWeek = checkDate.getUTCDay(); // Use UTC day
+				const dayOfWeek = checkDate.getUTCDay();
 				const dateStr = checkDate.toISOString().split('T')[0];
 				
-				// Double-check: ONLY add if it's a weekday (1-5) AND in target month
 				if (dayOfWeek >= 1 && dayOfWeek <= 5 && checkDate.getUTCMonth() === month - 1) {
 					weekDates.push(dateStr);
 				}
 				
-				// Move to next day using UTC
 				checkDate = new Date(checkDate.getTime() + 24 * 60 * 60 * 1000);
 			}
 			
-			// Only add week if we got at least 3 weekdays
 			if (weekDates.length >= 3) {
 				weeks.push({
 					weekNumber,
@@ -84,7 +78,6 @@ export function getMonthWeeks(year: number, month: number): WeekInfo[] {
 			}
 		}
 		
-		// Move to next day using UTC
 		currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
 	}
 	
@@ -102,29 +95,28 @@ function getMonthsElapsed(year: number, month: number): number {
 	return yearDiff * 12 + monthDiff;
 }
 
-// Get instructor assignment for a specific week
+// Get instructor assignment for a specific week (original 4-person rotation)
 function getInstructorForWeek(year: number, month: number, weekNumber: number): string {
 	const monthsElapsed = getMonthsElapsed(year, month);
 	
-	// Calculate rotated positions
+	// Calculate rotated positions for original 4 instructors
 	const rotatedAssignments: Record<string, number> = {};
 	
-	for (const instructor of OD_INSTRUCTORS) {
+	for (const instructor of ["22018", "36639", "39426", "51892"]) {
 		const baseWeek = BASE_ROTATION.assignments[instructor];
-		// Rotate: each month, instructor moves to next week position
 		const newWeek = ((baseWeek - 1 + monthsElapsed) % 4) + 1;
 		rotatedAssignments[instructor] = newWeek;
 	}
 	
 	// Find which instructor is assigned to this week
-	for (const instructor of OD_INSTRUCTORS) {
+	for (const instructor of ["22018", "36639", "39426", "51892"]) {
 		if (rotatedAssignments[instructor] === weekNumber) {
 			return instructor;
 		}
 	}
 	
-	// Fallback: shouldn't happen, but assign in order
-	return OD_INSTRUCTORS[(weekNumber - 1) % OD_INSTRUCTORS.length];
+	// Fallback
+	return OD_INSTRUCTORS[(weekNumber - 1) % 4];
 }
 
 // Main function to assign OD for a month
@@ -153,14 +145,17 @@ export async function assignODForMonth(
 	console.log(`Found ${weeks.length} weeks in ${year}-${month}`);
 	
 	const assignments = [];
+	const assignedWeeks = new Set<number>(); // Track which weeks have been assigned
 	
-	// ✅ FIX: Assign OD for ALL weeks, ensuring full week coverage
+	// STEP 1: Assign OD for original 4 instructors in rotation order
+	const rotationOrder = ["22018", "36639", "39426", "51892"];
+	
 	for (const week of weeks) {
 		const primaryInstructor = getInstructorForWeek(year, month, week.weekNumber);
 		
 		console.log(`Week ${week.weekNumber} (${week.dates[0]} to ${week.dates[week.dates.length-1]}): Primary = ${primaryInstructor}`);
 		
-		// Check if primary instructor has conflicts for this entire week
+		// Check if primary instructor has conflicts
 		let hasConflict = false;
 		for (const date of week.dates) {
 			const { data: existing } = await supabase
@@ -173,22 +168,20 @@ export async function assignODForMonth(
 			if (existing && existing.duties && existing.duties.length > 0) {
 				console.log(`⚠ ${primaryInstructor} has conflict on ${date}: ${existing.duties.join(', ')}`);
 				hasConflict = true;
-				break; // Stop checking, we found a conflict
+				break;
 			}
 		}
 		
-		// Determine which instructor will get this week
 		let assignedInstructor = primaryInstructor;
 		
 		if (hasConflict) {
-			console.log(`⚠ ${primaryInstructor} has conflicts in week ${week.weekNumber}, finding alternative...`);
+			console.log(`⚠ ${primaryInstructor} has conflicts in week ${week.weekNumber}, finding alternative from rotation...`);
 			
-			// Try to find an available instructor from the pool
+			// Try other instructors from rotation order
 			let foundAlternative = false;
-			for (const altInstructor of OD_INSTRUCTORS) {
-				if (altInstructor === primaryInstructor) continue; // Skip the one with conflict
+			for (const altInstructor of rotationOrder) {
+				if (altInstructor === primaryInstructor) continue;
 				
-				// Check if this alternative has conflicts
 				let altHasConflict = false;
 				for (const date of week.dates) {
 					const { data: existing } = await supabase
@@ -213,12 +206,12 @@ export async function assignODForMonth(
 			}
 			
 			if (!foundAlternative) {
-				console.log(`❌ No available instructor for week ${week.weekNumber}, skipping entire week`);
-				continue; // Skip this entire week
+				console.log(`⚠ No available instructor from rotation for week ${week.weekNumber}, will try 39462 later`);
+				continue; // Skip for now, will try to assign 39462
 			}
 		}
 		
-		// Get user details for the assigned instructor
+		// Get user details
 		const { data: userData, error: userError } = await supabase
 			.from('users')
 			.select('full_name, rank, base')
@@ -230,7 +223,7 @@ export async function assignODForMonth(
 			continue;
 		}
 		
-		// Assign OD for the full week to this instructor
+		// Assign OD for the full week
 		for (const date of week.dates) {
 			try {
 				const { data: existing } = await supabase
@@ -241,7 +234,6 @@ export async function assignODForMonth(
 					.maybeSingle();
 				
 				if (existing && (!existing.duties || existing.duties.length === 0)) {
-					// Entry exists but has no duties - update with OD
 					const { error: updateError } = await supabase
 						.from('fi_schedule')
 						.update({ 
@@ -257,7 +249,6 @@ export async function assignODForMonth(
 						console.log(`✓ Updated OD for ${assignedInstructor} on ${date}`);
 					}
 				} else if (!existing) {
-					// No entry exists - create new with OD
 					const { error: insertError } = await supabase
 						.from('fi_schedule')
 						.insert({
@@ -289,6 +280,86 @@ export async function assignODForMonth(
 				console.error(`Unexpected error for ${assignedInstructor} on ${date}:`, err);
 			}
 		}
+		
+		assignedWeeks.add(week.weekNumber);
+	}
+	
+	// STEP 2: Try to assign 39462 to an available week
+	console.log(`\n--- Assigning 39462 (5th instructor) ---`);
+	
+	let instructor39462Assigned = false;
+	
+	for (const week of weeks) {
+		if (assignedWeeks.has(week.weekNumber)) {
+			// Check if 39462 has conflicts with this week
+			let hasConflict = false;
+			for (const date of week.dates) {
+				const { data: existing } = await supabase
+					.from('fi_schedule')
+					.select('duties')
+					.eq('employee_id', '39462')
+					.eq('date', date)
+					.maybeSingle();
+				
+				if (existing && existing.duties && existing.duties.length > 0) {
+					hasConflict = true;
+					break;
+				}
+			}
+			
+			if (!hasConflict) {
+				// 39462 can be assigned to this week (will overlap with another instructor)
+				console.log(`✓ Assigning 39462 to week ${week.weekNumber} (overlapping assignment)`);
+				
+				const { data: userData } = await supabase
+					.from('users')
+					.select('full_name, rank, base')
+					.eq('employee_id', '39462')
+					.single();
+				
+				if (userData) {
+					for (const date of week.dates) {
+						const { data: existing } = await supabase
+							.from('fi_schedule')
+							.select('*')
+							.eq('employee_id', '39462')
+							.eq('date', date)
+							.maybeSingle();
+						
+						if (!existing) {
+							await supabase
+								.from('fi_schedule')
+								.insert({
+									employee_id: '39462',
+									full_name: userData.full_name,
+									rank: userData.rank,
+									base: userData.base,
+									date: date,
+									duties: ['OD'],
+									year: year,
+									created_by: executedBy,
+									updated_by: executedBy
+								});
+							
+							console.log(`✓ Created OD for 39462 on ${date}`);
+							
+							assignments.push({
+								date,
+								instructor: '39462',
+								week: week.weekNumber
+							});
+						}
+					}
+					
+					instructor39462Assigned = true;
+					break; // 39462 assigned, done
+				}
+			}
+		}
+	}
+	
+	if (!instructor39462Assigned) {
+		console.log(`⚠ 39462 could not be assigned (conflicts on all weeks)`);
 	}
 	
 	console.log(`\n=== OD Assignment Complete ===`);
