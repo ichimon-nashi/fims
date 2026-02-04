@@ -1,4 +1,4 @@
-// src/app/api/schedule/route.ts - FIXED VERSION
+// src/app/api/schedule/route.ts - FIXED VERSION WITH DATABASE PERMISSION CHECKS
 import { NextRequest, NextResponse } from "next/server";
 import { 
 	getScheduleEntries, 
@@ -6,9 +6,8 @@ import {
 } from "@/lib/database";
 import { verifyToken, extractTokenFromHeader } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
-
-// Special accounts that can modify all schedules
-const ADMIN_ACCOUNTS = ["admin", "21986", "51892"];
+import { hasAppAccess, canEditOthersSchedules } from "@/lib/permissionHelpers";
+import { User } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
 	try {
@@ -29,9 +28,34 @@ export async function GET(request: NextRequest) {
 		const decoded = verifyToken(token);
 		console.log("Token verified for user:", decoded.userId);
 
-		if (decoded.authLevel < 1) {
+		// Get full user data with permissions from database
+		const supabase = await createClient();
+		const { data: user, error: userError } = await supabase
+			.from("users")
+			.select("*")
+			.eq("id", decoded.userId)
+			.single();
+
+		if (userError || !user) {
+			console.log("User not found in database:", decoded.userId);
 			return NextResponse.json(
-				{ message: "Insufficient permissions" },
+				{ message: "User not found" },
+				{ status: 404 }
+			);
+		}
+
+		// Check if user has access to roster app using database permissions
+		const rosterAccess = hasAppAccess(user as User, 'roster');
+		console.log("Roster access check:", {
+			employee_id: user.employee_id,
+			has_access: rosterAccess.granted,
+			reason: rosterAccess.reason
+		});
+
+		if (!rosterAccess.granted) {
+			console.log("Access denied to roster app");
+			return NextResponse.json(
+				{ message: "您沒有權限存取此功能" },
 				{ status: 403 }
 			);
 		}
@@ -90,22 +114,15 @@ export async function POST(request: NextRequest) {
 		const decoded = verifyToken(token);
 		console.log("🔍 DEBUGGING TOKEN:");
 		console.log("Full decoded token:", JSON.stringify(decoded, null, 2));
-		
-		if (decoded.authLevel < 1) {
-			return NextResponse.json(
-				{ message: "Insufficient permissions" },
-				{ status: 403 }
-			);
-		}
 
 		const scheduleData = await request.json();
 		console.log("📋 Schedule data received:", scheduleData);
 
-		// Get user's employee_id from database using the UUID  
+		// Get full user data with permissions from database
 		const supabase = await createClient();
 		const { data: user, error: userError } = await supabase
 			.from("users")
-			.select("employee_id, full_name")
+			.select("*")
 			.eq("id", decoded.userId)
 			.single();
 
@@ -121,19 +138,38 @@ export async function POST(request: NextRequest) {
 		console.log("✅ Found user:", {
 			uuid: decoded.userId,
 			employee_id: userEmployeeId,
-			name: user.full_name
+			name: user.full_name,
+			app_permissions: user.app_permissions
 		});
 
-		// Permission check: Users can only modify their own schedule unless they are admin
-		const isAdmin = ADMIN_ACCOUNTS.includes(userEmployeeId);
-		const canModify = isAdmin || scheduleData.employee_id === userEmployeeId;
+		// Check if user has access to roster app using database permissions
+		const rosterAccess = hasAppAccess(user as User, 'roster');
+		console.log("🔐 Roster access check:", {
+			employee_id: userEmployeeId,
+			has_access: rosterAccess.granted,
+			reason: rosterAccess.reason
+		});
+
+		if (!rosterAccess.granted) {
+			console.log("❌ Access denied to roster app");
+			return NextResponse.json(
+				{ message: "您沒有權限存取此功能" },
+				{ status: 403 }
+			);
+		}
+
+		// Check if user can edit others' schedules using database permissions
+		const canEditOthers = canEditOthersSchedules(user as User);
+		const isEditingSelf = scheduleData.employee_id === userEmployeeId;
+		const canModify = canEditOthers || isEditingSelf;
 		
 		console.log("🔒 Permission check:", {
 			userEmployeeId,
 			targetEmployeeId: scheduleData.employee_id,
-			isAdmin,
+			canEditOthers,
+			isEditingSelf,
 			canModify,
-			adminAccounts: ADMIN_ACCOUNTS
+			roster_permissions: user.app_permissions?.roster
 		});
 		
 		if (!canModify) {
@@ -192,9 +228,6 @@ export async function POST(request: NextRequest) {
 			}
 		}
 
-		// Use the actual user employee_id
-		const userEmployeeIdForTracking = userEmployeeId;
-
 		// Ensure we have all required fields with defaults
 		const entryData = {
 			employee_id: scheduleData.employee_id,
@@ -203,8 +236,8 @@ export async function POST(request: NextRequest) {
 			base: scheduleData.base || 'Unknown',
 			date: scheduleData.date,
 			duties: scheduleData.duties,
-			created_by: scheduleData.created_by || userEmployeeIdForTracking,
-			updated_by: userEmployeeIdForTracking,
+			created_by: scheduleData.created_by || userEmployeeId,
+			updated_by: userEmployeeId,
 			updated_at: new Date().toISOString()
 		};
 
@@ -217,9 +250,9 @@ export async function POST(request: NextRequest) {
 			message: "Schedule entry created/updated successfully",
 			data: newScheduleEntry,
 			debug: {
-				userEmployeeId: userEmployeeIdForTracking,
-				isAdmin,
-				adminAccounts: ADMIN_ACCOUNTS
+				userEmployeeId: userEmployeeId,
+				canEditOthers,
+				roster_permissions: user.app_permissions?.roster
 			}
 		}, { status: 201 });
 	} catch (error: any) {
@@ -289,11 +322,11 @@ export async function DELETE(request: NextRequest) {
 		const decoded = verifyToken(token);
 		console.log("Token verified for user:", decoded.userId);
 
-		// Get user's employee_id from database using the UUID  
+		// Get full user data with permissions from database
 		const supabase = await createClient();
 		const { data: user, error: userError } = await supabase
 			.from("users")
-			.select("employee_id, full_name")
+			.select("*")
 			.eq("id", decoded.userId)
 			.single();
 
@@ -307,18 +340,12 @@ export async function DELETE(request: NextRequest) {
 
 		const userEmployeeId = user.employee_id;
 
-		// Check if user has permission to delete schedules
-		const isAdmin = ADMIN_ACCOUNTS.includes(userEmployeeId);
-		
-		console.log("Delete permission check:", {
-			userEmployeeId,
-			isAdmin,
-			authLevel: decoded.authLevel
-		});
-		
-		if (!isAdmin && decoded.authLevel < 5) {
+		// Check if user has access to roster app using database permissions
+		const rosterAccess = hasAppAccess(user as User, 'roster');
+		if (!rosterAccess.granted) {
+			console.log("Access denied to roster app");
 			return NextResponse.json(
-				{ message: "Insufficient permissions to delete schedules" },
+				{ message: "您沒有權限存取此功能" },
 				{ status: 403 }
 			);
 		}
@@ -334,8 +361,18 @@ export async function DELETE(request: NextRequest) {
 			);
 		}
 
-		// Additional permission check: Users can only delete their own schedule unless they are admin
-		if (!isAdmin && employeeId !== userEmployeeId) {
+		// Check if user can edit others' schedules or is editing their own
+		const canEditOthers = canEditOthersSchedules(user as User);
+		const isEditingSelf = employeeId === userEmployeeId;
+		
+		console.log("Delete permission check:", {
+			userEmployeeId,
+			targetEmployeeId: employeeId,
+			canEditOthers,
+			isEditingSelf
+		});
+		
+		if (!canEditOthers && !isEditingSelf) {
 			return NextResponse.json(
 				{ message: "您只能刪除自己的排程" },
 				{ status: 403 }

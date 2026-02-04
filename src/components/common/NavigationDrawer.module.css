@@ -6,9 +6,10 @@
 	left: 0;
 	right: 0;
 	bottom: 0;
-	background: rgba(0, 0, 0, 0.5);
+	background: rgba(26, 31, 53, 0.8);
 	z-index: 998;
 	transition: opacity 0.3s ease;
+	backdrop-filter: blur(4px);
 }
 
 .drawer {
@@ -17,11 +18,11 @@
 	left: 0;
 	height: 100vh;
 	width: 360px;
-	background: white;
+	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
 	z-index: 999;
 	transform: translateX(-100%);
 	transition: transform 0.3s ease;
-	box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+	box-shadow: 2px 0 20px rgba(0, 0, 0, 0.5);
 	display: flex;
 	flex-direction: column;
 	overflow-y: auto;
@@ -42,11 +43,11 @@
 }
 
 .drawerHeader.default {
-	background: linear-gradient(135deg, #2563eb, #1e40af);
+	background: linear-gradient(135deg, #4a9eff, #357abd);
 }
 
 .drawerHeader.admin {
-	background: linear-gradient(135deg, #dc2626, #7f1d1d);
+	background: linear-gradient(135deg, #ef4444, #b91c1c);
 }
 
 .drawerHeader.khh {
@@ -58,7 +59,7 @@
 }
 
 .drawerHeader.rmq {
-	background: linear-gradient(135deg, #8b5cf6, #4c1d95);
+	background: linear-gradient(135deg, #8b5cf6, #6d28d9);
 }
 
 .userProfile {
@@ -73,7 +74,7 @@
 	width: 4.063rem;
 	height: 4.063rem;
 	border-radius: 50%;
-	background: rgba(255, 255, 255, 0.2);
+	background: rgba(255, 255, 255, 0.15);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -96,15 +97,15 @@
 	font-size: 1.1rem;
 	margin-bottom: 0.25rem;
 	color: white;
-	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+	text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
 	word-wrap: break-word;
 }
 
 .userRole {
 	font-size: 0.8rem;
-	opacity: 0.9;
+	opacity: 0.95;
 	margin-bottom: 0.25rem;
-	color: rgba(255, 255, 255, 0.9);
+	color: rgba(255, 255, 255, 0.95);
 	word-wrap: break-word;
 	overflow-wrap: break-word;
 	white-space: normal;
@@ -117,8 +118,8 @@
 
 .userBase {
 	font-size: 0.875rem;
-	opacity: 0.9;
-	color: rgba(255, 255, 255, 0.9);
+	opacity: 0.95;
+	color: rgba(255, 255, 255, 0.95);
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
@@ -189,7 +190,7 @@
 }
 
 .closeButton {
-	background: rgba(255, 255, 255, 0.2);
+	background: rgba(255, 255, 255, 0.15);
 	border: none;
 	border-radius: 50%;
 	width: 32px;
@@ -205,7 +206,7 @@
 }
 
 .closeButton:hover {
-	background: rgba(255, 255, 255, 0.3);
+	background: rgba(255, 255, 255, 0.25);
 }
 
 /* Navigation List */
@@ -229,17 +230,17 @@
 }
 
 .navigationItem:hover {
-	background: #f8fafc;
-	border-left-color: #3b82f6;
+	background: rgba(74, 158, 255, 0.1);
+	border-left-color: #4a9eff;
 }
 
 .navigationItemActive {
-	background: #eff6ff;
-	border-left-color: #3b82f6;
+	background: rgba(74, 158, 255, 0.15);
+	border-left-color: #4a9eff;
 }
 
 .navigationItemActive .navigationTitle {
-	color: #3b82f6;
+	color: #4a9eff;
 	font-weight: 600;
 }
 
@@ -247,7 +248,7 @@
 	width: 40px;
 	height: 40px;
 	border-radius: 0.75rem;
-	background: #f1f5f9;
+	background: rgba(255, 255, 255, 0.05);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -262,59 +263,59 @@
 	color: inherit;
 }
 
-/* Icon colors matching Dashboard */
+/* Icon colors matching Dashboard - adjusted for dark theme */
 .navigationIcon.dashboard {
-	background: rgba(161, 98, 7, 0.1);
-	color: #a16207;
+	background: rgba(161, 98, 7, 0.15);
+	color: #fbbf24;
 }
 
 .navigationIcon.roster {
-	background: rgba(59, 130, 246, 0.1);
-	color: #3b82f6;
+	background: rgba(74, 158, 255, 0.15);
+	color: #60a5fa;
 }
 
 .navigationIcon.tasks {
-	background: rgba(16, 185, 129, 0.1);
-	color: #10b981;
+	background: rgba(16, 185, 129, 0.15);
+	color: #34d399;
 }
 
 .navigationIcon.sms {
-	background: rgba(239, 68, 68, 0.1);
-	color: #ef4444;
+	background: rgba(239, 68, 68, 0.15);
+	color: #f87171;
 }
 
 .navigationIcon.oralTest {
-	background: rgba(245, 158, 11, 0.1);
-	color: #f59e0b;
+	background: rgba(245, 158, 11, 0.15);
+	color: #fbbf24;
 }
 
 .navigationIcon.bcTraining {
-	background: rgba(139, 92, 246, 0.1);
-	color: #8b5cf6;
+	background: rgba(139, 92, 246, 0.15);
+	color: #a78bfa;
 }
 
 .navigationIcon.mdafaat {
-	background: rgba(236, 72, 153, 0.1);
-	color: #ec4899;
+	background: rgba(236, 72, 153, 0.15);
+	color: #f472b6;
 }
 
 .navigationIcon.ads {
-	background: rgba(20, 184, 166, 0.1);
-	color: #14b8a6;
+	background: rgba(20, 184, 166, 0.15);
+	color: #2dd4bf;
 }
 
 .navigationIcon.ccomReview {
-	background: rgba(251, 146, 60, 0.1);
+	background: rgba(251, 146, 60, 0.15);
 	color: #fb923c;
 }
 
 .navigationItem:hover .navigationIcon {
-	background: #e2e8f0;
+	background: rgba(74, 158, 255, 0.2);
 	transform: scale(1.05);
 }
 
 .navigationItemActive .navigationIcon {
-	background: #dbeafe;
+	background: rgba(74, 158, 255, 0.25);
 }
 
 .navigationContent {
@@ -324,7 +325,7 @@
 .navigationTitle {
 	font-size: 1rem;
 	font-weight: 500;
-	color: #1f2937;
+	color: #e8e9ed;
 	margin-bottom: 0.25rem;
 	display: flex;
 	align-items: center;
@@ -333,7 +334,7 @@
 
 .navigationDescription {
 	font-size: 0.75rem;
-	color: #6b7280;
+	color: #a0aec0;
 }
 
 .navigationBadge {
@@ -348,21 +349,21 @@
 }
 
 .navigationArrow {
-	color: #9ca3af;
+	color: #a0aec0;
 	font-size: 0.875rem;
-	transition: transform 0.2s;
+	transition: transform 0.2s, color 0.2s;
 	flex-shrink: 0;
 }
 
 .navigationItem:hover .navigationArrow {
 	transform: translateX(2px);
-	color: #6b7280;
+	color: #4a9eff;
 }
 
 /* Submenu */
 .submenu {
-	background: #f8fafc;
-	border-left: 4px solid #e2e8f0;
+	background: rgba(255, 255, 255, 0.03);
+	border-left: 4px solid rgba(74, 158, 255, 0.3);
 	margin-left: 1.5rem;
 	margin-right: 1.5rem;
 	border-radius: 0 0.5rem 0.5rem 0;
@@ -378,21 +379,21 @@
 }
 
 .submenuItem:hover {
-	background: #f1f5f9;
+	background: rgba(74, 158, 255, 0.1);
 }
 
 .submenuItemActive {
-	background: #dbeafe;
-	border-left: 3px solid #3b82f6;
+	background: rgba(74, 158, 255, 0.15);
+	border-left: 3px solid #4a9eff;
 }
 
 .submenuItemActive .submenuTitle {
-	color: #3b82f6;
+	color: #4a9eff;
 	font-weight: 600;
 }
 
 .submenuDot {
-	color: #9ca3af;
+	color: #a0aec0;
 	font-size: 1rem;
 	width: 16px;
 	text-align: center;
@@ -401,21 +402,21 @@
 
 .submenuTitle {
 	font-size: 0.875rem;
-	color: #4b5563;
+	color: #e8e9ed;
 	font-weight: 500;
 }
 
 /* Footer */
 .drawerFooter {
 	padding: 1rem 1.5rem;
-	border-top: 1px solid #e5e7eb;
-	background: #f9fafb;
+	border-top: 1px solid rgba(255, 255, 255, 0.1);
+	background: rgba(255, 255, 255, 0.03);
 }
 
 .logoutButton {
 	width: 100%;
 	padding: 1rem;
-	background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+	background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
 	border: none;
 	border-radius: 8px;
 	color: white;
@@ -428,12 +429,13 @@
 	font-size: 1rem;
 	font-weight: 500;
 	margin-bottom: 1rem;
+	box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
 .logoutButton:hover {
-	background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+	background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
 	transform: translateY(-2px);
-	box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+	box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
 }
 
 .logoutIcon {
@@ -451,13 +453,13 @@
 .appVersion {
 	font-size: 0.75rem;
 	font-weight: 600;
-	color: #374151;
+	color: #e8e9ed;
 	margin-bottom: 0.25rem;
 }
 
 .lastUpdate {
 	font-size: 0.625rem;
-	color: #9ca3af;
+	color: #a0aec0;
 }
 
 /* Mobile Responsive */

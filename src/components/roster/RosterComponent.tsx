@@ -413,334 +413,324 @@ const RosterComponent: React.FC = () => {
 
 	// Screenshot functionality
 	const handleScreenshot = async (): Promise<void> => {
-		try {
-			const html2canvasModule = await import("html2canvas");
-			const html2canvas = html2canvasModule.default || html2canvasModule;
+	try {
+		const html2canvas = (await import("html2canvas")).default;
 
-			const tableContainer = tableContainerRef.current;
-			if (!tableContainer) {
-				alert("無法找到表格元素");
-				return;
-			}
+		const tableContainer = tableContainerRef.current;
+		if (!tableContainer) {
+			alert("無法找到表格元素");
+			return;
+		}
 
-			// Create screenshot container
-			const screenshotContainer = document.createElement("div");
-			screenshotContainer.id = "screenshot-container";
-			screenshotContainer.style.cssText = `
-				position: absolute;
-				top: -10000px;
-				left: 0;
-				width: fit-content;
-				height: fit-content;
-				background: #ffffff !important;
-				padding: 8px 20px 20px 8px;
-				margin: 0;
-				border: none;
-				box-shadow: none;
-				z-index: -999;
-				visibility: hidden;
-				opacity: 0;
-				overflow: visible;
-				box-sizing: content-box;
-				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-			`;
+		// Create screenshot container - SMS DARK THEME
+		const screenshotContainer = document.createElement("div");
+		screenshotContainer.id = "screenshot-container";
+		screenshotContainer.style.cssText = `
+			position: absolute;
+			top: -10000px;
+			left: 0;
+			width: fit-content;
+			height: fit-content;
+			background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%) !important;
+			padding: 16px;
+			margin: 0;
+			border: none;
+			box-shadow: none;
+			z-index: -999;
+			visibility: hidden;
+			opacity: 0;
+			overflow: visible;
+			box-sizing: border-box;
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+		`;
 
-			// Create outer wrapper
-			const outerWrapper = document.createElement("div");
-			outerWrapper.style.cssText = `
-				background: #ffffff !important;
-				padding: 8px 16px 16px 8px;
-				margin: 0;
-				border: 4px solid #ffffff;
+		// Create table - SMS DARK THEME
+		const table = document.createElement("table");
+		table.style.cssText = `
+			border-collapse: collapse;
+			width: auto;
+			background: rgba(255, 255, 255, 0.05) !important;
+			font-family: inherit;
+			table-layout: auto;
+			margin: 0;
+			padding: 0;
+			border: 3px solid rgba(74, 158, 255, 0.3);
+			box-sizing: border-box;
+		`;
+
+		// Create thead
+		const thead = document.createElement("thead");
+		const headerRow = document.createElement("tr");
+		headerRow.style.background = "transparent";
+
+		// Header cells - SMS BLUE GRADIENT
+		const headers = ["員編", "姓名", "基地"];
+		headers.forEach((header) => {
+			const th = document.createElement("th");
+			th.textContent = header;
+			th.style.cssText = `
+				background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%) !important;
+				color: #ffffff !important;
+				padding: 14px 12px;
+				text-align: center;
+				font-weight: 600;
+				border: 1px solid rgba(74, 158, 255, 0.3);
+				font-size: 16px;
+				min-width: 100px;
+				white-space: nowrap;
 				box-sizing: border-box;
-				width: fit-content;
-				height: fit-content;
+				text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+			`;
+			headerRow.appendChild(th);
+		});
+
+		// Date headers - SMS BLUE/RED GRADIENTS
+		dateColumns.forEach((col) => {
+			const th = document.createElement("th");
+			const dayName = ["日", "一", "二", "三", "四", "五", "六"][
+				col.dayOfWeek
+			];
+
+			const dateContent = document.createElement("div");
+			dateContent.style.cssText = `
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 3px;
+				padding: 3px;
 			`;
 
-			// Create table
-			const table = document.createElement("table");
-			table.style.cssText = `
-				border-collapse: collapse;
-				width: auto;
-				background: #ffffff !important;
-				font-family: inherit;
-				table-layout: auto;
-				margin: 0;
-				padding: 0;
-				border: 2px solid #e5e7eb;
+			const dateNumber = document.createElement("div");
+			dateNumber.textContent = col.date.toString();
+			dateNumber.style.cssText = `
+				font-size: 16px;
+				font-weight: bold;
+				color: inherit;
 			`;
 
-			// Create thead
-			const thead = document.createElement("thead");
-			const headerRow = document.createElement("tr");
-			headerRow.style.background = "#ffffff";
+			const dayOfWeekSpan = document.createElement("div");
+			dayOfWeekSpan.textContent = dayName;
+			dayOfWeekSpan.style.cssText = `
+				font-size: 12px;
+				opacity: 0.9;
+				color: inherit;
+			`;
 
-			// Header cells
-			const headers = ["員編", "姓名", "基地"];
-			headers.forEach((header) => {
-				const th = document.createElement("th");
-				th.textContent = header;
-				th.style.cssText = `
-					background: #02c39a !important;
-					color: #ffffff !important;
+			dateContent.appendChild(dateNumber);
+			dateContent.appendChild(dayOfWeekSpan);
+			th.appendChild(dateContent);
+
+			th.style.cssText = `
+				background: ${col.isWeekend ? "linear-gradient(135deg, #f87171 0%, #ef4444 100%)" : "linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)"} !important;
+				color: #ffffff !important;
+				padding: 10px 8px;
+				text-align: center;
+				font-weight: 600;
+				border: 1px solid ${col.isWeekend ? "rgba(239, 68, 68, 0.3)" : "rgba(59, 130, 246, 0.3)"};
+				font-size: 14px;
+				min-width: 80px;
+				white-space: nowrap;
+				box-sizing: border-box;
+				text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+			`;
+			headerRow.appendChild(th);
+		});
+
+		thead.appendChild(headerRow);
+		table.appendChild(thead);
+
+		// Create tbody - SMS DARK THEME
+		const tbody = document.createElement("tbody");
+		tbody.style.background = "transparent";
+
+		instructors.forEach((instructor) => {
+			const employeeId = getEmployeeIdentifier(instructor);
+			const row = document.createElement("tr");
+			row.style.cssText = `
+				border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+				background: transparent !important;
+			`;
+
+			// Instructor info cells - SMS DARK THEME
+			const cells = [
+				employeeId,
+				instructor.full_name,
+				instructor.base,
+			];
+			cells.forEach((text, cellIndex) => {
+				const td = document.createElement("td");
+				td.textContent = text || "";
+				td.style.cssText = `
 					padding: 12px 10px;
 					text-align: center;
-					font-weight: 600;
-					border: 1px solid #00a783;
-					font-size: 14px;
-					min-width: 90px;
+					border: 1px solid rgba(255, 255, 255, 0.1);
+					background: ${cellIndex === 0 ? "rgba(255, 255, 255, 0.08)" : "rgba(255, 255, 255, 0.05)"} !important;
+					font-weight: 500;
+					font-size: 15px;
+					min-width: 100px;
 					white-space: nowrap;
+					color: #e8e9ed;
 					box-sizing: border-box;
 				`;
-				headerRow.appendChild(th);
+				row.appendChild(td);
 			});
 
-			// Date headers
+			// Schedule cells - SMS DARK THEME
 			dateColumns.forEach((col) => {
-				const th = document.createElement("th");
-				const dayName = ["日", "一", "二", "三", "四", "五", "六"][
-					col.dayOfWeek
-				];
+				const td = document.createElement("td");
+				const duties = getDutiesForDate(employeeId, col.fullDate);
 
-				const dateContent = document.createElement("div");
-				dateContent.style.cssText = `
+				td.style.cssText = `
+					padding: 5px;
+					border: 1px solid rgba(255, 255, 255, 0.1);
+					vertical-align: top;
+					min-width: 80px;
+					height: 90px;
+					background: rgba(255, 255, 255, 0.03) !important;
+					box-sizing: border-box;
+				`;
+
+				const dutiesContainer = document.createElement("div");
+				dutiesContainer.style.cssText = `
 					display: flex;
 					flex-direction: column;
+					gap: 3px;
+					height: 100%;
+					min-height: 80px;
 					align-items: center;
-					gap: 2px;
-					padding: 2px;
-				`;
-
-				const dateNumber = document.createElement("div");
-				dateNumber.textContent = col.date.toString();
-				dateNumber.style.cssText = `
-					font-size: 14px;
-					font-weight: bold;
-					color: inherit;
-				`;
-
-				const dayOfWeekSpan = document.createElement("div");
-				dayOfWeekSpan.textContent = dayName;
-				dayOfWeekSpan.style.cssText = `
-					font-size: 10px;
-					opacity: 0.9;
-					color: inherit;
-				`;
-
-				dateContent.appendChild(dateNumber);
-				dateContent.appendChild(dayOfWeekSpan);
-				th.appendChild(dateContent);
-
-				th.style.cssText = `
-					background: ${col.isWeekend ? "#ef6f6f" : "#5c98f9"} !important;
-					color: #ffffff !important;
-					padding: 8px 6px;
-					text-align: center;
-					font-weight: 600;
-					border: 1px solid ${col.isWeekend ? "#dc2626" : "#2563eb"};
-					font-size: 12px;
-					min-width: 70px;
-					white-space: nowrap;
+					justify-content: flex-start;
+					padding: 3px;
 					box-sizing: border-box;
 				`;
-				headerRow.appendChild(th);
-			});
 
-			thead.appendChild(headerRow);
-			table.appendChild(thead);
-
-			// Create tbody
-			const tbody = document.createElement("tbody");
-			tbody.style.background = "#ffffff";
-
-			instructors.forEach((instructor) => {
-				const employeeId = getEmployeeIdentifier(instructor);
-				const row = document.createElement("tr");
-				row.style.cssText = `
-					border-bottom: 1px solid #e5e7eb;
-					background: #ffffff !important;
-				`;
-
-				// Instructor info cells
-				const cells = [
-					employeeId,
-					instructor.full_name,
-					instructor.base,
-				];
-				cells.forEach((text, cellIndex) => {
-					const td = document.createElement("td");
-					td.textContent = text || "";
-					td.style.cssText = `
-						padding: 10px 8px;
+				duties.forEach((duty) => {
+					const dutyTag = document.createElement("div");
+					dutyTag.textContent = duty;
+					dutyTag.style.cssText = `
+						padding: 4px 8px;
 						text-align: center;
-						border: 1px solid #e5e7eb;
-						background: ${cellIndex === 0 ? "#f1f5f9" : "#f8fafc"} !important;
-						font-weight: 500;
 						font-size: 13px;
-						min-width: 90px;
-						white-space: nowrap;
-						color: #1f2937;
-						box-sizing: border-box;
-					`;
-					row.appendChild(td);
-				});
-
-				// Schedule cells
-				dateColumns.forEach((col) => {
-					const td = document.createElement("td");
-					const duties = getDutiesForDate(employeeId, col.fullDate);
-
-					td.style.cssText = `
-						padding: 4px;
-						border: 1px solid #e5e7eb;
-						vertical-align: top;
-						min-width: 70px;
-						height: 80px;
-						background: #ffffff !important;
-						box-sizing: border-box;
-					`;
-
-					const dutiesContainer = document.createElement("div");
-					dutiesContainer.style.cssText = `
+						font-weight: 600;
+						border-radius: 4px;
+						color: #ffffff !important;
+						text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+						min-height: 22px;
 						display: flex;
-						flex-direction: column;
-						gap: 2px;
-						height: 100%;
-						min-height: 70px;
 						align-items: center;
-						justify-content: flex-start;
-						padding: 2px;
+						justify-content: center;
+						background: ${DUTY_COLORS[duty] || "#3b82f6"} !important;
+						border: 1px solid rgba(0, 0, 0, 0.2);
+						white-space: nowrap;
+						width: 100%;
 						box-sizing: border-box;
+						max-width: 70px;
 					`;
-
-					duties.forEach((duty) => {
-						const dutyTag = document.createElement("div");
-						dutyTag.textContent = duty;
-						dutyTag.style.cssText = `
-							padding: 3px 6px;
-							text-align: center;
-							font-size: 11px;
-							font-weight: 600;
-							border-radius: 3px;
-							color: #ffffff !important;
-							text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.6);
-							min-height: 18px;
-							display: flex;
-							align-items: center;
-							justify-content: center;
-							background: ${DUTY_COLORS[duty] || "#3b82f6"} !important;
-							border: 1px solid rgba(0, 0, 0, 0.2);
-							white-space: nowrap;
-							width: 100%;
-							box-sizing: border-box;
-							max-width: 60px;
-						`;
-						dutiesContainer.appendChild(dutyTag);
-					});
-
-					td.appendChild(dutiesContainer);
-					row.appendChild(td);
+					dutiesContainer.appendChild(dutyTag);
 				});
 
-				tbody.appendChild(row);
+				td.appendChild(dutiesContainer);
+				row.appendChild(td);
 			});
 
-			table.appendChild(tbody);
-			outerWrapper.appendChild(table);
-			screenshotContainer.appendChild(outerWrapper);
+			tbody.appendChild(row);
+		});
 
-			document.body.appendChild(screenshotContainer);
+		table.appendChild(tbody);
+		screenshotContainer.appendChild(table);
 
-			await new Promise((resolve) => {
-				requestAnimationFrame(() => {
-					requestAnimationFrame(resolve);
-				});
+		document.body.appendChild(screenshotContainer);
+
+		await new Promise((resolve) => {
+			requestAnimationFrame(() => {
+				requestAnimationFrame(resolve);
 			});
+		});
 
-			const tableWidth = table.offsetWidth;
-			const tableHeight = table.offsetHeight;
-			const totalWidth = tableWidth + 24;
-			const totalHeight = tableHeight + 24;
+		const tableWidth = table.offsetWidth;
+		const tableHeight = table.offsetHeight;
+		const totalWidth = tableWidth + 32; // 16px padding on each side
+		const totalHeight = tableHeight + 32;
 
-			screenshotContainer.style.visibility = "visible";
-			screenshotContainer.style.opacity = "1";
+		screenshotContainer.style.visibility = "visible";
+		screenshotContainer.style.opacity = "1";
 
-			const canvas = await html2canvas(screenshotContainer, {
-				useCORS: true,
-				allowTaint: true,
-				backgroundColor: "#ffffff",
-				logging: false,
-				pixelRatio: Math.min(window.devicePixelRatio || 1, 2),
-				scale: 1.2,
-				width: totalWidth,
-				height: totalHeight,
-				windowWidth: totalWidth,
-				windowHeight: totalHeight,
-				scrollX: 0,
-				scrollY: 0,
-				removeContainer: true,
-				foreignObjectRendering: false,
-				imageTimeout: 0,
-				onclone: (clonedDoc: Document) => {
-					const clonedBody = clonedDoc.body;
-					if (clonedBody) {
-						clonedBody.style.backgroundColor = "#ffffff";
-					}
-					const clonedContainer = clonedDoc.getElementById(
-						"screenshot-container"
-					);
-					if (clonedContainer) {
-						clonedContainer.style.backgroundColor = "#ffffff";
-						clonedContainer.style.visibility = "visible";
-						clonedContainer.style.opacity = "1";
-					}
-				},
-			} as any);
+		// INCREASED RESOLUTION - 2x pixel ratio and 2x scale
+		const canvas = await html2canvas(screenshotContainer, {
+			useCORS: true,
+			allowTaint: true,
+			backgroundColor: "#1a1f35", // SMS dark background
+			logging: false,
+			pixelRatio: 2, // INCREASED from 1 to 2
+			scale: 2, // INCREASED from 1.2 to 2
+			width: totalWidth,
+			height: totalHeight,
+			windowWidth: totalWidth,
+			windowHeight: totalHeight,
+			scrollX: 0,
+			scrollY: 0,
+			removeContainer: true,
+			foreignObjectRendering: false,
+			imageTimeout: 0,
+			onclone: (clonedDoc: Document) => {
+				const clonedBody = clonedDoc.body;
+				if (clonedBody) {
+					clonedBody.style.backgroundColor = "#1a1f35";
+				}
+				const clonedContainer = clonedDoc.getElementById(
+					"screenshot-container"
+				);
+				if (clonedContainer) {
+					clonedContainer.style.background = "linear-gradient(135deg, #1a1f35 0%, #2d3651 100%)";
+					clonedContainer.style.visibility = "visible";
+					clonedContainer.style.opacity = "1";
+				}
+			},
+		} as any);
 
-			document.body.removeChild(screenshotContainer);
+		document.body.removeChild(screenshotContainer);
 
-			const ctx = canvas.getContext("2d");
-			const imageData = ctx?.getImageData(
-				0,
-				0,
-				canvas.width,
-				canvas.height
-			);
-			const hasContent = imageData?.data.some(
-				(value, index) => index % 4 !== 3 && value !== 255
-			);
+		const ctx = canvas.getContext("2d");
+		const imageData = ctx?.getImageData(
+			0,
+			0,
+			canvas.width,
+			canvas.height
+		);
+		const hasContent = imageData?.data.some(
+			(value, index) => index % 4 !== 3 && value !== 255
+		);
 
-			if (!hasContent) {
-				throw new Error("Screenshot appears to be blank");
-			}
-
-			const link = document.createElement("a");
-			const fileName = `教師班表-${selectedYear}年${selectedMonth}月-${new Date()
-				.toISOString()
-				.slice(0, 10)}.png`;
-			link.download = fileName;
-			link.href = canvas.toDataURL("image/png", 0.95);
-
-			document.body.appendChild(link);
-			link.click();
-			document.body.removeChild(link);
-
-			alert(`截圖已儲存：${fileName}`);
-		} catch (error: any) {
-			console.error("Screenshot error:", error);
-			let errorMessage = "截圖失敗：";
-			if (error.message?.includes("blank")) {
-				errorMessage += "截圖內容為空白，請稍後再試";
-			} else if (error.message?.includes("html2canvas")) {
-				errorMessage += "截圖庫載入失敗，請重新整理頁面";
-			} else if (error.message?.includes("Canvas")) {
-				errorMessage += "瀏覽器不支援此功能，請使用最新版 Chrome 或 Firefox";
-			} else {
-				errorMessage += error.message || "未知錯誤";
-			}
-			alert(errorMessage);
+		if (!hasContent) {
+			throw new Error("Screenshot appears to be blank");
 		}
-	};
+
+		const link = document.createElement("a");
+		const fileName = `教師班表-${selectedYear}年${selectedMonth}月-${new Date()
+			.toISOString()
+			.slice(0, 10)}.png`;
+		link.download = fileName;
+		link.href = canvas.toDataURL("image/png", 1.0); // INCREASED quality from 0.95 to 1.0
+
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+
+		alert(`截圖已儲存：${fileName}\n解析度已提升為高清 (2x)`);
+	} catch (error: any) {
+		console.error("Screenshot error:", error);
+		let errorMessage = "截圖失敗：";
+		if (error.message?.includes("blank")) {
+			errorMessage += "截圖內容為空白，請稍後再試";
+		} else if (error.message?.includes("html2canvas")) {
+			errorMessage += "截圖庫載入失敗，請重新整理頁面";
+		} else if (error.message?.includes("Canvas")) {
+			errorMessage += "瀏覽器不支援此功能，請使用最新版 Chrome 或 Firefox";
+		} else {
+			errorMessage += error.message || "未知錯誤";
+		}
+		alert(errorMessage);
+	}
+};
 
 	// Excel export functionality
 	const handleExcelExport = async (): Promise<void> => {
@@ -1164,7 +1154,7 @@ const RosterComponent: React.FC = () => {
 				{/* Header */}
 				<div className={styles.header}>
 					<div className={styles.headerContent}>
-						<h1 className={styles.title}>教師月份休假計畫</h1>
+						<h1 className={styles.title}>教師班表系統</h1>
 
 						<div className={styles.topControls}>
 							<div className={styles.dateSelector}>
@@ -1472,25 +1462,11 @@ const RosterComponent: React.FC = () => {
 							</li>
 							<li>
 								<strong>權限說明：</strong>
-								一般使用者只能修改自己的排程，管理員可修改所有排程
+								一般使用者只能安排自己的班表，管理員可修改所有班表
 							</li>
 							<li>
-								<strong>受保護任務：</strong>
-								由管理員設定的任務無法被一般使用者移除
-							</li>
-							<li>
-								<strong>排序說明：</strong>
-								員工按照手動設定順序排列：MANUAL_ORDER 中的員工依序顯示，其餘按員編號碼排序
-							</li>
-							{HIDDEN_EMPLOYEES.length > 0 && (
-								<li>
-									<strong>隱藏員工：</strong>
-									部分員工已從名單中隱藏 ({HIDDEN_EMPLOYEES.length} 人)
-								</li>
-							)}
-							<li>
-								<strong>手動排序：</strong>
-								若要調整員工顯示順序，請修改程式碼中的 MANUAL_ORDER 陣列
+								<strong>任務編輯限制：</strong>
+								一般使用者無法刪除管理者指派的任務
 							</li>
 						</ul>
 					</div>
