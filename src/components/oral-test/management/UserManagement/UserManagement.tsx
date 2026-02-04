@@ -1095,36 +1095,6 @@ const UserForm = ({
 								</div>
 							)}
 
-						{/* Auth Level - only for level 20+ users */}
-						{currentUser &&
-							currentUser.authentication_level >= 20 && (
-								<div className={styles.formGroup}>
-									<label className={styles.formLabel}>
-										Authentication Level
-									</label>
-									<AuthLevelDropdown
-										value={formData.authentication_level}
-										onChange={(level) =>
-											setFormData((prev) => ({
-												...prev,
-												authentication_level: level,
-											}))
-										}
-										maxLevel={currentUserAuthLevel}
-									/>
-									<small>
-										Controls access to different parts of
-										the application. Cannot exceed your
-										level ({currentUserAuthLevel}).
-									</small>
-									{user?.employee_id === "admin" && (
-										<small className={styles.adminNote}>
-											⚠️ Admin typically has level 99
-											access
-										</small>
-									)}
-								</div>
-							)}
 					</div>
 
 					{/* Filter Categories Section */}

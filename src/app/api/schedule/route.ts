@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
 		if (!rosterAccess.granted) {
 			console.log("Access denied to roster app");
 			return NextResponse.json(
-				{ message: "您沒有權限存取此功能" },
+				{ message: "您沒有權限使用此功能" },
 				{ status: 403 }
 			);
 		}
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
 		if (!rosterAccess.granted) {
 			console.log("❌ Access denied to roster app");
 			return NextResponse.json(
-				{ message: "您沒有權限存取此功能" },
+				{ message: "您沒有權限使用此功能" },
 				{ status: 403 }
 			);
 		}
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
 		if (!canModify) {
 			console.log("❌ Permission denied: User trying to modify another user's schedule");
 			return NextResponse.json(
-				{ message: "您只能修改自己的排程" },
+				{ message: "您只能修改自己的班表" },
 				{ status: 403 }
 			);
 		}
@@ -374,7 +374,7 @@ export async function DELETE(request: NextRequest) {
 		
 		if (!canEditOthers && !isEditingSelf) {
 			return NextResponse.json(
-				{ message: "您只能刪除自己的排程" },
+				{ message: "您只能刪除自己的班表" },
 				{ status: 403 }
 			);
 		}

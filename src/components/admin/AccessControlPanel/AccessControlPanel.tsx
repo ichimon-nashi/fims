@@ -396,12 +396,23 @@ const AccessControlPanel = () => {
 				console.log("Save successful:", data);
 				setSaveSuccess("權限已成功更新！");
 
+				// Transform the saved permissions back to UI format
+				const updatedUser = {
+					...data.user,
+					app_permissions: transformPermissionsFromDatabase(
+						data.user.app_permissions,
+					),
+				};
+
 				// Update the user in the users list
 				setUsers(
 					users.map((u) =>
-						u.id === selectedUser.id ? { ...u, ...data.user } : u,
+						u.id === selectedUser.id ? updatedUser : u,
 					),
 				);
+
+				// Update selected user with transformed permissions
+				setSelectedUser(updatedUser);
 
 				// Clear success message after 3 seconds
 				setTimeout(() => {

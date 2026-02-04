@@ -1,4 +1,4 @@
-// src/app/sms/page.tsx - DEBUG VERSION
+// src/app/sms/page.tsx
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -47,9 +47,6 @@ function SMSContent() {
         
         const yearsWithData = new Set<number>(yearsFromData);
         
-        console.log('📅 Years with data:', yearsFromData);
-        console.log('📅 All available years:', sortedYears);
-        
         setAvailableYears(sortedYears);
         setYearsWithData(yearsWithData);
       } else {
@@ -70,14 +67,6 @@ function SMSContent() {
 
   // Check if user can edit SMS (not just view)
   const canEdit = permissions.canEditSMS();
-
-  // DEBUG LOGGING
-  console.log('=== SMS PAGE DEBUG ===');
-  console.log('User employee_id:', user?.employee_id);
-  console.log('User app_permissions:', user?.app_permissions);
-  console.log('SMS permissions:', user?.app_permissions?.sms);
-  console.log('canEditSMS():', canEdit);
-  console.log('canViewSMS():', permissions.canViewSMS());
 
   if (!user) {
     return null;
@@ -136,23 +125,6 @@ function SMSContent() {
           {activeTab === 'statistics' && (
             <StatisticsTab isAdmin={canEdit} />
           )}
-        </div>
-
-        {/* DEBUG INFO */}
-        <div style={{ 
-          position: 'fixed', 
-          bottom: '10px', 
-          right: '10px', 
-          background: 'rgba(0,0,0,0.8)', 
-          color: '#fff', 
-          padding: '10px', 
-          borderRadius: '5px',
-          fontSize: '12px',
-          zIndex: 9999
-        }}>
-          <div>Employee: {user.employee_id}</div>
-          <div>Can Edit: {canEdit ? 'YES' : 'NO'}</div>
-          <div>View Only: {user.app_permissions?.sms?.view_only ? 'YES' : 'NO'}</div>
         </div>
       </div>
     </>
