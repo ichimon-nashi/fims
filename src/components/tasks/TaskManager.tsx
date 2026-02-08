@@ -83,7 +83,7 @@ const TaskManager = () => {
             <div className={styles.headerLeft}>
               <h1 className={styles.boardTitle}>任務管理系統</h1>
               
-              {/* View Switcher - UPDATED: Dark theme */}
+              {/* View Switcher */}
               <div style={{ 
                 display: 'flex', 
                 background: 'rgba(51, 65, 85, 0.5)', 
@@ -140,16 +140,42 @@ const TaskManager = () => {
                 </select>
               </div>
 
-              {/* Team Avatars */}
+              {/* Team Avatars - Now dynamic based on availableUsers */}
               <div className={styles.teamAvatars}>
-                {availableUsers.map(user => {
-                  const employeeId = getEmployeeIdentifier(user);
-                  return (
-                    <div key={user.id} className={styles.avatar} title={user.full_name}>
-                      <Avatar employeeId={employeeId} fullName={user.full_name} size="small" />
-                    </div>
-                  );
-                })}
+                {loadingUsers ? (
+                  <div style={{ 
+                    fontSize: '0.875rem', 
+                    color: '#94a3b8',
+                    fontStyle: 'italic' 
+                  }}>
+                    Loading team...
+                  </div>
+                ) : availableUsers.length === 0 ? (
+                  <div style={{ 
+                    fontSize: '0.875rem', 
+                    color: '#94a3b8',
+                    fontStyle: 'italic' 
+                  }}>
+                    No team members available
+                  </div>
+                ) : (
+                  availableUsers.map(teamMember => {
+                    const employeeId = getEmployeeIdentifier(teamMember);
+                    return (
+                      <div 
+                        key={teamMember.id} 
+                        className={styles.avatar} 
+                        title={`${teamMember.full_name} (${teamMember.employee_id})`}
+                      >
+                        <Avatar 
+                          employeeId={employeeId} 
+                          fullName={teamMember.full_name} 
+                          size="small" 
+                        />
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
 

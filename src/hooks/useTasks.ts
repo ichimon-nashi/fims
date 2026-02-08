@@ -1,4 +1,4 @@
-// src/hooks/useTasks.ts - FIXED: Proper dependencies and no circular references
+// src/hooks/useTasks.ts - UPDATED: Filter users with Task Manager permissions
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { createServiceClient } from '@/utils/supabase/service-client';
@@ -11,9 +11,9 @@ export const useTasks = (selectedYear: number) => {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [loadingTasks, setLoadingTasks] = useState(false);
   
-  // FIXED: Memoize initial columns to maintain stable reference
+  // Memoize initial columns to maintain stable reference
   const initialColumns: Column[] = useMemo(() => [
-    { id: 'backlog', title: '代辦 Open', color: '#3B82F6', count: 0, tasks: [] },
+    { id: 'backlog', title: '待辦 Open', color: '#3B82F6', count: 0, tasks: [] },
     { id: 'in-progress', title: '進行中 In Progress', color: '#907ad6', count: 0, tasks: [] },
     { id: 'complete', title: '完成 Complete', color: '#10B981', count: 0, tasks: [] },
     { id: 'review', title: '暫緩 On Hold', color: '#ef476f', count: 0, tasks: [] },
@@ -21,7 +21,7 @@ export const useTasks = (selectedYear: number) => {
   
   const [columns, setColumns] = useState<Column[]>(initialColumns);
 
-  // Load users
+  // Load users with Task Manager access
   useEffect(() => {
     const loadUsers = async () => {
       if (!user || !token) return;
@@ -39,9 +39,10 @@ export const useTasks = (selectedYear: number) => {
           return;
         }
 
+        // Fetch all users with their app permissions
         const { data: allUsers, error } = await supabase
           .from('users')
-          .select('id, employee_id, full_name, rank, base, email, authentication_level')
+          .select('id, employee_id, full_name, rank, base, email, authentication_level, app_permissions')
           .order('full_name', { ascending: true });
 
         if (error) {
@@ -49,16 +50,22 @@ export const useTasks = (selectedYear: number) => {
           throw error;
         }
 
-        const filteredInstructors = (allUsers || []).filter(
-          (user) => {
-            return user.rank === "FI - Flight Attendant Instructor" ||
-                   user.rank === "SC - Section Chief" ||
-                   (user.employee_id && ["21701", "22119", "36639", "59976"].includes(user.employee_id));
+        // Filter users who have Task Manager access based ONLY on app_permissions
+        const usersWithTaskAccess = (allUsers || []).filter((u) => {
+          // Exclude users with "test" or "admin" rank (case-insensitive)
+          const rankLower = (u.rank || '').toLowerCase();
+          if (rankLower === 'test' || rankLower === 'admin') {
+            return false;
           }
-        );
+          
+          // ONLY check app_permissions.tasks.access - no fallbacks
+          return u.app_permissions?.tasks?.access === true;
+        });
         
-        const sortedInstructors = sortInstructors(filteredInstructors);
+        const sortedInstructors = sortInstructors(usersWithTaskAccess);
         setAvailableUsers(sortedInstructors);
+        
+        console.log(`Loaded ${sortedInstructors.length} users with explicit Task Manager access (app_permissions.tasks.access = true)`);
       } catch (error) {
         console.error('Error loading users:', error);
         setAvailableUsers([]);
@@ -72,7 +79,7 @@ export const useTasks = (selectedYear: number) => {
     }
   }, [user, token]);
 
-  // FIXED: Load tasks with proper dependencies
+  // Load tasks with proper dependencies
   const loadTasks = useCallback(async () => {
     if (!user || !token || loadingUsers) return;
     
@@ -183,7 +190,7 @@ export const useTasks = (selectedYear: number) => {
     } finally {
       setLoadingTasks(false);
     }
-  }, [user, token, selectedYear, loadingUsers, availableUsers, initialColumns]); // FIXED: Include initialColumns
+  }, [user, token, selectedYear, loadingUsers, availableUsers, initialColumns]);
 
   // Load tasks with cross-year support
   useEffect(() => {

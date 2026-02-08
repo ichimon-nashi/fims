@@ -138,6 +138,17 @@
 	background: linear-gradient(135deg, #374151, #1f2937);
 }
 
+.backButton {
+	background: linear-gradient(135deg, #6366f1, #4f46e5);
+	color: white;
+	border-color: #818cf8;
+}
+
+.backButton:hover {
+	background: linear-gradient(135deg, #4f46e5, #4338ca);
+}
+
+
 .startButton {
 	background: linear-gradient(135deg, #16a34a, #15803d);
 	color: white;
@@ -781,6 +792,12 @@
 	transform: scale(1.1);
 	border-color: white;
 	box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.filterAll.filterActive {
+	background: linear-gradient(135deg, #facc15, #eab308);
+	border-color: #facc15;
+	color: #000;
 }
 
 .filterEmergency.filterActive {
