@@ -384,9 +384,18 @@
 	gap: 0.25rem;
 }
 
-.b738Rating,
-.atrRating {
-	font-size: 0.875rem;
+.b738RatingIcon {
+	width: 1rem;
+	height: 1rem;
+	color: #60a5fa;
+	stroke-width: 2;
+}
+
+.atrRatingIcon {
+	width: 1rem;
+	height: 1rem;
+	color: #a78bfa;
+	stroke-width: 2;
 }
 
 .seniorRank {
@@ -646,13 +655,17 @@
 }
 
 .jetIcon {
-	font-size: 2rem;
-	filter: grayscale(0%);
+	color: #60a5fa;
+	width: 2rem;
+	height: 2rem;
+	stroke-width: 1.5;
 }
 
 .propIcon {
-	font-size: 2rem;
-	filter: grayscale(0%);
+	color: #a78bfa;
+	width: 2rem;
+	height: 2rem;
+	stroke-width: 1.5;
 }
 
 .teamInfo {

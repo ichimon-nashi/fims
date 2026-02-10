@@ -2,7 +2,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Search, X, Users, Shuffle, ArrowRight, Plane } from "lucide-react";
+import { Search, X, Users, Shuffle, ArrowRight } from "lucide-react";
+import { GiBoatPropeller } from "react-icons/gi";
+import { IoAirplane } from "react-icons/io5";
 import Image from "next/image";
 import Avatar from "@/components/ui/Avatar/Avatar";
 import { createServiceClient } from "@/utils/supabase/service-client";
@@ -24,7 +26,7 @@ interface Team {
 }
 
 interface TeamFormationProps {
-	onStartGame: () => void;
+	onStartGame: (teamCount: number) => void;
 }
 
 const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame }) => {
@@ -36,6 +38,7 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame }) => {
 	const [aircraftCount, setAircraftCount] = useState(0);
 	const [loadingUsers, setLoadingUsers] = useState(true);
 	const [showTeams, setShowTeams] = useState(false);
+	const [configWarning, setConfigWarning] = useState<string>("");
 
 	// Rank classification
 	const isHigherSenior = (rank: string): boolean => {
@@ -194,7 +197,43 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame }) => {
 		setUserPool([]);
 		setTeams([]);
 		setShowTeams(false);
+		setConfigWarning("");
 	};
+
+	// Validate configuration whenever pool or aircraft type changes
+	React.useEffect(() => {
+		if (userPool.length === 0) {
+			setConfigWarning("");
+			return;
+		}
+
+		const warnings: string[] = [];
+		const totalPeople = userPool.length;
+
+		if (aircraftType === "ATR") {
+			if (totalPeople % 2 !== 0) {
+				warnings.push(`⚠️ ATR需要偶數人數，目前有 ${totalPeople} 人 (會有 1 人無法分組)`);
+			}
+		} else {
+			// B738 - check if valid distribution is possible
+			const minB738 = aircraftCount * 4;
+			const maxB738 = aircraftCount * 6;
+			
+			if (totalPeople < minB738) {
+				warnings.push(`⚠️ ${aircraftCount} 架B738最少需要 ${minB738} 人，目前只有 ${totalPeople} 人`);
+			} else if (totalPeople > maxB738) {
+				// Check if overflow can form valid ATR teams (even number)
+				const overflow = totalPeople - maxB738;
+				if (overflow % 2 !== 0) {
+					// Odd overflow - can't form complete ATR teams
+					warnings.push(`⚠️ 超出人數無法平均分配 (會有 1 人無法分組)`);
+				}
+				// If even overflow, it's OK - will form ATR teams
+			}
+		}
+
+		setConfigWarning(warnings.join("; "));
+	}, [userPool, aircraftType, aircraftCount]);
 
 	// Smart grouping algorithm
 	const formTeams = () => {
@@ -282,55 +321,7 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame }) => {
 		// Step 2: Combine remaining B738-qualified + ATR-only people for ATR teams
 		let atrPeople = [...remainingPeople, ...atrOnly];
 
-		// Step 3: Before creating ATR teams, check if we should fill B738 teams instead
-		// Goal: Minimize number of teams by filling B738 to 5-6 before creating ATR
-		const b738Teams = newTeams.filter((t) => t.aircraftType === "B738");
-
-		if (b738Teams.length > 0) {
-			// Calculate: Can we avoid creating extra ATR teams by filling B738?
-			// For each potential ATR team (2 people), check if we can add them to B738 instead
-
-			for (const team of b738Teams) {
-				// Try to add up to 2 more people to this B738 (from 4 to 6)
-				while (
-					team.members.length < maxB738Crew &&
-					atrPeople.length > 0
-				) {
-					// Find a B738-qualified person
-					const b738QualifiedIdx = atrPeople.findIndex((p) =>
-						canFlyAircraft(p, "B738"),
-					);
-
-					if (b738QualifiedIdx === -1) {
-						// No more B738-qualified people in ATR pool
-						break;
-					}
-
-					// Check: Will taking this person help us avoid an extra ATR team?
-					// Only take if atrPeople will still have pairs (even number) OR we're taking the last person
-					if (atrPeople.length === 1 || atrPeople.length % 2 === 1) {
-						// Odd number - taking one will make it even (good for ATR pairing)
-						const person = atrPeople.splice(b738QualifiedIdx, 1)[0];
-						team.members.push(person);
-					} else if (
-						atrPeople.length === 2 &&
-						team.members.length === 5
-					) {
-						// Special case: 2 people left, B738 has 5 - don't take (make 1 ATR team instead)
-						break;
-					} else if (team.members.length < 5) {
-						// B738 still has room and it won't hurt ATR pairing
-						const person = atrPeople.splice(b738QualifiedIdx, 1)[0];
-						team.members.push(person);
-					} else {
-						// B738 at 5, don't fill to 6 unless it helps
-						break;
-					}
-				}
-			}
-		}
-
-		// Step 4: Create ATR teams with remaining people (2 crew each)
+		// Step 3: Create ATR teams FIRST (exactly 2 per team)
 		while (atrPeople.length >= 2) {
 			const atrTeam: Team = {
 				id: `atr-${newTeams.filter((t) => t.aircraftType === "ATR").length + 1}`,
@@ -346,37 +337,20 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame }) => {
 			newTeams.push(atrTeam);
 		}
 
-		// Step 5: Handle any final overflow (should be 0 or 1)
-		// IMPORTANT: ATR teams must be EXACTLY 2 people, never 3
-		if (atrPeople.length > 0) {
-			// This should only be 1 person (odd number)
+		// Step 4: Handle overflow (1 person left) - try to add to B738
+		if (atrPeople.length === 1) {
 			const overflow = atrPeople[0];
-
-			// Check if overflow person can fly B738
-			if (canFlyAircraft(overflow, "B738")) {
-				// Add to B738 teams if possible (up to max 6)
-				const b738TeamsForOverflow = newTeams.filter(
-					(t) => t.aircraftType === "B738",
-				);
-				if (b738TeamsForOverflow.length > 0) {
-					const targetTeam = b738TeamsForOverflow[0]; // Add to first B738
-					if (targetTeam.members.length < maxB738Crew) {
-						targetTeam.members.push(overflow);
-					}
-					// If B738 is full, this person cannot be assigned (should not happen with proper planning)
+			const b738Teams = newTeams.filter((t) => t.aircraftType === "B738");
+			
+			if (canFlyAircraft(overflow, "B738") && b738Teams.length > 0) {
+				const targetTeam = b738Teams.find(t => t.members.length < maxB738Crew);
+				if (targetTeam) {
+					targetTeam.members.push(overflow);
 				}
-				// If no B738 teams exist, this person cannot be assigned
-			} else {
-				// ATR-only person with no ATR team available - cannot assign
-				// This should not happen in normal operation
-				console.warn(
-					"Warning: ATR-only overflow person with no available team:",
-					overflow.full_name,
-				);
 			}
 		}
 
-		// Step 6: Redistribute to ensure each team has at least 1 senior if possible
+		// Step 5: Redistribute to ensure each team has at least 1 senior if possible
 		// Note: If there are fewer seniors than teams, some teams will remain without seniors
 		let teamsNeedingSenior = newTeams.filter(
 			(team) => !team.members.some((m) => isSenior(m.rank)),
@@ -785,24 +759,20 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame }) => {
 															{user.aircraft_type_ratings.includes(
 																"B738",
 															) && (
-																<span
+																<IoAirplane
 																	className={
-																		styles.b738Rating
+																		styles.b738RatingIcon
 																	}
-																>
-																	✈️
-																</span>
+																/>
 															)}
 															{user.aircraft_type_ratings.includes(
 																"ATR",
 															) && (
-																<span
+																<GiBoatPropeller
 																	className={
-																		styles.atrRating
+																		styles.atrRatingIcon
 																	}
-																>
-																	🛩️
-																</span>
+																/>
 															)}
 														</span>
 													)}
@@ -870,6 +840,13 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame }) => {
 									</div>
 								</div>
 							</div>
+
+							{/* Configuration Warning */}
+							{configWarning && (
+								<div className={styles.warningMessage} style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+									{configWarning}
+								</div>
+							)}
 
 							<button
 								onClick={formTeams}
@@ -941,13 +918,13 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame }) => {
 								<div key={team.id} className={styles.teamCard}>
 									<div className={styles.teamHeader}>
 										{team.aircraftType === "B738" ? (
-											<span className={styles.jetIcon}>
-												✈️
-											</span>
+											<IoAirplane
+												className={styles.jetIcon}
+											/>
 										) : (
-											<span className={styles.propIcon}>
-												🛩️
-											</span>
+											<GiBoatPropeller
+												className={styles.propIcon}
+											/>
 										)}
 										<div className={styles.teamInfo}>
 											<span className={styles.teamName}>
@@ -1038,7 +1015,7 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame }) => {
 					</div>
 
 					<button
-						onClick={onStartGame}
+						onClick={() => onStartGame(teams.length)}
 						className={styles.startGameButton}
 					>
 						開始訓練 Start Training
