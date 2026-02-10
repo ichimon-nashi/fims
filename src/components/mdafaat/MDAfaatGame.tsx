@@ -3,9 +3,14 @@
 
 import React, { useState } from "react";
 import { Shuffle, RotateCcw, Plus, ArrowLeft, Sparkles } from "lucide-react";
+import { FiEdit } from "react-icons/fi";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
+import { PiSirenFill } from "react-icons/pi";
+import { FaPersonWalkingLuggage } from "react-icons/fa6";
+import { FaTools } from "react-icons/fa";
 import TeamFormation from "./TeamFormation";
+import ScenarioEditor from "./ScenarioEditor";
 import styles from "./MDAfaatGame.module.css";
 import { 
 	Outcome, 
@@ -315,10 +320,7 @@ const applyRandomOutcome = (card: DrawnCard): void => {
 	card.selectedOutcome = outcome;
 	card.outcomeKey = key;
 	
-	card.description = `${card.description}\n\n結果: ${outcome.description}`;
-	if (outcome.action) {
-		card.description += `\n⚠️ 行動: ${outcome.action}`;
-	}
+	// Don't add to description - outcome is displayed separately in card UI
 };
 
 const applyEscalations = (cardData: CardData, scenario: DrawnCard[]): void => {
@@ -492,6 +494,7 @@ const MDAfaatGame = () => {
 	const [gameMode, setGameMode] = useState<"formation" | "game">("formation");
 	const [teamCount, setTeamCount] = useState<number>(0);
 	const [sessionScenarios, setSessionScenarios] = useState<Set<number>>(new Set());
+	const [showEditor, setShowEditor] = useState(false);
 
 	// ENHANCED card data with outcomes from scenarioData.ts
 	const baseCardData: CardData = {
@@ -998,8 +1001,15 @@ const MDAfaatGame = () => {
 					onStartGame={(count: number) => {
 						setTeamCount(count);
 						setGameMode("game");
-					}} 
+					}}
+					onOpenEditor={() => setShowEditor(true)}
 				/>
+				{showEditor && (
+					<ScenarioEditor 
+						onClose={() => setShowEditor(false)}
+						initialData={baseCardData}
+					/>
+				)}
 			</div>
 		);
 	}
@@ -1008,7 +1018,15 @@ const MDAfaatGame = () => {
 		<div className={`${styles.container} ${shuffling ? styles.shuffling : ''}`}>
 			<div className={styles.gameContainer}>
 				<div className={styles.header}>
-					<h1 className={styles.title}>MDAfaat 情境訓練遊戲</h1>
+					<h1 className={styles.title}>情境演練 Scenario Training</h1>
+					<button 
+						onClick={() => setShowEditor(true)}
+						className={styles.editorButton}
+						title="編輯情境卡片"
+					>
+						<FiEdit size={18} />
+						編輯情境
+					</button>
 				</div>
 
 				<div className={styles.controls}>
@@ -1068,21 +1086,21 @@ const MDAfaatGame = () => {
 								onClick={() => setCardTypeFilter("emergency")}
 								title="緊急狀況"
 							>
-								🚨
+								<PiSirenFill size={20} />
 							</button>
 							<button
 								className={`${styles.filterButton} ${cardTypeFilter === "passenger" ? styles.filterActive : ""} ${styles.filterPassenger}`}
 								onClick={() => setCardTypeFilter("passenger")}
 								title="旅客狀況"
 							>
-								👤
+								<FaPersonWalkingLuggage size={18} />
 							</button>
 							<button
 								className={`${styles.filterButton} ${cardTypeFilter === "equipment" ? styles.filterActive : ""} ${styles.filterEquipment}`}
 								onClick={() => setCardTypeFilter("equipment")}
 								title="設備/環境"
 							>
-								⚙️
+								<FaTools size={18} />
 							</button>
 						</div>
 					</div>
@@ -1090,19 +1108,19 @@ const MDAfaatGame = () => {
 					{allDrawnCards.length > 0 && (
 						<div className={styles.cardCounts}>
 							<div className={`${styles.countBadge} ${styles.emergencyBadge}`}>
-								<span className={styles.countIcon}>🚨</span>
+								<span className={styles.countIcon}><PiSirenFill size={20} /></span>
 								<span className={styles.countNumber}>
 									{10 - allDrawnCards.filter((card) => card.type === "emergency").length}
 								</span>
 							</div>
 							<div className={`${styles.countBadge} ${styles.passengerBadge}`}>
-								<span className={styles.countIcon}>👤</span>
+								<span className={styles.countIcon}><FaPersonWalkingLuggage size={18} /></span>
 								<span className={styles.countNumber}>
 									{10 - allDrawnCards.filter((card) => card.type === "passenger").length}
 								</span>
 							</div>
 							<div className={`${styles.countBadge} ${styles.equipmentBadge}`}>
-								<span className={styles.countIcon}>⚙️</span>
+								<span className={styles.countIcon}><FaTools size={18} /></span>
 								<span className={styles.countNumber}>
 									{10 - allDrawnCards.filter((card) => card.type === "equipment").length}
 								</span>
@@ -1196,6 +1214,14 @@ const MDAfaatGame = () => {
 					)}
 				</div>
 			</div>
+
+			{/* Scenario Editor Modal */}
+			{showEditor && (
+				<ScenarioEditor 
+					onClose={() => setShowEditor(false)}
+					initialData={baseCardData}
+				/>
+			)}
 		</div>
 	);
 };

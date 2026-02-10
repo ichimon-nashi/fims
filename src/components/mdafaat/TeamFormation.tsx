@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Search, X, Users, Shuffle, ArrowRight } from "lucide-react";
+import { FiEdit } from "react-icons/fi";
 import { GiBoatPropeller } from "react-icons/gi";
 import { IoAirplane } from "react-icons/io5";
 import Image from "next/image";
@@ -27,9 +28,10 @@ interface Team {
 
 interface TeamFormationProps {
 	onStartGame: (teamCount: number) => void;
+	onOpenEditor: () => void;
 }
 
-const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame }) => {
+const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor }) => {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [allUsers, setAllUsers] = useState<User[]>([]);
 	const [userPool, setUserPool] = useState<User[]>([]);
@@ -578,6 +580,14 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame }) => {
 					<Users className={styles.titleIcon} />
 					分組系統 Team Formation
 				</h2>
+				<button 
+					onClick={onOpenEditor}
+					className={styles.editorButton}
+					title="編輯情境卡片"
+				>
+					<FiEdit size={18} />
+					編輯情境
+				</button>
 				<p className={styles.subtitle}>搜尋學員並安排分配</p>
 			</div>
 
