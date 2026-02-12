@@ -35,7 +35,7 @@ export const emergencyOutcomes: Record<number, CardEnhancement> = {
 		crew_impact: {
 			no_impact: {
 				probability: 0.2,
-				description: "組員快速撲滅，無人受傷",
+				description: "組員快速滅火，無人受傷，無複燃",
 			},
 			minor: { probability: 0.45, description: "一名組員輕微燒傷" },
 			moderate: {

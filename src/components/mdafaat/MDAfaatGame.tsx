@@ -1,7 +1,7 @@
 // src/components/mdafaat/MDAfaatGame.tsx - WITH TEAM FORMATION + SMART SCENARIO SYSTEM
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Shuffle, RotateCcw, Plus, ArrowLeft, Sparkles } from "lucide-react";
 import { FiEdit } from "react-icons/fi";
 import Image from "next/image";
@@ -17,6 +17,7 @@ import {
 	OutcomeSet, 
 	enhanceAllCards 
 } from "@/utils/mdafaat/scenarioData";
+import { getAllCards } from "@/lib/mdafaatDatabase";
 
 // ============================================
 // INTERFACES - UPDATED
@@ -491,241 +492,105 @@ const generateSmartScenario = (
 // ============================================
 
 const MDAfaatGame = () => {
+	// All hooks must be at the top (Rules of Hooks)
 	const [gameMode, setGameMode] = useState<"formation" | "game">("formation");
 	const [teamCount, setTeamCount] = useState<number>(0);
 	const [sessionScenarios, setSessionScenarios] = useState<Set<number>>(new Set());
 	const [showEditor, setShowEditor] = useState(false);
 
-	// ENHANCED card data with outcomes from scenarioData.ts
-	const baseCardData: CardData = {
-		emergency: [
-			{
-				id: 1,
-				title: "客艙火災",
-				description: "置物櫃旅客行李起火！",
-				code: "E-01",
-				conflicts: [2, 6],
-			},
-			{
-				id: 2,
-				title: "客艙失壓",
-				description: "客艙破洞造成快速失壓！",
-				code: "E-02",
-				conflicts: [1, 4, 6, 8],
-			},
-			{
-				id: 3,
-				title: "亂流受傷",
-				description: "旅客因通過無預警亂流受傷！",
-				code: "E-03",
-				conflicts: [],
-			},
-			{
-				id: 4,
-				title: "PED電子用品起火",
-				description: "手機電池發熱冒煙！",
-				code: "E-04",
-				conflicts: [2],
-			},
-			{
-				id: 5,
-				title: "醫療事件",
-				description: "旅客昏倒，無心跳！",
-				code: "E-05",
-				conflicts: [],
-			},
-			{
-				id: 6,
-				title: "客艙冒煙",
-				description: "隱藏性火災，客艙冒煙！",
-				code: "E-06",
-				conflicts: [2],
-			},
-			{
-				id: 7,
-				title: "組員失能",
-				description: "前艙組員失能！",
-				code: "E-07",
-				conflicts: [],
-			},
-			{
-				id: 8,
-				title: "CPP",
-				description: "雙引擎失效，準備迫降！",
-				code: "E-08",
-				conflicts: [1, 2, 6],
-			},
-			{
-				id: 9,
-				title: "滑出跑道",
-				description: "飛機滑出跑道！",
-				code: "E-09",
-				conflicts: [],
-			},
-			{
-				id: 10,
-				title: "機場關閉",
-				description: "目的地機場關閉！",
-				code: "E-10",
-				conflicts: [],
-			},
-		],
-		passenger: [
-			{
-				id: 1,
-				title: "酒醉旅客",
-				description: "酒醉旅客騷擾其他旅客！",
-				code: "P-01",
-				conflicts: [],
-			},
-			{
-				id: 2,
-				title: "嬰兒啼哭",
-				description: "嬰兒持續啼哭不停！",
-				code: "P-02",
-				conflicts: [],
-			},
-			{
-				id: 3,
-				title: "寵物脫逃",
-				description: "客艙寵物脫逃四處亂竄！",
-				code: "P-03",
-				conflicts: [],
-			},
-			{
-				id: 4,
-				title: "座位糾紛",
-				description: "旅客爭奪座位發生爭執！",
-				code: "P-04",
-				conflicts: [],
-			},
-			{
-				id: 5,
-				title: "暈機嘔吐",
-				description: "多位旅客暈機嘔吐！",
-				code: "P-05",
-				conflicts: [],
-			},
-			{
-				id: 6,
-				title: "過敏反應",
-				description: "旅客食物過敏！",
-				code: "P-06",
-				conflicts: [],
-			},
-			{
-				id: 7,
-				title: "行李掉落",
-				description: "行李櫃行李掉落砸傷旅客！",
-				code: "P-07",
-				conflicts: [],
-			},
-			{
-				id: 8,
-				title: "恐慌發作",
-				description: "旅客恐慌發作呼吸困難！",
-				code: "P-08",
-				conflicts: [],
-			},
-			{
-				id: 9,
-				title: "語言障礙",
-				description: "旅客不會說中英文！",
-				code: "P-09",
-				conflicts: [],
-			},
-			{
-				id: 10,
-				title: "特殊餐點",
-				description: "特殊餐點漏備！",
-				code: "P-10",
-				conflicts: [],
-			},
-		],
-		equipment: [
-			{
-				id: 1,
-				title: "廁所故障",
-				description: "廁所馬桶阻塞溢水！",
-				code: "Q-01",
-				conflicts: [],
-			},
-			{
-				id: 2,
-				title: "娛樂系統",
-				description: "全機娛樂系統當機！",
-				code: "Q-02",
-				conflicts: [],
-			},
-			{
-				id: 3,
-				title: "空調失效",
-				description: "客艙空調系統失效！",
-				code: "Q-03",
-				conflicts: [],
-			},
-			{
-				id: 4,
-				title: "照明故障",
-				description: "客艙照明突然熄滅！",
-				code: "Q-04",
-				conflicts: [],
-			},
-			{
-				id: 5,
-				title: "座椅損壞",
-				description: "旅客座椅無法調整！",
-				code: "Q-05",
-				conflicts: [],
-			},
-			{
-				id: 6,
-				title: "餐車卡住",
-				description: "餐車輪子卡住無法移動！",
-				code: "Q-06",
-				conflicts: [],
-			},
-			{
-				id: 7,
-				title: "烤箱故障",
-				description: "烤箱冒煙停止運作！",
-				code: "Q-07",
-				conflicts: [],
-			},
-			{
-				id: 8,
-				title: "門把損壞",
-				description: "艙門把手鬆脫！",
-				code: "Q-08",
-				conflicts: [],
-			},
-			{
-				id: 9,
-				title: "氧氣面罩",
-				description: "氧氣面罩意外掉落！",
-				code: "Q-09",
-				conflicts: [],
-			},
-			{
-				id: 10,
-				title: "通話系統",
-				description: "機組通話系統故障！",
-				code: "Q-10",
-				conflicts: [],
-			},
-		],
-	};
+	// Database state
+	const [baseCardData, setBaseCardData] = useState<CardData | null>(null);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 
-	// Enhance with outcomes from scenarioData.ts
-	const cardData = enhanceAllCards(baseCardData);
-
+	// Game state (must be declared before any returns)
 	const [allDrawnCards, setAllDrawnCards] = useState<DrawnCard[]>([]);
-	const [availableCards, setAvailableCards] = useState<CardData>(cardData);
+	const [availableCards, setAvailableCards] = useState<CardData>({
+		emergency: [],
+		passenger: [],
+		equipment: []
+	});
 	const [shuffling, setShuffling] = useState(false);
 	const [dealingAnimation, setDealingAnimation] = useState(false);
 	const [cardTypeFilter, setCardTypeFilter] = useState<
 		"all" | "emergency" | "passenger" | "equipment"
 	>("emergency");
+	const [currentDealIndex, setCurrentDealIndex] = useState(0);
+
+	// Fetch cards from database on mount
+	useEffect(() => {
+		async function loadCards() {
+			try {
+				const cards = await getAllCards();
+				setBaseCardData(cards);
+			} catch (err) {
+				console.error("Failed to load cards:", err);
+				setError("無法載入情境卡片");
+			} finally {
+				setLoading(false);
+			}
+		}
+		loadCards();
+	}, []);
+
+	// Initialize availableCards when baseCardData loads
+	useEffect(() => {
+		if (baseCardData) {
+			const cardData = enhanceAllCards(baseCardData);
+			setAvailableCards(cardData);
+		}
+	}, [baseCardData]);
+
+	// Show loading state
+	if (loading) {
+		return (
+			<div style={{ 
+				display: 'flex', 
+				justifyContent: 'center', 
+				alignItems: 'center', 
+				height: '100vh',
+				fontSize: '1.5rem',
+				color: 'white'
+			}}>
+				載入中...
+			</div>
+		);
+	}
+
+	// Show error state
+	if (error || !baseCardData) {
+		return (
+			<div style={{ 
+				display: 'flex', 
+				flexDirection: 'column',
+				justifyContent: 'center', 
+				alignItems: 'center', 
+				height: '100vh',
+				fontSize: '1.5rem',
+				color: '#ff6b6b',
+				gap: '1rem'
+			}}>
+				<div>❌ {error || "載入失敗"}</div>
+				<button 
+					onClick={() => window.location.reload()}
+					style={{
+						padding: '0.75rem 1.5rem',
+						fontSize: '1rem',
+						background: '#4a9eff',
+						color: 'white',
+						border: 'none',
+						borderRadius: '0.5rem',
+						cursor: 'pointer'
+					}}
+				>
+					重新載入
+				</button>
+			</div>
+		);
+	}
+
+	// Enhance with outcomes from scenarioData.ts
+	const cardData = enhanceAllCards(baseCardData);
 
 	const getShuffleRadius = () => {
 		if (typeof window !== "undefined") {
@@ -851,9 +716,6 @@ const MDAfaatGame = () => {
 
 		setDealingAnimation(false);
 	};
-
-	// Track current deal count for session-based scenario distribution
-	const [currentDealIndex, setCurrentDealIndex] = useState(0);
 
 	// NEW: Smart scenario handler with session tracking
 	const handleGenerateSmartScenario = async () => {

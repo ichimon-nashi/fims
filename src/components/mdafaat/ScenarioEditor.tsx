@@ -89,36 +89,142 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 		setEditMode("new");
 	};
 
-	const handleSave = () => {
+	const handleSave = async () => {
 		if (!formData.title || !formData.description) {
 			alert("請填寫標題和描述");
 			return;
 		}
 
-		const updatedCards = { ...cards };
-		
-		if (editMode === "new") {
-			updatedCards[cardType] = [...updatedCards[cardType], formData];
-		} else if (editMode === "edit" && selectedCard) {
-			updatedCards[cardType] = updatedCards[cardType].map(c => 
-				c.id === selectedCard.id ? formData : c
-			);
-		}
+		try {
+			// Get token from localStorage
+			const token = localStorage.getItem("token");
+			
+			if (!token) {
+				alert("請先登入");
+				return;
+			}
 
-		setCards(updatedCards);
-		setSelectedCard(formData);
-		setEditMode("view");
+			if (editMode === "new") {
+				// Create new card via API
+				const response = await fetch("/api/mdafaat/cards", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						"Authorization": `Bearer ${token}`
+					},
+					body: JSON.stringify({
+						id: formData.id,
+						card_type: cardType,
+						code: formData.code,
+						title: formData.title,
+						description: formData.description,
+						conflicts: formData.conflicts || [],
+						synergies: [],
+						escalates_to: [],
+						escalation_chance: 0.3,
+						crew_impact: {},
+						passenger_impact: {},
+						severity_levels: {},
+						malfunction_outcomes: {}
+					})
+				});
+
+				if (!response.ok) {
+					const error = await response.json();
+					throw new Error(error.error || "Failed to create card");
+				}
+
+				alert("新增成功！");
+
+			} else if (editMode === "edit" && selectedCard) {
+				// Update existing card via API
+				const response = await fetch(`/api/mdafaat/cards/${selectedCard.id}`, {
+					method: "PUT",
+					headers: {
+						"Content-Type": "application/json",
+						"Authorization": `Bearer ${token}`
+					},
+					body: JSON.stringify({
+						title: formData.title,
+						description: formData.description,
+						code: formData.code,
+						conflicts: formData.conflicts || []
+					})
+				});
+
+				if (!response.ok) {
+					const error = await response.json();
+					throw new Error(error.error || "Failed to update card");
+				}
+
+				alert("更新成功！");
+			}
+
+			// Refresh cards from API
+			const refreshResponse = await fetch("/api/mdafaat/cards", {
+				headers: {
+					"Authorization": `Bearer ${token}`
+				}
+			});
+
+			if (refreshResponse.ok) {
+				const updatedCards = await refreshResponse.json();
+				setCards(updatedCards);
+				setSelectedCard(formData);
+			}
+
+			setEditMode("view");
+
+		} catch (error) {
+			console.error("Save failed:", error);
+			alert(`儲存失敗: ${error instanceof Error ? error.message : "未知錯誤"}`);
+		}
 	};
 
-	const handleDelete = () => {
+	const handleDelete = async () => {
 		if (!selectedCard) return;
 		
 		if (confirm(`確定要刪除「${selectedCard.title}」嗎？`)) {
-			const updatedCards = { ...cards };
-			updatedCards[cardType] = updatedCards[cardType].filter(c => c.id !== selectedCard.id);
-			setCards(updatedCards);
-			setSelectedCard(null);
-			setEditMode("view");
+			try {
+				const token = localStorage.getItem("token");
+				
+				if (!token) {
+					alert("請先登入");
+					return;
+				}
+
+				const response = await fetch(`/api/mdafaat/cards/${selectedCard.id}`, {
+					method: "DELETE",
+					headers: {
+						"Authorization": `Bearer ${token}`
+					}
+				});
+
+				if (!response.ok) {
+					const error = await response.json();
+					throw new Error(error.error || "Failed to delete card");
+				}
+
+				// Refresh cards from API
+				const refreshResponse = await fetch("/api/mdafaat/cards", {
+					headers: {
+						"Authorization": `Bearer ${token}`
+					}
+				});
+
+				if (refreshResponse.ok) {
+					const updatedCards = await refreshResponse.json();
+					setCards(updatedCards);
+				}
+
+				setSelectedCard(null);
+				setEditMode("view");
+				alert("刪除成功！");
+
+			} catch (error) {
+				console.error("Delete failed:", error);
+				alert(`刪除失敗: ${error instanceof Error ? error.message : "未知錯誤"}`);
+			}
 		}
 	};
 
