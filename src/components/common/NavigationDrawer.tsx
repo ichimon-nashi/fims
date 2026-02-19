@@ -162,6 +162,11 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 		console.log('User object:', user);
 		console.log('User SMS permissions:', user?.app_permissions?.sms);
 		console.log('Can access SMS?', permissions.hasAppAccess('sms'));
+		
+		// Make user available globally for MDAfaatGame instructor name
+		if (user) {
+			(window as any).currentUser = user;
+		}
 	}, [user, permissions]);
 
 	// TEMPORARY DEBUG: Log permissions when drawer opens

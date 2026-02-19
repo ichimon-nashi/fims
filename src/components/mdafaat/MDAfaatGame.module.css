@@ -1,1114 +1,892 @@
 /* src/components/mdafaat/MDAfaatGame.module.css */
 
-/* Main Container */
+/* Container */
 .container {
-	min-height: calc(100vh - 64px); /* Account for navbar height */
-	background: linear-gradient(135deg, #064e3b, #065f46, #047857);
-	padding: 1.5rem;
-	position: relative;
-	overflow-x: hidden;
-	overflow-y: auto;
-	display: flex;
-	flex-direction: column;
-}
-
-/* During shuffling - prevent scrollbars and ensure full viewport */
-.container.shuffling {
-	overflow: hidden !important;
-	height: calc(100vh - 64px);
-	max-height: calc(100vh - 64px);
-}
-
-.container.shuffling .gameArea {
-	overflow: visible !important;
-	flex: 1;
-	min-height: 0;
-}
-
-.background {
-	position: absolute;
-	inset: 0;
-	opacity: 0.2;
-	background: radial-gradient(
-		circle,
-		rgba(34, 197, 94, 0.3) 0%,
-		rgba(21, 128, 61, 0.5) 100%
-	);
-}
-
-/* Game Container */
-.gameContainer {
-	display: flex;
-	flex-direction: column;
-	flex: 1;
 	width: 100%;
-	min-height: 0;
-}
-
-.mainContent {
-	max-width: 1800px;
-	width: 100%;
-	margin: 0 auto;
-	position: relative;
-	z-index: 10;
+	min-height: 100vh;
+	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
 	display: flex;
 	flex-direction: column;
-	flex: 1;
-	padding: 0; /* Remove any padding */
-}
-
-/* Header */
-.header {
-	margin-bottom: 1.5rem;
-	text-align: center;
-	flex-shrink: 0;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	position: relative;
-}
-
-.title {
-	font-size: 2.5rem;
-	font-weight: bold;
-	color: white;
-	margin-bottom: 0.5rem;
-	filter: drop-shadow(0 2px 1px rgb(0 0 0 / 0.3));
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 1rem;
-}
-
-.editorButton {
-	position: absolute;
-	right: 2rem;
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	padding: 0.75rem 1.25rem;
-	background: rgba(139, 92, 246, 0.2);
-	color: #c4b5fd;
-	border: 2px solid #8b5cf6;
-	border-radius: 0.5rem;
-	font-weight: 600;
-	cursor: pointer;
-	transition: all 0.2s;
-}
-
-.editorButton:hover {
-	background: rgba(139, 92, 246, 0.3);
-	transform: scale(1.05);
-	box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-}
-
-.titleAccent {
-	color: #facc15;
-}
-
-.subtitle {
-	color: #bbf7d0;
-	font-size: 1.125rem;
-	filter: drop-shadow(0 2px 1px rgb(0 0 0 / 0.3));
-}
-
-/* Control Panel */
-.controlPanel {
-	background-color: rgba(0, 0, 0, 0.2);
-	backdrop-filter: blur(16px);
-	border-radius: 0.75rem;
-	padding: 1rem 2rem;
-	margin-bottom: 1.5rem;
-	border: 2px solid rgba(250, 204, 21, 0.3);
-	box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-	flex-shrink: 0;
-}
-
-.controls {
-	background-color: rgba(0, 0, 0, 0.2);
-	backdrop-filter: blur(16px);
-	border-radius: 0.75rem;
-	padding: 1rem 2rem;
-	margin-bottom: 1.5rem;
-	border: 2px solid rgba(250, 204, 21, 0.3);
-	box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-	flex-shrink: 0;
-	display: flex;
-	flex-wrap: wrap;
-	gap: 1rem;
-	align-items: center;
-	justify-content: space-between;
-}
-
-.leftControls {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 1rem;
-	align-items: center;
-}
-
-.filterControls {
-	display: flex;
-	gap: 0.5rem;
-	align-items: center;
-}
-
-.controlsRow {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 1rem;
-	align-items: center;
-	justify-content: center;
-}
-
-/* Buttons */
-.button {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	padding: 0.75rem 1.5rem;
-	border-radius: 0.5rem;
-	font-weight: bold;
-	font-size: 1rem;
-	transition: all 0.3s ease;
-	box-shadow: 0 2px 4px -1px rgb(0 0 0 / 0.1);
-	border: 2px solid;
-	cursor: pointer;
-	white-space: nowrap;
-}
-
-.button:hover:not(.disabled) {
-	transform: scale(1.05);
-	box-shadow: 0 4px 8px -2px rgb(0 0 0 / 0.2);
-}
-
-.button:active:not(.disabled) {
-	transform: scale(0.98);
-}
-
-/* Action Button Base */
-.actionButton {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	padding: 0.75rem 1.5rem;
-	border-radius: 0.5rem;
-	font-weight: bold;
-	font-size: 1rem;
-	transition: all 0.3s ease;
-	box-shadow: 0 2px 4px -1px rgb(0 0 0 / 0.1);
-	border: 2px solid;
-	cursor: pointer;
-	white-space: nowrap;
-}
-
-.actionButton:hover:not(.disabled) {
-	transform: scale(1.05);
-	box-shadow: 0 4px 8px -2px rgb(0 0 0 / 0.2);
-}
-
-.actionButton:active:not(.disabled) {
-	transform: scale(0.98);
-}
-
-.dealButton {
-	background: linear-gradient(135deg, #ca8a04, #ea580c);
-	color: white;
-	border-color: #facc15;
-}
-
-.dealButton:hover:not(.disabled) {
-	background: linear-gradient(135deg, #a16207, #c2410c);
-}
-
-.addButton {
-	background: linear-gradient(135deg, #16a34a, #15803d);
-	color: white;
-	border-color: #4ade80;
-}
-
-.addButton:hover:not(.disabled) {
-	background: linear-gradient(135deg, #15803d, #166534);
-}
-
-.resetButton {
-	background: linear-gradient(135deg, #4b5563, #374151);
-	color: white;
-	border-color: #9ca3af;
-}
-
-.resetButton:hover:not(.disabled) {
-	background: linear-gradient(135deg, #374151, #1f2937);
-}
-
-.backButton {
-	background: linear-gradient(135deg, #6366f1, #4f46e5);
-	color: white;
-	border-color: #818cf8;
-}
-
-.backButton:hover:not(.disabled) {
-	background: linear-gradient(135deg, #4f46e5, #4338ca);
-}
-
-.startButton {
-	background: linear-gradient(135deg, #16a34a, #15803d);
-	color: white;
-	border-color: #4ade80;
-}
-
-.startButton:hover:not(.disabled) {
-	background: linear-gradient(135deg, #15803d, #166534);
-}
-
-.disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
-}
-
-.buttonIcon {
-	width: 1.125rem;
-	height: 1.125rem;
-}
-
-.buttonDivider {
-	width: 2px;
-	height: 2rem;
-	background: rgba(255, 255, 255, 0.2);
-	margin: 0 0.5rem;
-}
-
-/* Stats */
-.statsInline {
-	display: flex;
-	align-items: center;
-	gap: 1rem;
-	background-color: rgba(0, 0, 0, 0.3);
-	backdrop-filter: blur(4px);
-	padding: 0.625rem 1.25rem;
-	border-radius: 0.5rem;
-	border: 1px solid rgba(250, 204, 21, 0.3);
-	font-size: 1.125rem;
-}
-
-.statEmergency {
-	color: #fca5a5;
-	font-weight: bold;
-}
-
-.statPassenger {
-	color: #93c5fd;
-	font-weight: bold;
-}
-
-.statEquipment {
-	color: #fde047;
-	font-weight: bold;
 }
 
 /* Game Area */
 .gameArea {
 	flex: 1;
+	width: 100%;
+	max-width: 100vw;
+	padding: 2rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow-x: auto;
+	min-height: calc(100vh - 200px);
+	background: 
+		radial-gradient(ellipse at center, rgba(0, 100, 0, 0.3) 0%, transparent 70%),
+		repeating-linear-gradient(
+			0deg,
+			rgba(0, 80, 0, 0.8) 0px,
+			rgba(0, 100, 0, 0.9) 2px,
+			rgba(0, 120, 0, 0.85) 4px
+		);
+	background-color: #0a5f0a;
+}
+
+/* Header */
+.header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 1.5rem 2rem;
+	background: #1e293b;
+	border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.title {
+	font-size: 2.25rem;
+	font-weight: 700;
+	color: #60a5fa;
+	margin: 0;
+	flex: 1;
+	text-align: center;
+}
+
+.closeBtn {
+	background: rgba(239, 68, 68, 0.2);
+	color: #fca5a5;
+	border: 2px solid #ef4444;
+	padding: 0.5rem;
+	border-radius: 0.5rem;
+	cursor: pointer;
+	transition: all 0.2s;
+	display: flex;
+	align-items: center;
+}
+
+.closeBtn:hover {
+	background: rgba(239, 68, 68, 0.3);
+	transform: scale(1.05);
+}
+
+/* Conditions Bar */
+.conditionsBar {
+	display: flex;
+	align-items: center;
+	gap: 2rem;
+	padding: 1rem 2rem;
+	background: #1e293b;
+	border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+	font-size: 0.875rem;
+	color: #cbd5e1;
+	flex-wrap: wrap;
+}
+
+.teamMembers {
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	flex-wrap: wrap;
+}
+
+.teamLabel {
+	font-weight: 600;
+	color: #94a3b8;
+	margin-right: 0.5rem;
+}
+
+.membersList {
+	display: flex;
+	gap: 0.75rem;
+	flex-wrap: wrap;
+}
+
+.teamMember {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.5rem 0.75rem;
+	background: rgba(59, 130, 246, 0.2);
+	border: 2px solid rgba(59, 130, 246, 0.5);
+	border-radius: 0.5rem;
+	transition: all 0.2s;
+}
+
+.teamLeader {
+	border-color: #fb923c;
+	border-width: 3px;
+	box-shadow: 0 0 12px rgba(251, 146, 60, 0.4);
+}
+
+.teamMemberActive {
+	background: rgba(59, 130, 246, 0.4);
+	border-color: #3b82f6;
+	box-shadow: 0 0 12px rgba(59, 130, 246, 0.6);
+}
+
+.memberAvatar {
+	border-radius: 50%;
+	object-fit: cover;
+}
+
+.memberName {
+	font-size: 0.875rem;
+	font-weight: 600;
+	color: #e2e8f0;
+}
+
+.activeIndicator {
+	width: 8px;
+	height: 8px;
+	background: #4ade80;
+	border-radius: 50%;
+	animation: blink 1.5s ease-in-out infinite;
+}
+
+@keyframes blink {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.3; }
+}
+
+.currentPlayer {
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.5rem 1rem;
+	background: rgba(59, 130, 246, 0.2);
+	border: 1px solid rgba(59, 130, 246, 0.5);
+	border-radius: 0.5rem;
+}
+
+.currentPlayer img {
+	width: 2rem;
+	height: 2rem;
+	border-radius: 50%;
+	object-fit: cover;
+}
+
+.currentPlayer span {
+	font-weight: 600;
+	color: #93c5fd;
+}
+
+/* Breadcrumb */
+.breadcrumb {
+	background: rgba(15, 23, 42, 0.6);
+	border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+	padding: 0.75rem 2rem;
+}
+
+.breadcrumbToggle {
+	background: none;
+	border: none;
+	color: #94a3b8;
+	font-size: 0.875rem;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.breadcrumbList {
+	margin-top: 0.75rem;
 	display: flex;
 	flex-direction: column;
-	justify-content: center;
-	align-items: center;
-	min-height: 500px; /* Ensure enough space for shuffle animation */
-	overflow-y: auto;
-	overflow-x: hidden;
+	gap: 0.5rem;
+}
+
+.breadcrumbItem {
+	color: #cbd5e1;
+	font-size: 0.8125rem;
 	padding: 0.5rem;
+	background: rgba(51, 65, 85, 0.5);
+	border-radius: 0.25rem;
 }
 
-/* During shuffling - take full available space */
-.gameAreaShuffling {
-	flex: 1;
-	min-height: 0;
-	height: 100%;
-	overflow: visible !important;
-}
-
-/* Deck Area - When no cards are drawn */
-.deckArea {
-	flex: 1;
+/* Game Area */
+/* Start Screen */
+.startScreen {
 	display: flex;
+	flex-direction: column;
 	align-items: center;
 	justify-content: center;
+	gap: 2rem;
 	width: 100%;
-	position: relative;
-	min-height: 600px; /* Ensure space for 200px radius animation + card height */
-	padding: 3rem; /* Extra padding to contain flying cards */
 }
 
 .deckContainer {
 	position: relative;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 18rem;
-	height: 24rem;
-	max-width: 90vw; /* Ensure it fits on small screens */
-	max-height: 60vh; /* Limit height on smaller viewports */
-}
-
-.deckBase {
-	position: relative;
-	z-index: 5;
-}
-
-.shuffleCard {
-	/* Positioning is handled inline via framer-motion style prop */
-	z-index: 4;
-}
-
-.statusMessage {
-	position: absolute;
-	top: 50%; /* Center vertically with deck */
-	left: 50%;
-	transform: translate(-50%, -50%); /* Center both axes */
-	background-color: #facc15;
-	color: black;
-	padding: 0.875rem 1.75rem;
-	border-radius: 0.625rem;
-	font-weight: bold;
-	font-size: 1.125rem;
-	white-space: nowrap;
-	box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-	z-index: 1000; /* Above deck and shuffle cards */
-	text-align: center;
-	max-width: 90vw; /* Prevent cutoff on small screens */
-	pointer-events: none; /* Allow clicks to pass through */
-}
-
-/* Cards Container - Responsive Grid */
-.cardsContainer {
-	display: grid;
-	gap: 1.5rem;
-	justify-content: center;
-	align-items: start;
-	width: 100%;
-	padding: 1rem;
-	grid-template-columns: repeat(5, 15rem); /* Desktop: 5 cards per row */
-	max-width: fit-content;
+	width: 320px;
+	height: 450px;
+	perspective: 1000px;
 	margin: 0 auto;
 }
 
-/* Cards - Base styling */
-.card {
+.cardBack {
+	width: 320px;
+	height: 450px;
+	background: linear-gradient(135deg, #1e293b, #334155);
+	border: none;
+	border-radius: 1rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+	transition: transform 0.3s;
+	overflow: hidden;
 	position: relative;
-	width: 15rem;
-	height: 20rem;
+}
+
+.cardBackImage {
+	object-fit: cover;
 	border-radius: 0.875rem;
-	border: 4px solid;
+}
+
+.cardBack:hover {
+	transform: translateY(-10px);
+}
+
+.cardBackInner {
+	font-size: 3rem;
+	font-weight: 700;
+	color: #60a5fa;
+	text-shadow: 0 0 20px rgba(96, 165, 250, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 100%;
+}
+
+.shuffleBtn {
+	padding: 1rem 2rem;
+	background: linear-gradient(135deg, #8b5cf6, #7c3aed);
 	color: white;
-	transition: all 0.3s ease;
-	box-shadow: 0 10px 20px -5px rgb(0 0 0 / 0.3);
+	border: none;
+	border-radius: 0.75rem;
+	font-size: 1.125rem;
+	font-weight: 700;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	transition: all 0.2s;
+	box-shadow: 0 4px 16px rgba(139, 92, 246, 0.4);
 }
 
-.playingCard:hover {
-	transform: scale(1.05) translateY(-5px);
-	box-shadow: 0 15px 30px -8px rgb(0 0 0 / 0.4);
+.shuffleBtn:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
 }
 
-.deckCard {
-	background: transparent;
-	border: none; /* Remove border */
-	box-shadow: none; /* Remove shadow */
+.shuffleBtn:disabled {
+	opacity: 0.8;
+	cursor: not-allowed;
 }
 
-.emergencyCard {
-	background: linear-gradient(135deg, #dc2626, #b91c1c);
-	border-color: #dc2626;
+.spinning {
+	animation: none;
 }
 
-.passengerCard {
-	background: linear-gradient(135deg, #2563eb, #1d4ed8);
-	border-color: #2563eb;
+/* Cards Row */
+.cardsRow {
+	display: flex;
+	gap: 2rem;
+	align-items: flex-start;
+	width: 100%;
+	max-width: 100%;
+	justify-content: space-evenly;
+	flex-wrap: nowrap;
+	padding: 0 1rem;
 }
 
-.equipmentCard {
-	background: linear-gradient(135deg, #ca8a04, #a16207);
-	border-color: #ca8a04;
-}
-
-/* Deck Content */
-.deckContent {
+.cardColumn {
 	display: flex;
 	flex-direction: column;
-	justify-content: center;
 	align-items: center;
-	height: 100%;
-	width: 100%;
-	border-radius: 0.625rem;
-	overflow: hidden;
+	gap: 1.5rem;
+	min-width: 320px;
+	max-width: 500px;
+	flex: 1;
+}
+
+/* Card Styles */
+.card {
+	background: linear-gradient(135deg, #1e293b, #334155);
+	border-radius: 0.75rem;
 	padding: 0;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+	transition: all 0.3s;
+	width: 320px;
+	height: 450px;
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
-.deckImage {
-	width: 100%;
-	height: 100%;
-	object-fit: contain;
-}
-
-.deckLogo {
-	width: 100%;
-	height: 100%;
-	object-fit: contain;
-	padding: 1rem;
-	max-width: 100%;
-	max-height: 100%;
-}
-
-/* Card Content */
-.cardHeader {
+/* Card Corners */
+.cardCornerTopLeft {
 	position: absolute;
 	top: 0.75rem;
 	left: 0.75rem;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 0.375rem;
 }
 
-.cardSymbol {
-	font-size: 2.25rem;
-	font-weight: bold;
-	filter: drop-shadow(0 2px 1px rgb(0 0 0 / 0.3));
+.cardCornerTopRight {
+	position: absolute;
+	top: 0.75rem;
+	right: 0.75rem;
+}
+
+.cardCornerBottomLeft {
+	position: absolute;
+	bottom: 0.75rem;
+	left: 0.75rem;
+}
+
+.cardCornerBottomRight {
+	position: absolute;
+	bottom: 0.75rem;
+	right: 0.75rem;
+}
+
+/* Card Center Content */
+.cardCenter {
+	text-align: center;
+	padding: 2rem 1.5rem;
+	max-width: 90%;
+}
+
+.cardemergency {
+	border: 3px solid #dc2626;
+	background: linear-gradient(135deg, #7f1d1d, #991b1b);
+}
+
+.cardpassenger {
+	border: 3px solid #2563eb;
+	background: linear-gradient(135deg, #1e3a8a, #1e40af);
+}
+
+.cardequipment {
+	border: 3px solid #eab308;
+	background: linear-gradient(135deg, #854d0e, #a16207);
+}
+
+.cardEnd {
+	border: 3px solid #16a34a;
+	background: linear-gradient(135deg, #14532d, #166534);
+}
+
+.cardShiny {
+	border-width: 4px;
+	border-color: #fbbf24;
+	position: relative;
+	overflow: hidden;
+	transition: all 0.3s ease;
+}
+
+.cardShiny::before {
+	content: "";
+	position: absolute;
+	top: -50%;
+	left: -50%;
+	width: 200%;
+	height: 200%;
+	background: linear-gradient(
+		45deg,
+		transparent 30%,
+		rgba(255, 255, 255, 0.1) 40%,
+		rgba(255, 255, 255, 0.3) 50%,
+		rgba(255, 255, 255, 0.1) 60%,
+		transparent 70%
+	);
+	transform: rotate(45deg);
+	opacity: 0;
+	transition: opacity 0.5s ease;
+	pointer-events: none;
+}
+
+.cardShiny:hover::before {
+	opacity: 1;
+	animation: shinySlide 1.5s ease-in-out infinite;
+}
+
+@keyframes shinySlide {
+	0% {
+		transform: translateX(-100%) translateY(-100%) rotate(45deg);
+	}
+	100% {
+		transform: translateX(100%) translateY(100%) rotate(45deg);
+	}
+}
+
+.cardHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 1rem;
 }
 
 .cardCode {
-	font-size: 0.75rem;
 	font-family: monospace;
-	background-color: rgba(0, 0, 0, 0.3);
-	padding: 0.25rem 0.5rem;
+	font-weight: 700;
+	color: #fbbf24;
+	font-size: 0.875rem;
+	line-height: 1;
+}
+
+.cardSuit {
+	font-size: 1.5rem;
+	line-height: 1;
+	font-weight: bold;
+}
+
+.cardBadge {
+	background: rgba(139, 92, 246, 0.3);
+	color: #c4b5fd;
+	padding: 0.25rem 0.75rem;
 	border-radius: 0.25rem;
-	backdrop-filter: blur(4px);
+	font-size: 0.75rem;
 	font-weight: 600;
 }
 
-.cardSymbolTopRight {
-	position: absolute;
-	top: 0.75rem;
-	right: 0.75rem;
-	font-size: 3rem;
-	opacity: 0.7;
-	filter: drop-shadow(0 2px 1px rgb(0 0 0 / 0.3));
+.shinyIcon {
+	color: #fbbf24;
+	animation: pulse 2s ease-in-out infinite;
 }
 
-.cardContent {
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
-	align-items: center;
-	height: 100%;
-	padding: 1.5rem;
+@keyframes pulse {
+	0%, 100% { opacity: 0.7; }
+	50% { opacity: 1; }
+}
+
+.card h3 {
+	font-size: 1.75rem;
+	font-weight: 700;
+	color: #e2e8f0;
+	margin: 0 0 0.75rem 0;
 	text-align: center;
 }
 
-.cardTitle {
-	font-size: 1.5rem;
-	font-weight: bold;
-	margin-bottom: 1rem;
-	line-height: 1.2;
-	filter: drop-shadow(0 2px 1px rgb(0 0 0 / 0.3));
+.card h2 {
+	font-size: 2rem;
+	font-weight: 700;
+	color: #e2e8f0;
+	margin: 0 0 0.75rem 0;
+	text-align: center;
 }
 
-.cardDescription {
-	font-size: 1.25rem;
-	line-height: 1.4;
-	filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.3));
+.card p {
+	color: #cbd5e1;
+	line-height: 1.6;
+	margin: 0;
+	text-align: center;
+	font-size: 0.95rem;
 }
 
-.cardSymbolBottomLeft {
-	position: absolute;
-	bottom: 0.75rem;
-	left: 0.75rem;
-	font-size: 3rem;
-	opacity: 0.7;
-	transform: rotate(180deg);
-	filter: drop-shadow(0 2px 1px rgb(0 0 0 / 0.3));
+/* Outcomes */
+.outcomes {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+	justify-content: center;
+	width: 100%;
+	max-width: 100%;
 }
 
-.cardFooter {
-	position: absolute;
-	bottom: 0.75rem;
-	right: 0.75rem;
+.outcomeBtn {
+	background: rgba(30, 41, 59, 0.8);
+	border: 2px solid rgba(148, 163, 184, 0.3);
+	border-radius: 0.5rem;
+	padding: 0.875rem 1rem;
+	color: #e2e8f0;
+	cursor: pointer;
+	transition: all 0.2s;
 	display: flex;
 	flex-direction: column;
+	justify-content: center;
 	align-items: center;
-	gap: 0.375rem;
-	transform: rotate(180deg);
+	text-align: center;
+	flex: 1 1 140px;
+	min-width: 130px;
+	max-width: 160px;
+	min-height: 100px;
 }
 
-.cardSymbolFooter {
-	font-size: 2.25rem;
-	font-weight: bold;
-	filter: drop-shadow(0 2px 1px rgb(0 0 0 / 0.3));
+.outcomeBtn:hover:not(:disabled) {
+	background: rgba(51, 65, 85, 0.8);
+	border-color: rgba(148, 163, 184, 0.5);
+	transform: translateY(-2px);
 }
 
-.cardCodeFooter {
-	font-size: 0.75rem;
-	font-family: monospace;
-	background-color: rgba(0, 0, 0, 0.3);
-	padding: 0.25rem 0.5rem;
-	border-radius: 0.25rem;
-	backdrop-filter: blur(4px);
-	font-weight: 600;
+.outcomeBtn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
 }
 
-.removeButton {
-	position: absolute;
-	top: -0.875rem;
-	right: -0.875rem;
-	width: 2.75rem;
-	height: 2.75rem;
-	background-color: #dc2626;
+.outcomeSelected {
+	background: rgba(59, 130, 246, 0.3);
+	border-color: #3b82f6;
+}
+
+.outcomeAuto {
+	border-style: dashed;
+	border-color: rgba(251, 191, 36, 0.5);
+}
+
+.outcomeShiny {
+	border-color: #fbbf24;
+	box-shadow: 0 0 15px rgba(251, 191, 36, 0.4);
+	background: rgba(251, 191, 36, 0.1);
+}
+
+.shinyIcon {
+	display: inline-block;
+	animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.6; }
+}
+
+.outcomeDesc {
+	font-size: 0.95rem;
+	margin-bottom: 0.5rem;
+	text-align: center;
+	line-height: 1.5;
+}
+
+.outcomeProb {
+	font-weight: 700;
+	color: #60a5fa;
+	font-size: 1rem;
+	margin-top: 0.5rem;
+}
+
+.sideEffectIndicator {
+	color: #60a5fa;
+	font-weight: 700;
+}
+
+.randomBtn {
+	background: linear-gradient(135deg, #8b5cf6, #7c3aed);
 	color: white;
-	border-radius: 50%;
-	border: 3px solid white;
-	font-size: 1.75rem;
-	font-weight: bold;
+	border: none;
+	border-radius: 0.5rem;
+	padding: 0.75rem;
+	font-weight: 600;
 	cursor: pointer;
-	transition: all 0.2s ease;
-	box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3);
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	line-height: 1;
-	z-index: 10;
+	gap: 0.5rem;
+	transition: all 0.2s;
 }
 
-.removeButton:hover {
-	background-color: #b91c1c;
-	transform: scale(1.15) rotate(90deg);
+.randomBtn:hover:not(:disabled) {
+	transform: scale(1.02);
+	box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
 }
 
-/* Animations */
-@keyframes pulse {
-	0%,
-	100% {
-		opacity: 1;
-	}
-	50% {
-		opacity: 0.6;
-	}
+.randomBtn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
 }
 
-/* MacBook Air and smaller desktops - reduce shuffle radius */
-@media (max-width: 1440px) and (min-width: 1024px) {
-	.deckContainer {
-		width: 15rem;
-		height: 20rem;
-	}
-	
-	.card {
-		width: 15rem;
-		height: 20rem;
-	}
+.confirmBtn {
+	background: linear-gradient(135deg, #10b981, #059669);
+	color: white;
+	border: none;
+	border-radius: 0.5rem;
+	padding: 1rem 1.5rem;
+	font-weight: 700;
+	font-size: 1rem;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	transition: all 0.2s;
+	width: 100%;
+	margin-top: 1rem;
+	box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
-/* Responsive Design - Tablet */
-@media (max-width: 1023px) {
-	.container {
-		padding: 1rem;
-	}
-
-	.title {
-		font-size: 2rem;
-	}
-
-	.subtitle {
-		font-size: 1rem;
-	}
-
-	.cardsContainer {
-		grid-template-columns: repeat(3, 15rem); /* Tablet: 3 cards per row */
-		gap: 1.5rem;
-		padding: 1rem;
-	}
-
-	.card {
-		width: 15rem;
-		height: 20rem;
-	}
-	
-	.deckContainer {
-		width: 15rem;
-		height: 20rem;
-	}
-
-	.cardTitle {
-		font-size: 1.375rem;
-		margin-bottom: 0.875rem;
-	}
-
-	.cardDescription {
-		font-size: 1.125rem;
-	}
-
-	.cardSymbol,
-	.cardSymbolFooter {
-		font-size: 2rem;
-	}
-
-	.cardSymbolTopRight,
-	.cardSymbolBottomLeft {
-		font-size: 2.75rem;
-	}
+.confirmBtn:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 6px 16px rgba(16, 185, 129, 0.6);
 }
 
-/* Responsive Design - Mobile Landscape/Small Tablet */
-@media (max-width: 768px) {
-	.container {
-		padding: 0.75rem;
-	}
-
-	.header {
-		margin-bottom: 1rem;
-	}
-
-	.title {
-		font-size: 1.625rem;
-		gap: 0.5rem;
-	}
-
-	.subtitle {
-		font-size: 0.875rem;
-	}
-
-	.controlPanel {
-		padding: 0.75rem 1rem;
-		margin-bottom: 1rem;
-	}
-
-	.controlsRow {
-		gap: 0.625rem;
-	}
-
-	.button {
-		padding: 0.625rem 1.125rem;
-		font-size: 0.875rem;
-	}
-
-	.buttonIcon {
-		width: 1rem;
-		height: 1rem;
-	}
-
-	.buttonDivider {
-		display: none;
-	}
-
-	.cardsContainer {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 1rem;
-		padding: 0.75rem;
-		max-width: 100%;
-	}
-
-	.card {
-		width: 100%;
-		max-width: 13rem;
-		height: auto;
-		aspect-ratio: 3 / 4;
-	}
-	
-	.deckContainer {
-		width: 100%;
-		max-width: 13rem;
-		height: auto;
-		aspect-ratio: 3 / 4;
-	}
-
-	.cardHeader {
-		top: 0.5rem;
-		left: 0.5rem;
-		gap: 0.25rem;
-	}
-
-	.cardSymbol,
-	.cardSymbolFooter {
-		font-size: 1.5rem;
-	}
-
-	.cardCode,
-	.cardCodeFooter {
-		font-size: 0.625rem;
-		padding: 0.25rem 0.375rem;
-	}
-
-	.cardSymbolTopRight {
-		top: 0.5rem;
-		right: 0.5rem;
-		font-size: 2rem;
-	}
-
-	.cardSymbolBottomLeft {
-		bottom: 0.5rem;
-		left: 0.5rem;
-		font-size: 2rem;
-	}
-
-	.cardFooter {
-		bottom: 0.5rem;
-		right: 0.5rem;
-	}
-
-	.cardContent {
-		padding: 1rem;
-	}
-
-	.cardTitle {
-		font-size: 1.125rem;
-		margin-bottom: 0.625rem;
-	}
-
-	.cardDescription {
-		font-size: 0.9375rem;
-	}
-
-	.statusMessage {
-		font-size: 1rem;
-		padding: 0.75rem 1.5rem;
-	}
+.randomCategoryBtn {
+	background: linear-gradient(135deg, #a855f7, #9333ea);
+	color: white;
+	border: 2px dashed rgba(168, 85, 247, 0.5);
+	border-radius: 0.5rem;
+	padding: 0.75rem 1rem;
+	font-weight: 600;
+	font-size: 0.875rem;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.375rem;
+	transition: all 0.2s;
+	flex: 0 0 auto;
 }
 
-/* Responsive Design - Mobile Portrait */
-@media (max-width: 480px) {
-	.container {
-		padding: 0.5rem;
-	}
-
-	.header {
-		margin-bottom: 0.875rem;
-	}
-
-	.title {
-		font-size: 1.25rem;
-		flex-direction: column;
-		gap: 0.25rem;
-	}
-
-	.subtitle {
-		font-size: 0.75rem;
-	}
-
-	.controlPanel {
-		padding: 0.625rem 0.875rem;
-		margin-bottom: 0.875rem;
-	}
-
-	.controls {
-		padding: 0.75rem;
-		flex-direction: column;
-		gap: 0.75rem;
-	}
-
-	.leftControls {
-		width: 100%;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.actionButton {
-		width: 100%;
-		padding: 0.625rem;
-		font-size: 0.875rem;
-		justify-content: center;
-	}
-
-	.filterControls {
-		width: 100%;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.cardTypeSelector {
-		width: 100%;
-		justify-content: space-between;
-	}
-
-	.filterButton {
-		flex: 1;
-		font-size: 1.25rem;
-	}
-
-	.cardCounts {
-		width: 100%;
-		justify-content: space-around;
-	}
-
-	.controlsRow {
-		flex-direction: column;
-		gap: 0.5rem;
-		width: 100%;
-	}
-
-	.button {
-		width: 100%;
-		justify-content: center;
-		padding: 0.625rem 1rem;
-		font-size: 0.875rem;
-	}
-
-	.statsInline {
-		width: 100%;
-		justify-content: center;
-		padding: 0.5rem 0.875rem;
-		gap: 1rem;
-		font-size: 1rem;
-	}
-
-	.cardsContainer {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 0.625rem;
-		padding: 0.5rem;
-	}
-
-	.card {
-		width: 100%;
-		height: auto;
-		aspect-ratio: 3 / 4;
-	}
-	
-	.deckContainer {
-		width: 100%;
-		max-width: 14rem;
-		height: auto;
-		aspect-ratio: 3 / 4;
-	}
-
-	.statusMessage {
-		font-size: 0.875rem;
-		padding: 0.5rem 1rem;
-	}
-
-	.removeButton {
-		width: 2.25rem;
-		height: 2.25rem;
-		font-size: 1.375rem;
-		top: -0.625rem;
-		right: -0.625rem;
-	}
+.randomCategoryBtn:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4);
+	border-color: #a855f7;
 }
 
-/* Extra small devices */
-@media (max-width: 360px) {
-	.title {
-		font-size: 1.125rem;
-	}
-
-	.cardTitle {
-		font-size: 1rem;
-		margin-bottom: 0.5rem;
-	}
-
-	.cardDescription {
-		font-size: 0.875rem;
-	}
-	
-	.cardSymbol,
-	.cardSymbolFooter {
-		font-size: 1.25rem;
-	}
-	
-	.cardSymbolTopRight,
-	.cardSymbolBottomLeft {
-		font-size: 1.75rem;
-	}
+.specialCardBtn {
+	background: linear-gradient(135deg, #06b6d4, #0891b2);
+	color: white;
+	border: none;
+	border-radius: 0.375rem;
+	padding: 0.5rem 1rem;
+	font-weight: 600;
+	font-size: 0.875rem;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	transition: all 0.2s;
 }
-/* Card Type Selector */
-.cardTypeSelector {
+
+.specialCardBtn:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
+}
+
+.specialCardBtn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.cardSpecial {
+	border: 3px solid #06b6d4;
+	box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+}
+
+.cardDoor {
+	background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+	border: 3px solid #a855f7;
+	box-shadow: 0 0 25px rgba(168, 85, 247, 0.4);
+}
+
+.cardPosition {
+	background: linear-gradient(135deg, #db2777 0%, #ec4899 100%);
+	border: 3px solid #ec4899;
+	box-shadow: 0 0 25px rgba(236, 72, 153, 0.4);
+}
+
+.specialCardActions {
 	display: flex;
 	gap: 0.5rem;
-	background-color: rgba(0, 0, 0, 0.3);
-	backdrop-filter: blur(4px);
-	padding: 0.375rem;
-	border-radius: 0.5rem;
-	border: 2px solid rgba(250, 204, 21, 0.3);
+	margin-top: 0.75rem;
 }
 
-/* Filter Controls */
-.filterLabel {
-	color: #fbbf24;
-	font-weight: 600;
-	font-size: 1rem;
-}
-
-.filterSelect {
-	background: rgba(0, 0, 0, 0.4);
+.regenerateBtn {
+	flex: 1;
+	background: linear-gradient(135deg, #4a9eff, #3b82f6);
 	color: white;
-	border: 2px solid rgba(250, 204, 21, 0.3);
-	border-radius: 0.5rem;
-	padding: 0.5rem 1rem;
+	border: none;
+	border-radius: 0.375rem;
+	padding: 0.625rem 1rem;
+	font-weight: 600;
 	font-size: 0.875rem;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.375rem;
+	transition: all 0.2s;
+}
+
+.regenerateBtn:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(74, 158, 255, 0.4);
+}
+
+.deleteBtn {
+	flex: 1;
+	background: linear-gradient(135deg, #ef4444, #dc2626);
+	color: white;
+	border: none;
+	border-radius: 0.375rem;
+	padding: 0.625rem 1rem;
+	font-weight: 600;
+	font-size: 0.875rem;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.375rem;
+	transition: all 0.2s;
+}
+
+.deleteBtn:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+/* Complete Screen */
+.completeScreen {
+	display: flex;
+	flex-direction: column;
+	gap: 2rem;
+	width: 100%;
+	max-width: 1400px; /* Wider max-width */
+	margin: 0 auto;
+	padding: 0 2rem; /* Add padding instead of limiting width */
+	align-items: center;
+}
+
+.completeActions {
+	background: rgba(30, 41, 59, 0.8);
+	border: 2px solid rgba(34, 197, 94, 0.5);
+	border-radius: 1rem;
+	padding: 2rem;
+	text-align: center;
+}
+
+.completeActions h3 {
+	color: #4ade80;
+	font-size: 1.75rem;
+	margin: 0 0 1.5rem 0;
+}
+
+.nextBtn {
+	background: linear-gradient(135deg, #16a34a, #15803d);
+	color: white;
+	border: none;
+	border-radius: 0.5rem;
+	padding: 1rem 2rem;
+	font-size: 1.125rem;
+	font-weight: 700;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.75rem;
+	transition: all 0.2s;
+}
+
+.nextBtn:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 6px 20px rgba(22, 163, 74, 0.4);
+}
+
+/* Export Section */
+.exportSection {
+	background: rgba(15, 23, 42, 0.6);
+	border: 1px solid rgba(148, 163, 184, 0.2);
+	border-radius: 0.75rem;
+	padding: 1.5rem;
+	width: 100%; /* Full width */
+	max-width: 1400px; /* Match completeScreen */
+}
+
+.exportSection h4 {
+	color: #60a5fa;
+	margin: 0 0 1rem 0;
+	font-size: 1.125rem;
+}
+
+.recordText {
+	color: #cbd5e1;
+	font-size: 0.875rem;
+	line-height: 1.6;
+	margin-bottom: 1rem;
+	background: rgba(0, 0, 0, 0.3);
+	padding: 1rem;
+	border-radius: 0.5rem;
+}
+
+.exportBtn {
+	background: rgba(59, 130, 246, 0.2);
+	color: #60a5fa;
+	border: 1px solid rgba(59, 130, 246, 0.5);
+	border-radius: 0.5rem;
+	padding: 0.75rem 1.5rem;
 	font-weight: 600;
 	cursor: pointer;
 	transition: all 0.2s;
 }
 
-.filterSelect:hover {
-	border-color: rgba(250, 204, 21, 0.5);
-	background: rgba(0, 0, 0, 0.5);
+.exportBtn:hover {
+	background: rgba(59, 130, 246, 0.3);
 }
 
-.filterSelect:focus {
-	outline: none;
-	border-color: #fbbf24;
-	box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.2);
-}
-
-/* Card Counts */
-.cardCounts {
-	display: flex;
-	gap: 0.75rem;
-	align-items: center;
-}
-
-.countBadge {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	padding: 0.5rem 1rem;
-	border-radius: 0.5rem;
-	font-weight: bold;
-	border: 2px solid;
-}
-
-.emergencyBadge {
-	background: rgba(220, 38, 38, 0.2);
-	color: #fca5a5;
-	border-color: #dc2626;
-}
-
-.passengerBadge {
-	background: rgba(37, 99, 235, 0.2);
-	color: #93c5fd;
-	border-color: #2563eb;
-}
-
-.equipmentBadge {
-	background: rgba(202, 138, 4, 0.2);
-	color: #fde047;
-	border-color: #ca8a04;
-}
-
-.countIcon {
-	font-size: 1.25rem;
-}
-
-.countNumber {
+/* Loading */
+.loading {
+	text-align: center;
+	color: #cbd5e1;
 	font-size: 1.125rem;
+	padding: 4rem;
 }
 
-/* Card Outcome Styling */
-.cardOutcome {
-	margin-top: 1rem;
-	padding: 0.75rem;
-	background: rgba(0, 0, 0, 0.3);
-	border-radius: 0.5rem;
-	border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.outcomeText {
-	color: #fbbf24;
-	font-weight: 600;
-	margin-bottom: 0.5rem;
-	font-size: 0.9rem;
-}
-
-.actionBadge {
-	background: rgba(239, 68, 68, 0.2);
-	color: #fca5a5;
-	border: 1px solid #ef4444;
-	padding: 0.375rem 0.75rem;
-	border-radius: 0.375rem;
-	font-size: 0.8rem;
-	font-weight: 600;
-	margin-top: 0.5rem;
-}
-
-.durationBadge {
-	background: rgba(59, 130, 246, 0.2);
-	color: #93c5fd;
-	border: 1px solid #3b82f6;
-	padding: 0.375rem 0.75rem;
-	border-radius: 0.375rem;
-	font-size: 0.8rem;
-	font-weight: 600;
-	margin-top: 0.5rem;
-}
-
-.filterButton {
+.loadingState {
+	padding: 2rem;
+	text-align: center;
+	color: #94a3b8;
+	font-style: italic;
 	display: flex;
+	flex-direction: column;
 	align-items: center;
-	justify-content: center;
-	padding: 0.5rem 0.875rem;
-	border-radius: 0.375rem;
-	font-weight: bold;
-	font-size: 1.125rem;
-	transition: all 0.2s ease;
-	border: 2px solid transparent;
-	cursor: pointer;
-	background: rgba(255, 255, 255, 0.1);
-	color: white;
-	min-width: 2.5rem;
+	gap: 1rem;
 }
 
-.filterButton:hover {
-	transform: scale(1.05);
-	background: rgba(255, 255, 255, 0.2);
+.loadingImage {
+	width: 120px;
+	height: 120px;
+	object-fit: contain;
+	animation: pulse 2s ease-in-out infinite;
 }
 
-.filterActive {
-	transform: scale(1.1);
-	border-color: white;
-	box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+@keyframes pulse {
+	0%,
+	100% {
+		opacity: 0.6;
+		transform: scale(1);
+	}
+	50% {
+		opacity: 1;
+		transform: scale(1.05);
+	}
 }
 
-.filterAll.filterActive {
-	background: linear-gradient(135deg, #facc15, #eab308);
-	border-color: #facc15;
-	color: #000;
+/* Tablet Responsive - Keep conditions in one row */
+@media (min-width: 769px) and (max-width: 1024px) {
+	.conditionsBar {
+		gap: 1rem; /* Tighter gap on tablets */
+		font-size: 0.813rem; /* Slightly smaller text */
+	}
 }
 
-.filterEmergency.filterActive {
-	background: linear-gradient(135deg, #dc2626, #b91c1c);
-	border-color: #dc2626;
-}
-
-.filterPassenger.filterActive {
-	background: linear-gradient(135deg, #2563eb, #1d4ed8);
-	border-color: #2563eb;
-}
-
-.filterEquipment.filterActive {
-	background: linear-gradient(135deg, #ca8a04, #a16207);
-	border-color: #ca8a04;
-}
-
-/* Responsive - Card Type Selector */
+/* Mobile Responsive */
 @media (max-width: 768px) {
-	.cardTypeSelector {
-		gap: 0.375rem;
-		padding: 0.25rem;
+	.cardsRow {
+		flex-direction: column;
+		align-items: center;
 	}
 
-	.filterButton {
-		padding: 0.375rem 0.625rem;
-		font-size: 1rem;
-		min-width: 2rem;
-	}
-}
-
-@media (max-width: 480px) {
-	.cardTypeSelector {
+	.cardColumn {
 		width: 100%;
-		justify-content: space-between;
 	}
 
-	.filterButton {
-		flex: 1;
-		padding: 0.5rem;
-		font-size: 0.875rem;
+	.conditionsBar {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.5rem;
+	}
+
+	.currentPlayer {
+		margin-left: 0;
+		width: 100%;
+		justify-content: center;
 	}
 }

@@ -5,44 +5,43 @@
 import { createServiceClient } from "@/utils/supabase/service-client";
 
 // ============================================================================
-// INTERFACES
+// INTERFACES (Updated for branching system)
 // ============================================================================
+
+export interface Outcome {
+	id: string;
+	description: string;
+	probability: number; // 0-100 (percentage)
+	next_card_id: number;
+	side_effect_card_id?: number | null;
+	effect?: string;
+}
 
 export interface MdafaatCard {
 	id: number;
-	card_type: "emergency" | "passenger" | "equipment";
+	card_type: "emergency" | "passenger" | "equipment" | "door" | "position";
 	code: string;
 	title: string;
 	description: string;
+	is_shiny: boolean;
 	conflicts: number[];
-	synergies: number[];
-	escalates_to: number[];
-	escalation_chance: number;
-	crew_impact: Record<string, Outcome>;
-	passenger_impact: Record<string, Outcome>;
-	severity_levels: Record<string, Outcome>;
-	malfunction_outcomes: Record<string, Outcome>;
+	outcomes: Outcome[];
 	created_at: string;
 	updated_at: string;
-}
-
-export interface Outcome {
-	probability: number;
-	description: string;
-	action?: string;
-	duration?: string;
-	escalates?: boolean;
 }
 
 export interface CardData {
 	emergency: MdafaatCard[];
 	passenger: MdafaatCard[];
 	equipment: MdafaatCard[];
+	door: MdafaatCard[];
+	position: MdafaatCard[];
 }
 
 export interface MdafaatFilters {
-	card_type?: "emergency" | "passenger" | "equipment";
+	card_type?: "emergency" | "passenger" | "equipment" | "door" | "position";
 	search?: string;
+	is_shiny?: boolean;
 }
 
 // ============================================================================
@@ -79,11 +78,13 @@ export const getAllCards = async (
 			throw error;
 		}
 
-		// Group by card type
+		// Group by card type - UPDATED to include door and position
 		const cardData: CardData = {
 			emergency: data?.filter((c) => c.card_type === "emergency") || [],
 			passenger: data?.filter((c) => c.card_type === "passenger") || [],
 			equipment: data?.filter((c) => c.card_type === "equipment") || [],
+			door: data?.filter((c) => c.card_type === "door") || [],
+			position: data?.filter((c) => c.card_type === "position") || [],
 		};
 
 		console.log(
@@ -93,7 +94,11 @@ export const getAllCards = async (
 			cardData.passenger.length,
 			"passenger,",
 			cardData.equipment.length,
-			"equipment"
+			"equipment,",
+			cardData.door.length,
+			"door,",
+			cardData.position.length,
+			"position"
 		);
 		return cardData;
 	} catch (error) {
@@ -141,18 +146,13 @@ export const getCardById = async (id: number): Promise<MdafaatCard | null> => {
 
 export const createCard = async (cardData: {
 	id: number;
-	card_type: "emergency" | "passenger" | "equipment";
+	card_type: "emergency" | "passenger" | "equipment" | "door" | "position";
 	code: string;
 	title: string;
 	description: string;
+	is_shiny?: boolean;
 	conflicts?: number[];
-	synergies?: number[];
-	escalates_to?: number[];
-	escalation_chance?: number;
-	crew_impact?: Record<string, Outcome>;
-	passenger_impact?: Record<string, Outcome>;
-	severity_levels?: Record<string, Outcome>;
-	malfunction_outcomes?: Record<string, Outcome>;
+	outcomes?: Outcome[];
 }): Promise<MdafaatCard> => {
 	try {
 		console.log("Creating MDAfaat card:", cardData.code);
@@ -164,14 +164,9 @@ export const createCard = async (cardData: {
 			.insert([
 				{
 					...cardData,
+					is_shiny: cardData.is_shiny || false,
 					conflicts: cardData.conflicts || [],
-					synergies: cardData.synergies || [],
-					escalates_to: cardData.escalates_to || [],
-					escalation_chance: cardData.escalation_chance || 0.3,
-					crew_impact: cardData.crew_impact || {},
-					passenger_impact: cardData.passenger_impact || {},
-					severity_levels: cardData.severity_levels || {},
-					malfunction_outcomes: cardData.malfunction_outcomes || {},
+					outcomes: cardData.outcomes || [],
 				},
 			])
 			.select()
@@ -208,14 +203,9 @@ export const updateCard = async (
 		code: string;
 		title: string;
 		description: string;
+		is_shiny: boolean;
 		conflicts: number[];
-		synergies: number[];
-		escalates_to: number[];
-		escalation_chance: number;
-		crew_impact: Record<string, Outcome>;
-		passenger_impact: Record<string, Outcome>;
-		severity_levels: Record<string, Outcome>;
-		malfunction_outcomes: Record<string, Outcome>;
+		outcomes: Outcome[];
 	}>
 ): Promise<MdafaatCard> => {
 	try {
@@ -223,7 +213,7 @@ export const updateCard = async (
 
 		const supabase = createServiceClient();
 
-		const { data, error } = await supabase
+		const { data, error} = await supabase
 			.from("mdafaat_cards")
 			.update(updates)
 			.eq("id", id)
@@ -277,18 +267,13 @@ export const deleteCard = async (id: number): Promise<void> => {
 export const bulkCreateCards = async (
 	cards: Array<{
 		id: number;
-		card_type: "emergency" | "passenger" | "equipment";
+		card_type: "emergency" | "passenger" | "equipment" | "door" | "position";
 		code: string;
 		title: string;
 		description: string;
+		is_shiny?: boolean;
 		conflicts?: number[];
-		synergies?: number[];
-		escalates_to?: number[];
-		escalation_chance?: number;
-		crew_impact?: Record<string, Outcome>;
-		passenger_impact?: Record<string, Outcome>;
-		severity_levels?: Record<string, Outcome>;
-		malfunction_outcomes?: Record<string, Outcome>;
+		outcomes?: Outcome[];
 	}>
 ): Promise<MdafaatCard[]> => {
 	try {
@@ -298,14 +283,9 @@ export const bulkCreateCards = async (
 
 		const cardsWithDefaults = cards.map((card) => ({
 			...card,
+			is_shiny: card.is_shiny || false,
 			conflicts: card.conflicts || [],
-			synergies: card.synergies || [],
-			escalates_to: card.escalates_to || [],
-			escalation_chance: card.escalation_chance || 0.3,
-			crew_impact: card.crew_impact || {},
-			passenger_impact: card.passenger_impact || {},
-			severity_levels: card.severity_levels || {},
-			malfunction_outcomes: card.malfunction_outcomes || {},
+			outcomes: card.outcomes || [],
 		}));
 
 		const { data, error } = await supabase
@@ -332,9 +312,9 @@ export const bulkCreateCards = async (
 
 export const getCardStatistics = async (): Promise<{
 	total: number;
-	by_type: { emergency: number; passenger: number; equipment: number };
-	with_synergies: number;
-	with_escalations: number;
+	by_type: { emergency: number; passenger: number; equipment: number; door: number; position: number };
+	shiny_cards: number;
+	with_outcomes: number;
 }> => {
 	try {
 		console.log("Getting card statistics");
@@ -343,7 +323,7 @@ export const getCardStatistics = async (): Promise<{
 
 		const { data, error } = await supabase
 			.from("mdafaat_cards")
-			.select("card_type, synergies, escalates_to");
+			.select("card_type, is_shiny, outcomes");
 
 		if (error) {
 			console.error("Error getting statistics:", error);
@@ -356,12 +336,12 @@ export const getCardStatistics = async (): Promise<{
 				emergency: data?.filter((c) => c.card_type === "emergency").length || 0,
 				passenger: data?.filter((c) => c.card_type === "passenger").length || 0,
 				equipment: data?.filter((c) => c.card_type === "equipment").length || 0,
+				door: data?.filter((c) => c.card_type === "door").length || 0,
+				position: data?.filter((c) => c.card_type === "position").length || 0,
 			},
-			with_synergies:
-				data?.filter((c) => c.synergies && c.synergies.length > 0).length || 0,
-			with_escalations:
-				data?.filter((c) => c.escalates_to && c.escalates_to.length > 0)
-					.length || 0,
+			shiny_cards: data?.filter((c) => c.is_shiny === true).length || 0,
+			with_outcomes:
+				data?.filter((c) => c.outcomes && c.outcomes.length > 0).length || 0,
 		};
 
 		console.log("Statistics:", stats);

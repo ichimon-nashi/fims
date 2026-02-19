@@ -4,11 +4,11 @@
 	width: 100%;
 	max-width: 1920px;
 	margin: 0 auto;
-	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+	background: transparent;
 	border-radius: 1rem;
 	padding: 2rem;
-	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-	border: 1px solid rgba(148, 163, 184, 0.2);
+	box-shadow: none;
+	border: none;
 }
 
 /* Header */

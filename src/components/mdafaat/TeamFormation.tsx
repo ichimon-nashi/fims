@@ -27,7 +27,16 @@ interface Team {
 }
 
 interface TeamFormationProps {
-	onStartGame: (teamCount: number) => void;
+	onStartGame: (teams: Array<{
+		name: string;
+		members: Array<{
+			userId: string;
+			name: string;
+			employeeId: string;
+			rank: string;
+			avatarUrl?: string;
+		}>;
+	}>) => void;
 	onOpenEditor: () => void;
 }
 
@@ -588,7 +597,7 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 					<FiEdit size={18} />
 					編輯情境
 				</button>
-				<p className={styles.subtitle}>搜尋學員並安排分配</p>
+				<p className={styles.subtitle}>搜尋學員並安排分組</p>
 			</div>
 
 			{/* Search Section */}
@@ -1025,7 +1034,20 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 					</div>
 
 					<button
-						onClick={() => onStartGame(teams.length)}
+						onClick={() => {
+							// Convert teams to format MDAfaatGame expects
+							const gameTeams = teams.map(team => ({
+								name: `${team.aircraftType} ${team.aircraftNumber}`,
+								members: team.members.map(member => ({
+									userId: member.id,
+									name: member.full_name,
+									employeeId: member.employee_id,
+									rank: member.rank,
+									avatarUrl: undefined
+								}))
+							}));
+							onStartGame(gameTeams);
+						}}
 						className={styles.startGameButton}
 					>
 						開始訓練 Start Training

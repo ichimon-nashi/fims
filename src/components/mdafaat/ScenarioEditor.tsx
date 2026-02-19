@@ -5,8 +5,8 @@
 import React, { useState } from "react";
 import { X, Save, Download, Upload, Plus, Trash2, Copy, ChevronDown, ChevronUp } from "lucide-react";
 import { PiSirenFill } from "react-icons/pi";
-import { FaPersonWalkingLuggage } from "react-icons/fa6";
-import { FaTools } from "react-icons/fa";
+import { FaPersonWalkingLuggage, FaLocationDot } from "react-icons/fa6";
+import { FaTools, FaDoorClosed } from "react-icons/fa";
 import styles from "./ScenarioEditor.module.css";
 
 // Full card interface with all enhancement fields
@@ -15,7 +15,11 @@ interface Card {
 	title: string;
 	description: string;
 	code: string;
+	is_shiny?: boolean;
+	can_be_initial?: boolean;
+	category?: string | null;
 	conflicts?: number[];
+	outcomes?: Outcome[];
 	synergies?: number[];
 	escalates_to?: number[];
 	escalation_chance?: number;
@@ -37,6 +41,8 @@ interface CardData {
 	emergency: Card[];
 	passenger: Card[];
 	equipment: Card[];
+	door: Card[];
+	position: Card[];
 }
 
 interface ScenarioEditorProps {
@@ -44,7 +50,7 @@ interface ScenarioEditorProps {
 	initialData: CardData;
 }
 
-type CardType = "emergency" | "passenger" | "equipment";
+type CardType = "emergency" | "passenger" | "equipment" | "door" | "position";
 type OutcomeType = "crew_impact" | "passenger_impact" | "severity_levels" | "malfunction_outcomes";
 
 const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData }) => {
@@ -57,7 +63,11 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 		title: "",
 		description: "",
 		code: "",
+		is_shiny: false,
+		can_be_initial: false,
+		category: null,
 		conflicts: [],
+		outcomes: [],
 		synergies: [],
 		escalates_to: [],
 		escalation_chance: 30, // 30%
@@ -66,6 +76,17 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 		severity_levels: {},
 		malfunction_outcomes: {}
 	});
+
+	// Ensure door and position arrays exist
+	React.useEffect(() => {
+		if (!cards.door || !cards.position) {
+			setCards(prev => ({
+				...prev,
+				door: prev.door || [],
+				position: prev.position || []
+			}));
+		}
+	}, [cards]);
 
 	// Expandable sections state
 	const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -77,7 +98,7 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 		malfunction_outcomes: false
 	});
 
-	const currentCards = cards[cardType];
+	const currentCards = cards[cardType] || [];
 
 	const toggleSection = (section: string) => {
 		// Close all sections, then open the clicked one
@@ -106,12 +127,15 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 
 	const handleNewCard = () => {
 		// Use offset per card type to avoid ID conflicts across types
-		// Emergency: 1-99, Passenger: 101-199, Equipment: 201-299
+		// Emergency: 1-99, Passenger: 101-199, Equipment: 201-299, Door: 301-399, Position: 401-499
 		const getIdOffset = () => {
 			switch (cardType) {
 				case "emergency": return 0;
 				case "passenger": return 100;
 				case "equipment": return 200;
+				case "door": return 300;
+				case "position": return 400;
+				default: return 0;
 			}
 		};
 
@@ -124,14 +148,30 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 			newId++;
 		}
 
-		const newCode = `${cardType === "emergency" ? "E" : cardType === "passenger" ? "P" : "Q"}-${String(newId - offset).padStart(2, "0")}`;
+		// Generate code prefix
+		const getCodePrefix = () => {
+			switch (cardType) {
+				case "emergency": return "E";
+				case "passenger": return "P";
+				case "equipment": return "Q";
+				case "door": return "D";
+				case "position": return "POS";
+				default: return "X";
+			}
+		};
+
+		const newCode = `${getCodePrefix()}-${String(newId - offset).padStart(2, "0")}`;
 		
 		setFormData({
 			id: newId,
 			title: "",
 			description: "",
 			code: newCode,
+			is_shiny: false,
+			can_be_initial: false,
+			category: null,
 			conflicts: [],
+			outcomes: [],
 			synergies: [],
 			escalates_to: [],
 			escalation_chance: 30, // 30%
@@ -205,14 +245,11 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 						code: formData.code,
 						title: formData.title,
 						description: formData.description,
+						is_shiny: formData.is_shiny || false,
+						can_be_initial: formData.can_be_initial || false,
+						category: formData.category || null,
 						conflicts: formData.conflicts || [],
-						synergies: formData.synergies || [],
-						escalates_to: formData.escalates_to || [],
-						escalation_chance: (formData.escalation_chance || 30) / 100,
-						crew_impact: formData.crew_impact ? convertToDecimal(formData.crew_impact) : {},
-						passenger_impact: formData.passenger_impact ? convertToDecimal(formData.passenger_impact) : {},
-						severity_levels: formData.severity_levels ? convertToDecimal(formData.severity_levels) : {},
-						malfunction_outcomes: formData.malfunction_outcomes ? convertToDecimal(formData.malfunction_outcomes) : {}
+						outcomes: formData.outcomes || []
 					})
 				});
 
@@ -225,6 +262,9 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 								case "emergency": return 0;
 								case "passenger": return 100;
 								case "equipment": return 200;
+								case "door": return 300;
+								case "position": return 400;
+								default: return 0;
 							}
 						};
 						const offset = getIdOffset();
@@ -252,14 +292,11 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 						title: formData.title,
 						description: formData.description,
 						code: formData.code,
+						is_shiny: formData.is_shiny || false,
+						can_be_initial: formData.can_be_initial || false,
+						category: formData.category || null,
 						conflicts: formData.conflicts || [],
-						synergies: formData.synergies || [],
-						escalates_to: formData.escalates_to || [],
-						escalation_chance: (formData.escalation_chance || 30) / 100,
-						crew_impact: formData.crew_impact ? convertToDecimal(formData.crew_impact) : {},
-						passenger_impact: formData.passenger_impact ? convertToDecimal(formData.passenger_impact) : {},
-						severity_levels: formData.severity_levels ? convertToDecimal(formData.severity_levels) : {},
-						malfunction_outcomes: formData.malfunction_outcomes ? convertToDecimal(formData.malfunction_outcomes) : {}
+						outcomes: formData.outcomes || []
 					})
 				});
 
@@ -318,7 +355,9 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 							passenger_impact: c.passenger_impact ? convert(c.passenger_impact) : {},
 							severity_levels: c.severity_levels ? convert(c.severity_levels) : {},
 							malfunction_outcomes: c.malfunction_outcomes ? convert(c.malfunction_outcomes) : {}
-						}))
+						})),
+						door: cards.door || [],
+						position: cards.position || []
 					};
 				};
 
@@ -482,6 +521,20 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 							>
 								<FaTools size={18} />
 								設備 ({cards.equipment.length})
+							</button>
+							<button
+								className={cardType === "door" ? styles.typeBtnActive : styles.typeBtn}
+								onClick={() => setCardType("door")}
+							>
+								<FaDoorClosed size={18} />
+								Door ({cards.door?.length || 0})
+							</button>
+							<button
+								className={cardType === "position" ? styles.typeBtnActive : styles.typeBtn}
+								onClick={() => setCardType("position")}
+							>
+								<FaLocationDot size={18} />
+								Position ({cards.position?.length || 0})
 							</button>
 						</div>
 
@@ -864,7 +917,7 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 				{/* Footer */}
 				<div className={styles.footer}>
 					<div className={styles.stats}>
-						緊急: {cards.emergency.length} | 旅客: {cards.passenger.length} | 設備: {cards.equipment.length}
+						緊急: {cards.emergency.length} | 旅客: {cards.passenger.length} | 設備: {cards.equipment.length} | Door: {cards.door?.length || 0} | Position: {cards.position?.length || 0}
 					</div>
 				</div>
 			</div>
