@@ -363,7 +363,7 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 		setFormData({ ...formData, outcomes: updated });
 	};
 
-	const categories = ["fire", "medical", "security", "equipment", "passenger"];
+	const categories = ["fire", "medical", "security", "equipment", "passenger", "turbulence", "decompression", "evacuation", "emergency", "OTHER"];
 
 	return (
 		<div className={styles.modal}>
@@ -481,12 +481,12 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 								<div className={styles.section}>
 									<div className={styles.sectionHeader} onClick={() => toggleSection('basic')}>
 										<h4>基本資訊</h4>
-										{expandedSections.basic ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+										{expandedSections.basic ? <ChevronUp size={20} color="#ffffff" /> : <ChevronDown size={20} color="#ffffff" />}
 									</div>
 									{expandedSections.basic && (
 										<div className={styles.sectionContent}>
 											<div className={styles.formField}>
-												<label>ID</label>
+												<label>ID (自動編碼)</label>
 												<input
 													type="number"
 													value={formData.id}
@@ -496,7 +496,7 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 											</div>
 
 											<div className={styles.formField}>
-												<label>Code</label>
+												<label>Code (自動編碼)</label>
 												<input
 													type="text"
 													value={formData.code}
@@ -561,7 +561,7 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 								<div className={styles.section}>
 									<div className={styles.sectionHeader} onClick={() => toggleSection('relationships')}>
 										<h4>關聯設定</h4>
-										{expandedSections.relationships ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+										{expandedSections.relationships ? <ChevronUp size={20} color="#ffffff" /> : <ChevronDown size={20} color="#ffffff" />}
 									</div>
 									{expandedSections.relationships && (
 										<div className={styles.sectionContent}>
@@ -620,22 +620,30 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 														/>
 													</div>
 													<div className={styles.formField} style={{ flex: 1 }}>
-														<label>Probability (%)</label>
+														<label>Probability: {outcome.probability}%</label>
 														<input
-															type="number"
+															type="range"
 															min="0"
 															max="100"
+															step="5"
 															value={outcome.probability}
 															onChange={(e) => updateOutcome(oIdx, 'probability', parseInt(e.target.value))}
+															style={{ width: '100%' }}
 														/>
 													</div>
 													<div className={styles.formField} style={{ flex: 1 }}>
 														<label>Next Card ID</label>
-														<input
-															type="number"
+														<select
 															value={outcome.next_card_id}
 															onChange={(e) => updateOutcome(oIdx, 'next_card_id', parseInt(e.target.value))}
-														/>
+														>
+															<option value="">-- Select Card --</option>
+															{currentCards.map(card => (
+																<option key={card.id} value={card.id}>
+																	{card.code}: {card.title}
+																</option>
+															))}
+														</select>
 													</div>
 												</div>
 
@@ -649,54 +657,96 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 													</label>
 													{outcome.side_effects?.map((sideEffect, sIdx) => (
 														<div key={sIdx} className={styles.sideEffectCard}>
-															<div className={styles.formRow}>
-																<div className={styles.formField}>
-																	<label>Type</label>
-																	<select
-																		value={sideEffect.type}
-																		onChange={(e) => updateSideEffect(oIdx, sIdx, 'type', e.target.value)}
-																	>
-																		<option value="specific">Specific Card</option>
-																		<option value="random_category">Random Category</option>
-																	</select>
+															<div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+																<div style={{ flex: 1 }}>
+																	<div className={styles.formRow}>
+																		<div className={styles.formField}>
+																			<label>Type</label>
+																			<select
+																				value={sideEffect.type}
+																				onChange={(e) => updateSideEffect(oIdx, sIdx, 'type', e.target.value)}
+																			>
+																				<option value="specific">Specific Card</option>
+																				<option value="random_category">Random Category</option>
+																			</select>
+																		</div>
+
+																		{sideEffect.type === 'specific' ? (
+																			<div className={styles.formField}>
+																				<label>Card ID</label>
+																				<select
+																					value={sideEffect.card_id || ''}
+																					onChange={(e) => updateSideEffect(oIdx, sIdx, 'card_id', parseInt(e.target.value) || null)}
+																				>
+																					<option value="">-- Select Card --</option>
+																					<optgroup label="緊急 Emergency">
+																						{cards.emergency.map(card => (
+																							<option key={card.id} value={card.id}>
+																								{card.code}: {card.title}
+																							</option>
+																						))}
+																					</optgroup>
+																					<optgroup label="旅客 Passenger">
+																						{cards.passenger.map(card => (
+																							<option key={card.id} value={card.id}>
+																								{card.code}: {card.title}
+																							</option>
+																						))}
+																					</optgroup>
+																					<optgroup label="設備 Equipment">
+																						{cards.equipment.map(card => (
+																							<option key={card.id} value={card.id}>
+																								{card.code}: {card.title}
+																							</option>
+																						))}
+																					</optgroup>
+																					<optgroup label="Door">
+																						{cards.door?.map(card => (
+																							<option key={card.id} value={card.id}>
+																								{card.code}: {card.title}
+																							</option>
+																						))}
+																					</optgroup>
+																					<optgroup label="Position">
+																						{cards.position?.map(card => (
+																							<option key={card.id} value={card.id}>
+																								{card.code}: {card.title}
+																							</option>
+																						))}
+																					</optgroup>
+																				</select>
+																			</div>
+																		) : (
+																			<div className={styles.formField}>
+																				<label>Category (RANDOM)</label>
+																				<select
+																					value={sideEffect.category || ''}
+																					onChange={(e) => updateSideEffect(oIdx, sIdx, 'category', e.target.value)}
+																				>
+																					<option value="">-- Select --</option>
+																					{categories.map(cat => (
+																						<option key={cat} value={cat}>{cat}</option>
+																					))}
+																				</select>
+																			</div>
+																		)}
+
+																		<div className={styles.formField}>
+																			<label>Trigger Rate: {sideEffect.trigger_rate}%</label>
+																			<input
+																				type="range"
+																				min="0"
+																				max="100"
+																				step="5"
+																				value={sideEffect.trigger_rate}
+																				onChange={(e) => updateSideEffect(oIdx, sIdx, 'trigger_rate', parseInt(e.target.value))}
+																				style={{ width: '100%' }}
+																			/>
+																		</div>
+																	</div>
 																</div>
 
-																{sideEffect.type === 'specific' ? (
-																	<div className={styles.formField}>
-																		<label>Card ID</label>
-																		<input
-																			type="number"
-																			value={sideEffect.card_id || ''}
-																			onChange={(e) => updateSideEffect(oIdx, sIdx, 'card_id', parseInt(e.target.value) || null)}
-																		/>
-																	</div>
-																) : (
-																	<div className={styles.formField}>
-																		<label>Category</label>
-																		<select
-																			value={sideEffect.category || ''}
-																			onChange={(e) => updateSideEffect(oIdx, sIdx, 'category', e.target.value)}
-																		>
-																			<option value="">-- Select --</option>
-																			{categories.map(cat => (
-																				<option key={cat} value={cat}>{cat}</option>
-																			))}
-																		</select>
-																	</div>
-																)}
-
-																<div className={styles.formField}>
-																	<label>Trigger Rate (%)</label>
-																	<input
-																		type="number"
-																		min="0"
-																		max="100"
-																		value={sideEffect.trigger_rate}
-																		onChange={(e) => updateSideEffect(oIdx, sIdx, 'trigger_rate', parseInt(e.target.value))}
-																	/>
-																</div>
-
-																<button onClick={() => removeSideEffect(oIdx, sIdx)} className={styles.removeBtn}>
+																<button onClick={() => removeSideEffect(oIdx, sIdx)} className={styles.removeBtn} style={{ marginTop: '1.75rem' }}>
 																	<X size={14} />
 																</button>
 															</div>

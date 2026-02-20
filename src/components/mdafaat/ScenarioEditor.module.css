@@ -541,3 +541,127 @@
 .editorPanel::-webkit-scrollbar-thumb:hover {
 	background: rgba(148, 163, 184, 0.5);
 }
+/* Responsive Design */
+@media (max-width: 1024px) {
+	.modalContent {
+		width: 98vw;
+		height: 95vh;
+	}
+
+	.sidebar {
+		width: 240px;
+	}
+
+	.editorPanel {
+		padding: 1.5rem;
+	}
+}
+
+@media (max-width: 768px) {
+	.modalContent {
+		width: 100vw;
+		height: 100vh;
+		border-radius: 0;
+	}
+
+	.editorLayout {
+		flex-direction: column;
+	}
+
+	.sidebar {
+		width: 100%;
+		max-height: 40vh;
+		border-right: none;
+		border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+	}
+
+	.typeSelector {
+		flex-direction: row;
+		overflow-x: auto;
+		gap: 0.5rem;
+	}
+
+	.typeBtn,
+	.typeBtnActive {
+		min-width: 120px;
+		padding: 0.5rem 0.75rem;
+		font-size: 0.85rem;
+	}
+
+	.cardList {
+		padding: 0.75rem;
+	}
+
+	.cardItem,
+	.cardItemActive {
+		padding: 0.5rem;
+	}
+
+	.editorPanel {
+		padding: 1rem;
+		max-height: 60vh;
+	}
+
+	.header {
+		padding: 1rem;
+	}
+
+	.header h2 {
+		font-size: 1.25rem;
+	}
+
+	.formRow {
+		flex-direction: column;
+	}
+
+	.sectionContent {
+		padding: 1rem;
+		max-height: none;
+	}
+
+	.buttonGroup {
+		flex-direction: column;
+	}
+
+	.saveBtn,
+	.cancelBtn,
+	.iconButton,
+	.iconButtonDanger {
+		width: 100%;
+	}
+}
+
+@media (max-width: 480px) {
+	.header {
+		padding: 0.75rem;
+	}
+
+	.header h2 {
+		font-size: 1.1rem;
+	}
+
+	.sidebar {
+		max-height: 35vh;
+	}
+
+	.editorPanel {
+		padding: 0.75rem;
+	}
+
+	.formField input,
+	.formField select,
+	.formField textarea {
+		font-size: 16px; /* Prevents zoom on iOS */
+	}
+
+	.newCardButton {
+		margin: 0.75rem;
+		padding: 0.5rem;
+		font-size: 0.9rem;
+	}
+
+	.footer {
+		padding: 0.75rem;
+		font-size: 0.8rem;
+	}
+}
