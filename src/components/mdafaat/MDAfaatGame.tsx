@@ -208,8 +208,20 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 		};
 		setConditions(cond);
 
-		// Shuffle animation for 2 seconds (matches shuffle.js timing)
-		await new Promise(r => setTimeout(r, 2000));
+		// Trigger CSS shuffle animation (matches deck-of-cards timing: 400ms animation + delays)
+		const shuffleContainer = document.querySelector(`.${styles.shuffleAnimation}`);
+		if (shuffleContainer) {
+			shuffleContainer.classList.add(styles.shuffling);
+		}
+
+		// Wait for shuffle animation to complete
+		// Timing: last card delay (9 * 10 = 90ms) + animation duration (800ms) = ~900ms
+		await new Promise(r => setTimeout(r, 950));
+
+		// Remove shuffle class
+		if (shuffleContainer) {
+			shuffleContainer.classList.remove(styles.shuffling);
+		}
 
 		// Deal initial card: prioritize cards marked as can_be_initial
 		const initialCards = allCards.filter(c => c.can_be_initial);
@@ -642,32 +654,27 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 					<div className={styles.startScreen}>
 						<div className={styles.deckContainer}>
 							{shuffling ? (
-								// EXACT implementation from shuffle.js
+								// Pure CSS animation matching deck-of-cards
 								<>
 									{[...Array(10)].map((_, i) => {
 										const z = i / 4;
-										const delay = i * 2; // delay = i * 2 (from shuffle.js)
+										const delay = i * 10; // Slower stagger: 10ms instead of 2ms
 										const plusMinus = Math.round(Math.random()) ? -1 : 1;
-										const randomOffset = plusMinus * (Math.random() * 40 + 20);
+										// Much larger spread: 120-200px
+										const randomOffset = plusMinus * (Math.random() * 80 + 120);
 										
 										return (
-											<motion.div
+											<div
 												key={i}
-												className={styles.cardBack}
+												className={`${styles.cardBack} ${styles.shuffleCard}`}
 												style={{
 													position: 'absolute',
-													zIndex: i, // zIndex set to i (from shuffle.js)
-												}}
-												animate={{
-													x: [0, randomOffset, -z, -z],
-													y: [- i * 2, -z, -z, -i * 2],
-													rotate: [0, 0, 0, 0],
-												}}
-												transition={{
-													duration: 0.4, // 200ms * 2 stages
-													delay: delay * 0.001, // Convert to seconds
-													times: [0, 0.5, 0.5, 1], // Two 200ms stages
-													ease: "easeInOut",
+													zIndex: i,
+													animationDelay: `${delay}ms`,
+													// CSS variables for animation
+													['--random-x' as any]: `${randomOffset}px`,
+													['--z' as any]: `${-z}px`,
+													['--init-y' as any]: `${-i * 2}px`,
 												}}
 											>
 												<Image 
@@ -686,7 +693,7 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 														MDAfaat
 													</div>
 												)}
-											</motion.div>
+											</div>
 										);
 									})}
 								</>
@@ -874,21 +881,21 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 							<div className={styles.cardColumn}>
 								<div className={`${styles.card} ${styles.cardDoor}`}>
 									<div className={styles.cardCornerTopLeft}>
-										<span className={styles.cardCode} style={{ color: '#ffffff' }}>{doorCard.code}</span>
+										<span className={styles.cardCode} style={{ color: '#1e293b' }}>{doorCard.code}</span>
 									</div>
 									<div className={styles.cardCornerTopRight}>
-										<span className={styles.cardSuit} style={{ color: '#ffffff' }}>♣</span>
+										<span className={styles.cardSuit} style={{ color: '#000000' }}>♣</span>
 									</div>
 									<div className={styles.cardCenter}>
-										<span className={styles.cardBadge} style={{ marginBottom: '0.5rem', display: 'inline-block', background: '#a855f7', color: '#ffffff' }}><FaDoorClosed size={14} style={{ marginRight: '0.25rem' }} /> DOOR</span>
-										<h3 style={{ color: '#ffffff', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>{doorCard.title}</h3>
-										<p style={{ color: '#f3e8ff', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>{doorCard.description}</p>
+										<span className={styles.cardBadge} style={{ marginBottom: '0.5rem', display: 'inline-block', background: '#475569', color: '#ffffff' }}><FaDoorClosed size={14} style={{ marginRight: '0.25rem' }} /> DOOR</span>
+										<h3 style={{ color: '#1e293b' }}>{doorCard.title}</h3>
+										<p style={{ color: '#475569' }}>{doorCard.description}</p>
 									</div>
 									<div className={styles.cardCornerBottomLeft}>
-										<span className={styles.cardSuit} style={{ color: '#ffffff' }}>♣</span>
+										<span className={styles.cardSuit} style={{ color: '#000000' }}>♣</span>
 									</div>
 									<div className={styles.cardCornerBottomRight}>
-										<span className={styles.cardCode} style={{ color: '#ffffff' }}>{doorCard.code}</span>
+										<span className={styles.cardCode} style={{ color: '#1e293b' }}>{doorCard.code}</span>
 									</div>
 								</div>
 								
@@ -917,21 +924,21 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 							<div className={styles.cardColumn}>
 								<div className={`${styles.card} ${styles.cardPosition}`}>
 									<div className={styles.cardCornerTopLeft}>
-										<span className={styles.cardCode} style={{ color: '#ffffff' }}>{positionCard.code}</span>
+										<span className={styles.cardCode} style={{ color: '#1e293b' }}>{positionCard.code}</span>
 									</div>
 									<div className={styles.cardCornerTopRight}>
-										<span className={styles.cardSuit} style={{ color: '#ffffff' }}>♣</span>
+										<span className={styles.cardSuit} style={{ color: '#000000' }}>♣</span>
 									</div>
 									<div className={styles.cardCenter}>
-										<span className={styles.cardBadge} style={{ marginBottom: '0.5rem', display: 'inline-block', background: '#ec4899', color: '#ffffff' }}><FaLocationDot size={14} style={{ marginRight: '0.25rem' }} /> POSITION</span>
-										<h3 style={{ color: '#ffffff', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>{positionCard.title}</h3>
-										<p style={{ color: '#fce7f3', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>{positionCard.description}</p>
+										<span className={styles.cardBadge} style={{ marginBottom: '0.5rem', display: 'inline-block', background: '#64748b', color: '#ffffff' }}><FaLocationDot size={14} style={{ marginRight: '0.25rem' }} /> POSITION</span>
+										<h3 style={{ color: '#1e293b' }}>{positionCard.title}</h3>
+										<p style={{ color: '#475569' }}>{positionCard.description}</p>
 									</div>
 									<div className={styles.cardCornerBottomLeft}>
-										<span className={styles.cardSuit} style={{ color: '#ffffff' }}>♣</span>
+										<span className={styles.cardSuit} style={{ color: '#000000' }}>♣</span>
 									</div>
 									<div className={styles.cardCornerBottomRight}>
-										<span className={styles.cardCode} style={{ color: '#ffffff' }}>{positionCard.code}</span>
+										<span className={styles.cardCode} style={{ color: '#1e293b' }}>{positionCard.code}</span>
 									</div>
 								</div>
 								

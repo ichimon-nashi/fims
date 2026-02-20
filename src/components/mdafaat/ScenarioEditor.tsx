@@ -1,15 +1,14 @@
-// src/components/mdafaat/ScenarioEditorEnhanced.tsx
-// Full editor with outcomes, probabilities, synergies, escalations
-"use client";
+// ScenarioEditor.tsx - SIMPLE VERSION
+// Only: Basic fields, outcomes with side effects (specific card or random category)
 
 import React, { useState } from "react";
-import { X, Save, Download, Upload, Plus, Trash2, Copy, ChevronDown, ChevronUp } from "lucide-react";
+import styles from "./ScenarioEditor.module.css";
+import { Plus, X, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { PiSirenFill } from "react-icons/pi";
 import { FaPersonWalkingLuggage, FaLocationDot } from "react-icons/fa6";
 import { FaTools, FaDoorClosed } from "react-icons/fa";
-import styles from "./ScenarioEditor.module.css";
 
-// Full card interface with all enhancement fields
+// Card interface - ONLY database fields
 interface Card {
 	id: number;
 	title: string;
@@ -20,21 +19,21 @@ interface Card {
 	category?: string | null;
 	conflicts?: number[];
 	outcomes?: Outcome[];
-	synergies?: number[];
-	escalates_to?: number[];
-	escalation_chance?: number;
-	crew_impact?: Record<string, Outcome>;
-	passenger_impact?: Record<string, Outcome>;
-	severity_levels?: Record<string, Outcome>;
-	malfunction_outcomes?: Record<string, Outcome>;
 }
 
 interface Outcome {
+	id: string;
 	probability: number;
 	description: string;
-	action?: string;
-	duration?: string;
-	escalates?: boolean;
+	next_card_id: number;
+	side_effects?: SideEffect[];
+}
+
+interface SideEffect {
+	type: 'specific' | 'random_category';
+	card_id?: number | null;
+	category?: string | null;
+	trigger_rate: number; // 0-100
 }
 
 interface CardData {
@@ -51,7 +50,6 @@ interface ScenarioEditorProps {
 }
 
 type CardType = "emergency" | "passenger" | "equipment" | "door" | "position";
-type OutcomeType = "crew_impact" | "passenger_impact" | "severity_levels" | "malfunction_outcomes";
 
 const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData }) => {
 	const [cards, setCards] = useState<CardData>(initialData);
@@ -67,14 +65,13 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 		can_be_initial: false,
 		category: null,
 		conflicts: [],
-		outcomes: [],
-		synergies: [],
-		escalates_to: [],
-		escalation_chance: 30, // 30%
-		crew_impact: {},
-		passenger_impact: {},
-		severity_levels: {},
-		malfunction_outcomes: {}
+		outcomes: []
+	});
+
+	// Expandable sections state
+	const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+		basic: true,
+		relationships: false
 	});
 
 	// Ensure door and position arrays exist
@@ -88,46 +85,18 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 		}
 	}, [cards]);
 
-	// Expandable sections state
-	const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-		basic: true,
-		relationships: false,
-		crew_impact: false,
-		passenger_impact: false,
-		severity_levels: false,
-		malfunction_outcomes: false
-	});
-
 	const currentCards = cards[cardType] || [];
 
 	const toggleSection = (section: string) => {
-		// Close all sections, then open the clicked one
 		if (expandedSections[section]) {
-			// If clicking an open section, close it
-			setExpandedSections(prev => ({ ...prev, [section]: false }));
+			setExpandedSections({ ...expandedSections, [section]: false });
 		} else {
-			// Close all others, open this one
-			const allClosed = Object.keys(expandedSections).reduce((acc, key) => {
-				acc[key] = false;
-				return acc;
-			}, {} as Record<string, boolean>);
-			setExpandedSections({ ...allClosed, [section]: true });
+			setExpandedSections({ ...expandedSections, [section]: true });
 		}
 	};
 
-	const handleSelectCard = (card: Card) => {
-		setSelectedCard(card);
-		setFormData(card);
-		setEditMode("view");
-	};
-
-	const handleEdit = () => {
-		setEditMode("edit");
-	};
-
 	const handleNewCard = () => {
-		// Use offset per card type to avoid ID conflicts across types
-		// Emergency: 1-99, Passenger: 101-199, Equipment: 201-299, Door: 301-399, Position: 401-499
+		// ID ranges: Emergency 1-99, Passenger 101-199, Equipment 201-299, Door 301-399, Position 401-499
 		const getIdOffset = () => {
 			switch (cardType) {
 				case "emergency": return 0;
@@ -142,13 +111,11 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 		const offset = getIdOffset();
 		const existingIds = currentCards.map(c => c.id);
 		
-		// Find next available ID in this range
 		let newId = offset + 1;
 		while (existingIds.includes(newId)) {
 			newId++;
 		}
 
-		// Generate code prefix
 		const getCodePrefix = () => {
 			switch (cardType) {
 				case "emergency": return "E";
@@ -171,26 +138,21 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 			can_be_initial: false,
 			category: null,
 			conflicts: [],
-			outcomes: [],
-			synergies: [],
-			escalates_to: [],
-			escalation_chance: 30, // 30%
-			crew_impact: {},
-			passenger_impact: {},
-			severity_levels: {},
-			malfunction_outcomes: {}
+			outcomes: []
 		});
 		setEditMode("new");
 		setSelectedCard(null);
-		// Expand basic info section
-		setExpandedSections({ 
-			basic: true,
-			relationships: false,
-			crew_impact: false,
-			passenger_impact: false,
-			severity_levels: false,
-			malfunction_outcomes: false
-		});
+		setExpandedSections({ basic: true, relationships: false });
+	};
+
+	const handleSelectCard = (card: Card) => {
+		setSelectedCard(card);
+		setFormData({...card});
+		setEditMode("view");
+	};
+
+	const handleEdit = () => {
+		setEditMode("edit");
 	};
 
 	const handleSave = async () => {
@@ -199,16 +161,12 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 			return;
 		}
 
-		// Validate probabilities for each outcome type (convert from percentage to decimal for validation)
-		const outcomeTypes: OutcomeType[] = ["crew_impact", "passenger_impact", "severity_levels", "malfunction_outcomes"];
-		for (const type of outcomeTypes) {
-			const outcomes = formData[type];
-			if (outcomes && Object.keys(outcomes).length > 0) {
-				const total = Object.values(outcomes).reduce((sum, o) => sum + o.probability, 0);
-				if (Math.abs(total - 100) > 1) {
-					alert(`${type} 的機率總和必須等於 100% (目前: ${total.toFixed(0)}%)`);
-					return;
-				}
+		// Validate outcomes probabilities sum to 100%
+		if (formData.outcomes && formData.outcomes.length > 0) {
+			const total = formData.outcomes.reduce((sum, o) => sum + o.probability, 0);
+			if (Math.abs(total - 100) > 1) {
+				alert(`結果機率總和必須等於 100% (目前: ${total.toFixed(0)}%)`);
+				return;
 			}
 		}
 
@@ -219,18 +177,6 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 				alert("請先登入");
 				return;
 			}
-
-			// Convert percentages to decimals for API
-			const convertToDecimal = (outcomes: Record<string, Outcome>) => {
-				const converted: Record<string, Outcome> = {};
-				for (const [key, outcome] of Object.entries(outcomes)) {
-					converted[key] = {
-						...outcome,
-						probability: outcome.probability / 100
-					};
-				}
-				return converted;
-			};
 
 			if (editMode === "new") {
 				const response = await fetch("/api/mdafaat/cards", {
@@ -255,27 +201,6 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 
 				if (!response.ok) {
 					const error = await response.json();
-					if (response.status === 409) {
-						// ID conflict - suggest next available ID
-						const getIdOffset = () => {
-							switch (cardType) {
-								case "emergency": return 0;
-								case "passenger": return 100;
-								case "equipment": return 200;
-								case "door": return 300;
-								case "position": return 400;
-								default: return 0;
-							}
-						};
-						const offset = getIdOffset();
-						const existingIds = currentCards.map(c => c.id);
-						let nextId = offset + 1;
-						while (existingIds.includes(nextId)) {
-							nextId++;
-						}
-						alert(`ID ${formData.id} 已存在！\n\n建議使用 ID: ${nextId}\n(${cardType === "emergency" ? "緊急" : cardType === "passenger" ? "旅客" : "設備"}卡片 ID 範圍: ${offset + 1}-${offset + 99})`);
-						return;
-					}
 					throw new Error(error.error || "Failed to create card");
 				}
 
@@ -308,7 +233,7 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 				alert("更新成功！");
 			}
 
-			// Refresh cards from API and convert decimals to percentages
+			// Refresh cards
 			const refreshResponse = await fetch("/api/mdafaat/cards", {
 				headers: {
 					"Authorization": `Bearer ${token}`
@@ -317,51 +242,11 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 
 			if (refreshResponse.ok) {
 				const updatedCards = await refreshResponse.json();
-				
-				// Convert all probabilities from decimal to percentage for display
-				const convertToPercentage = (cards: CardData): CardData => {
-					const convert = (outcomes: Record<string, Outcome>) => {
-						const converted: Record<string, Outcome> = {};
-						for (const [key, outcome] of Object.entries(outcomes)) {
-							converted[key] = {
-								...outcome,
-								probability: outcome.probability * 100
-							};
-						}
-						return converted;
-					};
-
-					return {
-						emergency: cards.emergency.map(c => ({
-							...c,
-							escalation_chance: c.escalation_chance ? c.escalation_chance * 100 : 30,
-							crew_impact: c.crew_impact ? convert(c.crew_impact) : {},
-							passenger_impact: c.passenger_impact ? convert(c.passenger_impact) : {},
-							severity_levels: c.severity_levels ? convert(c.severity_levels) : {},
-							malfunction_outcomes: c.malfunction_outcomes ? convert(c.malfunction_outcomes) : {}
-						})),
-						passenger: cards.passenger.map(c => ({
-							...c,
-							escalation_chance: c.escalation_chance ? c.escalation_chance * 100 : 30,
-							crew_impact: c.crew_impact ? convert(c.crew_impact) : {},
-							passenger_impact: c.passenger_impact ? convert(c.passenger_impact) : {},
-							severity_levels: c.severity_levels ? convert(c.severity_levels) : {},
-							malfunction_outcomes: c.malfunction_outcomes ? convert(c.malfunction_outcomes) : {}
-						})),
-						equipment: cards.equipment.map(c => ({
-							...c,
-							escalation_chance: c.escalation_chance ? c.escalation_chance * 100 : 30,
-							crew_impact: c.crew_impact ? convert(c.crew_impact) : {},
-							passenger_impact: c.passenger_impact ? convert(c.passenger_impact) : {},
-							severity_levels: c.severity_levels ? convert(c.severity_levels) : {},
-							malfunction_outcomes: c.malfunction_outcomes ? convert(c.malfunction_outcomes) : {}
-						})),
-						door: cards.door || [],
-						position: cards.position || []
-					};
-				};
-
-				setCards(convertToPercentage(updatedCards));
+				setCards({
+					...updatedCards,
+					door: updatedCards.door || [],
+					position: updatedCards.position || []
+				});
 				setSelectedCard(formData);
 			}
 
@@ -405,7 +290,11 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 
 				if (refreshResponse.ok) {
 					const updatedCards = await refreshResponse.json();
-					setCards(updatedCards);
+					setCards({
+						...updatedCards,
+						door: updatedCards.door || [],
+						position: updatedCards.position || []
+					});
 				}
 
 				setSelectedCard(null);
@@ -419,86 +308,75 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 		}
 	};
 
-	// Add/Edit/Remove outcome
-	const addOutcome = (type: OutcomeType) => {
-		const outcomes = formData[type] || {};
-		const newKey = `outcome_${Object.keys(outcomes).length + 1}`;
+	// Outcome management
+	const addOutcome = () => {
+		const newOutcome: Outcome = {
+			id: `outcome-${Date.now()}`,
+			probability: 0,
+			description: "",
+			next_card_id: 99,
+			side_effects: []
+		};
 		setFormData({
 			...formData,
-			[type]: {
-				...outcomes,
-				[newKey]: {
-					probability: 0,
-					description: ""
-				}
-			}
+			outcomes: [...(formData.outcomes || []), newOutcome]
 		});
 	};
 
-	const updateOutcome = (type: OutcomeType, key: string, field: keyof Outcome, value: any) => {
-		const outcomes = formData[type] || {};
-		setFormData({
-			...formData,
-			[type]: {
-				...outcomes,
-				[key]: {
-					...outcomes[key],
-					[field]: value
-				}
-			}
+	const updateOutcome = (index: number, field: keyof Outcome, value: any) => {
+		const updated = [...(formData.outcomes || [])];
+		updated[index] = { ...updated[index], [field]: value };
+		setFormData({ ...formData, outcomes: updated });
+	};
+
+	const removeOutcome = (index: number) => {
+		const updated = formData.outcomes?.filter((_, i) => i !== index) || [];
+		setFormData({ ...formData, outcomes: updated });
+	};
+
+	// Side effect management
+	const addSideEffect = (outcomeIndex: number) => {
+		const updated = [...(formData.outcomes || [])];
+		if (!updated[outcomeIndex].side_effects) {
+			updated[outcomeIndex].side_effects = [];
+		}
+		updated[outcomeIndex].side_effects!.push({
+			type: 'specific',
+			card_id: null,
+			category: null,
+			trigger_rate: 100
 		});
+		setFormData({ ...formData, outcomes: updated });
 	};
 
-	const removeOutcome = (type: OutcomeType, key: string) => {
-		const outcomes = { ...formData[type] };
-		delete outcomes[key];
-		setFormData({
-			...formData,
-			[type]: outcomes
-		});
+	const updateSideEffect = (outcomeIndex: number, sideIndex: number, field: keyof SideEffect, value: any) => {
+		const updated = [...(formData.outcomes || [])];
+		const sideEffects = [...(updated[outcomeIndex].side_effects || [])];
+		sideEffects[sideIndex] = { ...sideEffects[sideIndex], [field]: value };
+		updated[outcomeIndex].side_effects = sideEffects;
+		setFormData({ ...formData, outcomes: updated });
 	};
 
-	const getCardIcon = (type: CardType) => {
-		switch (type) {
-			case "emergency": return <PiSirenFill size={20} />;
-			case "passenger": return <FaPersonWalkingLuggage size={18} />;
-			case "equipment": return <FaTools size={18} />;
-		}
+	const removeSideEffect = (outcomeIndex: number, sideIndex: number) => {
+		const updated = [...(formData.outcomes || [])];
+		updated[outcomeIndex].side_effects = updated[outcomeIndex].side_effects?.filter((_, i) => i !== sideIndex) || [];
+		setFormData({ ...formData, outcomes: updated });
 	};
 
-	const getOutcomeTypeLabel = (type: OutcomeType) => {
-		switch (type) {
-			case "crew_impact": return "組員影響";
-			case "passenger_impact": return "旅客影響";
-			case "severity_levels": return "嚴重程度";
-			case "malfunction_outcomes": return "故障結果";
-		}
-	};
-
-	const getOutcomeTypeHelp = (type: OutcomeType) => {
-		switch (type) {
-			case "crew_impact": return "定義此情境對組員的影響程度 (例: 無影響、輕傷、中度傷害、嚴重)";
-			case "passenger_impact": return "定義此情境對旅客的反應 (例: 冷靜、焦慮、恐慌)";
-			case "severity_levels": return "適用於醫療/緊急事件的嚴重程度分級";
-			case "malfunction_outcomes": return "適用於設備故障的可能結果";
-		}
-	};
+	const categories = ["fire", "medical", "security", "equipment", "passenger"];
 
 	return (
 		<div className={styles.modal}>
-			<div className={styles.modalOverlay} onClick={onClose} />
+			<div className={styles.modalOverlay} />
 			<div className={styles.modalContent}>
-				{/* Header */}
 				<div className={styles.header}>
-					<h2 className={styles.title}>情境編輯器 (完整版)</h2>
+					<h2 style={{ color: '#ffffff' }}>情境編輯器</h2>
 					<button onClick={onClose} className={styles.closeButton}>
 						<X size={24} />
 					</button>
 				</div>
 
-				{/* Main Content */}
 				<div className={styles.editorLayout}>
-					{/* Left Sidebar */}
 					<div className={styles.sidebar}>
 						<div className={styles.typeSelector}>
 							<button
@@ -550,354 +428,40 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 									className={selectedCard?.id === card.id ? styles.cardItemActive : styles.cardItem}
 									onClick={() => handleSelectCard(card)}
 								>
-									<div className={styles.cardItemHeader}>
-										<span className={styles.cardCode}>{card.code}</span>
-										{getCardIcon(cardType)}
-									</div>
+									<div className={styles.cardCode}>{card.code}</div>
 									<div className={styles.cardItemTitle}>{card.title}</div>
 								</div>
 							))}
 						</div>
 					</div>
 
-					{/* Right Panel - Card Editor */}
 					<div className={styles.editorPanel}>
-						{selectedCard || editMode === "new" ? (
-							<>
-								<div className={styles.editorHeader}>
-									<h3>{editMode === "new" ? "新增情境" : formData.title || "選擇情境"}</h3>
-									<div className={styles.editorActions}>
-										{editMode === "view" && (
-											<>
-												<button onClick={handleEdit} className={styles.iconButton} title="編輯">
-													編輯
-												</button>
-												<button onClick={handleDelete} className={styles.iconButtonDanger} title="刪除">
-													<Trash2 size={18} />
-												</button>
-											</>
-										)}
-										{(editMode === "edit" || editMode === "new") && (
-											<>
-												<button onClick={() => setEditMode("view")} className={styles.iconButton}>
-													取消
-												</button>
-												<button onClick={handleSave} className={styles.saveButton}>
-													<Save size={18} />
-													儲存
-												</button>
-											</>
-										)}
+						{editMode === "view" && selectedCard ? (
+							<div className={styles.viewMode}>
+								<div className={styles.cardDetail}>
+									<h3>{selectedCard.code}: {selectedCard.title}</h3>
+									<p>{selectedCard.description}</p>
+									<div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', fontSize: '0.875rem' }}>
+										{selectedCard.is_shiny && <span className={styles.badge}>✨ Shiny</span>}
+										{selectedCard.can_be_initial && <span className={styles.badge}>🎲 Initial</span>}
+										{selectedCard.category && <span className={styles.badge}>📂 {selectedCard.category}</span>}
 									</div>
-								</div>
 
-								<div className={styles.editorForm}>
-									{editMode === "view" ? (
-										// VIEW MODE - Show all data
-										<div className={styles.viewMode}>
-											<div className={styles.viewField}>
-												<label>代碼</label>
-												<div className={styles.codeDisplay}>{formData.code}</div>
-											</div>
-											<div className={styles.viewField}>
-												<label>標題</label>
-												<div>{formData.title}</div>
-											</div>
-											<div className={styles.viewField}>
-												<label>描述</label>
-												<div className={styles.description}>{formData.description}</div>
-											</div>
-											{formData.conflicts && formData.conflicts.length > 0 && (
-												<div className={styles.viewField}>
-													<label>衝突情境</label>
-													<div className={styles.conflicts}>
-														{formData.conflicts.map(id => {
-															const conflictCard = currentCards.find(c => c.id === id);
-															return conflictCard ? (
-																<span key={id} className={styles.conflictTag}>
-																	{conflictCard.code}: {conflictCard.title}
-																</span>
-															) : null;
-														})}
-													</div>
-												</div>
-											)}
-											{formData.synergies && formData.synergies.length > 0 && (
-												<div className={styles.viewField}>
-													<label>協同效應</label>
-													<div className={styles.conflicts}>
-														{formData.synergies.map(id => {
-															const synergyCard = currentCards.find(c => c.id === id);
-															return synergyCard ? (
-																<span key={id} className={styles.conflictTag}>
-																	{synergyCard.code}: {synergyCard.title}
-																</span>
-															) : null;
-														})}
-													</div>
-												</div>
-											)}
-											{formData.escalates_to && formData.escalates_to.length > 0 && (
-												<div className={styles.viewField}>
-													<label>可能升級為</label>
-													<div className={styles.conflicts}>
-														{formData.escalates_to.map(id => {
-															const escalateCard = currentCards.find(c => c.id === id);
-															return escalateCard ? (
-																<span key={id} className={styles.conflictTag}>
-																	{escalateCard.code}: {escalateCard.title}
-																</span>
-															) : null;
-														})}
-													</div>
-												</div>
-											)}
-											<div className={styles.viewField}>
-												<label>升級機率</label>
-												<div>{(formData.escalation_chance || 0).toFixed(0)}%</div>
-											</div>
-										</div>
-									) : (
-										// EDIT MODE - Collapsible sections
-										<div className={styles.editMode}>
-											{/* Basic Info Section */}
-											<div className={styles.section}>
-												<div className={styles.sectionHeader} onClick={() => toggleSection('basic')}>
-													<h4>基本資訊</h4>
-													{expandedSections.basic ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-												</div>
-												{expandedSections.basic && (
-													<div className={styles.sectionContent}>
-														<div className={styles.formField}>
-															<label>代碼</label>
-															<input
-																type="text"
-																value={formData.code}
-																onChange={e => setFormData({ ...formData, code: e.target.value })}
-																className={styles.input}
-															/>
-														</div>
-														<div className={styles.formField}>
-															<label>標題 *</label>
-															<input
-																type="text"
-																value={formData.title}
-																onChange={e => setFormData({ ...formData, title: e.target.value })}
-																className={styles.input}
-																placeholder="例：客艙火災"
-															/>
-														</div>
-														<div className={styles.formField}>
-															<label>描述 *</label>
-															<textarea
-																value={formData.description}
-																onChange={e => setFormData({ ...formData, description: e.target.value })}
-																className={styles.textarea}
-																placeholder="例：置物櫃旅客行李起火！"
-																rows={4}
-															/>
-														</div>
-													</div>
-												)}
-											</div>
-
-											{/* Relationships Section */}
-											<div className={styles.section}>
-												<div className={styles.sectionHeader} onClick={() => toggleSection('relationships')}>
-													<h4>關聯設定</h4>
-													{expandedSections.relationships ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-												</div>
-												{expandedSections.relationships && (
-													<div className={styles.sectionContent}>
-														<div className={styles.formField}>
-															<label>衝突情境 (不能同時出現)</label>
-															<small style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '0.5rem', display: 'block' }}>
-																選擇不能與此情境同時發生的卡片
-															</small>
-															<div className={styles.checkboxGroup}>
-																{currentCards
-																	.filter(c => c.id !== formData.id)
-																	.map(card => (
-																		<label key={card.id} className={styles.checkbox}>
-																			<input
-																				type="checkbox"
-																				checked={formData.conflicts?.includes(card.id) || false}
-																				onChange={e => {
-																					const conflicts = formData.conflicts || [];
-																					if (e.target.checked) {
-																						setFormData({ ...formData, conflicts: [...conflicts, card.id] });
-																					} else {
-																						setFormData({ ...formData, conflicts: conflicts.filter(id => id !== card.id) });
-																					}
-																				}}
-																			/>
-																			<span>{card.code}: {card.title}</span>
-																		</label>
-																	))}
-															</div>
-														</div>
-
-														<div className={styles.formField}>
-															<label>協同效應 (配合良好)</label>
-															<small style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '0.5rem', display: 'block' }}>
-																選擇與此情境配合效果更好的卡片
-															</small>
-															<div className={styles.checkboxGroup}>
-																{currentCards
-																	.filter(c => c.id !== formData.id)
-																	.map(card => (
-																		<label key={card.id} className={styles.checkbox}>
-																			<input
-																				type="checkbox"
-																				checked={formData.synergies?.includes(card.id) || false}
-																				onChange={e => {
-																					const synergies = formData.synergies || [];
-																					if (e.target.checked) {
-																						setFormData({ ...formData, synergies: [...synergies, card.id] });
-																					} else {
-																						setFormData({ ...formData, synergies: synergies.filter(id => id !== card.id) });
-																					}
-																				}}
-																			/>
-																			<span>{card.code}: {card.title}</span>
-																		</label>
-																	))}
-															</div>
-														</div>
-
-														<div className={styles.formField}>
-															<label>可能升級為</label>
-															<small style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '0.5rem', display: 'block' }}>
-																此情境可能升級成哪些更嚴重的情境
-															</small>
-															<div className={styles.checkboxGroup}>
-																{currentCards
-																	.filter(c => c.id !== formData.id)
-																	.map(card => (
-																		<label key={card.id} className={styles.checkbox}>
-																			<input
-																				type="checkbox"
-																				checked={formData.escalates_to?.includes(card.id) || false}
-																				onChange={e => {
-																					const escalates_to = formData.escalates_to || [];
-																					if (e.target.checked) {
-																						setFormData({ ...formData, escalates_to: [...escalates_to, card.id] });
-																					} else {
-																						setFormData({ ...formData, escalates_to: escalates_to.filter(id => id !== card.id) });
-																					}
-																				}}
-																			/>
-																			<span>{card.code}: {card.title}</span>
-																		</label>
-																	))}
-															</div>
-														</div>
-
-														<div className={styles.formField}>
-															<label>升級機率: {(formData.escalation_chance || 0).toFixed(0)}%</label>
-															<small style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '0.5rem', display: 'block' }}>
-																此情境升級為更嚴重情境的機率
-															</small>
-															<input
-																type="range"
-																min="0"
-																max="100"
-																step="5"
-																value={formData.escalation_chance || 30}
-																onChange={e => setFormData({ ...formData, escalation_chance: parseFloat(e.target.value) })}
-																className={styles.slider}
-															/>
-														</div>
-													</div>
-												)}
-											</div>
-
-											{/* Outcome Sections */}
-											{(["crew_impact", "passenger_impact", "severity_levels", "malfunction_outcomes"] as OutcomeType[]).map(type => (
-												<div key={type} className={styles.section}>
-													<div className={styles.sectionHeader} onClick={() => toggleSection(type)}>
-														<div>
-															<h4>{getOutcomeTypeLabel(type)}</h4>
-															<small style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem' }}>
-																{getOutcomeTypeHelp(type)}
-															</small>
-														</div>
-														{expandedSections[type] ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-													</div>
-													{expandedSections[type] && (
-														<div className={styles.sectionContent}>
-															{Object.entries(formData[type] || {}).map(([key, outcome]) => (
-																<div key={key} className={styles.outcomeItem}>
-																	<div className={styles.outcomeHeader}>
-																		<input
-																			type="text"
-																			value={key}
-																			className={styles.outcomeKey}
-																			disabled
-																		/>
-																		<button
-																			onClick={() => removeOutcome(type, key)}
-																			className={styles.removeOutcome}
-																		>
-																			<Trash2 size={16} />
-																		</button>
-																	</div>
-																	<div className={styles.formField}>
-																		<label>機率: {outcome.probability.toFixed(0)}%</label>
-																		<input
-																			type="range"
-																			min="0"
-																			max="100"
-																			step="1"
-																			value={outcome.probability}
-																			onChange={e => updateOutcome(type, key, 'probability', parseFloat(e.target.value))}
-																			className={styles.slider}
-																		/>
-																	</div>
-																	<div className={styles.formField}>
-																		<label>描述</label>
-																		<textarea
-																			value={outcome.description}
-																			onChange={e => updateOutcome(type, key, 'description', e.target.value)}
-																			className={styles.textarea}
-																			rows={2}
-																		/>
-																	</div>
-																	<div className={styles.formField}>
-																		<label>行動 (選填)</label>
-																		<input
-																			type="text"
-																			value={outcome.action || ''}
-																			onChange={e => updateOutcome(type, key, 'action', e.target.value)}
-																			className={styles.input}
-																		/>
-																	</div>
-																	<div className={styles.formField}>
-																		<label>持續時間 (選填)</label>
-																		<input
-																			type="text"
-																			value={outcome.duration || ''}
-																			onChange={e => updateOutcome(type, key, 'duration', e.target.value)}
-																			className={styles.input}
-																		/>
-																	</div>
+									{selectedCard.outcomes && selectedCard.outcomes.length > 0 && (
+										<div style={{ marginTop: '1.5rem' }}>
+											<strong style={{ color: '#ffffff' }}>Outcomes:</strong>
+											{selectedCard.outcomes.map((outcome, idx) => (
+												<div key={outcome.id} style={{ marginLeft: '1rem', marginTop: '0.5rem', padding: '0.5rem', background: 'rgba(0,0,0,0.2)', borderRadius: '0.5rem' }}>
+													<div style={{ color: '#e2e8f0' }}>{idx + 1}. {outcome.description} ({outcome.probability}%)</div>
+													<div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>→ Next: {outcome.next_card_id}</div>
+													{outcome.side_effects && outcome.side_effects.length > 0 && (
+														<div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#a78bfa' }}>
+															Side Effects:
+															{outcome.side_effects.map((se, seIdx) => (
+																<div key={seIdx} style={{ marginLeft: '1rem' }}>
+																	• {se.type === 'specific' ? `Card ${se.card_id}` : `Random ${se.category}`} ({se.trigger_rate}% trigger)
 																</div>
 															))}
-															<button
-																onClick={() => addOutcome(type)}
-																className={styles.addOutcomeButton}
-															>
-																<Plus size={16} />
-																新增結果
-															</button>
-															{Object.keys(formData[type] || {}).length > 0 && (
-																<div className={styles.probabilitySum}>
-																	機率總和: {Object.values(formData[type] || {}).reduce((sum, o) => sum + o.probability, 0).toFixed(0)}%
-																	{Math.abs(Object.values(formData[type] || {}).reduce((sum, o) => sum + o.probability, 0) - 100) > 1 && (
-																		<span className={styles.warning}> ⚠️ 必須等於 100%</span>
-																	)}
-																</div>
-															)}
 														</div>
 													)}
 												</div>
@@ -905,20 +469,262 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 										</div>
 									)}
 								</div>
-							</>
+
+								<div className={styles.buttonGroup}>
+									<button onClick={handleEdit} className={styles.iconButton}>編輯</button>
+									<button onClick={handleDelete} className={styles.iconButtonDanger}>刪除</button>
+								</div>
+							</div>
+						) : (editMode === "edit" || editMode === "new") ? (
+							<div className={styles.editMode}>
+								{/* Basic Info Section */}
+								<div className={styles.section}>
+									<div className={styles.sectionHeader} onClick={() => toggleSection('basic')}>
+										<h4>基本資訊</h4>
+										{expandedSections.basic ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+									</div>
+									{expandedSections.basic && (
+										<div className={styles.sectionContent}>
+											<div className={styles.formField}>
+												<label>ID</label>
+												<input
+													type="number"
+													value={formData.id}
+													onChange={(e) => setFormData({ ...formData, id: parseInt(e.target.value) })}
+													disabled={editMode === "edit"}
+												/>
+											</div>
+
+											<div className={styles.formField}>
+												<label>Code</label>
+												<input
+													type="text"
+													value={formData.code}
+													onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+												/>
+											</div>
+
+											<div className={styles.formField}>
+												<label>Title</label>
+												<input
+													type="text"
+													value={formData.title}
+													onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+												/>
+											</div>
+
+											<div className={styles.formField}>
+												<label>Description</label>
+												<input
+													type="text"
+													value={formData.description}
+													onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+												/>
+											</div>
+
+											<div className={styles.checkboxGroup} style={{ display: 'flex', gap: '1rem', flexDirection: 'column' }}>
+												<label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+													<input
+														type="checkbox"
+														checked={formData.is_shiny || false}
+														onChange={(e) => setFormData({ ...formData, is_shiny: e.target.checked })}
+													/>
+													<span style={{ color: '#e2e8f0' }}>Shiny Card (閃卡)</span>
+												</label>
+												<label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+													<input
+														type="checkbox"
+														checked={formData.can_be_initial || false}
+														onChange={(e) => setFormData({ ...formData, can_be_initial: e.target.checked })}
+													/>
+													<span style={{ color: '#e2e8f0' }}>Can be Initial Card (可作為起始卡)</span>
+												</label>
+											</div>
+
+											<div className={styles.formField}>
+												<label>Category (for random selection)</label>
+												<select
+													value={formData.category || ""}
+													onChange={(e) => setFormData({ ...formData, category: e.target.value || null })}
+												>
+													<option value="">-- None --</option>
+													{categories.map(cat => (
+														<option key={cat} value={cat}>{cat}</option>
+													))}
+												</select>
+											</div>
+										</div>
+									)}
+								</div>
+
+								{/* Conflicts Section */}
+								<div className={styles.section}>
+									<div className={styles.sectionHeader} onClick={() => toggleSection('relationships')}>
+										<h4>關聯設定</h4>
+										{expandedSections.relationships ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+									</div>
+									{expandedSections.relationships && (
+										<div className={styles.sectionContent}>
+											<div className={styles.formField}>
+												<label>衝突情境 (不能同時出現)</label>
+												<small style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '0.5rem', display: 'block' }}>
+													選擇不能與此情境同時發生的卡片
+												</small>
+												<div className={styles.checkboxGroup}>
+													{currentCards
+														.filter(c => c.id !== formData.id)
+														.map(card => (
+															<label key={card.id} className={styles.checkbox}>
+																<input
+																	type="checkbox"
+																	checked={formData.conflicts?.includes(card.id) || false}
+																	onChange={e => {
+																		const conflicts = formData.conflicts || [];
+																		if (e.target.checked) {
+																			setFormData({ ...formData, conflicts: [...conflicts, card.id] });
+																		} else {
+																			setFormData({ ...formData, conflicts: conflicts.filter(id => id !== card.id) });
+																		}
+																	}}
+																/>
+																<span>{card.code}: {card.title}</span>
+															</label>
+														))}
+												</div>
+											</div>
+
+											{/* Outcomes - inside 關聯設定 */}
+											<div className={styles.formField} style={{ marginTop: '1.5rem' }}>
+												<label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+													<span>Outcomes</span>
+													<button onClick={addOutcome} className={styles.addBtn}>
+														<Plus size={16} /> Add
+													</button>
+												</label>
+												{formData.outcomes?.map((outcome, oIdx) => (
+											<div key={outcome.id} className={styles.outcomeCard}>
+												<div className={styles.outcomeHeader}>
+													<span>Outcome {oIdx + 1}</span>
+													<button onClick={() => removeOutcome(oIdx)} className={styles.removeBtn}>
+														<Trash2 size={16} />
+													</button>
+												</div>
+
+												<div className={styles.formRow}>
+													<div className={styles.formField} style={{ flex: 2 }}>
+														<label>Description</label>
+														<input
+															type="text"
+															value={outcome.description}
+															onChange={(e) => updateOutcome(oIdx, 'description', e.target.value)}
+														/>
+													</div>
+													<div className={styles.formField} style={{ flex: 1 }}>
+														<label>Probability (%)</label>
+														<input
+															type="number"
+															min="0"
+															max="100"
+															value={outcome.probability}
+															onChange={(e) => updateOutcome(oIdx, 'probability', parseInt(e.target.value))}
+														/>
+													</div>
+													<div className={styles.formField} style={{ flex: 1 }}>
+														<label>Next Card ID</label>
+														<input
+															type="number"
+															value={outcome.next_card_id}
+															onChange={(e) => updateOutcome(oIdx, 'next_card_id', parseInt(e.target.value))}
+														/>
+													</div>
+												</div>
+
+												{/* Side Effects */}
+												<div className={styles.sideEffectsSection}>
+													<label>
+														Side Effects
+														<button onClick={() => addSideEffect(oIdx)} className={styles.addBtn} style={{ marginLeft: '0.5rem' }}>
+															<Plus size={14} /> Add
+														</button>
+													</label>
+													{outcome.side_effects?.map((sideEffect, sIdx) => (
+														<div key={sIdx} className={styles.sideEffectCard}>
+															<div className={styles.formRow}>
+																<div className={styles.formField}>
+																	<label>Type</label>
+																	<select
+																		value={sideEffect.type}
+																		onChange={(e) => updateSideEffect(oIdx, sIdx, 'type', e.target.value)}
+																	>
+																		<option value="specific">Specific Card</option>
+																		<option value="random_category">Random Category</option>
+																	</select>
+																</div>
+
+																{sideEffect.type === 'specific' ? (
+																	<div className={styles.formField}>
+																		<label>Card ID</label>
+																		<input
+																			type="number"
+																			value={sideEffect.card_id || ''}
+																			onChange={(e) => updateSideEffect(oIdx, sIdx, 'card_id', parseInt(e.target.value) || null)}
+																		/>
+																	</div>
+																) : (
+																	<div className={styles.formField}>
+																		<label>Category</label>
+																		<select
+																			value={sideEffect.category || ''}
+																			onChange={(e) => updateSideEffect(oIdx, sIdx, 'category', e.target.value)}
+																		>
+																			<option value="">-- Select --</option>
+																			{categories.map(cat => (
+																				<option key={cat} value={cat}>{cat}</option>
+																			))}
+																		</select>
+																	</div>
+																)}
+
+																<div className={styles.formField}>
+																	<label>Trigger Rate (%)</label>
+																	<input
+																		type="number"
+																		min="0"
+																		max="100"
+																		value={sideEffect.trigger_rate}
+																		onChange={(e) => updateSideEffect(oIdx, sIdx, 'trigger_rate', parseInt(e.target.value))}
+																	/>
+																</div>
+
+																<button onClick={() => removeSideEffect(oIdx, sIdx)} className={styles.removeBtn}>
+																	<X size={14} />
+																</button>
+															</div>
+														</div>
+													))}
+												</div>
+											</div>
+										))}
+									</div>
+								</div>
+									)}
+								</div>
+
+								<div className={styles.buttonGroup}>
+									<button onClick={handleSave} className={styles.saveBtn}>儲存</button>
+									<button onClick={() => setEditMode("view")} className={styles.cancelBtn}>取消</button>
+								</div>
+							</div>
 						) : (
 							<div className={styles.emptyState}>
-								<p>請選擇或新增情境</p>
+								<p>請選擇一張卡片或新增情境</p>
 							</div>
 						)}
 					</div>
 				</div>
 
-				{/* Footer */}
-				<div className={styles.footer}>
-					<div className={styles.stats}>
-						緊急: {cards.emergency.length} | 旅客: {cards.passenger.length} | 設備: {cards.equipment.length} | Door: {cards.door?.length || 0} | Position: {cards.position?.length || 0}
-					</div>
+				<div className={styles.footer} style={{ color: '#ffffff' }}>
+					總計: 緊急: {cards.emergency.length} | 旅客: {cards.passenger.length} | 設備: {cards.equipment.length} | Door: {cards.door?.length || 0} | Position: {cards.position?.length || 0}
 				</div>
 			</div>
 		</div>
