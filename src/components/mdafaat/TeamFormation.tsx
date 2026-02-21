@@ -8,6 +8,7 @@ import { GiBoatPropeller } from "react-icons/gi";
 import { IoAirplane } from "react-icons/io5";
 import Image from "next/image";
 import Avatar from "@/components/ui/Avatar/Avatar";
+import { useAuth } from "@/context/AuthContext";
 import { createServiceClient } from "@/utils/supabase/service-client";
 import styles from "./TeamFormation.module.css";
 
@@ -41,6 +42,18 @@ interface TeamFormationProps {
 }
 
 const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor }) => {
+	const { permissions } = useAuth();
+	
+	// Debug: Log permissions to console
+	console.log("🔍 MDAfaat Permissions Debug:", {
+		fullPermissions: permissions,
+		mdafaat: permissions?.mdafaat,
+		view_only: permissions?.mdafaat?.view_only,
+		canEdit: !permissions?.mdafaat?.view_only
+	});
+	
+	const canEditScenarios = !permissions?.mdafaat?.view_only;
+	
 	const [searchQuery, setSearchQuery] = useState("");
 	const [allUsers, setAllUsers] = useState<User[]>([]);
 	const [userPool, setUserPool] = useState<User[]>([]);
@@ -589,6 +602,7 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 					<Users className={styles.titleIcon} />
 					分組系統 Team Formation
 				</h2>
+			{canEditScenarios && (
 				<button 
 					onClick={onOpenEditor}
 					className={styles.editorButton}
@@ -597,6 +611,7 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 					<FiEdit size={18} />
 					編輯情境
 				</button>
+			)}
 				<p className={styles.subtitle}>搜尋學員並安排分組</p>
 			</div>
 

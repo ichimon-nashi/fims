@@ -68,6 +68,8 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ onClose, initialData })
 		outcomes: []
 	});
 
+	
+
 	// Expandable sections state
 	const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
 		basic: true,

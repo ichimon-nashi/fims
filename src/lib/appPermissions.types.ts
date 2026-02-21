@@ -41,10 +41,18 @@ export interface OralTestPermissions {
 }
 
 /**
- * Simple App Permissions (BC Training, MDAFAAT, AdS, CCOM Review)
+ * Simple App Permissions (BC Training, AdS, CCOM Review)
  */
 export interface SimpleAppPermissions {
   access: boolean;           // Can they access this app?
+}
+
+/**
+ * MDAfaat App Permissions
+ */
+export interface MDAfaatPermissions {
+  access: boolean;           // Can they access MDAfaat?
+  view_only: boolean;        // If true, they can only view (no scenario editing)
 }
 
 /**
@@ -57,7 +65,7 @@ export interface AppPermissions {
   sms: SMSPermissions;
   oral_test: OralTestPermissions;
   bc_training: SimpleAppPermissions;
-  mdafaat: SimpleAppPermissions;
+  mdafaat: MDAfaatPermissions;
   ads: SimpleAppPermissions;
   ccom_review: SimpleAppPermissions;
 }

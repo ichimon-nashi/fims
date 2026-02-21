@@ -127,6 +127,11 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 	// Complete
 	const [complete, setComplete] = useState(false);
 
+	// Stopwatch
+	const [elapsedTime, setElapsedTime] = useState(0);
+	const [timerRunning, setTimerRunning] = useState(false);
+	const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout | null>(null);
+
 	// Computed values
 	const team = teams[currentTeam];
 	const member = team?.members[currentMember];
@@ -195,6 +200,20 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 		load();
 	}, []);
 
+	// Stopwatch effect
+	useEffect(() => {
+		if (timerRunning) {
+			const interval = setInterval(() => {
+				setElapsedTime(prev => prev + 1);
+			}, 1000);
+			setTimerInterval(interval);
+			return () => clearInterval(interval);
+		} else if (timerInterval) {
+			clearInterval(timerInterval);
+			setTimerInterval(null);
+		}
+	}, [timerRunning]);
+
 	// Shuffle
 	const handleShuffle = async () => {
 		setShuffling(true);
@@ -203,20 +222,20 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 		const cond = {
 			time: ["morning", "midday", "night"][Math.floor(Math.random() * 3)] as any,
 			full: Math.random() > 0.5,
-			infants: Math.random() > 0.5,
-			disabled: Math.random() > 0.5,
+			infants: Math.random() > 0.75,
+			disabled: Math.random() > 0.75,
 		};
 		setConditions(cond);
 
-		// Trigger CSS shuffle animation (matches deck-of-cards timing: 400ms animation + delays)
+		// Trigger CSS shuffle animation (3 iterations, 1000ms total - balanced speed)
 		const shuffleContainer = document.querySelector(`.${styles.shuffleAnimation}`);
 		if (shuffleContainer) {
 			shuffleContainer.classList.add(styles.shuffling);
 		}
 
 		// Wait for shuffle animation to complete
-		// Timing: last card delay (9 * 10 = 90ms) + animation duration (800ms) = ~900ms
-		await new Promise(r => setTimeout(r, 950));
+		// Timing: last card delay (9 * 10 = 90ms) + animation duration (1000ms) = ~1100ms
+		await new Promise(r => setTimeout(r, 1150));
 
 		// Remove shuffle class
 		if (shuffleContainer) {
@@ -228,6 +247,10 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 		const first = initialCards.length > 0
 			? initialCards[Math.floor(Math.random() * initialCards.length)]
 			: allCards[Math.floor(Math.random() * allCards.length)];
+
+		// Start stopwatch after first card is dealt
+		setElapsedTime(0);
+		setTimerRunning(true);
 
 		// Flip delay
 		await new Promise(r => setTimeout(r, 300));
@@ -495,6 +518,7 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 			console.log('Next card is END card');
 			setCurrentCard(next);
 			setComplete(true);
+			setTimerRunning(false); // Stop stopwatch
 			return;
 		}
 
@@ -530,6 +554,8 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 		setComplete(false);
 		setGameStarted(false);
 		setConditions(null);
+		setElapsedTime(0);
+		setTimerRunning(false);
 	};
 
 	// Render
@@ -571,42 +597,33 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 				</button>
 			</div>
 
-			{/* Conditions Bar */}
-			{conditions && (
-				<div className={styles.conditionsBar}>
-					<span>🌅 {conditions.time === "morning" ? "早上" : conditions.time === "midday" ? "中午" : "夜航"}</span>
-					<span>✈️ 客滿: {conditions.full ? "YES" : "NO"}</span>
-					<span>👶 嬰兒: {conditions.infants ? "YES" : "NO"}</span>
-					<span>♿ 身心障礙旅客: {conditions.disabled ? "YES" : "NO"}</span>
-					
-					{/* DOOR and POSITION buttons */}
-					<button 
-						onClick={generateDoorCard}
-						className={styles.specialCardBtn}
-						disabled={!!doorCard}
-						title="Generate random DOOR card"
-					>
-						<FaDoorClosed size={16} /> DOOR
-					</button>
-					
-					<button 
-						onClick={generatePositionCard}
-						className={styles.specialCardBtn}
-						disabled={!!positionCard}
-						title="Generate random POSITION card"
-					>
-						<FaLocationDot size={16} /> POSITION
-					</button>
-					
+		{/* Conditions Bar */}
+		{conditions && (
+			<>
+				{/* Row 1: Stopwatch */}
+				<div className={styles.stopwatchBar}>
+					<span style={{ color: '#4ade80', fontWeight: 700, fontSize: '1.25rem' }}>
+						⏱️ {Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}
+					</span>
+				</div>
+
+				{/* Row 2: Initial Conditions + Team (Desktop), stacked on mobile */}
+				<div className={styles.conditionsTeamRow}>
+					<div className={styles.conditionsGroup}>
+						<span>🌅 {conditions.time === "morning" ? "早上" : conditions.time === "midday" ? "中午" : "夜航"}</span>
+						<span>✈️ 客滿: {conditions.full ? "YES" : "NO"}</span>
+						<span>👶 嬰兒: {conditions.infants ? "YES" : "NO"}</span>
+						<span>♿ 身心障礙旅客: {conditions.disabled ? "YES" : "NO"}</span>
+					</div>
+
 					{team && (
-						<div className={styles.teamMembers}>
+						<div className={styles.teamGroup}>
 							<span className={styles.teamLabel}>Team {team.name}:</span>
 							<div className={styles.membersList}>
 								{[...team.members]
 									.sort((a, b) => {
 										const rankDiff = getRankOrder(a.rank) - getRankOrder(b.rank);
 										if (rankDiff !== 0) return rankDiff;
-										// Same rank - sort by employee ID (lower = more senior)
 										return parseInt(a.employeeId) - parseInt(b.employeeId);
 									})
 									.map((m, idx) => (
@@ -626,7 +643,29 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 						</div>
 					)}
 				</div>
-			)}
+
+				{/* Row 3: DOOR and POSITION buttons */}
+				<div className={styles.buttonsRow}>
+					<button 
+						onClick={generateDoorCard}
+						className={styles.specialCardBtn}
+						disabled={!!doorCard}
+						title="Generate random DOOR card"
+					>
+						<FaDoorClosed size={16} /> DOOR
+					</button>
+					
+					<button 
+						onClick={generatePositionCard}
+						className={styles.specialCardBtn}
+						disabled={!!positionCard}
+						title="Generate random POSITION card"
+					>
+						<FaLocationDot size={16} /> POSITION
+					</button>
+				</div>
+			</>
+		)}
 
 			{/* History Breadcrumb */}
 			{history.length > 0 && (
@@ -660,8 +699,8 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 										const z = i / 4;
 										const delay = i * 10; // Slower stagger: 10ms instead of 2ms
 										const plusMinus = Math.round(Math.random()) ? -1 : 1;
-										// Much larger spread: 120-200px
-										const randomOffset = plusMinus * (Math.random() * 80 + 120);
+										// Much larger spread: 200-350px
+										const randomOffset = plusMinus * (Math.random() * 150 + 200);
 										
 										return (
 											<div
@@ -788,10 +827,10 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 									))}
 									<br />
 									<strong>Initial Conditions:</strong><br />
-									• Time: {conditions.time === "morning" ? "Morning" : conditions.time === "midday" ? "Midday" : "Night"}<br />
-									• Full Flight: {conditions.full ? "Yes" : "No"}<br />
-									• Infants: {conditions.infants ? "Yes" : "No"}<br />
-									• Disabled Passengers: {conditions.disabled ? "Yes" : "No"}<br />
+											• {conditions.time === "morning" ? "🌅 晨航" : conditions.time === "midday" ? "☀️ 午航" : "🌙 夜航"}: YES<br />
+											• ✈️ 客滿: {conditions.full ? "YES" : "NO"}<br />
+											• 👶 嬰兒: {conditions.infants ? "YES" : "NO"}<br />
+											• ♿ 身心障礙旅客: {conditions.disabled ? "YES" : "NO"}<br />
 									<br />
 									<strong>Scenario Path:</strong><br />
 									{history.map((h, i) => (
@@ -1003,17 +1042,25 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 								<div className={styles.outcomes}>
 									{addAutoSuccess(sideCard)
 										.sort((a, b) => b.probability - a.probability)
-										.map(o => (
-										<button
-											key={o.id}
-											onClick={() => selectOutcome(o, true)}
-											className={`${styles.outcomeBtn} ${selectedSide?.id === o.id ? styles.outcomeSelected : ""}`}
-											disabled={!!selectedSide}
-										>
-											<span className={styles.outcomeDesc}>{o.description}</span>
-											<span className={styles.outcomeProb}>{o.probability}%</span>
-										</button>
-									))}
+										.map(o => {
+											const nextCard = o.next_card_id ? allCards.find(c => c.id === o.next_card_id) : null;
+											const isShiny = nextCard?.is_shiny || false;
+											
+											return (
+												<button
+													key={o.id}
+													onClick={() => selectOutcome(o, true)}
+													className={`${styles.outcomeBtn} ${selectedSide?.id === o.id ? styles.outcomeSelected : ""} ${isShiny ? styles.outcomeShiny : ""}`}
+													disabled={!!selectedSide}
+												>
+													<span className={styles.outcomeDesc}>
+														{isShiny && <span className={styles.shinyIcon}>✨ </span>}
+														{o.description}
+													</span>
+													<span className={styles.outcomeProb}>{o.probability}%</span>
+												</button>
+											);
+										})}
 									<button onClick={randomSide} className={styles.randomBtn} disabled={!!selectedSide}>
 										<Zap size={16} /> Random
 									</button>

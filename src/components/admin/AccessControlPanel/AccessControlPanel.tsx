@@ -30,6 +30,10 @@ interface SMSPermissions {
 	view_only: boolean; // Can they edit, or just view?
 }
 
+interface MDAfaatPermissions {
+	view_only: boolean; // Can they edit scenarios, or just view?
+}
+
 interface AppPermissions {
 	roster: boolean;
 	tasks: boolean;
@@ -39,6 +43,7 @@ interface AppPermissions {
 	oral_test_pages?: OralTestPermissions;
 	bc_training: boolean;
 	mdafaat: boolean;
+	mdafaat_edit?: MDAfaatPermissions; // Sub-permissions for MDAfaat
 	ads: boolean;
 	ccom_review: boolean;
 }
@@ -111,6 +116,11 @@ const AccessControlPanel = () => {
 			view_only: dbPermissions.sms?.view_only ?? true,
 		};
 
+		// Extract MDAfaat edit permission
+		const mdafaatEdit = {
+			view_only: dbPermissions.mdafaat?.view_only ?? true,
+		};
+
 		return {
 			roster: dbPermissions.roster?.access ?? false,
 			tasks: dbPermissions.tasks?.access ?? false,
@@ -120,6 +130,7 @@ const AccessControlPanel = () => {
 			oral_test_pages: oralTestPages,
 			bc_training: dbPermissions.bc_training?.access ?? false,
 			mdafaat: dbPermissions.mdafaat?.access ?? false,
+			mdafaat_edit: mdafaatEdit,
 			ads: dbPermissions.ads?.access ?? false,
 			ccom_review: dbPermissions.ccom_review?.access ?? false,
 		};
@@ -243,6 +254,9 @@ const AccessControlPanel = () => {
 			},
 			bc_training: true,
 			mdafaat: true,
+			mdafaat_edit: {
+				view_only: false, // Default: can edit scenarios
+			},
 			ads: true,
 			ccom_review: true,
 		};
@@ -304,6 +318,25 @@ const AccessControlPanel = () => {
 		});
 	};
 
+	// Handle MDAfaat edit permission toggle
+	const handleMDAfaatEditToggle = () => {
+		if (!selectedUser || !selectedUser.app_permissions) return;
+
+		const currentMDAfaatEdit = selectedUser.app_permissions.mdafaat_edit || {
+			view_only: true,
+		};
+
+		setSelectedUser({
+			...selectedUser,
+			app_permissions: {
+				...selectedUser.app_permissions,
+				mdafaat_edit: {
+					view_only: !currentMDAfaatEdit.view_only,
+				},
+			},
+		});
+	};
+
 	// Transform simple boolean permissions to database format
 	const transformPermissionsForDatabase = (
 		permissions: AppPermissions | undefined,
@@ -337,6 +370,7 @@ const AccessControlPanel = () => {
 			},
 			mdafaat: {
 				access: permissions.mdafaat ?? false,
+				view_only: permissions.mdafaat_edit?.view_only ?? true,
 			},
 			ads: {
 				access: permissions.ads ?? false,
@@ -1382,6 +1416,30 @@ const AccessControlPanel = () => {
 																情境演練 (緊急撤離演練)
 															</span>
 														</label>
+													</div>
+													{/* MDAfaat Edit Sub-Permission */}
+													<div className={styles.appSubPermissions}>
+														<div className={styles.subPermissionItem}>
+															<label
+																className={
+																	styles.subPermissionLabel
+																}
+															>
+																<input
+																	type="checkbox"
+																	className={
+																		styles.subCheckbox
+																	}
+																	checked={!(selectedUser.app_permissions?.mdafaat_edit?.view_only ?? true)}
+																	onChange={handleMDAfaatEditToggle}
+																	disabled={!selectedUser.app_permissions?.mdafaat}
+																/>
+																<span>
+																	Can Edit
+																	(可編輯)
+																</span>
+															</label>
+														</div>
 													</div>
 												</div>
 												<div

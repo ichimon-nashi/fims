@@ -9,6 +9,7 @@ import { User } from '@/lib/types'; // Import User type from types.ts
 interface AuthContextType {
 	user: User | null;
 	token: string | null;
+	permissions: any; // User's app permissions from database
 	login: (identifier: string, password: string) => Promise<boolean>;
 	logout: () => void;
 	loading: boolean;
@@ -17,6 +18,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
 	user: null,
 	token: null,
+	permissions: null,
 	login: async () => false,
 	logout: () => {},
 	loading: true,
@@ -26,6 +28,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 	const [user, setUser] = useState<User | null>(null);
 	const [token, setToken] = useState<string | null>(null);
 	const [loading, setLoading] = useState(true);
+
+	// Extract permissions from user object
+	const permissions = user?.app_permissions || null;
 
 	// Get weather service instance
 	const weatherService = WeatherService.getInstance();
@@ -186,6 +191,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 			value={{
 				user,
 				token,
+				permissions,
 				login,
 				logout,
 				loading,
