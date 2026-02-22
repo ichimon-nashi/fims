@@ -642,8 +642,8 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 						<Image
 							src="/K-dogmatic.png"
 							alt="Loading"
-							width={120}
-							height={120}
+							width={150}
+							height={150}
 							className={styles.loadingImage}
 							priority
 						/>

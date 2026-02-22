@@ -18,47 +18,45 @@ const OralTestNavigation = ({ currentPath }: OralTestNavigationProps) => {
       path: '/oral-test/dashboard',
       label: 'Dashboard',
       icon: '🏠',
-      permission: 'access', // Just needs access
+      page: 'dashboard',
     },
     {
       path: '/oral-test/users',
       label: 'Users',
       icon: '👥',
-      permission: 'manage_users',
+      page: 'users',
     },
     {
       path: '/oral-test/questions',
       label: 'Questions',
       icon: '📚',
-      permission: 'manage_questions',
+      page: 'questions',
     },
     {
       path: '/oral-test/test',
       label: 'Conduct Test',
       icon: '📝',
-      permission: 'conduct_test',
+      page: 'test',
     },
     {
       path: '/oral-test/results',
       label: 'Results',
       icon: '📊',
-      permission: 'access', // Anyone with access can view results
+      page: 'results',
     },
   ];
 
-  const hasAccess = (permission: string) => {
+  const hasAccess = (page: string) => {
     if (!user || !user.app_permissions?.oral_test) return false;
-    
+
     const oralTestPerms = user.app_permissions.oral_test;
-    
+
     // Must have basic access
     if (!oralTestPerms.access) return false;
-    
-    // If just checking for access
-    if (permission === 'access') return true;
-    
-    // Check specific permission
-    return oralTestPerms[permission] === true;
+
+    // Check pages array
+    const pages: string[] = oralTestPerms.pages || [];
+    return pages.includes(page);
   };
 
   const handleNavigation = (path: string) => {
@@ -70,7 +68,7 @@ const OralTestNavigation = ({ currentPath }: OralTestNavigationProps) => {
       <div className={styles.navContainer}>
         {navigationItems.map((item) => {
           const isActive = currentPath === item.path;
-          const hasPermission = hasAccess(item.permission);
+          const hasPermission = hasAccess(item.page);
           
           return (
             <button
@@ -78,7 +76,7 @@ const OralTestNavigation = ({ currentPath }: OralTestNavigationProps) => {
               className={`${styles.navItem} ${isActive ? styles.active : ''} ${!hasPermission ? styles.disabled : ''}`}
               onClick={() => hasPermission && handleNavigation(item.path)}
               disabled={!hasPermission}
-              title={!hasPermission ? `Requires ${item.permission} permission` : item.label}
+              title={!hasPermission ? `Requires ${item.page} permission` : item.label}
             >
               <span className={styles.icon}>{item.icon}</span>
               <span className={styles.label}>{item.label}</span>

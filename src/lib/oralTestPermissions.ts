@@ -61,12 +61,14 @@ export async function checkOralTestPermissions(
 		};
 	}
 
-	// Determine specific permissions
+	// Determine specific permissions from pages array (set by AccessControlPanel)
+	const pages: string[] = oralTestPermissions.pages || [];
+
 	const canView = true; // Has access
 	const canEdit = !oralTestPermissions.view_only;
-	const canManageQuestions = oralTestPermissions.manage_questions || false;
-	const canManageUsers = oralTestPermissions.manage_users || false;
-	const canConductTest = oralTestPermissions.conduct_test || false;
+	const canManageQuestions = pages.includes("questions");
+	const canManageUsers = pages.includes("users");
+	const canConductTest = pages.includes("test");
 
 	return {
 		canView,

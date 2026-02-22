@@ -13,14 +13,16 @@ function TestPageContent() {
   const { user } = useAuth();
   const router = useRouter();
 
+  const hasTestAccess = user?.app_permissions?.oral_test?.pages?.includes("test") ?? false;
+
   useEffect(() => {
-    // Check if user has conduct_test permission
-    if (user && !user.app_permissions?.oral_test?.conduct_test) {
+    // Check if user has test page permission
+    if (user && !hasTestAccess) {
       router.push('/oral-test/dashboard');
     }
-  }, [user, router]);
+  }, [user, hasTestAccess, router]);
 
-  if (!user || !user.app_permissions?.oral_test?.conduct_test) {
+  if (!user || !hasTestAccess) {
     return (
       <div style={{ 
         height: '100vh', 

@@ -13,15 +13,17 @@ function QuestionsPageContent() {
 	const { user } = useAuth();
 	const router = useRouter();
 
+	const hasQuestionsAccess = user?.app_permissions?.oral_test?.pages?.includes("questions") ?? false;
+
 	useEffect(() => {
-		// Check if user has manage_questions permission
-		if (user && !user.app_permissions?.oral_test?.manage_questions) {
+		// Check if user has questions page permission
+		if (user && !hasQuestionsAccess) {
 			router.push("/oral-test/dashboard");
 		}
-	}, [user, router]);
+	}, [user, hasQuestionsAccess, router]);
 
 	// Show loading or redirect if insufficient permissions
-	if (!user || !user.app_permissions?.oral_test?.manage_questions) {
+	if (!user || !hasQuestionsAccess) {
 		return (
 			<div style={{ 
 				height: '100vh', 

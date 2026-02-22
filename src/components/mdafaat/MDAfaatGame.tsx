@@ -651,8 +651,8 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 				<Image
 					src="/K-dogmatic.png"
 					alt="Loading"
-					width={120}
-					height={120}
+					width={150}
+					height={150}
 					className={styles.loadingImage}
 					priority
 				/>
@@ -665,7 +665,7 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 	if (!teams || teams.length === 0) {
 		return (
 			<div className={styles.container}>
-				<div className={styles.loading}>沒有可用的隊伍</div>
+				<div className={styles.loading}>沒有可用的團隊</div>
 				<button onClick={onBack} className={styles.shuffleBtn}>
 					返回
 				</button>
@@ -883,22 +883,22 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 						</div>
 
 						<div className={styles.completeActions}>
-							<h3>Scenario Complete!</h3>
+							<h3>Congratulations! 演練完成!</h3>
 							{hasNextTeam ? (
 								<button onClick={nextPlayer} className={styles.nextBtn}>
 									<ArrowRight />
-									Next Group
+									下一組
 								</button>
 							) : (
 								<button onClick={onBack} className={styles.nextBtn}>
-									Return to Formation
+									回到分組
 								</button>
 							)}
 						</div>
 
 						{/* Export breadcrumb */}
 						<div className={styles.exportSection} id="training-record">
-							<h4>Training Record</h4>
+							<h4>演練紀錄</h4>
 							<div className={styles.recordText}>
 								<div style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem', color: '#60a5fa' }}>
 									{new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}
@@ -918,7 +918,7 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 											• <FaBaby style={{ color: '#fb923c' }} /> 嬰兒: {conditions.infants ? "YES" : "NO"}<br />
 											• <FaWheelchair style={{ color: '#a78bfa' }} /> 身心障礙旅客: {conditions.disabled ? "YES" : "NO"}<br />
 									<br />
-									<strong>Scenario Path:</strong><br />
+									<strong>演練流程:</strong><br />
 									{history.map((h, i) => (
 										<div key={i} style={{ marginLeft: '1rem', marginBottom: '0.25rem' }}>
 											{i + 1}. <strong>{h.card.code}</strong>: {h.card.title}<br />
@@ -946,20 +946,20 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 									<strong>Instructor:</strong> {instructorName}
 								</div>
 							</div>
-							<div style={{ display: 'flex', gap: '0.75rem' }}>
+							<div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center'}}>
 								<button 
 									className={styles.exportBtn}
 									onClick={() => {
 										const record = `Training Record - ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}\n\nTeam: ${team.name}\n\nCrew Members:\n${team.members.map((m, idx) => `• ${m.employeeId} ${m.name}${idx === 0 ? ' (Leader)' : ''}`).join('\n')}\n\nInitial Conditions:\n• Time: ${conditions.time}\n• Full Flight: ${conditions.full ? 'Yes' : 'No'}\n• Infants: ${conditions.infants ? 'Yes' : 'No'}\n• Disabled: ${conditions.disabled ? 'Yes' : 'No'}\n\nScenario Path:\n${history.map((h, i) => `${i + 1}. ${h.card.code}: ${h.card.title}${h.doorCard ? `\n   🚪 Door: ${h.doorCard.code} - ${h.doorCard.title}` : ''}${h.positionCard ? `\n   📍 Position: ${h.positionCard.code} - ${h.positionCard.title}` : ''}\n   → ${h.outcome.description} (${h.outcome.probability}%)${h.sideCard ? `\n   + Side Effect: ${h.sideCard.code} - ${h.sideEffectOutcome?.description}` : ''}`).join('\n')}\n\nInstructor: ${instructorName}`;
 										
 										navigator.clipboard.writeText(record).then(() => {
-											alert("✅ Training record copied!");
+											alert("✅ 複製成功!");
 										}).catch(() => {
-											alert("❌ Copy failed");
+											alert("❌ 複製失敗");
 										});
 									}}
 								>
-									📋 Copy Text
+									📋 複製文字
 								</button>
 								<button 
 									className={styles.exportBtn}
@@ -983,18 +983,18 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 													a.download = `Training-Record-${team.name}-${member.employeeId}-${Date.now()}.png`;
 													a.click();
 													URL.revokeObjectURL(url);
-													alert("✅ Screenshot saved!");
+													alert("✅ 截圖成功!");
 												});
 											} else {
 												alert("📸 Screenshot feature requires html2canvas library.\nPlease copy text instead.");
 											}
 										} catch (error) {
 											console.error("Screenshot error:", error);
-											alert("❌ Screenshot failed. Please use Copy Text instead.");
+											alert("❌ 截圖失敗，請改用複製文字");
 										}
 									}}
 								>
-									📸 Screenshot
+									📸 截圖
 								</button>
 							</div>
 						</div>

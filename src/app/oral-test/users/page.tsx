@@ -13,15 +13,17 @@ function UsersPageContent() {
 	const { user } = useAuth();
 	const router = useRouter();
 
+	const hasUsersAccess = user?.app_permissions?.oral_test?.pages?.includes("users") ?? false;
+
 	useEffect(() => {
-		// Check if user has manage_users permission
-		if (user && !user.app_permissions?.oral_test?.manage_users) {
+		// Check if user has users page permission
+		if (user && !hasUsersAccess) {
 			router.push("/oral-test/dashboard");
 		}
-	}, [user, router]);
+	}, [user, hasUsersAccess, router]);
 
 	// Show loading or redirect if insufficient permissions
-	if (!user || !user.app_permissions?.oral_test?.manage_users) {
+	if (!user || !hasUsersAccess) {
 		return (
 			<div style={{ 
 				height: '100vh', 
