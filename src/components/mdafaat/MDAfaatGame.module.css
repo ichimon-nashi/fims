@@ -14,7 +14,7 @@
 	flex: 1;
 	width: 100%;
 	max-width: 100vw;
-	padding: 2rem;
+	padding: 0;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -514,7 +514,7 @@
 }
 
 .card h3 {
-	font-size: 1.75rem;
+	font-size: 1.5rem;
 	font-weight: 700;
 	color: #e2e8f0;
 	margin: 0 0 0.75rem 0;
@@ -522,7 +522,7 @@
 }
 
 .card h2 {
-	font-size: 2rem;
+	font-size: 1.75rem;
 	font-weight: 700;
 	color: #e2e8f0;
 	margin: 0 0 0.75rem 0;
@@ -534,7 +534,7 @@
 	line-height: 1.6;
 	margin: 0;
 	text-align: center;
-	font-size: 0.95rem;
+	font-size: 0.875rem;
 }
 
 /* Outcomes */
@@ -949,15 +949,9 @@
 }
 
 /* Tablet Responsive - Keep conditions in one row */
-@media (min-width: 769px) and (max-width: 1024px) {
-	.conditionsBar {
-		gap: 1rem; /* Tighter gap on tablets */
-		font-size: 0.813rem; /* Slightly smaller text */
-	}
-}
 
 /* Mobile Responsive */
-@media (max-width: 768px) {
+@media (max-width: 767px) {
 	.cardsRow {
 		flex-direction: column;
 		align-items: center;
@@ -983,10 +977,15 @@
 
 /* Responsive Design for Mobile and Tablet */
 
-/* Tablet (768px - 1024px) */
-@media (max-width: 1024px) {
+/* Tablet (769px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
 	.container {
-		padding: 1.5rem 1rem;
+		padding: 0;
+	}
+
+	.conditionsBar {
+		gap: 1rem;
+		font-size: 0.813rem;
 	}
 
 	.title {
@@ -1014,25 +1013,33 @@
 		justify-content: center;
 	}
 
+	.deckContainer {
+		margin: 0 auto !important;
+		display: flex !important;
+		align-items: center !important;
+		justify-content: center !important;
+	}
+
 	.cardBack {
-		width: 320px;
-		height: 450px; /* 1.4 ratio */
+		width: 240px !important;
+		height: 338px !important; /* 25% smaller than original 320x450 */
 	}
 
 	.cardBackInner {
-		font-size: 2.5rem;
+		font-size: 2rem !important;
 	}
 
 	.card {
-		width: 320px;
-		min-height: 450px; /* 1.4 ratio */
+		width: 240px !important;
+		height: 338px !important; /* Same as cardBack - no stretching */
+		max-height: 338px !important;
 	}
 }
 
 /* Mobile (481px - 768px) */
-@media (max-width: 768px) {
+@media (max-width: 767px) {
 	.container {
-		padding: 1rem 0.75rem;
+		padding: 0;
 	}
 
 	.title {
@@ -1093,19 +1100,27 @@
 		align-items: center;
 	}
 
+	.deckContainer {
+		margin: 0 auto;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
 	.cardBack {
-		width: 320px;
-		height: 450px; /* 1.4 ratio maintained */
+		width: 160px;
+		height: 225px; /* 1/2 of original */
 	}
 
 	.cardBackInner {
-		font-size: 2rem;
+		font-size: 1.25rem;
 	}
 
 	.card {
-		width: 320px;
-		min-height: 450px; /* 1.4 ratio maintained */
-		padding: 1rem;
+		width: 160px;
+		height: 225px; /* Same as cardBack - no stretching */
+		max-height: 225px;
+		padding: 0.75rem;
 	}
 
 	.cardHeader {
@@ -1169,7 +1184,7 @@
 /* Small Mobile (320px - 480px) */
 @media (max-width: 480px) {
 	.container {
-		padding: 0.75rem 0.5rem;
+		padding: 0;
 	}
 
 	.header {
@@ -1214,19 +1229,27 @@
 		justify-content: center;
 	}
 
+	.deckContainer {
+		margin: 0 auto;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
 	.cardBack {
-		width: 320px;
-		height: 450px; /* 1.4 ratio */
+		width: 160px;
+		height: 225px; /* 1/2 of original */
 	}
 
 	.cardBackInner {
-		font-size: 1.75rem;
+		font-size: 1.125rem;
 	}
 
 	.card {
-		width: 320px;
-		min-height: 450px; /* 1.4 ratio */
-		padding: 0.875rem;
+		width: 160px;
+		height: 225px; /* Same as cardBack - no stretching */
+		max-height: 225px;
+		padding: 0.75rem;
 	}
 
 	.cardCode {

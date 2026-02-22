@@ -4,8 +4,10 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { X, Shuffle, Zap, ArrowRight, Sparkles, ChevronDown, ChevronUp, CornerUpLeft } from "lucide-react";
-import { FaDoorClosed } from "react-icons/fa";
-import { FaLocationDot } from "react-icons/fa6";
+import { FaDoorClosed, FaWheelchair, FaBaby } from "react-icons/fa";
+import { FaLocationDot, FaPeopleGroup } from "react-icons/fa6";
+import { IoMdSunny } from "react-icons/io";
+import { IoPartlySunny, IoCloudyNight } from "react-icons/io5";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import styles from "./MDAfaatGame.module.css";
@@ -107,6 +109,20 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 		}
 	}, []);
 
+	// Helper function to get time icon
+	const getTimeIcon = (time: string) => {
+		if (time === "morning") return <IoMdSunny style={{ color: '#fbbf24' }} />;
+		if (time === "midday") return <IoPartlySunny style={{ color: '#f59e0b' }} />;
+		return <IoCloudyNight style={{ color: '#818cf8' }} />;
+	};
+
+	// Helper function to get time text
+	const getTimeText = (time: string) => {
+		if (time === "morning") return "早上";
+		if (time === "midday") return "中午";
+		return "晚上";
+	};
+
 	// Conditions
 	const [conditions, setConditions] = useState<any>(null);
 
@@ -141,7 +157,10 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 	const availableCategories = useMemo(() => {
 		const cats = new Set<string>();
 		allCards.forEach(c => {
-			if (c.category) cats.add(c.category);
+			// Exclude RANDOM categories (they're only for outcomes/side effects)
+			if (c.category && !c.category.toUpperCase().includes('RANDOM')) {
+				cats.add(c.category);
+			}
 		});
 		return Array.from(cats).sort();
 	}, [allCards]);
@@ -610,10 +629,10 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 				{/* Row 2: Initial Conditions + Team (Desktop), stacked on mobile */}
 				<div className={styles.conditionsTeamRow}>
 					<div className={styles.conditionsGroup}>
-						<span>🌅 {conditions.time === "morning" ? "早上" : conditions.time === "midday" ? "中午" : "夜航"}</span>
-						<span>✈️ 客滿: {conditions.full ? "YES" : "NO"}</span>
-						<span>👶 嬰兒: {conditions.infants ? "YES" : "NO"}</span>
-						<span>♿ 身心障礙旅客: {conditions.disabled ? "YES" : "NO"}</span>
+						<span>{getTimeIcon(conditions.time)} {getTimeText(conditions.time)}</span>
+						<span><FaPeopleGroup style={{ color: '#60a5fa' }} /> 客滿: {conditions.full ? "YES" : "NO"}</span>
+						<span><FaBaby style={{ color: '#fb923c' }} /> 嬰兒: {conditions.infants ? "YES" : "NO"}</span>
+						<span><FaWheelchair style={{ color: '#a78bfa' }} /> 身心障礙旅客: {conditions.disabled ? "YES" : "NO"}</span>
 					</div>
 
 					{team && (
@@ -827,14 +846,14 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 									))}
 									<br />
 									<strong>Initial Conditions:</strong><br />
-											• {conditions.time === "morning" ? "🌅 晨航" : conditions.time === "midday" ? "☀️ 午航" : "🌙 夜航"}: YES<br />
-											• ✈️ 客滿: {conditions.full ? "YES" : "NO"}<br />
-											• 👶 嬰兒: {conditions.infants ? "YES" : "NO"}<br />
-											• ♿ 身心障礙旅客: {conditions.disabled ? "YES" : "NO"}<br />
+											• {getTimeIcon(conditions.time)} {getTimeText(conditions.time)}<br />
+											• <FaPeopleGroup style={{ color: '#60a5fa' }} /> 客滿: {conditions.full ? "YES" : "NO"}<br />
+											• <FaBaby style={{ color: '#fb923c' }} /> 嬰兒: {conditions.infants ? "YES" : "NO"}<br />
+											• <FaWheelchair style={{ color: '#a78bfa' }} /> 身心障礙旅客: {conditions.disabled ? "YES" : "NO"}<br />
 									<br />
 									<strong>Scenario Path:</strong><br />
 									{history.map((h, i) => (
-										<div key={i} style={{ marginLeft: '1rem', marginBottom: '0.5rem' }}>
+										<div key={i} style={{ marginLeft: '1rem', marginBottom: '0.25rem' }}>
 											{i + 1}. <strong>{h.card.code}</strong>: {h.card.title}<br />
 											{h.doorCard && (
 												<span style={{ marginLeft: '1.5rem', color: '#a855f7' }}>
@@ -1142,16 +1161,7 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 										<Zap size={16} /> Random
 									</button>
 									
-									{/* Random Category Buttons */}
-									{availableCategories.length > 0 && availableCategories.map(cat => (
-										<button 
-											key={cat}
-											onClick={() => selectRandomFromCategory(cat)}
-											className={styles.randomCategoryBtn}
-										>
-											🎲 {cat.toUpperCase()}
-										</button>
-									))}
+									{/* Random Category Buttons - Hidden (only used for backend logic) */}
 									
 									{/* Show Confirm button when both main and side are selected */}
 									{selectedMain && selectedSide && sideCard && (
