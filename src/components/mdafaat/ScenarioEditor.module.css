@@ -579,17 +579,22 @@
 		flex-direction: row;
 		overflow-x: auto;
 		gap: 0.5rem;
+		flex-wrap: nowrap;
 	}
 
 	.typeBtn,
 	.typeBtnActive {
-		min-width: 120px;
+		min-width: 100px;
+		flex-shrink: 0;
 		padding: 0.5rem 0.75rem;
 		font-size: 0.85rem;
 	}
 
 	.cardList {
 		padding: 0.75rem;
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 0.5rem;
 	}
 
 	.cardItem,

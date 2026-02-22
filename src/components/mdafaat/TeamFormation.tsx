@@ -602,6 +602,7 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 					<Users className={styles.titleIcon} />
 					分組系統 Team Formation
 				</h2>
+				<p className={styles.subtitle}>搜尋學員並安排分組</p>
 			{canEditScenarios && (
 				<button 
 					onClick={onOpenEditor}
@@ -612,7 +613,6 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 					編輯情境
 				</button>
 			)}
-				<p className={styles.subtitle}>搜尋學員並安排分組</p>
 			</div>
 
 			{/* Search Section */}

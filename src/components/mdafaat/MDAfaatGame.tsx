@@ -138,7 +138,7 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 
 	// History
 	const [history, setHistory] = useState<CardHistory[]>([]);
-	const [showHistory, setShowHistory] = useState(true);
+	const [showHistory, setShowHistory] = useState(false);
 
 	// Complete
 	const [complete, setComplete] = useState(false);
@@ -159,6 +159,18 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 		allCards.forEach(c => {
 			// Exclude RANDOM categories (they're only for outcomes/side effects)
 			if (c.category && !c.category.toUpperCase().includes('RANDOM')) {
+				cats.add(c.category);
+			}
+		});
+		return Array.from(cats).sort();
+	}, [allCards]);
+
+	// Extract all categories for dynamic ID mapping (10000+)
+	// This must match the ScenarioEditor's allCategories extraction
+	const allRandomCategories = useMemo(() => {
+		const cats = new Set<string>();
+		allCards.forEach(c => {
+			if (c.category) { // Get ALL categories
 				cats.add(c.category);
 			}
 		});
@@ -523,7 +535,62 @@ const MDAfaatGame: React.FC<Props> = ({ teams, onBack }) => {
 		}
 
 		// Now proceed to main path
-		const next = allCards.find(c => c.id === main.next_card_id);
+		let next: MdafaatCard | undefined;
+		
+		// Check if next_card_id is a RANDOM category (ID >= 10000)
+		if (main.next_card_id >= 10000) {
+			const categoryIndex = main.next_card_id - 10000;
+			const category = allRandomCategories[categoryIndex];
+			
+			if (!category) {
+				console.log('ERROR: Invalid RANDOM category ID:', main.next_card_id);
+				console.log('Available categories:', allRandomCategories);
+				console.log('Category index:', categoryIndex);
+				return;
+			}
+			
+			console.log('=== RANDOM CATEGORY SELECTION ===');
+			console.log('Requested category:', category, '(ID:', main.next_card_id, ')');
+			console.log('All categories in game:', allRandomCategories);
+			
+			// Get all cards from this category (case-insensitive match)
+			const categoryCards = allCards.filter(c => 
+				c.category && c.category.toLowerCase() === category.toLowerCase()
+			);
+			console.log(`Found ${categoryCards.length} cards in ${category} category`);
+			
+			if (categoryCards.length === 0) {
+				console.log('ERROR: No cards found with category:', category);
+				console.log('Sample cards:', allCards.slice(0, 5).map(c => ({ code: c.code, category: c.category })));
+				alert(`找不到 ${category} 類別的卡片！\nNo cards found in ${category} category!`);
+				return;
+			}
+			
+			// Filter out conflicting cards (only check against current card)
+			const currentCardId = currentCard?.id;
+			const nonConflictingCards = categoryCards.filter(card => {
+				const conflictIds = card.conflicts || [];
+				// Check if the card to be drawn conflicts with the current card
+				const hasConflict = currentCardId && conflictIds.includes(currentCardId);
+				return !hasConflict;
+			});
+			
+			console.log(`${nonConflictingCards.length} cards available after conflict filtering (vs current card)`);
+			
+			if (nonConflictingCards.length > 0) {
+				// Pick a random card from the non-conflicting cards
+				next = nonConflictingCards[Math.floor(Math.random() * nonConflictingCards.length)];
+				console.log('✅ Randomly selected (after conflict filter):', next.code, 'from category:', category);
+			} else {
+				console.log('ERROR: No non-conflicting cards found in category:', category);
+				alert(`沒有可用的 ${category} 卡片！\nNo available ${category} cards without conflicts!`);
+				return;
+			}
+		} else {
+			// Normal card lookup by ID
+			next = allCards.find(c => c.id === main.next_card_id);
+		}
+		
 		console.log('Main path next card:', next?.code, next?.title);
 		
 		if (!next) {
