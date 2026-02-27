@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Search, X, Users, Shuffle, ArrowRight } from "lucide-react";
+import { Search, X, Users, Shuffle, ArrowRight, Save, Trash2 } from "lucide-react";
 import { FiEdit } from "react-icons/fi";
 import { GiBoatPropeller } from "react-icons/gi";
 import { IoAirplane } from "react-icons/io5";
@@ -25,6 +25,7 @@ interface Team {
 	aircraftType: "ATR" | "B738";
 	aircraftNumber: number;
 	members: User[];
+	coreScenario?: string;
 }
 
 interface TeamFormationProps {
@@ -63,6 +64,21 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 	const [loadingUsers, setLoadingUsers] = useState(true);
 	const [showTeams, setShowTeams] = useState(false);
 	const [configWarning, setConfigWarning] = useState<string>("");
+	
+	// Date filter and training sessions
+	const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+	const [trainedUserIds, setTrainedUserIds] = useState<Set<string>>(new Set());
+	const [loadingTrainingSessions, setLoadingTrainingSessions] = useState(false);
+
+	// Core scenarios for assignment
+	const coreScenarios = [
+		'lithium_fire',
+		'bomb_threat', 
+		'decompression',
+		'incapacitation',
+		'planned_evacuation',
+		'unplanned_evacuation'
+	];
 
 	// Rank classification
 	const isHigherSenior = (rank: string): boolean => {
@@ -177,10 +193,39 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 		loadAllUsers();
 	}, []);
 
-	// Filter users based on search query and exclude those in pool
+	// Load training sessions when date changes
+	useEffect(() => {
+		const loadTrainingSessions = async () => {
+			if (!selectedDate) return;
+			
+			setLoadingTrainingSessions(true);
+			try {
+				// Load filtered user list (hide users trained before this date)
+				const response = await fetch(`/api/mdafaat/training-sessions?before=${selectedDate}`);
+				if (response.ok) {
+					const data = await response.json();
+					const userIds = new Set(data.map((d: any) => d.employee_id));
+					setTrainedUserIds(userIds);
+				}
+				
+				// Load groups for this specific date (if any exist)
+				await loadGroupsForDate(selectedDate);
+			} catch (error) {
+				console.error('Error loading training sessions:', error);
+			} finally {
+				setLoadingTrainingSessions(false);
+			}
+		};
+		
+		loadTrainingSessions();
+	}, [selectedDate, allUsers]); // Add allUsers dependency
+
+	// Filter users based on search query and exclude those in pool AND trained users
 	const getAvailableUsers = (): User[] => {
 		const poolIds = userPool.map((u) => u.id);
-		let available = allUsers.filter((u) => !poolIds.includes(u.id));
+		let available = allUsers.filter((u) => 
+			!poolIds.includes(u.id) && !trainedUserIds.has(u.employee_id)
+		);
 
 		if (searchQuery.trim()) {
 			const query = searchQuery.toLowerCase();
@@ -361,16 +406,37 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 			newTeams.push(atrTeam);
 		}
 
-		// Step 4: Handle overflow (1 person left) - try to add to B738
+		// Step 4: Handle overflow (1 person left) - assign to 2 groups
 		if (atrPeople.length === 1) {
 			const overflow = atrPeople[0];
 			const b738Teams = newTeams.filter((t) => t.aircraftType === "B738");
+			const atrTeams = newTeams.filter((t) => t.aircraftType === "ATR");
 			
+			// Try B738 first if qualified and space available
 			if (canFlyAircraft(overflow, "B738") && b738Teams.length > 0) {
 				const targetTeam = b738Teams.find(t => t.members.length < maxB738Crew);
 				if (targetTeam) {
 					targetTeam.members.push(overflow);
+					atrPeople = []; // Person placed
 				}
+			}
+			
+			// If still not placed, assign to a random ATR team (person will be in 2 groups)
+			// ATR teams stay at 2 people, this person just appears in multiple groups
+			if (atrPeople.length === 1 && atrTeams.length > 0) {
+				const randomAtrTeam = atrTeams[Math.floor(Math.random() * atrTeams.length)];
+				// Create a new ATR team with overflow + 1 person from the random team
+				const partnerFromExisting = randomAtrTeam.members[Math.floor(Math.random() * randomAtrTeam.members.length)];
+				
+				const overflowTeam: Team = {
+					id: `atr-${newTeams.filter((t) => t.aircraftType === "ATR").length + 1}`,
+					aircraftType: "ATR",
+					aircraftNumber: newTeams.filter((t) => t.aircraftType === "ATR").length + 1,
+					members: [overflow, partnerFromExisting]
+				};
+				
+				newTeams.push(overflowTeam);
+				console.log(`Overflow: ${overflow.name_chinese} paired with ${partnerFromExisting.name_chinese} (both in 2 groups)`);
 			}
 		}
 
@@ -494,6 +560,48 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 			);
 		}
 
+		// ===== B738 REBALANCING: Ensure all B738 teams have minimum crew =====
+		// This fixes the bug where senior redistribution can leave B738s with < 4 crew
+		const b738Teams = newTeams.filter(t => t.aircraftType === "B738");
+		const atrTeams = newTeams.filter(t => t.aircraftType === "ATR");
+		
+		for (const b738Team of b738Teams) {
+			while (b738Team.members.length < minB738Crew) {
+				console.log(`Rebalancing ${b738Team.id}: has ${b738Team.members.length}, needs ${minB738Crew}`);
+				
+				// Strategy 1: Pull from richest B738 team (if it has >4 crew)
+				const richestB738 = b738Teams
+					.filter(t => t.id !== b738Team.id && t.members.length > minB738Crew)
+					.sort((a, b) => b.members.length - a.members.length)[0];
+				
+				if (richestB738) {
+					const memberToMove = richestB738.members[richestB738.members.length - 1];
+					richestB738.members.pop();
+					b738Team.members.push(memberToMove);
+					console.log(`Moved ${memberToMove.name_chinese} from ${richestB738.id} to ${b738Team.id}`);
+					continue;
+				}
+				
+				// Strategy 2: Pull B738-qualified member from ATR teams
+				let moved = false;
+				for (const atrTeam of atrTeams) {
+					const b738QualifiedMember = atrTeam.members.find(m => canFlyAircraft(m, "B738"));
+					if (b738QualifiedMember && atrTeam.members.length > 2) {
+						atrTeam.members = atrTeam.members.filter(m => m.id !== b738QualifiedMember.id);
+						b738Team.members.push(b738QualifiedMember);
+						console.log(`Moved ${b738QualifiedMember.name_chinese} from ${atrTeam.id} to ${b738Team.id}`);
+						moved = true;
+						break;
+					}
+				}
+				
+				if (!moved) {
+					console.warn(`Unable to fill ${b738Team.id} to minimum ${minB738Crew} crew`);
+					break;
+				}
+			}
+		}
+
 		// FINAL VALIDATION: Remove any ATR-only people from B738 teams
 		const b738TeamsForValidation = newTeams.filter(
 			(t) => t.aircraftType === "B738",
@@ -558,7 +666,6 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 		}
 
 		// CRITICAL VALIDATION: Ensure ATR teams have EXACTLY 2 people
-		const atrTeams = newTeams.filter((t) => t.aircraftType === "ATR");
 		atrTeams.forEach((team) => {
 			if (team.members.length > 2) {
 				console.error(
@@ -580,8 +687,197 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 			}
 		});
 
+		// ===== ASSIGN CORE SCENARIOS TO TEAMS =====
+		// Ensure minimum 6 teams for 6 scenarios
+		
+		// If we have fewer than 6 teams, create extra ATR teams with random members
+		while (newTeams.length < 6) {
+			const allMembers = newTeams.flatMap(t => t.members);
+			
+			// Get unique members by ID
+			const uniqueMembers = Array.from(
+				new Map(allMembers.map(m => [m.id, m])).values()
+			);
+			
+			if (uniqueMembers.length < 2) {
+				console.warn('Not enough unique people to create 6 teams');
+				break;
+			}
+			
+			// Randomly pick 2 DIFFERENT members
+			const shuffled = [...uniqueMembers].sort(() => Math.random() - 0.5);
+			const member1 = shuffled[0];
+			const member2 = shuffled[1]; // Guaranteed to be different from member1
+			
+			const extraTeam: Team = {
+				id: `atr-extra-${newTeams.filter((t) => t.aircraftType === "ATR").length + 1}`,
+				aircraftType: "ATR",
+				aircraftNumber: newTeams.filter((t) => t.aircraftType === "ATR").length + 1,
+				members: [member1, member2]
+			};
+			
+			newTeams.push(extraTeam);
+			console.log(`Created extra ATR team ${extraTeam.id} to reach 6 teams minimum`);
+		}
+		
+		// Shuffle scenarios and assign to teams
+		const shuffledScenarios = [...coreScenarios].sort(() => Math.random() - 0.5);
+		newTeams.forEach((team, idx) => {
+			team.coreScenario = shuffledScenarios[idx % 6];
+		});
+
 		setTeams(newTeams);
 		setShowTeams(true);
+	};
+
+	const saveGroups = async () => {
+		if (teams.length === 0) {
+			alert('請先分組！');
+			return;
+		}
+		
+		if (!confirm(`確定要儲存 ${selectedDate} 的分組？`)) {
+			return;
+		}
+		
+		try {
+			const token = localStorage.getItem("token");
+			if (!token) {
+				alert("請先登入");
+				return;
+			}
+			
+			// Flatten teams to individual records
+			const sessionsToSave = teams.flatMap(team => 
+				team.members.map(member => ({
+					training_date: selectedDate,
+					employee_id: member.employee_id,
+					group_type: team.aircraftType,
+					group_number: team.aircraftNumber,
+					core_scenario: team.coreScenario || 'unassigned',
+					team_members: team.members.map(m => m.employee_id)
+				}))
+			);
+			
+			const response = await fetch('/api/mdafaat/training-sessions', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${token}`
+				},
+				body: JSON.stringify({ sessions: sessionsToSave })
+			});
+			
+			if (!response.ok) {
+				throw new Error('Failed to save groups');
+			}
+			
+			alert(`✅ 成功儲存 ${teams.length} 組！`);
+			
+			// Reload training sessions to update filter
+			const reloadResponse = await fetch(`/api/mdafaat/training-sessions?before=${selectedDate}`);
+			if (reloadResponse.ok) {
+				const data = await reloadResponse.json();
+				const userIds = new Set(data.map((d: any) => d.employee_id));
+				setTrainedUserIds(userIds);
+			}
+		} catch (error) {
+			console.error('Error saving groups:', error);
+			alert('❌ 儲存失敗！');
+		}
+	};
+
+	const loadGroupsForDate = async (date: string) => {
+		try {
+			const response = await fetch(`/api/mdafaat/training-sessions?date=${date}`);
+			if (!response.ok) return;
+			
+			const sessions = await response.json();
+			if (!sessions || sessions.length === 0) {
+				setTeams([]);
+				setShowTeams(false);
+				return;
+			}
+			
+			// Group sessions by group_type and group_number
+			const groupMap = new Map<string, any>();
+			
+			sessions.forEach((session: any) => {
+				const key = `${session.group_type}-${session.group_number}`;
+				if (!groupMap.has(key)) {
+					groupMap.set(key, {
+						id: key.toLowerCase(),
+						aircraftType: session.group_type,
+						aircraftNumber: session.group_number,
+						coreScenario: session.core_scenario,
+						memberIds: new Set(session.team_members)
+					});
+				}
+			});
+			
+			// Convert to Team objects with actual user data
+			const loadedTeams: Team[] = [];
+			for (const [_, groupData] of groupMap) {
+				const members = allUsers.filter(u => groupData.memberIds.has(u.employee_id));
+				if (members.length > 0) {
+					loadedTeams.push({
+						id: groupData.id,
+						aircraftType: groupData.aircraftType,
+						aircraftNumber: groupData.aircraftNumber,
+						coreScenario: groupData.coreScenario,
+						members
+					});
+				}
+			}
+			
+			if (loadedTeams.length > 0) {
+				setTeams(loadedTeams);
+				setShowTeams(true);
+				console.log(`Loaded ${loadedTeams.length} groups for ${date}`);
+			}
+		} catch (error) {
+			console.error('Error loading groups:', error);
+		}
+	};
+
+	const clearAllTrainingData = async () => {
+		if (!canEditScenarios) {
+			alert('您沒有權限執行此操作！');
+			return;
+		}
+		
+		if (!confirm('⚠️ 這將刪除所有訓練記錄！確定要繼續嗎？')) {
+			return;
+		}
+		
+		if (!confirm('⚠️ 最後確認：真的要刪除所有訓練資料嗎？')) {
+			return;
+		}
+		
+		try {
+			const token = localStorage.getItem("token");
+			if (!token) {
+				alert("請先登入");
+				return;
+			}
+			
+			const response = await fetch('/api/mdafaat/training-sessions', {
+				method: 'DELETE',
+				headers: {
+					'Authorization': `Bearer ${token}`
+				}
+			});
+			
+			if (!response.ok) {
+				throw new Error('Failed to clear data');
+			}
+			
+			setTrainedUserIds(new Set());
+			alert('✅ 所有訓練資料已清除！');
+		} catch (error) {
+			console.error('Error clearing data:', error);
+			alert('❌ 清除失敗！');
+		}
 	};
 
 	const getRankShorthand = (rank: string): string => {
@@ -603,16 +899,95 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 					分組系統 Team Formation
 				</h2>
 				<p className={styles.subtitle}>搜尋學員並安排分組</p>
-			{canEditScenarios && (
-				<button 
-					onClick={onOpenEditor}
-					className={styles.editorButton}
-					title="編輯情境卡片"
-				>
-					<FiEdit size={18} />
-					編輯情境
-				</button>
-			)}
+			</div>
+
+			{/* Date Filter Section */}
+			<div style={{ 
+				display: 'flex', 
+				gap: '1rem', 
+				alignItems: 'center',
+				marginBottom: '1rem',
+				padding: '1rem',
+				background: 'rgba(30, 41, 59, 0.5)',
+				borderRadius: '0.5rem',
+				flexWrap: 'wrap'
+			}}>
+				<label style={{ color: '#e2e8f0', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+					訓練日期 Training Date:
+				</label>
+				<input 
+					type="date" 
+					value={selectedDate}
+					onChange={(e) => setSelectedDate(e.target.value)}
+					style={{
+						padding: '0.5rem',
+						borderRadius: '0.375rem',
+						border: '1px solid rgba(148, 163, 184, 0.3)',
+						background: 'rgba(30, 41, 59, 0.8)',
+						color: '#e2e8f0',
+						fontSize: '0.875rem'
+					}}
+				/>
+				{trainedUserIds.size > 0 && (
+					<span style={{ 
+						fontSize: '0.875rem', 
+						color: '#94a3b8',
+						flex: '1 1 auto',
+						minWidth: '200px'
+					}}>
+						隱藏{trainedUserIds.size}位已訓練人員
+					</span>
+				)}
+				{loadingTrainingSessions && (
+					<span style={{ fontSize: '0.875rem', color: '#4a9eff' }}>
+						載入中... Loading...
+					</span>
+				)}
+				{canEditScenarios && (
+					<button
+						onClick={clearAllTrainingData}
+						style={{ 
+							padding: '0.5rem 1rem',
+							borderRadius: '0.375rem',
+							background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+							color: '#ffffff',
+							border: 'none',
+							cursor: 'pointer',
+							display: 'flex',
+							alignItems: 'center',
+							gap: '0.5rem',
+							fontSize: '0.875rem',
+							fontWeight: '500',
+							whiteSpace: 'nowrap'
+						}}
+					>
+						<Trash2 size={16} />
+						Clear All Data
+					</button>
+				)}
+				{canEditScenarios && (
+					<button
+						onClick={onOpenEditor}
+						style={{ 
+							padding: '0.5rem 1rem',
+							borderRadius: '0.375rem',
+							background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+							color: '#ffffff',
+							border: 'none',
+							cursor: 'pointer',
+							display: 'flex',
+							alignItems: 'center',
+							gap: '0.5rem',
+							fontSize: '0.875rem',
+							fontWeight: '500',
+							whiteSpace: 'nowrap'
+						}}
+						title="編輯情境卡片"
+					>
+						<FiEdit size={16} />
+						編輯情境
+					</button>
+				)}
 			</div>
 
 			{/* Search Section */}
@@ -642,8 +1017,8 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 						<Image
 							src="/K-dogmatic.png"
 							alt="Loading"
-							width={150}
-							height={150}
+							width={120}
+							height={120}
 							className={styles.loadingImage}
 							priority
 						/>
@@ -910,6 +1285,14 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 								重新分組
 							</button>
 							<button
+								onClick={saveGroups}
+								className={styles.reshuffleButton}
+								style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
+							>
+								<Save size={18} />
+								儲存分組
+							</button>
+							<button
 								onClick={() => {
 									setShowTeams(false);
 									setTeams([]);
@@ -965,6 +1348,20 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 												{team.aircraftType} #
 												{team.aircraftNumber}
 											</span>
+											{team.coreScenario && (
+												<div style={{
+													background: 'rgba(74, 158, 255, 0.2)',
+													padding: '0.25rem 0.5rem',
+													borderRadius: '0.375rem',
+													fontSize: '0.7rem',
+													color: '#4a9eff',
+													border: '1px solid rgba(74, 158, 255, 0.3)',
+													marginTop: '0.25rem',
+													textAlign: 'center'
+												}}>
+													📋 {team.coreScenario.replace(/_/g, ' ').toUpperCase()}
+												</div>
+											)}
 											<span className={styles.teamCount}>
 												{team.members.length} 人
 											</span>
