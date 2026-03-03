@@ -71,8 +71,10 @@
 /* Stopwatch Bar - Non-interactive info */
 .stopwatchBar {
 	display: flex;
+	flex-direction: column;
 	align-items: center;
 	justify-content: center;
+	gap: 0.25rem;
 	padding: 0.75rem 2rem;
 	background: rgba(15, 23, 42, 0.8);
 	border-bottom: 1px solid rgba(148, 163, 184, 0.2);
@@ -94,9 +96,10 @@
 	display: flex;
 	align-items: center;
 	gap: 2rem;
-	font-size: 0.875rem;
-	color: #cbd5e1;
+	font-size: 1rem;
+	color: #e2e8f0;
 	flex-wrap: wrap;
+	font-weight: 500;
 }
 
 .teamGroup {
@@ -410,19 +413,45 @@
 	max-width: 90%;
 }
 
-.cardemergency {
-	border: 3px solid #dc2626;
-	background: linear-gradient(135deg, #7f1d1d, #991b1b);
-}
-
-.cardpassenger {
+/* Card styles by scenario position (A/B/C/D/E) */
+.cardBackground {
 	border: 3px solid #2563eb;
 	background: linear-gradient(135deg, #1e3a8a, #1e40af);
 }
 
-.cardequipment {
-	border: 3px solid #eab308;
-	background: linear-gradient(135deg, #854d0e, #a16207);
+.cardTrigger {
+	border: 3px solid #dc2626;
+	background: linear-gradient(135deg, #7f1d1d, #991b1b);
+}
+
+.cardComplication {
+	border: 3px solid #db2777;
+	background: linear-gradient(135deg, #500724, #831843);
+}
+
+.cardOutcome {
+	border: 3px solid #7c3aed;
+	background: linear-gradient(135deg, #3b0764, #4c1d95);
+}
+
+/* Current card — glowing cyan outline so it's obvious which card is next */
+.cardCurrent {
+	border-color: #22d3ee !important;
+	box-shadow: 0 0 0 3px #22d3ee, 0 0 20px rgba(34, 211, 238, 0.4) !important;
+	cursor: pointer !important;
+}
+
+/* Clicked card — dimmed green tint */
+.cardClicked {
+	opacity: 0.75;
+	border-color: #16a34a !important;
+	box-shadow: 0 0 0 2px #16a34a !important;
+}
+
+/* Skipped card — heavily dimmed */
+.cardSkipped {
+	opacity: 0.35;
+	filter: grayscale(0.6);
 }
 
 .cardEnd {
@@ -833,6 +862,19 @@
 	align-items: center;
 }
 
+.completeContainer {
+	width: 100%;
+	min-height: 100%;
+	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1.5rem;
+	padding: 2rem 1.5rem;
+	box-sizing: border-box;
+	overflow-y: auto;
+}
+
 .completeActions {
 	background: rgba(30, 41, 59, 0.8);
 	border: 2px solid rgba(34, 197, 94, 0.5);
@@ -840,7 +882,9 @@
 	padding: 2rem;
 	text-align: center;
 	width: 100%;
-	max-width: 1400px; /* Match exportSection for consistency */
+	max-width: 700px;
+	box-sizing: border-box;
+	margin: 1rem 0;
 }
 
 .completeActions h3 {
@@ -875,8 +919,9 @@
 	border: 1px solid rgba(148, 163, 184, 0.2);
 	border-radius: 0.75rem;
 	padding: 1.5rem;
-	width: 100%; /* Full width */
-	max-width: 1400px; /* Match completeScreen */
+	width: 100%;
+	max-width: min(900px, 90vw);
+	box-sizing: border-box;
 }
 
 .exportSection h4 {
@@ -953,12 +998,21 @@
 /* Mobile Responsive */
 @media (max-width: 767px) {
 	.cardsRow {
-		flex-direction: column;
-		align-items: center;
+		flex-direction: row;
+		align-items: flex-start;
+		overflow-x: auto;
+		justify-content: flex-start;
+		padding: 0.5rem 1rem 1rem;
+		gap: 1rem;
+		-webkit-overflow-scrolling: touch;
+		scroll-snap-type: x mandatory;
 	}
 
 	.cardColumn {
-		width: 100%;
+		flex-shrink: 0;
+		min-width: unset;
+		width: 200px;
+		scroll-snap-align: start;
 	}
 
 	.conditionsBar {
@@ -1108,8 +1162,8 @@
 	}
 
 	.cardBack {
-		width: 160px;
-		height: 225px; /* 1/2 of original */
+		width: 180px;
+		height: 254px;
 	}
 
 	.cardBackInner {
@@ -1117,10 +1171,26 @@
 	}
 
 	.card {
-		width: 160px;
-		height: 225px; /* Same as cardBack - no stretching */
-		max-height: 225px;
+		width: 180px;
+		height: 254px;
+		max-height: 254px;
 		padding: 0.75rem;
+	}
+
+	.cardCenter {
+		padding: 0.5rem;
+		overflow-y: auto;
+		max-height: 180px;
+	}
+
+	.cardCenter h3 {
+		font-size: 0.7rem;
+		margin-bottom: 0.35rem;
+	}
+
+	.cardCenter p {
+		font-size: 0.65rem;
+		line-height: 1.3;
 	}
 
 	.cardHeader {
@@ -1238,7 +1308,7 @@
 
 	.cardBack {
 		width: 160px;
-		height: 225px; /* 1/2 of original */
+		height: 225px;
 	}
 
 	.cardBackInner {
@@ -1247,7 +1317,7 @@
 
 	.card {
 		width: 160px;
-		height: 225px; /* Same as cardBack - no stretching */
+		height: 225px;
 		max-height: 225px;
 		padding: 0.75rem;
 	}

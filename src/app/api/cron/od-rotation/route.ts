@@ -14,11 +14,22 @@ export async function POST(request: NextRequest) {
 		
 		const authHeader = request.headers.get('authorization');
 		const cronSecret = process.env.CRON_SECRET;
-		
-		if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+
+		// Vercel invokes cron jobs automatically without the Authorization header.
+		// We allow the request if EITHER:
+		//   (a) it comes from Vercel's cron runner (no auth header, no CRON_SECRET set), OR
+		//   (b) a valid Bearer token is provided (manual trigger)
+		const isVercelCron = request.headers.get('x-vercel-cron') === '1';
+		const isValidManualCall = cronSecret && authHeader === `Bearer ${cronSecret}`;
+
+		if (!isVercelCron && !isValidManualCall) {
 			console.log("❌ Unauthorized cron request");
+			console.log("x-vercel-cron header:", request.headers.get('x-vercel-cron'));
+			console.log("Authorization header present:", !!authHeader);
 			return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 		}
+
+		console.log("✅ Auth passed - isVercelCron:", isVercelCron, "isManual:", isValidManualCall);
 		
 		const results: any = {
 			executedAt: new Date().toISOString(),

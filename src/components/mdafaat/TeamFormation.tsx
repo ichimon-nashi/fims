@@ -31,6 +31,7 @@ interface Team {
 interface TeamFormationProps {
 	onStartGame: (teams: Array<{
 		name: string;
+		coreScenario?: string;
 		members: Array<{
 			userId: string;
 			name: string;
@@ -200,8 +201,11 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 			
 			setLoadingTrainingSessions(true);
 			try {
-				// Load filtered user list (hide users trained before this date)
-				const response = await fetch(`/api/mdafaat/training-sessions?before=${selectedDate}`);
+				// Load filtered user list (hide users trained on or before this date)
+				const nextDay = new Date(selectedDate);
+				nextDay.setDate(nextDay.getDate() + 1);
+				const beforeDate = nextDay.toISOString().split('T')[0];
+				const response = await fetch(`/api/mdafaat/training-sessions?before=${beforeDate}`);
 				if (response.ok) {
 					const data = await response.json();
 					const userIds = new Set(data.map((d: any) => d.employee_id));
@@ -774,8 +778,11 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 			
 			alert(`✅ 成功儲存 ${teams.length} 組！`);
 			
-			// Reload training sessions to update filter
-			const reloadResponse = await fetch(`/api/mdafaat/training-sessions?before=${selectedDate}`);
+			// Reload training sessions - include today (use next day as before filter)
+			const nextDay = new Date(selectedDate);
+			nextDay.setDate(nextDay.getDate() + 1);
+			const nextDayStr = nextDay.toISOString().split('T')[0];
+			const reloadResponse = await fetch(`/api/mdafaat/training-sessions?before=${nextDayStr}`);
 			if (reloadResponse.ok) {
 				const data = await reloadResponse.json();
 				const userIds = new Set(data.map((d: any) => d.employee_id));
@@ -1450,6 +1457,7 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 							// Convert teams to format MDAfaatGame expects
 							const gameTeams = teams.map(team => ({
 								name: `${team.aircraftType} ${team.aircraftNumber}`,
+								coreScenario: team.coreScenario,
 								members: team.members.map(member => ({
 									userId: member.id,
 									name: member.full_name,

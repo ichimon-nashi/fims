@@ -144,6 +144,11 @@ export const canCreateTasks = (user: User | null): boolean => {
  * Check if user can edit other users' schedules in roster
  */
 export const canEditOthersSchedules = (user: User | null): boolean => {
+  if (!user) return false;
+  
+  // Admin, 51892 and 21986 always have full edit access regardless of stored permissions
+  if (user.employee_id === 'admin' || user.employee_id === '51892' || user.employee_id === '21986') return true;
+  
   if (!user?.app_permissions?.roster) return false;
   
   return user.app_permissions.roster.access === true && 
