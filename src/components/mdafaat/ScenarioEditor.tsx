@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Search, Eye, Edit2, Trash2, Plus, X, ArrowLeft } from "lucide-react";
+import { Search, Eye, Edit2, Trash2, Plus, X, ArrowLeft, ChevronDown } from "lucide-react";
 import LoadingScreen from "@/components/common/LoadingScreen";
 import { createServiceClient } from "@/utils/supabase/service-client";
 import styles from "./ScenarioEditor.module.css";
@@ -54,6 +54,7 @@ export default function ScenarioManager({ onClose }: Props) {
 	const [isViewing, setIsViewing] = useState(false);
 	const [isCreating, setIsCreating] = useState(false);
 	const [loading, setLoading] = useState(true);
+	const [openGroups, setOpenGroups] = useState<Set<string>>(new Set(CORE_SCENARIOS.map(c => c.value)));
 
 	const BLANK_SCENARIO: Omit<Scenario, 'id'> = {
 		scenario_code: '',
@@ -248,17 +249,15 @@ export default function ScenarioManager({ onClose }: Props) {
 	return (
 		<div className={styles.container}>
 			<div className={styles.header}>
-				<h2 className={styles.title}>情境編輯 Scenario Editor</h2>
-				<div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-					<button onClick={handleCreate} className={styles.addButton}>
-						<Plus size={16} /> 新增情境
+				{onClose && (
+					<button onClick={onClose} className={styles.closeButton} title="返回">
+						<ArrowLeft size={20} />
 					</button>
-					{onClose && (
-						<button onClick={onClose} className={styles.closeButton} title="返回">
-							<ArrowLeft size={24} />
-						</button>
-					)}
-				</div>
+				)}
+				<h2 className={styles.title}>情境編輯 Scenario Editor</h2>
+				<button onClick={handleCreate} className={styles.addButton}>
+					<Plus size={16} /> 新增情境
+				</button>
 			</div>
 
 			{/* Search Bar */}
@@ -283,46 +282,66 @@ export default function ScenarioManager({ onClose }: Props) {
 				</div>
 			</div>
 
-			{/* Scenarios Table */}
+			{/* Scenarios — grouped by core scenario type */}
 			{loading ? (
 				<LoadingScreen message="載入情境中..." />
+			) : filteredScenarios.length === 0 ? (
+				<div className={styles.noResults}>無符合條件的情境</div>
 			) : (
-				<div className={styles.tableContainer}>
-					<table className={styles.table}>
-						<thead>
-							<tr>
-								<th style={{ width: '110px' }}>代碼</th>
-								<th style={{ width: '110px' }}>情境分類</th>
-								<th style={{ width: '30%' }}>背景預覽</th>
-								<th className={styles.desktopOnly} style={{ width: '30%' }}>觸發事件預覽</th>
-								<th className={styles.desktopOnly} style={{ width: '60px', textAlign: 'center' }}>併發</th>
-								<th style={{ width: '100px' }}>操作</th>
-							</tr>
-						</thead>
-						<tbody>
-							{filteredScenarios.map((scenario) => (
-								<tr key={scenario.id}>
-									<td className={styles.code}>{scenario.scenario_code}</td>
-									<td><span className={styles.categoryBadge}>{CORE_SCENARIOS.find(c => c.value === scenario.core_scenario)?.label || scenario.core_scenario}</span></td>
-									<td className={styles.previewCell}>{scenario.background}</td>
-									<td className={`${styles.previewCell} ${styles.desktopOnly}`}>{scenario.trigger}</td>
-									<td className={styles.desktopOnly} style={{ textAlign: 'center' }}>
-										{scenario.complication ? <span style={{ color: '#db2777' }}>✓</span> : <span style={{ color: '#475569' }}>—</span>}
-									</td>
-									<td>
-										<div className={styles.actions}>
-											<button onClick={() => handleView(scenario)} className={styles.actionButton} title="檢視"><Eye size={16} /></button>
-											<button onClick={() => handleEdit(scenario)} className={styles.actionButton} title="編輯"><Edit2 size={16} /></button>
-											<button onClick={() => handleDelete(scenario)} className={styles.actionButtonDanger} title="刪除"><Trash2 size={16} /></button>
+				<div className={styles.groupList}>
+					{CORE_SCENARIOS.map(({ value, label }) => {
+						const rows = filteredScenarios.filter(s => s.core_scenario === value);
+						if (rows.length === 0) return null;
+						const isOpen = openGroups.has(value);
+						const toggleGroup = () => setOpenGroups(prev => {
+							const next = new Set(prev);
+							isOpen ? next.delete(value) : next.add(value);
+							return next;
+						});
+						return (
+							<div key={value} className={styles.group}>
+								{/* Group header */}
+								<div className={styles.groupHeader} onClick={toggleGroup}>
+									<div className={styles.groupHeaderLeft}>
+										<span className={styles.groupTitle}>{label}</span>
+										<span className={styles.groupCount}>{rows.length}</span>
+									</div>
+									<ChevronDown size={16} className={`${styles.groupChevron} ${isOpen ? styles.open : ''}`} />
+								</div>
+
+								{isOpen && (
+									<>
+										{/* Column headers */}
+										<div className={styles.colHeader}>
+											<span className={styles.colHeaderCell}>代碼</span>
+											<span className={styles.colHeaderCell}>背景 A</span>
+											<span className={styles.colHeaderCell}>觸發 B</span>
+											<span className={styles.colHeaderCell}>併發 C</span>
+											<span className={styles.colHeaderCell}>結果 D</span>
+											<span className={styles.colHeaderCell} style={{ textAlign: 'right' }}>操作</span>
 										</div>
-									</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-					{filteredScenarios.length === 0 && (
-						<div className={styles.noResults}>無符合條件的情境</div>
-					)}
+										{/* Rows */}
+										{rows.map(scenario => (
+											<div key={scenario.id} className={styles.scenarioRow}>
+												<span className={styles.codeCell}>{scenario.scenario_code}</span>
+												<span className={styles.previewCell}>{scenario.background}</span>
+												<span className={styles.previewCell}>{scenario.trigger}</span>
+												<span className={scenario.complication ? styles.previewCellComplication : styles.previewEmpty}>
+													{scenario.complication || '—'}
+												</span>
+												<span className={styles.previewCell}>{scenario.outcome}</span>
+												<div className={styles.actionsCell}>
+													<button onClick={() => handleView(scenario)} className={styles.actionButton} title="檢視"><Eye size={14} /></button>
+													<button onClick={() => handleEdit(scenario)} className={styles.actionButton} title="編輯"><Edit2 size={14} /></button>
+													<button onClick={() => handleDelete(scenario)} className={styles.actionButtonDanger} title="刪除"><Trash2 size={14} /></button>
+												</div>
+											</div>
+										))}
+									</>
+								)}
+							</div>
+						);
+					})}
 				</div>
 			)}
 

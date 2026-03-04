@@ -3,20 +3,18 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import LoadingScreen from '@/components/common/LoadingScreen';
 
-function HomePageContent() {
+export default function HomePage() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!loading) {
       if (user) {
-        // User is logged in, redirect to dashboard instead of roster
         router.replace('/dashboard');
       } else {
-        // User is not logged in, redirect to login
         router.replace('/login');
       }
     }
@@ -27,12 +25,4 @@ function HomePageContent() {
   }
 
   return null; // Will redirect
-}
-
-export default function HomePage() {
-  return (
-    <AuthProvider>
-      <HomePageContent />
-    </AuthProvider>
-  );
 }

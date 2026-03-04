@@ -23,6 +23,182 @@ const CORE_SCENARIO_LABELS: Record<string, string> = {
 	planned_evacuation: "客艙準備程序 Cabin Preparation",
 };
 
+// ─── Training criteria — all 13 categories from docx ─────────────────────────
+type CriteriaEntry = { ref: string; icon: string; shortLabel: string; items: string[] };
+const CRITERIA_DATA: Record<string, CriteriaEntry> = {
+	cpp: {
+		shortLabel: "客艙準備 CPP",
+		ref: "CCOM 9.1",
+		icon: "🛬",
+		items: [
+			"取得機長NTR訊息並提示組員",
+			"客艙燈光調整",
+			"客艙廣播告知旅客",
+			"工作區整理並確認Door Mode位置",
+			"依客艙廣播執行旅客準備",
+			"組員及客艙準備",
+			"PSP安排座位及任務提示",
+			"最終檢查，調整燈光，組員就位",
+			"正確辨識準備迫降指示，要求旅客彎腰、低頭，直飛機停妥",
+		],
+	},
+	planned_evac: {
+		shortLabel: "有預警撤離",
+		ref: "CCOM 9",
+		icon: "✈️",
+		items: [
+			"辨識飛航組員緊急指示",
+			"Opposite emergency exit — 開啟其他可用出口撤離旅客",
+			"Aircraft — 檢查滯留旅客、組員，通知及照顧飛航組員",
+			"Emergency equipment — 攜帶緊急裝備撤離",
+			"Passenger — 集結旅客至安全處並照顧受傷旅客",
+		],
+	},
+	unplanned_evac: {
+		shortLabel: "無預警撤離",
+		ref: "CCOM 9",
+		icon: "🚨",
+		items: [
+			"辨識飛航組員緊急指示或自行判斷逃生",
+			"選擇最佳逃生出口，評估機內外狀況，並就近指派PSP協助",
+			"Evacuation — 緊急撤離",
+			"Opposite emergency exit — 開啟其他可用出口撤離旅客",
+			"Aircraft — 檢查滯留旅客、組員，通知及照顧飛航組員",
+			"Emergency equipment — 攜帶緊急裝備撤離",
+			"Passenger — 集結旅客至安全處並照顧受傷旅客",
+		],
+	},
+	smoke_fire: {
+		shortLabel: "煙霧/失火",
+		ref: "CCOM 9.3 附件一",
+		icon: "🔥",
+		items: [
+			"辨識火災及煙霧，通知機長及其他組員協助",
+			"使用適當之滅火器設備及安全防護裝備，必要時",
+			"確認火源並執行滅火",
+			"駕客艙組員溝通及聯繫",
+			"提供備用滅火裝備",
+			"保持飛航組員聯繫",
+			"管理客艙及旅客狀況（廣播、移除易燃物、斷電、調整座位）",
+			"持續監控，避免復燃",
+		],
+	},
+	lithium_fire: {
+		shortLabel: "鋰電池火災",
+		ref: "CCOM 6.5 / 7.13 / 9.3",
+		icon: "🔋",
+		items: [
+			"辨識及確認火災，通知機長及其他組員協助",
+			"使用滅火器滅火",
+			"移除電子用品外接電源（可行時）",
+			"使用非易燃性液體冷卻後（10~15分鐘）；注意不可移動燃燒及冒煙中之裝備",
+			"穿戴防護手套將其裝入非溢漏之容器內，以水或非易燃性液體浸置",
+			"可行時放置適當位置，遠離駕駛艙",
+			"持續監控，避免復燃",
+		],
+	},
+	decompression: {
+		shortLabel: "客艙失壓",
+		ref: "CCOM 9.4",
+		icon: "💨",
+		items: [
+			"辨識快速失壓或慢速失壓",
+			"就近取得並戴上面罩",
+			"就近坐妥繫上安全帶（可行時）",
+			"正確指示旅客 — B738：拉下面罩，罩住口鼻，繫好安全帶",
+			"正確指示旅客 — ATR：留在座位上，繫好安全帶",
+			"保持駕客艙組員溝通及聯繫",
+			"管理客艙及旅客狀況",
+		],
+	},
+	flight_crew_incap: {
+		shortLabel: "飛航組員失能",
+		ref: "CCOM 8.3",
+		icon: "👨‍✈️",
+		items: [
+			"回應飛航組員指示",
+			"固定失能組員，將座椅向後移動，施予氧氣",
+			"將失能組員移出駕艙",
+			"廣播尋求醫療協助，施予必要急救",
+			"任務及指揮順序調整",
+			"保持駕客艙溝通及聯繫",
+		],
+	},
+	cabin_crew_incap: {
+		shortLabel: "客艙組員失能",
+		ref: "CCOM 8.3",
+		icon: "🏥",
+		items: [
+			"廣播尋求醫療協助，施予必要急救",
+			"固定失能組員，調整座位",
+			"通知飛航組員",
+			"任務及指揮順序調整",
+		],
+	},
+	controlled_disembark: {
+		shortLabel: "管制離機",
+		ref: "CCOM 4.4",
+		icon: "🚪",
+		items: [
+			"辨識飛航組員指示",
+			"廣播要求旅客依照指示，使用（逃生滑梯/空橋/登機梯）疏散",
+			"開啟緊急出口",
+			"管制客艙及旅客疏散",
+			"組員離機",
+		],
+	},
+	unruly_pax: {
+		shortLabel: "滋擾旅客",
+		ref: "CCOM 5.4",
+		icon: "⚠️",
+		items: [
+			"確認滋擾旅客威脅等級（1~4 LEVEL）",
+			"執行三階段處理程序",
+			"約束暴力攻擊行為之滋擾旅客，並予以監控",
+			"保持駕客艙溝通及聯繫",
+		],
+	},
+	bomb_threat: {
+		shortLabel: "爆裂物威脅",
+		ref: "CCOM 5.7",
+		icon: "💣",
+		items: [
+			"通知或接獲飛航組員訊息",
+			"廣播告知旅客訊息",
+			"依機長指示，使用「搜尋可疑爆炸物檢查表」執行搜查",
+			"回報檢查結果及描述可疑物狀況",
+			"必要時移動至最低危害位置 LRBL",
+			"管理客艙及旅客狀況",
+			"準備降落",
+			"降落後依機長指示準備管制旅客離機（Controlled Disembarkation）",
+		],
+	},
+	hijacking: {
+		shortLabel: "劫機",
+		ref: "CCOM 5.6",
+		icon: "🔫",
+		items: [
+			"使用標準用語規範通知飛航組員",
+			"執行駕駛艙門控管程序",
+			"安撫劫機者情緒",
+			"管理客艙及旅客狀況",
+			"保持駕客艙溝通及聯繫",
+		],
+	},
+	first_aid: {
+		shortLabel: "緊急救護 CPR",
+		ref: "CCOM 8.2 / 8.5",
+		icon: "❤️",
+		items: [
+			"檢查意識並確認生命跡象",
+			"尋求醫護協助",
+			"保持駕客艙溝通及聯繫",
+			"執行CPR，正確使用AED",
+			"紀錄急救過程，照顧病患旅客",
+		],
+	},
+};
+
 // ─── Flight data by base + time of day ────────────────────────────────────────
 interface FlightEntry {
 	flightNo: string;
@@ -162,6 +338,10 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
 	// Data
 	const [allCards, setAllCards] = useState<MdafaatCard[]>([]);
 	const [loading, setLoading] = useState(true);
+
+	// Criteria panel state
+	const [criteriaOpen, setCriteriaOpen] = useState<string | null>(null);
+	const [checkedItems, setCheckedItems] = useState<Record<string, Set<number>>>({});
 
 	// Game state
 	const [currentTeam, setCurrentTeam] = useState(0);
@@ -577,7 +757,86 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
 				</div>
 			)}
 
+			{/* ── Criteria Reference Bar ───────────────────────── */}
+			{conditions && (
+				<div className={styles.criteriaBar}>
+					<span className={styles.criteriaBarLabel}>評分標準</span>
+					{Object.entries(CRITERIA_DATA).map(([key, data]) => {
+						const checked = checkedItems[key]?.size ?? 0;
+						const total = data.items.length;
+						const isActive = criteriaOpen === key;
+						return (
+							<button
+								key={key}
+								className={`${styles.criteriaChip} ${isActive ? styles.active : ''}`}
+								onClick={() => setCriteriaOpen(isActive ? null : key)}
+							>
+								<span className={styles.criteriaChipIcon}>{data.icon}</span>
+								{data.shortLabel}
+								{checked > 0 && (
+									<span style={{ color: '#4ade80', fontWeight: 700, fontSize: '0.7rem' }}>
+										{checked}/{total}
+									</span>
+								)}
+							</button>
+						);
+					})}
+				</div>
+			)}
 
+			{/* ── Criteria Modal (anchored bottom-left) ────────── */}
+			{criteriaOpen && (() => {
+				const data = CRITERIA_DATA[criteriaOpen];
+				if (!data) return null;
+				const checked = checkedItems[criteriaOpen] ?? new Set<number>();
+				const toggleItem = (idx: number) => {
+					setCheckedItems(prev => {
+						const next = new Set(prev[criteriaOpen] ?? []);
+						next.has(idx) ? next.delete(idx) : next.add(idx);
+						return { ...prev, [criteriaOpen]: next };
+					});
+				};
+				const resetAll = () => setCheckedItems(prev => ({ ...prev, [criteriaOpen]: new Set() }));
+				return (
+					<div className={styles.criteriaOverlay} onClick={() => setCriteriaOpen(null)}>
+						<div className={styles.criteriaModal} onClick={e => e.stopPropagation()}>
+							<div className={styles.criteriaModalHeader}>
+								<div>
+									<div className={styles.criteriaModalTitle}>{data.icon} {data.shortLabel}</div>
+									<div className={styles.criteriaModalRef}>{data.ref}</div>
+								</div>
+								<button className={styles.criteriaCloseBtn} onClick={() => setCriteriaOpen(null)}>
+									<X size={16} />
+								</button>
+							</div>
+							<div className={styles.criteriaList}>
+								{data.items.map((item, idx) => {
+									const isChecked = checked.has(idx);
+									return (
+										<div
+											key={idx}
+											className={`${styles.criteriaItem} ${isChecked ? styles.checked : ''}`}
+											onClick={() => toggleItem(idx)}
+										>
+											<div className={styles.criteriaCheckbox}>
+												{isChecked && <span className={styles.criteriaCheckMark}>✓</span>}
+											</div>
+											<span className={styles.criteriaText}>{item}</span>
+										</div>
+									);
+								})}
+							</div>
+							<div className={styles.criteriaFooter}>
+								<span className={styles.criteriaProgress}>
+									<span className={styles.criteriaProgressFill}>{checked.size}</span>
+									/{data.items.length} 已確認
+								</span>
+								<button className={styles.criteriaResetBtn} onClick={resetAll}>重置</button>
+							</div>
+						</div>
+					</div>
+				);
+			})()}
 
 			{/* Game Area - GREEN POKER TABLE */}
 			<div className={styles.gameArea}>
