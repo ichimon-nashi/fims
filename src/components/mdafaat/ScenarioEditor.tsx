@@ -54,6 +54,7 @@ export default function ScenarioManager({ onClose }: Props) {
 	const [isViewing, setIsViewing] = useState(false);
 	const [isCreating, setIsCreating] = useState(false);
 	const [loading, setLoading] = useState(true);
+	const [codeManuallyEdited, setCodeManuallyEdited] = useState(false);
 	const [openGroups, setOpenGroups] = useState<Set<string>>(new Set(CORE_SCENARIOS.map(c => c.value)));
 
 	const BLANK_SCENARIO: Omit<Scenario, 'id'> = {
@@ -84,12 +85,13 @@ export default function ScenarioManager({ onClose }: Props) {
 	};
 
 	// Helper: when core_scenario changes, sync category and auto-increment code in create mode
+	// Only overwrites scenario_code if the user hasn't manually edited it
 	const handleCoreScenarioChange = (value: string) => {
 		const label = CORE_SCENARIOS.find(c => c.value === value)?.label || value;
 		setSelectedScenario(prev => {
 			if (!prev) return prev;
 			const updates: Partial<Scenario> = { core_scenario: value, category: label };
-			if (isCreating) updates.scenario_code = getNextCode(value);
+			if (isCreating && !codeManuallyEdited) updates.scenario_code = getNextCode(value);
 			return { ...prev, ...updates };
 		});
 	};
@@ -140,6 +142,7 @@ export default function ScenarioManager({ onClose }: Props) {
 	const handleCreate = () => {
 		const defaultCore = 'bomb_threat';
 		setSelectedScenario({ id: -1, ...BLANK_SCENARIO, scenario_code: getNextCode(defaultCore) });
+		setCodeManuallyEdited(false);
 		setIsCreating(true);
 		setIsEditing(false);
 		setIsViewing(false);
@@ -458,7 +461,10 @@ export default function ScenarioManager({ onClose }: Props) {
 										<input
 											type="text"
 											value={selectedScenario.scenario_code}
-											onChange={(e) => setSelectedScenario({ ...selectedScenario, scenario_code: e.target.value })}
+											onChange={(e) => {
+												setCodeManuallyEdited(true);
+												setSelectedScenario({ ...selectedScenario, scenario_code: e.target.value });
+											}}
 											className={styles.select}
 											placeholder="e.g. bomb-03"
 										/>
