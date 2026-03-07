@@ -402,7 +402,7 @@
   border: 1px solid rgba(148, 163, 184, 0.15);
   border-radius: 0.5rem;
   margin-bottom: 0.75rem;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .sectionHeader {
@@ -495,6 +495,8 @@
   font-size: 0.72rem;
   color: #64748b;
   margin-top: 0.25rem;
+  display: block;
+  overflow: visible;
 }
 
 .optionalBadge {

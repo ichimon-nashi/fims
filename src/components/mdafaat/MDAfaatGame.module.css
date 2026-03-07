@@ -1067,25 +1067,56 @@
 	}
 
 	.deckContainer {
+		width: 200px !important;
+		height: 280px !important;
 		margin: 0 auto !important;
-		display: flex !important;
-		align-items: center !important;
-		justify-content: center !important;
 	}
 
 	.cardBack {
-		width: 240px !important;
-		height: 338px !important; /* 25% smaller than original 320x450 */
+		width: 200px !important;
+		height: 280px !important;
 	}
 
 	.cardBackInner {
-		font-size: 2rem !important;
+		font-size: 1.5rem !important;
 	}
 
 	.card {
-		width: 240px !important;
-		height: 338px !important; /* Same as cardBack - no stretching */
-		max-height: 338px !important;
+		width: 200px !important;
+		height: 280px !important;
+		max-height: 280px !important;
+	}
+	.cardsRow {
+		gap: 0.75rem !important;
+		padding: 0 0.5rem !important;
+	}
+	.cardColumn {
+		min-width: 200px !important;
+		gap: 0.75rem !important;
+	}
+
+	.criteriaBar {
+		justify-content: center;
+		gap: 0.25rem;
+		padding: 0.4rem 0.75rem;
+	}
+
+	.criteriaBarLabel {
+		display: none;
+	}
+
+	.criteriaChip {
+		padding: 0.35rem 0.65rem !important;
+		font-size: 0.82rem !important;
+	}
+
+	.criteriaChipIcon {
+		width: 1.2rem !important;
+		height: 1.2rem !important;
+	}
+
+	.criteriaChipLabel {
+		font-size: 0.82rem !important;
 	}
 }
 
@@ -1130,6 +1161,30 @@
 
 	.membersList {
 		justify-content: center;
+	}
+
+	.criteriaBar {
+		justify-content: center;
+		gap: 0.22rem;
+		padding: 0.3rem 0.4rem;
+	}
+
+	.criteriaBarLabel {
+		display: none;
+	}
+
+	.criteriaChip {
+		padding: 0.3rem 0.55rem !important;
+		font-size: 0.78rem !important;
+	}
+
+	.criteriaChipIcon {
+		width: 1.1rem !important;
+		height: 1.1rem !important;
+	}
+
+	.criteriaChipLabel {
+		font-size: 0.78rem !important;
 	}
 
 	/* Buttons: 2 columns grid on mobile */
@@ -1371,58 +1426,80 @@
 /* ── Criteria Reference Bar ────────────────────────────────────── */
 .criteriaBar {
 	display: flex;
-	gap: 0.5rem;
-	padding: 0.6rem 1.5rem;
-	background: rgba(15, 23, 42, 0.7);
-	border-top: 1px solid rgba(148, 163, 184, 0.1);
-	border-bottom: 1px solid rgba(148, 163, 184, 0.1);
 	flex-wrap: wrap;
+	gap: 0.3rem;
+	padding: 0.5rem 1rem;
+	background: rgba(15, 23, 42, 0.85);
+	border-top: 1px solid rgba(74, 158, 255, 0.15);
+	border-bottom: 1px solid rgba(74, 158, 255, 0.15);
 	align-items: center;
+	justify-content: center;
 }
 
 .criteriaBarLabel {
 	font-size: 0.7rem;
 	font-weight: 700;
-	color: #475569;
+	color: #e2e8f0;
 	text-transform: uppercase;
-	letter-spacing: 0.06em;
+	letter-spacing: 0.08em;
 	white-space: nowrap;
-	margin-right: 0.25rem;
+	margin-right: 0.5rem;
+	flex-shrink: 0;
 }
 
 .criteriaChip {
 	display: flex;
+	flex-direction: row;
 	align-items: center;
-	gap: 0.35rem;
-	padding: 0.3rem 0.7rem;
-	background: rgba(30, 41, 59, 0.8);
-	border: 1px solid rgba(148, 163, 184, 0.15);
+	justify-content: center;
+	gap: 0.4rem;
+	padding: 0.4rem 0.85rem;
+	background: rgba(30, 41, 59, 0.9);
+	border: 1px solid rgba(74, 158, 255, 0.2);
 	border-radius: 2rem;
-	color: #94a3b8;
-	font-size: 0.75rem;
+	color: #e2e8f0;
+	font-size: 0.9rem;
 	font-weight: 600;
 	cursor: pointer;
 	white-space: nowrap;
 	transition: all 0.15s;
 	letter-spacing: 0.02em;
+	flex-shrink: 0;
 }
 
 .criteriaChip:hover {
-	background: rgba(74, 158, 255, 0.15);
-	border-color: rgba(74, 158, 255, 0.4);
+	background: rgba(74, 158, 255, 0.18);
+	border-color: rgba(74, 158, 255, 0.5);
 	color: #e2e8f0;
 	transform: translateY(-1px);
+	box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 
 .criteriaChip.active {
-	background: rgba(74, 158, 255, 0.2);
-	border-color: rgba(74, 158, 255, 0.5);
-	color: #60b4ff;
-	box-shadow: 0 0 8px rgba(74, 158, 255, 0.2);
+	background: rgba(74, 158, 255, 0.25);
+	border-color: #4a9eff;
+	color: #93c5fd;
+	box-shadow: 0 0 0 1px rgba(74, 158, 255, 0.4), 0 2px 8px rgba(74, 158, 255, 0.2);
 }
 
 .criteriaChipIcon {
+	width: 1.35rem;
+	height: 1.35rem;
+	object-fit: contain;
+	flex-shrink: 0;
+}
+
+.criteriaChipLabel {
 	font-size: 0.9rem;
+	font-weight: 600;
+	line-height: 1;
+}
+
+.criteriaChipCount {
+	font-size: 0.72rem;
+	font-weight: 700;
+	color: #4ade80;
+	margin-left: 0.1rem;
 }
 
 /* ── Criteria Modal Overlay ────────────────────────────────────── */

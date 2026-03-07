@@ -10,10 +10,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import styles from "./MDAfaatGame.module.css"; // SAME CSS
 
-declare global {
-	interface Window {}
-}
-
 const CORE_SCENARIO_LABELS: Record<string, string> = {
 	bomb_threat: "爆裂物威脅 Bomb Threat",
 	lithium_fire: "鋰電池火災 Lithium Battery Fire",
@@ -24,12 +20,13 @@ const CORE_SCENARIO_LABELS: Record<string, string> = {
 };
 
 // ─── Training criteria — all 13 categories from docx ─────────────────────────
+// Ordered for visual balance: 5 + 4 + 4 in the chips bar
 type CriteriaEntry = { ref: string; icon: string; shortLabel: string; items: string[] };
 const CRITERIA_DATA: Record<string, CriteriaEntry> = {
 	cpp: {
 		shortLabel: "客艙準備 CPP",
 		ref: "CCOM 9.1",
-		icon: "🛬",
+		icon: "/images/criteriachipicon/cpp.png",
 		items: [
 			"取得機長NTR訊息並提示組員",
 			"客艙燈光調整",
@@ -45,7 +42,7 @@ const CRITERIA_DATA: Record<string, CriteriaEntry> = {
 	planned_evac: {
 		shortLabel: "有預警撤離",
 		ref: "CCOM 9",
-		icon: "✈️",
+		icon: "/images/criteriachipicon/planned-evac.png",
 		items: [
 			"辨識飛航組員緊急指示",
 			"Opposite emergency exit — 開啟其他可用出口撤離旅客",
@@ -57,7 +54,7 @@ const CRITERIA_DATA: Record<string, CriteriaEntry> = {
 	unplanned_evac: {
 		shortLabel: "無預警撤離",
 		ref: "CCOM 9",
-		icon: "🚨",
+		icon: "/images/criteriachipicon/unplanned-evac.png",
 		items: [
 			"辨識飛航組員緊急指示或自行判斷逃生",
 			"選擇最佳逃生出口，評估機內外狀況，並就近指派PSP協助",
@@ -71,7 +68,7 @@ const CRITERIA_DATA: Record<string, CriteriaEntry> = {
 	smoke_fire: {
 		shortLabel: "煙霧/失火",
 		ref: "CCOM 9.3 附件一",
-		icon: "🔥",
+		icon: "/images/criteriachipicon/smoke-fire.png",
 		items: [
 			"辨識火災及煙霧，通知機長及其他組員協助",
 			"使用適當之滅火器設備及安全防護裝備，必要時",
@@ -86,7 +83,7 @@ const CRITERIA_DATA: Record<string, CriteriaEntry> = {
 	lithium_fire: {
 		shortLabel: "鋰電池火災",
 		ref: "CCOM 6.5 / 7.13 / 9.3",
-		icon: "🔋",
+		icon: "/images/criteriachipicon/lithium-fire.png",
 		items: [
 			"辨識及確認火災，通知機長及其他組員協助",
 			"使用滅火器滅火",
@@ -100,7 +97,7 @@ const CRITERIA_DATA: Record<string, CriteriaEntry> = {
 	decompression: {
 		shortLabel: "客艙失壓",
 		ref: "CCOM 9.4",
-		icon: "💨",
+		icon: "/images/criteriachipicon/decompression.png",
 		items: [
 			"辨識快速失壓或慢速失壓",
 			"就近取得並戴上面罩",
@@ -114,7 +111,7 @@ const CRITERIA_DATA: Record<string, CriteriaEntry> = {
 	flight_crew_incap: {
 		shortLabel: "飛航組員失能",
 		ref: "CCOM 8.3",
-		icon: "👨‍✈️",
+		icon: "/images/criteriachipicon/flight-crew-incap.png",
 		items: [
 			"回應飛航組員指示",
 			"固定失能組員，將座椅向後移動，施予氧氣",
@@ -127,7 +124,7 @@ const CRITERIA_DATA: Record<string, CriteriaEntry> = {
 	cabin_crew_incap: {
 		shortLabel: "客艙組員失能",
 		ref: "CCOM 8.3",
-		icon: "🏥",
+		icon: "/images/criteriachipicon/cabin-crew-incap.png",
 		items: [
 			"廣播尋求醫療協助，施予必要急救",
 			"固定失能組員，調整座位",
@@ -138,7 +135,7 @@ const CRITERIA_DATA: Record<string, CriteriaEntry> = {
 	controlled_disembark: {
 		shortLabel: "管制離機",
 		ref: "CCOM 4.4",
-		icon: "🚪",
+		icon: "/images/criteriachipicon/controlled-disembark.png",
 		items: [
 			"辨識飛航組員指示",
 			"廣播要求旅客依照指示，使用（逃生滑梯/空橋/登機梯）疏散",
@@ -150,7 +147,7 @@ const CRITERIA_DATA: Record<string, CriteriaEntry> = {
 	unruly_pax: {
 		shortLabel: "滋擾旅客",
 		ref: "CCOM 5.4",
-		icon: "⚠️",
+		icon: "/images/criteriachipicon/unruly-pax.png",
 		items: [
 			"確認滋擾旅客威脅等級（1~4 LEVEL）",
 			"執行三階段處理程序",
@@ -161,7 +158,7 @@ const CRITERIA_DATA: Record<string, CriteriaEntry> = {
 	bomb_threat: {
 		shortLabel: "爆裂物威脅",
 		ref: "CCOM 5.7",
-		icon: "💣",
+		icon: "/images/criteriachipicon/bomb-threat.png",
 		items: [
 			"通知或接獲飛航組員訊息",
 			"廣播告知旅客訊息",
@@ -176,7 +173,7 @@ const CRITERIA_DATA: Record<string, CriteriaEntry> = {
 	hijacking: {
 		shortLabel: "劫機",
 		ref: "CCOM 5.6",
-		icon: "🔫",
+		icon: "/images/criteriachipicon/hijacking.png",
 		items: [
 			"使用標準用語規範通知飛航組員",
 			"執行駕駛艙門控管程序",
@@ -188,7 +185,7 @@ const CRITERIA_DATA: Record<string, CriteriaEntry> = {
 	first_aid: {
 		shortLabel: "緊急救護 CPR",
 		ref: "CCOM 8.2 / 8.5",
-		icon: "❤️",
+		icon: "/images/criteriachipicon/first-aid.png",
 		items: [
 			"檢查意識並確認生命跡象",
 			"尋求醫護協助",
@@ -298,7 +295,20 @@ const getRandomFlight = (base: string, timeOfDay: string): FlightEntry | null =>
 	const fallback = FALLBACK_FLIGHTS[timeOfDay] || FALLBACK_FLIGHTS.midday;
 	return { flightNo: fallback[Math.floor(Math.random() * fallback.length)], departure: base, arrival: "???", aircraftType: "ATR" };
 };
-// ─────────────────────────────────────────────────────────────────────────────
+const SPECIAL_PASSENGERS = [
+	"WCHR - 輪椅旅客",
+	"WCHC - 客艙輪椅旅客",
+	"BLND - 視障旅客",
+	"DEAF - 聽障旅客",
+	"PRGN - 孕婦旅客",
+	"DPNA - 自閉症",
+	"DPNA - 腦性麻痺",
+	"POXY - 需氧旅客"
+];
+
+const getRandomSpecialPax = (): string =>
+	SPECIAL_PASSENGERS[Math.floor(Math.random() * SPECIAL_PASSENGERS.length)];
+
 
 interface MdafaatCard {
 	id: number;
@@ -345,7 +355,6 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
 
 	// Game state
 	const [currentTeam, setCurrentTeam] = useState(0);
-	const [currentMember, setCurrentMember] = useState(0);
 	const [gameStarted, setGameStarted] = useState(false);
 	const [shuffling, setShuffling] = useState(false);
 	const [instructorName, setInstructorName] = useState<string>("");
@@ -363,7 +372,6 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
 
 	// History
 	const [history, setHistory] = useState<CardHistory[]>([]);
-	const [showHistory, setShowHistory] = useState(true);
 
 	// Pending optional card (C/D) waiting for inline YES/NO
 	const [pendingOptional, setPendingOptional] = useState<number | null>(null);
@@ -378,7 +386,6 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
 
 	// Computed
 	const team = teams[currentTeam];
-	const member = team?.members[currentMember];
 	const hasNextTeam = currentTeam < teams.length - 1;
 
 	// Get instructor name
@@ -529,7 +536,7 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
 			time: timeOfDay,
 			full: Math.random() > 0.5,
 			infants: Math.random() > 0.75,
-			disabled: Math.random() > 0.75,
+			specialPax: Math.random() > 0.75 ? getRandomSpecialPax() : null,
 		};
 		setConditions(cond);
 
@@ -541,18 +548,8 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
 		const base = sortedForBase[0] ? getBaseFromEmployeeId(sortedForBase[0].employeeId) : 'KHH';
 		setFlightInfo(getRandomFlight(base, timeOfDay));
 
-		// Trigger CSS shuffle animation
-		const shuffleContainer = document.querySelector(`.${styles.shuffleAnimation}`);
-		if (shuffleContainer) {
-			shuffleContainer.classList.add(styles.shuffling);
-		}
-
-		// Wait for animation (1150ms from production)
+		// Wait for shuffle animation (1150ms)
 		await new Promise(r => setTimeout(r, 1150));
-
-		if (shuffleContainer) {
-			shuffleContainer.classList.remove(styles.shuffling);
-		}
 
 		// Load all scenario cards
 		const cards = [...allCards].sort((a, b) => a.id - b.id);
@@ -666,7 +663,6 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
 	const nextTeam = () => {
 		if (currentTeam < teams.length - 1) {
 			setCurrentTeam(currentTeam + 1);
-			setCurrentMember(0);
 			resetGame();
 		}
 	};
@@ -730,7 +726,7 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
 						<span>{getTimeIcon(conditions.time)} {getTimeText(conditions.time)}</span>
 						<span><FaPeopleGroup style={{ color: '#60a5fa' }} /> 客滿: {conditions.full ? "YES" : "NO"}</span>
 						<span><FaBaby style={{ color: '#fb923c' }} /> 嬰兒: {conditions.infants ? "YES" : "NO"}</span>
-						<span><FaWheelchair style={{ color: '#a78bfa' }} /> 身心障礙旅客: {conditions.disabled ? "YES" : "NO"}</span>
+						<span><FaWheelchair style={{ color: '#a78bfa' }} /> 特殊旅客: {conditions.specialPax ?? "NO"}</span>
 					</div>
 
 					{team && (
@@ -771,13 +767,12 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
 								className={`${styles.criteriaChip} ${isActive ? styles.active : ''}`}
 								onClick={() => setCriteriaOpen(isActive ? null : key)}
 							>
-								<span className={styles.criteriaChipIcon}>{data.icon}</span>
-								{data.shortLabel}
-								{checked > 0 && (
-									<span style={{ color: '#4ade80', fontWeight: 700, fontSize: '0.7rem' }}>
-										{checked}/{total}
-									</span>
-								)}
+								{/* eslint-disable-next-line @next/next/no-img-element */}
+							<img src={data.icon} alt="" className={styles.criteriaChipIcon} />
+							<span className={styles.criteriaChipLabel}>{data.shortLabel}</span>
+							{checked > 0 && (
+								<span className={styles.criteriaChipCount}>{checked}/{total}</span>
+							)}
 							</button>
 						);
 					})}
@@ -789,20 +784,16 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
 				const data = CRITERIA_DATA[criteriaOpen];
 				if (!data) return null;
 				const checked = checkedItems[criteriaOpen] ?? new Set<number>();
-				const toggleItem = (idx: number) => {
-					setCheckedItems(prev => {
-						const next = new Set(prev[criteriaOpen] ?? []);
-						next.has(idx) ? next.delete(idx) : next.add(idx);
-						return { ...prev, [criteriaOpen]: next };
-					});
-				};
-				const resetAll = () => setCheckedItems(prev => ({ ...prev, [criteriaOpen]: new Set() }));
 				return (
 					<div className={styles.criteriaOverlay} onClick={() => setCriteriaOpen(null)}>
 						<div className={styles.criteriaModal} onClick={e => e.stopPropagation()}>
 							<div className={styles.criteriaModalHeader}>
 								<div>
-									<div className={styles.criteriaModalTitle}>{data.icon} {data.shortLabel}</div>
+									<div className={styles.criteriaModalTitle} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+									{/* eslint-disable-next-line @next/next/no-img-element */}
+									<img src={data.icon} alt="" style={{ width: '1rem', height: '1rem', objectFit: 'contain' }} />
+									{data.shortLabel}
+								</div>
 									<div className={styles.criteriaModalRef}>{data.ref}</div>
 								</div>
 								<button className={styles.criteriaCloseBtn} onClick={() => setCriteriaOpen(null)}>
@@ -816,7 +807,13 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
 										<div
 											key={idx}
 											className={`${styles.criteriaItem} ${isChecked ? styles.checked : ''}`}
-											onClick={() => toggleItem(idx)}
+											onClick={() => {
+								setCheckedItems(prev => {
+									const next = new Set(prev[criteriaOpen!] ?? []);
+									next.has(idx) ? next.delete(idx) : next.add(idx);
+									return { ...prev, [criteriaOpen!]: next };
+								});
+							}}
 										>
 											<div className={styles.criteriaCheckbox}>
 												{isChecked && <span className={styles.criteriaCheckMark}>✓</span>}
@@ -831,7 +828,7 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
 									<span className={styles.criteriaProgressFill}>{checked.size}</span>
 									/{data.items.length} 已確認
 								</span>
-								<button className={styles.criteriaResetBtn} onClick={resetAll}>重置</button>
+								<button className={styles.criteriaResetBtn} onClick={() => setCheckedItems(prev => ({ ...prev, [criteriaOpen!]: new Set() }))}>重置</button>
 							</div>
 						</div>
 					</div>
@@ -951,7 +948,7 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
 									• {getTimeIcon(conditions.time)} {getTimeText(conditions.time)}: YES<br />
 									• ✈️ 客滿: {conditions.full ? "YES" : "NO"}<br />
 									• 👶 嬰兒: {conditions.infants ? "YES" : "NO"}<br />
-									• ♿ 身心障礙旅客: {conditions.disabled ? "YES" : "NO"}<br />
+									• ♿ 特殊旅客: {conditions.specialPax ?? "NO"}<br />
 									<br />
 									<strong>Scenario Path:</strong><br />
 									{history.map((h, i) => (
@@ -970,7 +967,22 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
 								<button 
 									className={styles.exportBtn}
 									onClick={() => {
-										const record = `Training Record - ${formatDate()}\n\nTeam: ${team.name}\nCore Scenario: ${CORE_SCENARIO_LABELS[team.coreScenario || ''] || team.coreScenario}\n\nCrew Members:\n${sortedMembers.map((m, idx) => `• ${m.employeeId} ${m.name}${idx === 0 ? ' (Leader)' : ''}`).join('\n')}\n\nInitial Conditions:\n• Time: ${conditions.time}\n• Full Flight: ${conditions.full ? 'Yes' : 'No'}\n• Infants: ${conditions.infants ? 'Yes' : 'No'}\n• Disabled: ${conditions.disabled ? 'Yes' : 'No'}\n\nScenario Path:\n${history.map((h, i) => `${i + 1}. ${h.card.code}: ${h.card.title}${h.skipped ? ' (Skipped)' : ''}`).join('\n')}\n\nTime: ${formatTime(elapsedTime)}\nInstructor: ${instructorName}`;
+										const lines = [
+								`Training Record - ${formatDate()}`, ``,
+								`Team: ${team.name}`,
+								`Core Scenario: ${CORE_SCENARIO_LABELS[team.coreScenario || ''] || team.coreScenario}`, ``,
+								`Crew Members:`,
+								...sortedMembers.map((m, idx) => `• ${m.employeeId} ${m.name}${idx === 0 ? ' (Leader)' : ''}`),
+								``, `Initial Conditions:`,
+								`• Time: ${conditions.time}`,
+								`• Full Flight: ${conditions.full ? 'Yes' : 'No'}`,
+								`• Infants: ${conditions.infants ? 'Yes' : 'No'}`,
+								`• Special Pax: ${conditions.specialPax ?? 'No'}`,
+								``, `Scenario Path:`,
+								...history.map((h, i) => `${i + 1}. ${h.card.code}: ${h.card.title}${h.skipped ? ' (Skipped)' : ''}`),
+								``, `Time: ${formatTime(elapsedTime)}`, `Instructor: ${instructorName}`,
+							];
+							const record = lines.join('\n');
 										
 										navigator.clipboard.writeText(record).then(() => {
 											alert("✅ Training record copied!");

@@ -31,12 +31,12 @@ const CORE_SCENARIOS = [
 ];
 
 const CODE_PREFIX: Record<string, string> = {
-	bomb_threat: "bomb",
-	lithium_fire: "lithiumfire",
-	decompression: "decompression",
-	incapacitation: "incapacitation",
-	unplanned_evacuation: "evac",
-	planned_evacuation: "cpp",
+	bomb_threat:           "BT",
+	lithium_fire:          "LF",
+	decompression:         "DP",
+	incapacitation:        "IN",
+	unplanned_evacuation:  "SL",
+	planned_evacuation:    "PL",
 };
 
 interface Props {
@@ -70,18 +70,18 @@ export default function ScenarioManager({ onClose }: Props) {
 		outcome: '',
 	};
 
-	// Returns next available code for a given core_scenario, e.g. "bomb-11"
+	// Returns next available code e.g. "BT01", "LF03"
 	const getNextCode = (coreScenario: string): string => {
-		const prefix = CODE_PREFIX[coreScenario] || coreScenario;
+		const prefix = CODE_PREFIX[coreScenario] || coreScenario.slice(0, 2).toUpperCase();
 		const existing = scenarios
 			.filter(s => s.core_scenario === coreScenario)
 			.map(s => {
-				const parts = s.scenario_code.split('-');
-				return parseInt(parts[parts.length - 1], 10);
+				const digits = s.scenario_code.replace(/^[A-Za-z]+/, '');
+				return parseInt(digits, 10);
 			})
 			.filter(n => !isNaN(n));
 		const next = existing.length > 0 ? Math.max(...existing) + 1 : 1;
-		return `${prefix}-${String(next).padStart(2, '0')}`;
+		return `${prefix}${String(next).padStart(2, '0')}`;
 	};
 
 	// Helper: when core_scenario changes, sync category and auto-increment code in create mode
