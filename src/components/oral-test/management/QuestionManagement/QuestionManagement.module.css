@@ -427,28 +427,33 @@
 }
 
 .difficulty1 {
-	background: rgba(34, 197, 94, 0.2);
-	color: white;
+	background: rgba(34, 197, 94, 0.25);
+	color: #4ade80;
+	border: 1px solid rgba(34, 197, 94, 0.5);
 }
 
 .difficulty2 {
-	background: rgba(59, 130, 246, 0.2);
-	color: white;
+	background: rgba(59, 130, 246, 0.25);
+	color: #60a5fa;
+	border: 1px solid rgba(59, 130, 246, 0.5);
 }
 
 .difficulty3 {
-	background: rgba(245, 158, 11, 0.2);
-	color: white;
+	background: rgba(234, 179, 8, 0.25);
+	color: #facc15;
+	border: 1px solid rgba(234, 179, 8, 0.5);
 }
 
 .difficulty4 {
-	background: rgba(239, 68, 68, 0.2);
-	color: white;
+	background: rgba(249, 115, 22, 0.25);
+	color: #fb923c;
+	border: 1px solid rgba(249, 115, 22, 0.5);
 }
 
 .difficulty5 {
-	background: rgba(220, 38, 38, 0.2);
-	color: white;
+	background: rgba(239, 68, 68, 0.25);
+	color: #f87171;
+	border: 1px solid rgba(239, 68, 68, 0.5);
 }
 
 /* Question preview card */
@@ -545,6 +550,47 @@
 	margin: 0;
 	cursor: pointer;
 	user-select: none;
+}
+
+/* Import loading overlay */
+.importOverlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 3000;
+}
+
+.importOverlayContent {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1.25rem;
+}
+
+.importOverlayLogo {
+	width: 350px;
+	height: 350px;
+	object-fit: contain;
+}
+
+.importOverlayContent p {
+	color: #e8e9ed;
+	font-size: 1.5rem;
+	font-weight: bold;
+	margin: 0;
+	text-align: center;
+}
+
+.importOverlayContent small {
+	color: #a0aec0;
+	font-size: 0.95rem;
+	text-align: center;
 }
 
 @keyframes fadeIn {

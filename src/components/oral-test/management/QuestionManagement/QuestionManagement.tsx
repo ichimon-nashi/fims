@@ -13,7 +13,7 @@ interface ImportedQuestion {
 	question_category: string;
 	question_title: string;
 	question_chapter: string;
-	question_page: number;
+	question_page: string;
 	question_line: string;
 	difficulty_level: number;
 }
@@ -88,6 +88,7 @@ const QuestionManagement = () => {
 	);
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [selectedQuestions, setSelectedQuestions] = useState<string[]>([]);
+	const [isImporting, setIsImporting] = useState(false);
 	
 	// NEW: Add current page state for pagination preservation
 	const [currentPage, setCurrentPage] = useState(1);
@@ -478,7 +479,7 @@ ${errorMessages}`);
 
 	const handleImportExcel = async (file: File) => {
 		try {
-			// Wait for XLSX to load if not already loaded
+			setIsImporting(true);
 			if (!XLSX) {
 				const xlsxModule = await import("xlsx");
 				XLSX = xlsxModule;
@@ -498,17 +499,22 @@ ${errorMessages}`);
 			// Validate and transform imported data
 			const importedQuestions = jsonData.map((row: ExcelRowData, index: number): ImportedQuestion => {
 				// FIXED: Handle multiple column name formats (both display names and database field names)
+				// Normalize row keys by trimming whitespace — Excel sometimes adds spaces to headers
+				const normalizedRow: ExcelRowData = {};
+				for (const key of Object.keys(row)) {
+					normalizedRow[key.trim()] = row[key];
+				}
 				const getFieldValue = (
-					row: ExcelRowData,
+					_row: ExcelRowData,
 					...possibleNames: string[]
 				): any => {
 					for (const name of possibleNames) {
 						if (
-							row[name] !== undefined &&
-							row[name] !== null &&
-							row[name] !== ""
+							normalizedRow[name] !== undefined &&
+							normalizedRow[name] !== null &&
+							normalizedRow[name] !== ""
 						) {
-							return row[name];
+							return normalizedRow[name];
 						}
 					}
 					return undefined;
@@ -538,24 +544,26 @@ ${errorMessages}`);
 						"chapter",
 						"CHAPTER"
 					),
-					question_page:
-						parseInt(
-							getFieldValue(
-								row,
-								"Page",
-								"question_page",
-								"page",
-								"PAGE"
-							)
-						) || 1,
-					question_line:
-						getFieldValue(
+					question_page: (() => {
+						const val = getFieldValue(
 							row,
-							"Line",
-							"question_line",
-							"line",
-							"LINE"
-						)?.toString() || "1",
+							"Page",
+							"question_page",
+							"page",
+							"PAGE"
+						);
+						return val !== undefined && val !== null ? String(val) : "1";
+					})(),
+					question_line: (() => {
+							const val = getFieldValue(
+								row,
+								"Line",
+								"question_line",
+								"line",
+								"LINE"
+							);
+							return val !== undefined && val !== null ? String(val) : "1";
+						})(),
 					// FIXED: Handle difficulty level from import if available
 					difficulty_level:
 						parseInt(
@@ -612,8 +620,8 @@ ${errorMessages}`);
 						errors.push(`Row ${rowNum}: Question Title is required`);
 					if (!question.question_chapter)
 						errors.push(`Row ${rowNum}: Chapter is required`);
-					if (!question.question_page || question.question_page < 1)
-						errors.push(`Row ${rowNum}: Valid Page number is required`);
+					if (!question.question_page || question.question_page.trim() === "")
+						errors.push(`Row ${rowNum}: Page is required`);
 					if (!question.question_line || question.question_line.trim() === "")
 						errors.push(`Row ${rowNum}: Line reference is required`);
 				}
@@ -716,6 +724,8 @@ ${errorMessages}`);
 			setError(
 				"Failed to process Excel file. Please check the format and ensure it's a valid Excel file."
 			);
+		} finally {
+			setIsImporting(false);
 		}
 	};
 
@@ -816,6 +826,19 @@ ${errorMessages}`);
 
 	return (
 		<div className={styles.questionManagement}>
+			{isImporting && (
+				<div className={styles.importOverlay}>
+					<div className={styles.importOverlayContent}>
+						<img
+							src="/K-dogmatic.png"
+							alt="Loading"
+							className={styles.importOverlayLogo}
+						/>
+						<p>📄 Importing questions...</p>
+						<small>Please wait, do not close this page</small>
+					</div>
+				</div>
+			)}
 			<div className={styles.header}>
 				<h1> </h1>
 				<div className={styles.actions}>
@@ -837,6 +860,7 @@ ${errorMessages}`);
 						onChange={(e) => {
 							const file = e.target.files?.[0];
 							if (file) handleImportExcel(file);
+							e.target.value = "";
 						}}
 						style={{ display: "none" }}
 						id="import-excel"
@@ -1045,12 +1069,7 @@ const QuestionForm = ({
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
-		// Convert page to number if it's not empty
-		const submitData = {
-			...formData,
-			question_page: formData.question_page ? parseInt(formData.question_page.toString()) || 1 : 1,
-		};
-		onSave(submitData);
+		onSave(formData);
 	};
 
 	const categories = QUESTION_CATEGORIES;
@@ -1117,9 +1136,8 @@ const QuestionForm = ({
 						<div className={styles.formGroup}>
 							<label className={styles.formLabel}>Page *</label>
 							<input
-								type="number"
+								type="text"
 								className={styles.formInput}
-								min="1"
 								value={formData.question_page}
 								onChange={(e) =>
 									setFormData((prev) => ({
@@ -1128,7 +1146,7 @@ const QuestionForm = ({
 									}))
 								}
 								required
-								placeholder="Enter page number"
+								placeholder="e.g., 3 or 3.5/4.5"
 							/>
 						</div>
 
