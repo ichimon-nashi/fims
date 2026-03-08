@@ -161,15 +161,9 @@ export async function POST(request: NextRequest) {
 			}, { status: 404 });
 		}
 
-		// Remove difficulty level from response (security)
-		const sanitizedQuestions = uniqueQuestions.map((question: any) => {
-			const { difficulty_level, ...questionWithoutDifficulty } = question;
-			return questionWithoutDifficulty;
-		});
+		console.log("Returning questions:", uniqueQuestions.length);
 
-		console.log("Returning sanitized questions:", sanitizedQuestions.length);
-
-		return NextResponse.json(sanitizedQuestions);
+		return NextResponse.json(uniqueQuestions);
 
 	} catch (error: any) {
 		console.error("Get filtered questions error:", error);
