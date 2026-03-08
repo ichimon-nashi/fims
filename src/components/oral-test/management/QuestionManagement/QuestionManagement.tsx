@@ -729,6 +729,35 @@ ${errorMessages}`);
 		}
 	};
 
+	const handleDownloadTemplate = async () => {
+		if (!XLSX) {
+			const xlsxModule = await import("xlsx");
+			XLSX = xlsxModule;
+		}
+		const templateData = [
+			{
+				"Category": "",
+				"Question Title": "",
+				"Chapter": "",
+				"Page": "",
+				"Line": "",
+				"Difficulty Level": "",
+			},
+		];
+		const ws = XLSX.utils.json_to_sheet(templateData);
+		ws["!cols"] = [
+			{ wch: 20 },
+			{ wch: 60 },
+			{ wch: 15 },
+			{ wch: 10 },
+			{ wch: 20 },
+			{ wch: 16 },
+		];
+		const wb = XLSX.utils.book_new();
+		XLSX.utils.book_append_sheet(wb, ws, "Questions");
+		XLSX.writeFile(wb, "questions_import_template.xlsx");
+	};
+
 	const columns = [
 		{
 			key: "question_number",
@@ -868,6 +897,14 @@ ${errorMessages}`);
 					<label htmlFor="import-excel" className="btn btn-secondary">
 						{buttonText.importText}
 					</label>
+					{currentUser?.employee_id === 'admin' && (
+						<button
+							className="btn btn-secondary"
+							onClick={handleDownloadTemplate}
+						>
+							📋 Template
+						</button>
+					)}
 					{selectedQuestions.length > 0 && (
 						<button
 							className="btn btn-danger"

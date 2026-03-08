@@ -72,6 +72,7 @@ const UserManagement = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
 	const [successMessage, setSuccessMessage] = useState("");
+	const [isImporting, setIsImporting] = useState(false);
 	const [editingUser, setEditingUser] = useState<User | null>(null);
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
@@ -307,6 +308,7 @@ const UserManagement = () => {
 
 	const handleImportExcel = async (file: File) => {
 		try {
+			setIsImporting(true);
 			const data = await file.arrayBuffer();
 			const workbook = XLSX.read(data);
 			const worksheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -431,6 +433,8 @@ const UserManagement = () => {
 		} catch (err) {
 			console.error("Import processing error:", err);
 			setError("Failed to process Excel file. Please check the format.");
+		} finally {
+			setIsImporting(false);
 		}
 	};
 
@@ -617,6 +621,19 @@ const UserManagement = () => {
 
 	return (
 		<div className={styles.userManagement}>
+			{isImporting && (
+				<div className={styles.importOverlay}>
+					<div className={styles.importOverlayContent}>
+						<img
+							src="/K-dogmatic.png"
+							alt="Loading"
+							className={styles.importOverlayLogo}
+						/>
+						<p>📄 Importing users...</p>
+						<small>Please wait, do not close this page</small>
+					</div>
+				</div>
+			)}
 			<div className={styles.header}>
 				<h1> </h1>
 				{/* Show admin status if current user is admin */}
@@ -646,6 +663,7 @@ const UserManagement = () => {
 						onChange={(e) => {
 							const file = e.target.files?.[0];
 							if (file) handleImportExcel(file);
+							e.target.value = "";
 						}}
 						style={{ display: "none" }}
 						id="import-excel"
