@@ -16,31 +16,31 @@ const OralTestNavigation = ({ currentPath }: OralTestNavigationProps) => {
   const navigationItems = [
     {
       path: '/oral-test/dashboard',
-      label: 'Dashboard',
+      label: '儀表板',
       icon: '🏠',
       page: 'dashboard',
     },
     {
       path: '/oral-test/users',
-      label: 'Users',
+      label: '人員管理',
       icon: '👥',
       page: 'users',
     },
     {
       path: '/oral-test/questions',
-      label: 'Questions',
+      label: '題庫管理',
       icon: '📚',
       page: 'questions',
     },
     {
       path: '/oral-test/test',
-      label: 'Conduct Test',
+      label: '執行測驗',
       icon: '📝',
       page: 'test',
     },
     {
       path: '/oral-test/results',
-      label: 'Results',
+      label: '成績',
       icon: '📊',
       page: 'results',
     },

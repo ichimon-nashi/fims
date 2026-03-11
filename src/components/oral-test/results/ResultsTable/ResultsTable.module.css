@@ -204,7 +204,7 @@
 	}
 
 	.statsCards {
-		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
 		gap: 1rem;
 	}
 
@@ -238,5 +238,15 @@
 	
 	.questionId {
 		font-size: 0.65rem;
+	}
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+	.statsCards {
+		grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+		gap: 1rem;
+	}
+	.statContent p {
+		font-size: 1.5rem;
 	}
 }
