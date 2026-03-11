@@ -120,7 +120,7 @@ function OralTestDashboardContent() {
         gap: '1rem'
       }}>
         <div className="loading-spinner"></div>
-        <p>Loading...</p>
+        <p style={{ color: '#e8e9ed' }}>Loading...</p>
       </div>
     );
   }
@@ -217,6 +217,20 @@ function OralTestDashboardContent() {
             padding: 0.75rem 1rem;
           }
         }
+
+        /* Tablet portrait: force 3 columns for stats cards */
+        @media (min-width: 768px) and (max-width: 1024px) {
+          .stats-cards-grid {
+            grid-template-columns: repeat(3, 1fr) !important;
+          }
+        }
+
+        /* Mobile: stack stats cards */
+        @media (max-width: 767px) {
+          .stats-cards-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
       `}</style>
       <div className="test-page-container">
         <div className="test-page-content fade-in">
@@ -249,12 +263,12 @@ function OralTestDashboardContent() {
                   height: '40px',
                   borderWidth: '4px'
                 }}></div>
-                <p>Loading dashboard data...</p>
+                <p style={{ color: '#e8e9ed' }}>Loading dashboard data...</p>
               </div>
             ) : dashboardData ? (
               <div style={{ marginTop: '2rem' }}>
                 {/* Stats Cards */}
-                <div style={{
+                <div className="stats-cards-grid" style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
                   gap: '1.5rem',
