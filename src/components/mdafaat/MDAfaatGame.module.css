@@ -18,7 +18,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	overflow-x: auto;
+	overflow: hidden;
 	min-height: calc(100vh - 200px);
 	background: 
 		radial-gradient(ellipse at center, rgba(0, 100, 0, 0.3) 0%, transparent 70%),
@@ -872,6 +872,124 @@
 	padding: 2rem 1.5rem;
 	box-sizing: border-box;
 	overflow-y: auto;
+}
+
+/* ── Pass/Fail Result Panel ─────────────────────────────────────── */
+.resultPanel {
+	background: rgba(15, 23, 42, 0.9);
+	border: 2px solid rgba(74, 158, 255, 0.3);
+	border-radius: 1rem;
+	padding: 1.5rem;
+	width: 100%;
+	max-width: 700px;
+	box-sizing: border-box;
+}
+
+.resultPanelTitle {
+	color: #e2e8f0;
+	font-size: 1.25rem;
+	font-weight: 700;
+	margin: 0 0 0.25rem 0;
+	text-align: center;
+}
+
+.resultPanelHint {
+	color: #64748b;
+	font-size: 0.8rem;
+	text-align: center;
+	margin: 0 0 1rem 0;
+}
+
+.resultMemberList {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	margin-bottom: 1.25rem;
+}
+
+.resultMemberBtn {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.75rem 1rem;
+	border-radius: 0.625rem;
+	border: 2px solid transparent;
+	cursor: pointer;
+	transition: all 0.15s;
+	text-align: left;
+	width: 100%;
+}
+
+.resultPass {
+	background: rgba(22, 163, 74, 0.15);
+	border-color: rgba(22, 163, 74, 0.4);
+}
+
+.resultPass:hover {
+	background: rgba(22, 163, 74, 0.22);
+	border-color: rgba(22, 163, 74, 0.6);
+}
+
+.resultRedo {
+	background: rgba(239, 68, 68, 0.15);
+	border-color: rgba(239, 68, 68, 0.45);
+}
+
+.resultRedo:hover {
+	background: rgba(239, 68, 68, 0.22);
+	border-color: rgba(239, 68, 68, 0.65);
+}
+
+.resultMemberName {
+	color: #e2e8f0;
+	font-weight: 600;
+	font-size: 0.95rem;
+	flex: 1;
+}
+
+.resultMemberEid {
+	color: #64748b;
+	font-size: 0.8rem;
+	font-family: monospace;
+}
+
+.resultBadge {
+	font-size: 0.82rem;
+	font-weight: 700;
+	padding: 0.2rem 0.65rem;
+	border-radius: 1rem;
+	min-width: 4.5rem;
+	text-align: center;
+}
+
+.resultPass .resultBadge {
+	background: rgba(22, 163, 74, 0.25);
+	color: #4ade80;
+	border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+.resultRedo .resultBadge {
+	background: rgba(239, 68, 68, 0.25);
+	color: #f87171;
+	border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+.confirmResultBtn {
+	width: 100%;
+	padding: 0.75rem;
+	background: linear-gradient(135deg, #3b82f6, #2563eb);
+	color: white;
+	border: none;
+	border-radius: 0.5rem;
+	font-weight: 700;
+	font-size: 0.95rem;
+	cursor: pointer;
+	transition: all 0.15s;
+}
+
+.confirmResultBtn:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
 .completeActions {

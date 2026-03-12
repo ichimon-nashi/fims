@@ -32,6 +32,9 @@ interface TeamFormationProps {
 	onStartGame: (teams: Array<{
 		name: string;
 		coreScenario?: string;
+		aircraftType?: string;
+		aircraftNumber?: number;
+		pendingGroupId?: number;
 		members: Array<{
 			userId: string;
 			name: string;
@@ -739,55 +742,41 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 			alert('請先分組！');
 			return;
 		}
-		
+
 		if (!confirm(`確定要儲存 ${selectedDate} 的分組？`)) {
 			return;
 		}
-		
+
 		try {
 			const token = localStorage.getItem("token");
-			if (!token) {
-				alert("請先登入");
-				return;
-			}
-			
-			// Flatten teams to individual records
-			const sessionsToSave = teams.flatMap(team => 
-				team.members.map(member => ({
-					training_date: selectedDate,
-					employee_id: member.employee_id,
-					group_type: team.aircraftType,
-					group_number: team.aircraftNumber,
-					core_scenario: team.coreScenario || 'unassigned',
-					team_members: team.members.map(m => m.employee_id)
-				}))
-			);
-			
-			const response = await fetch('/api/mdafaat/training-sessions', {
+			if (!token) { alert("請先登入"); return; }
+
+			const groups = teams.map(team => ({
+				group_type:      team.aircraftType,
+				group_number:    team.aircraftNumber,
+				core_scenario:   team.coreScenario || null,
+				aircraft_type:   team.aircraftType,
+				aircraft_number: team.aircraftNumber,
+				members:         team.members.map(m => ({
+					userId:     m.id,
+					name:       m.full_name,
+					employeeId: m.employee_id,
+					rank:       m.rank,
+				})),
+			}));
+
+			const response = await fetch('/api/mdafaat/pending-groups', {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'Authorization': `Bearer ${token}`
-				},
-				body: JSON.stringify({ sessions: sessionsToSave })
+				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+				body: JSON.stringify({ groups, training_date: selectedDate }),
 			});
-			
+
 			if (!response.ok) {
-				throw new Error('Failed to save groups');
+				const errBody = await response.json().catch(() => ({}));
+				throw new Error(errBody.error || `HTTP ${response.status}`);
 			}
-			
+
 			alert(`✅ 成功儲存 ${teams.length} 組！`);
-			
-			// Reload training sessions - include today (use next day as before filter)
-			const nextDay = new Date(selectedDate);
-			nextDay.setDate(nextDay.getDate() + 1);
-			const nextDayStr = nextDay.toISOString().split('T')[0];
-			const reloadResponse = await fetch(`/api/mdafaat/training-sessions?before=${nextDayStr}`);
-			if (reloadResponse.ok) {
-				const data = await reloadResponse.json();
-				const userIds = new Set(data.map((d: any) => d.employee_id));
-				setTrainedUserIds(userIds);
-			}
 		} catch (error) {
 			console.error('Error saving groups:', error);
 			alert('❌ 儲存失敗！');
@@ -796,51 +785,42 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 
 	const loadGroupsForDate = async (date: string) => {
 		try {
-			const response = await fetch(`/api/mdafaat/training-sessions?date=${date}`);
+			const response = await fetch(`/api/mdafaat/pending-groups?date=${date}`);
 			if (!response.ok) return;
-			
-			const sessions = await response.json();
-			if (!sessions || sessions.length === 0) {
+
+			const pendingGroups = await response.json();
+			if (!pendingGroups || pendingGroups.length === 0) {
 				setTeams([]);
 				setShowTeams(false);
 				return;
 			}
-			
-			// Group sessions by group_type and group_number
-			const groupMap = new Map<string, any>();
-			
-			sessions.forEach((session: any) => {
-				const key = `${session.group_type}-${session.group_number}`;
-				if (!groupMap.has(key)) {
-					groupMap.set(key, {
-						id: key.toLowerCase(),
-						aircraftType: session.group_type,
-						aircraftNumber: session.group_number,
-						coreScenario: session.core_scenario,
-						memberIds: new Set(session.team_members)
-					});
-				}
-			});
-			
-			// Convert to Team objects with actual user data
+
+			// Each pending group row has a members JSONB array with full member objects.
+			// Reconstruct Team objects by matching employeeId against allUsers.
 			const loadedTeams: Team[] = [];
-			for (const [_, groupData] of groupMap) {
-				const members = allUsers.filter(u => groupData.memberIds.has(u.employee_id));
+			for (const pg of pendingGroups) {
+				const memberIds = new Set(
+					(pg.members as any[]).map((m: any) => String(m.employeeId ?? m.employee_id ?? m.userId))
+				);
+				const members = allUsers.filter(u => memberIds.has(String(u.employee_id)));
 				if (members.length > 0) {
 					loadedTeams.push({
-						id: groupData.id,
-						aircraftType: groupData.aircraftType,
-						aircraftNumber: groupData.aircraftNumber,
-						coreScenario: groupData.coreScenario,
-						members
+						id: `${pg.group_type}-${pg.group_number}`.toLowerCase(),
+						aircraftType: pg.aircraft_type ?? pg.group_type,
+						aircraftNumber: pg.aircraft_number ?? pg.group_number,
+						coreScenario: pg.core_scenario,
+						pendingGroupId: pg.id,
+						members,
 					});
 				}
 			}
-			
+
 			if (loadedTeams.length > 0) {
 				setTeams(loadedTeams);
 				setShowTeams(true);
-				console.log(`Loaded ${loadedTeams.length} groups for ${date}`);
+			} else {
+				setTeams([]);
+				setShowTeams(false);
 			}
 		} catch (error) {
 			console.error('Error loading groups:', error);
@@ -1458,6 +1438,9 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 							const gameTeams = teams.map(team => ({
 								name: `${team.aircraftType} ${team.aircraftNumber}`,
 								coreScenario: team.coreScenario,
+								aircraftType: team.aircraftType,
+								aircraftNumber: team.aircraftNumber,
+								pendingGroupId: team.pendingGroupId,
 								members: team.members.map(member => ({
 									userId: member.id,
 									name: member.full_name,

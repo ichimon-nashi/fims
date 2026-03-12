@@ -17,11 +17,11 @@ export async function GET(request: NextRequest) {
 		.order('training_date', { ascending: false });
 	
 	if (before) {
-		query = query.lt('training_date', before);
+		query = query.lte('training_date', before);
 	}
 	
 	if (after) {
-		query = query.gt('training_date', after);
+		query = query.gte('training_date', after);
 	}
 	
 	if (date) {
@@ -38,7 +38,9 @@ export async function GET(request: NextRequest) {
 	return NextResponse.json(data || []);
 }
 
-// POST: Save training sessions — pure INSERT, no delete, allows multiple sessions per date
+// POST: Save training sessions — pure INSERT, one row per member per group.
+// CRITICAL: Do NOT deduplicate by employee_id. A person may intentionally appear
+// in multiple groups (duplicate/overflow scenario) and every group row must be saved.
 export async function POST(request: NextRequest) {
 	const token = request.headers.get("authorization")?.replace("Bearer ", "");
 	if (!token) {
@@ -58,44 +60,35 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ error: "Invalid data format" }, { status: 400 });
 		}
 		
-		// Group by employee_id to handle people in multiple groups
-		const employeeGroups = new Map<string, any>();
-		
-		sessions.forEach((session: any) => {
-			const key = session.employee_id;
-			if (!employeeGroups.has(key)) {
-				employeeGroups.set(key, {
-					training_date: session.training_date,
-					employee_id: session.employee_id,
-					groups: [],
-					team_members: session.team_members,
-					created_by: user.employee_id,
-					created_at: new Date().toISOString()
-				});
-			}
-			
-			employeeGroups.get(key)!.groups.push({
-				group_type: session.group_type,
-				group_number: session.group_number,
-				core_scenario: session.core_scenario
-			});
-		});
-		
-		const sessionsToSave = Array.from(employeeGroups.values()).map(emp => ({
-			training_date: emp.training_date,
-			employee_id: emp.employee_id,
-			group_type: emp.groups[0].group_type,
-			group_number: emp.groups[0].group_number,
-			core_scenario: emp.groups[0].core_scenario,
-			team_members: emp.team_members,
-			created_by: emp.created_by,
-			created_at: emp.created_at,
-			all_groups: emp.groups
+		// Insert every session row exactly as provided — no grouping or deduplication.
+		// Each row represents one person in one group. If someone is in two groups,
+		// they have two rows with different group_type/group_number values.
+		const sessionsToSave = sessions.map((session: any) => ({
+			training_date: session.training_date,
+			employee_id: String(session.employee_id),
+			group_type: session.group_type,
+			group_number: session.group_number,
+			core_scenario: session.core_scenario,
+			team_members: session.team_members,
+			all_groups: [{ group_type: session.group_type, group_number: session.group_number, core_scenario: session.core_scenario }],
+			// ScenarioMode fields — only included when present (TeamFormation saves omit these)
+			...(session.result        != null && { result:        session.result }),
+			...(session.is_redo       != null && { is_redo:       session.is_redo }),
+			...(session.elapsed_time  != null && { elapsed_time:  session.elapsed_time }),
+			...(session.instructor    != null && { instructor:    session.instructor }),
+			...(session.flight_info   != null && { flight_info:   session.flight_info }),
+			...(session.scenario_path != null && { scenario_path: session.scenario_path }),
+			...(session.conditions    != null && { conditions:    session.conditions }),
+			created_by: user.employee_id,
+			created_at: new Date().toISOString(),
 		}));
 		
 		const supabase = createServiceClient();
-		
-		// Pure INSERT — no delete before insert, allows multiple sessions per date
+
+		// Plain INSERT — each ScenarioMode completion is a new row.
+		// Same group training twice on the same date correctly creates two rows.
+		// (Unique constraint on training_date+employee_id+group_number was dropped
+		//  in migrate_pending_groups.sql)
 		const { data, error } = await supabase
 			.from('mdafaat_training_sessions')
 			.insert(sessionsToSave)

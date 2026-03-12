@@ -19,8 +19,7 @@ const CORE_SCENARIO_LABELS: Record<string, string> = {
 	planned_evacuation: "客艙準備程序 Cabin Preparation",
 };
 
-// ─── Training criteria — all 13 categories from docx ─────────────────────────
-// Ordered for visual balance: 5 + 4 + 4 in the chips bar
+// ─── Training criteria —  
 type CriteriaEntry = { ref: string; icon: string; shortLabel: string; items: string[] };
 const CRITERIA_DATA: Record<string, CriteriaEntry> = {
 	cpp: {
@@ -333,6 +332,9 @@ interface Props {
 	teams: Array<{
 		name: string;
 		coreScenario?: string;
+		aircraftType?: string;
+		aircraftNumber?: number;
+		pendingGroupId?: number;
 		members: Array<{
 			userId: string;
 			name: string;
@@ -342,9 +344,12 @@ interface Props {
 		}>;
 	}>;
 	onBack: () => void;
+	isRedoMode?: boolean;
+	/** Called with array of {employeeId, result} when scenario completes — for redo flow */
+	onSessionComplete?: (results: Array<{ employeeId: string; result: 'pass' | 'redo' }>) => void;
 }
 
-const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
+const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionComplete }) => {
 	// Data
 	const [allCards, setAllCards] = useState<MdafaatCard[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -380,9 +385,21 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
 	const [complete, setComplete] = useState(false);
 	const [showEndButton, setShowEndButton] = useState(false);
 
+	// Pass/fail results — keyed by employeeId, default 'pass'
+	const [memberResults, setMemberResults] = useState<Record<string, 'pass' | 'redo'>>({});
+
 	// Timer
 	const [elapsedTime, setElapsedTime] = useState(0);
 	const [timerRunning, setTimerRunning] = useState(false);
+
+	// Tracks which team indices have already been saved — prevents double-saves
+	// when instructor clicks 儲存結果 then nextTeam/Return to Formation.
+	// Reset when the teams prop changes (e.g. switching from normal → redo mode)
+	// so redo groups starting at index 0 are not blocked by the previous session.
+	const savedTeamIndices = React.useRef<Set<number>>(new Set());
+	useEffect(() => {
+		savedTeamIndices.current = new Set();
+	}, [teams]);
 
 	// Computed
 	const team = teams[currentTeam];
@@ -529,27 +546,30 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
 	// Shuffle (EXACT animation from production)
 	const handleShuffle = async () => {
 		setShuffling(true);
-		
-		// Random conditions
+
+		// Pre-calculate conditions and flight — set AFTER animation so layout
+		// stays stable during the shuffle (setting conditions immediately would
+		// render the bars and collapse the gameArea mid-animation)
 		const timeOfDay = (["morning", "midday", "night"] as const)[Math.floor(Math.random() * 3)];
 		const cond = {
 			time: timeOfDay,
 			full: Math.random() > 0.5,
-			infants: Math.random() > 0.75,
-			specialPax: Math.random() > 0.75 ? getRandomSpecialPax() : null,
+			infants: Math.random() > 0.70,
+			specialPax: Math.random() > 0.70 ? getRandomSpecialPax() : null,
 		};
-		setConditions(cond);
-
-		// Determine flight from team leader's base
 		const sortedForBase = [...team.members].sort((a, b) => {
 			const rd = getRankOrder(a.rank) - getRankOrder(b.rank);
 			return rd !== 0 ? rd : parseInt(a.employeeId) - parseInt(b.employeeId);
 		});
 		const base = sortedForBase[0] ? getBaseFromEmployeeId(sortedForBase[0].employeeId) : 'KHH';
-		setFlightInfo(getRandomFlight(base, timeOfDay));
+		const flight = getRandomFlight(base, timeOfDay);
 
-		// Wait for shuffle animation (1150ms)
+		// Wait for shuffle animation (1150ms) BEFORE revealing conditions
 		await new Promise(r => setTimeout(r, 1150));
+
+		// Now set conditions — bars appear after animation completes
+		setConditions(cond);
+		setFlightInfo(flight);
 
 		// Load all scenario cards
 		const cards = [...allCards].sort((a, b) => a.id - b.id);
@@ -612,56 +632,106 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
 		}
 	};
 
-	// End scenario
+	// End scenario — initialise all members as 'pass', then save
 	const handleEndScenario = async () => {
+		// Pre-populate all members as pass so the UI shows the toggles
+		const initial: Record<string, 'pass' | 'redo'> = {};
+		team.members.forEach(m => { initial[m.employeeId] = 'pass'; });
+		setMemberResults(initial);
 		setComplete(true);
 		setTimerRunning(false);
-		await saveTrainingSession();
 	};
 
-	// Save training session
-	const saveTrainingSession = async () => {
+	const toggleMemberResult = (employeeId: string) => {
+		setMemberResults(prev => ({
+			...prev,
+			[employeeId]: prev[employeeId] === 'pass' ? 'redo' : 'pass',
+		}));
+	};
+
+	// Save training session — called explicitly by instructor after setting pass/fail
+	const saveTrainingSession = async (resultsOverride?: Record<string, 'pass' | 'redo'>) => {
+		// Guard: skip if this team index was already saved
+		if (savedTeamIndices.current.has(currentTeam)) {
+			console.log(`Team ${currentTeam} already saved — skipping duplicate save`);
+			return;
+		}
+		savedTeamIndices.current.add(currentTeam);
+		const results = resultsOverride ?? memberResults;
 		try {
 			const token = localStorage.getItem("token");
-			const session = {
+			// Save one session row per member so each gets their own result
+			const sessions = team.members.map(m => ({
 				training_date: new Date().toISOString().split('T')[0],
-				employee_id: member.employeeId,
-				group_type: flightInfo?.aircraftType || 'ATR',
-				group_number: currentTeam + 1,
+				employee_id: m.employeeId,
+				group_type: team.aircraftType || flightInfo?.aircraftType || 'ATR',
+				group_number: team.aircraftNumber ?? (currentTeam + 1),
 				core_scenario: team.coreScenario,
 				flight_info: flightInfo,
-				team_members: team.members.map(m => ({
-					userId: m.userId,
-					name: m.name,
-					employeeId: m.employeeId,
-					rank: m.rank
+				team_members: team.members.map(tm => ({
+					userId: tm.userId,
+					name: tm.name,
+					employeeId: tm.employeeId,
+					rank: tm.rank,
 				})),
 				scenario_path: history.map(h => ({
 					code: h.card.code,
 					title: h.card.title,
-					skipped: h.skipped
+					description: h.card.description,
+					skipped: h.skipped,
 				})),
 				conditions,
 				elapsed_time: elapsedTime,
-				instructor: instructorName
-			};
+				instructor: instructorName,
+				result: results[m.employeeId] ?? 'pass',
+				is_redo: isRedoMode ?? false,
+			}));
 
-			await fetch('/api/mdafaat/training-sessions', {
+			const saveRes = await fetch('/api/mdafaat/training-sessions', {
 				method: 'POST',
 				headers: {
 					'Authorization': `Bearer ${token}`,
-					'Content-Type': 'application/json'
+					'Content-Type': 'application/json',
 				},
-				body: JSON.stringify({ sessions: [session] })
+				body: JSON.stringify({ sessions }),
 			});
+			if (!saveRes.ok) {
+				const errBody = await saveRes.json().catch(() => ({}));
+				console.error('❌ Save failed:', saveRes.status, errBody);
+			} else {
+				console.log('✅ Saved team', currentTeam, 'isRedo:', isRedoMode, 'sessions:', sessions.length);
+			}
+
+			// Delete the pending group now that training is complete
+			if (team.pendingGroupId) {
+				try {
+					await fetch(`/api/mdafaat/pending-groups?id=${team.pendingGroupId}`, {
+						method: 'DELETE',
+						headers: { 'Authorization': `Bearer ${token}` },
+					});
+				} catch (e) {
+					console.warn('Could not delete pending group:', e);
+				}
+			}
+
+			// Notify parent (used by redo flow to collect redo students)
+			if (onSessionComplete) {
+				onSessionComplete(
+					team.members.map(m => ({
+						employeeId: m.employeeId,
+						result: results[m.employeeId] ?? 'pass',
+					}))
+				);
+			}
 		} catch (error) {
 			console.error('Error saving training session:', error);
 		}
 	};
 
-	// Next team
-	const nextTeam = () => {
+	// Next team — auto-save with current results (all-pass by default) before advancing
+	const nextTeam = async () => {
 		if (currentTeam < teams.length - 1) {
+			await saveTrainingSession();
 			setCurrentTeam(currentTeam + 1);
 			resetGame();
 		}
@@ -681,6 +751,7 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
 		setElapsedTime(0);
 		setTimerRunning(false);
 		setPendingOptional(null);
+		setMemberResults({});
 	};
 
 	if (loading) {
@@ -711,6 +782,11 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
 					<span style={{ color: '#4ade80', fontWeight: 700, fontSize: '1.25rem' }}>
 						⏱️ {formatTime(elapsedTime)}
 					</span>
+					{team.coreScenario && (
+						<span style={{ color: '#fbbf24', fontWeight: 700, fontSize: '0.95rem', background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: '0.375rem', padding: '0.2rem 0.65rem', letterSpacing: '0.02em' }}>
+							🎯 {CORE_SCENARIO_LABELS[team.coreScenario] || team.coreScenario}
+						</span>
+					)}
 					{flightInfo && (
 						<span style={{ color: '#94a3b8', fontSize: '0.9rem' }}>
 							✈️ {flightInfo.flightNo}&nbsp;&nbsp;{flightInfo.departure} → {flightInfo.arrival}&nbsp;({flightInfo.aircraftType})
@@ -912,6 +988,42 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
 				) : complete ? (
 					/* Complete Screen */
 					<div className={styles.completeContainer}>
+
+						{/* ── Pass / Fail selector ── */}
+						<div className={styles.resultPanel}>
+							<h3 className={styles.resultPanelTitle}>
+								{isRedoMode ? '🔄 重考結果' : '✅ 訓練結果'} — {team.name}
+							</h3>
+							<p className={styles.resultPanelHint}>點擊切換通過 / 重考</p>
+							<div className={styles.resultMemberList}>
+								{sortedMembers.map(m => {
+									const result = memberResults[m.employeeId] ?? 'pass';
+									return (
+										<button
+											key={m.employeeId}
+											className={`${styles.resultMemberBtn} ${result === 'redo' ? styles.resultRedo : styles.resultPass}`}
+											onClick={() => toggleMemberResult(m.employeeId)}
+										>
+											<span className={styles.resultMemberName}>{m.name}</span>
+											<span className={styles.resultMemberEid}>{m.employeeId}</span>
+											<span className={styles.resultBadge}>
+												{result === 'pass' ? '✓ 通過' : '↺ 重考'}
+											</span>
+										</button>
+									);
+								})}
+							</div>
+							<button
+								className={styles.confirmResultBtn}
+								onClick={async () => {
+									await saveTrainingSession();
+									alert('✅ 訓練結果已儲存！');
+								}}
+							>
+								儲存結果
+							</button>
+						</div>
+
 						<div className={styles.completeActions}>
 							<h3>Scenario Complete!</h3>
 							{hasNextTeam ? (
@@ -920,7 +1032,7 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
 									Next Group
 								</button>
 							) : (
-								<button onClick={onBack} className={styles.nextBtn}>
+								<button onClick={async () => { await saveTrainingSession(); onBack(); }} className={styles.nextBtn}>
 									Return to Formation
 								</button>
 							)}
@@ -953,8 +1065,7 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
 									<strong>Scenario Path:</strong><br />
 									{history.map((h, i) => (
 										<div key={i} style={{ marginLeft: '1rem', marginBottom: '0.5rem' }}>
-											{i + 1}. <strong>{h.card.code}</strong>: {h.card.title}
-											{h.skipped && <span style={{ color: '#94a3b8' }}> (Skipped)</span>}
+											{i + 1}. <strong>{h.card.code}</strong>{h.skipped ? <span style={{ color: '#94a3b8' }}> (Skipped)</span> : null}: {h.card.description || h.card.title}
 											<br />
 										</div>
 									))}
@@ -979,7 +1090,7 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack }) => {
 								`• Infants: ${conditions.infants ? 'Yes' : 'No'}`,
 								`• Special Pax: ${conditions.specialPax ?? 'No'}`,
 								``, `Scenario Path:`,
-								...history.map((h, i) => `${i + 1}. ${h.card.code}: ${h.card.title}${h.skipped ? ' (Skipped)' : ''}`),
+								...history.map((h, i) => `${i + 1}. ${h.card.code}${h.skipped ? ' (Skipped)' : ''}: ${h.card.description || h.card.title}`),
 								``, `Time: ${formatTime(elapsedTime)}`, `Instructor: ${instructorName}`,
 							];
 							const record = lines.join('\n');
