@@ -391,15 +391,9 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 	// Timer
 	const [elapsedTime, setElapsedTime] = useState(0);
 	const [timerRunning, setTimerRunning] = useState(false);
+	const [toastMsg, setToastMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
-	// Tracks which team indices have already been saved — prevents double-saves
-	// when instructor clicks 儲存結果 then nextTeam/Return to Formation.
-	// Reset when the teams prop changes (e.g. switching from normal → redo mode)
-	// so redo groups starting at index 0 are not blocked by the previous session.
-	const savedTeamIndices = React.useRef<Set<number>>(new Set());
-	useEffect(() => {
-		savedTeamIndices.current = new Set();
-	}, [teams]);
+
 
 	// Computed
 	const team = teams[currentTeam];
@@ -649,14 +643,8 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 		}));
 	};
 
-	// Save training session — called explicitly by instructor after setting pass/fail
+	// Save training session — called on End Scenario, next group, and back navigation
 	const saveTrainingSession = async (resultsOverride?: Record<string, 'pass' | 'redo'>) => {
-		// Guard: skip if this team index was already saved
-		if (savedTeamIndices.current.has(currentTeam)) {
-			console.log(`Team ${currentTeam} already saved — skipping duplicate save`);
-			return;
-		}
-		savedTeamIndices.current.add(currentTeam);
 		const results = resultsOverride ?? memberResults;
 		try {
 			const token = localStorage.getItem("token");
@@ -767,9 +755,25 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 
 	return (
 		<div className={styles.container}>
+			{/* ── Toast ── */}
+			{toastMsg && (
+				<div style={{
+					position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)',
+					zIndex: 9999, padding: '0.6rem 1.25rem', borderRadius: '0.5rem',
+					fontWeight: 600, fontSize: '0.95rem', pointerEvents: 'none',
+					background: toastMsg.ok ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+					color: toastMsg.ok ? '#10b981' : '#ef4444',
+					border: `1px solid ${toastMsg.ok ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}`,
+				}}>
+					{toastMsg.text}
+				</div>
+			)}
 			{/* Header - EXACT from production */}
 			<div className={styles.header}>
-				<button onClick={onBack} className={styles.closeBtn} style={{ background: 'rgba(220,38,38,0.15)', borderColor: 'rgba(220,38,38,0.5)', color: '#ef4444' }}>
+				<button onClick={async () => {
+					if (gameStarted || complete) await saveTrainingSession();
+					onBack();
+				}} className={styles.closeBtn} style={{ background: 'rgba(220,38,38,0.15)', borderColor: 'rgba(220,38,38,0.5)', color: '#ef4444' }}>
 					<ArrowLeft />
 				</button>
 				<h1 className={styles.title}>客艙組員情境演練</h1>
@@ -1017,7 +1021,8 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 								className={styles.confirmResultBtn}
 								onClick={async () => {
 									await saveTrainingSession();
-									alert('✅ 訓練結果已儲存！');
+									setToastMsg({ ok: true, text: '✅ 訓練結果已儲存！' });
+									setTimeout(() => setToastMsg(null), 3000);
 								}}
 							>
 								儲存結果
@@ -1096,9 +1101,11 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 							const record = lines.join('\n');
 										
 										navigator.clipboard.writeText(record).then(() => {
-											alert("✅ Training record copied!");
+											setToastMsg({ ok: true, text: "✅ Training record copied!" });
+											setTimeout(() => setToastMsg(null), 3000);
 										}).catch(() => {
-											alert("❌ Copy failed");
+											setToastMsg({ ok: false, text: "❌ Copy failed" });
+											setTimeout(() => setToastMsg(null), 3000);
 										});
 									}}
 								>
@@ -1122,7 +1129,8 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 												URL.revokeObjectURL(url);
 											});
 										} catch {
-											alert('❌ Run: npm install html2canvas');
+											setToastMsg({ ok: false, text: '❌ Screenshot failed — check html2canvas install' });
+											setTimeout(() => setToastMsg(null), 4000);
 										}
 									}}
 								>

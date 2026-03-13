@@ -73,6 +73,12 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 	const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
 	const [trainedUserIds, setTrainedUserIds] = useState<Set<string>>(new Set());
 	const [loadingTrainingSessions, setLoadingTrainingSessions] = useState(false);
+	const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(null);
+	const [generalMsg, setGeneralMsg] = useState<{ ok: boolean; text: string } | null>(null);
+	const [confirmModal, setConfirmModal] = useState<{
+		lines: string[];
+		onConfirm: () => void;
+	} | null>(null);
 
 	// Core scenarios for assignment
 	const coreScenarios = [
@@ -739,17 +745,18 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 
 	const saveGroups = async () => {
 		if (teams.length === 0) {
-			alert('請先分組！');
-			return;
-		}
-
-		if (!confirm(`確定要儲存 ${selectedDate} 的分組？`)) {
+			setGeneralMsg({ ok: false, text: '請先分組！' });
+			setTimeout(() => setGeneralMsg(null), 3000);
 			return;
 		}
 
 		try {
 			const token = localStorage.getItem("token");
-			if (!token) { alert("請先登入"); return; }
+			if (!token) {
+				setGeneralMsg({ ok: false, text: '請先登入' });
+				setTimeout(() => setGeneralMsg(null), 3000);
+				return;
+			}
 
 			const groups = teams.map(team => ({
 				group_type:      team.aircraftType,
@@ -776,10 +783,12 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 				throw new Error(errBody.error || `HTTP ${response.status}`);
 			}
 
-			alert(`✅ 成功儲存 ${teams.length} 組！`);
+			setSaveMsg({ ok: true, text: `✅ 成功儲存 ${teams.length} 組！` });
+			setTimeout(() => setSaveMsg(null), 3000);
 		} catch (error) {
 			console.error('Error saving groups:', error);
-			alert('❌ 儲存失敗！');
+			setSaveMsg({ ok: false, text: '❌ 儲存失敗！' });
+			setTimeout(() => setSaveMsg(null), 4000);
 		}
 	};
 
@@ -827,44 +836,38 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 		}
 	};
 
-	const clearAllTrainingData = async () => {
+	const clearAllTrainingData = () => {
 		if (!canEditScenarios) {
-			alert('您沒有權限執行此操作！');
+			setGeneralMsg({ ok: false, text: '您沒有權限執行此操作！' });
+			setTimeout(() => setGeneralMsg(null), 3000);
 			return;
 		}
-		
-		if (!confirm('⚠️ 這將刪除所有訓練記錄！確定要繼續嗎？')) {
-			return;
-		}
-		
-		if (!confirm('⚠️ 最後確認：真的要刪除所有訓練資料嗎？')) {
-			return;
-		}
-		
-		try {
-			const token = localStorage.getItem("token");
-			if (!token) {
-				alert("請先登入");
-				return;
-			}
-			
-			const response = await fetch('/api/mdafaat/training-sessions', {
-				method: 'DELETE',
-				headers: {
-					'Authorization': `Bearer ${token}`
+		setConfirmModal({
+			lines: ['⚠️ 這將永久刪除所有訓練記錄！', '此操作無法復原，確定要繼續嗎？'],
+			onConfirm: async () => {
+				setConfirmModal(null);
+				try {
+					const token = localStorage.getItem("token");
+					if (!token) {
+						setGeneralMsg({ ok: false, text: '請先登入' });
+						setTimeout(() => setGeneralMsg(null), 3000);
+						return;
+					}
+					const response = await fetch('/api/mdafaat/training-sessions', {
+						method: 'DELETE',
+						headers: { 'Authorization': `Bearer ${token}` },
+					});
+					if (!response.ok) throw new Error('Failed');
+					setTrainedUserIds(new Set());
+					setGeneralMsg({ ok: true, text: '✅ 所有訓練資料已清除！' });
+					setTimeout(() => setGeneralMsg(null), 3000);
+				} catch (error) {
+					console.error('Error clearing data:', error);
+					setGeneralMsg({ ok: false, text: '❌ 清除失敗！' });
+					setTimeout(() => setGeneralMsg(null), 4000);
 				}
-			});
-			
-			if (!response.ok) {
-				throw new Error('Failed to clear data');
-			}
-			
-			setTrainedUserIds(new Set());
-			alert('✅ 所有訓練資料已清除！');
-		} catch (error) {
-			console.error('Error clearing data:', error);
-			alert('❌ 清除失敗！');
-		}
+			},
+		});
 	};
 
 	const getRankShorthand = (rank: string): string => {
@@ -880,6 +883,49 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 
 	return (
 		<div className={styles.container}>
+			{/* ── Confirm Modal (replaces browser confirm()) ── */}
+			{confirmModal && (
+				<div style={{
+					position: 'fixed', inset: 0, zIndex: 9999,
+					background: 'rgba(0,0,0,0.7)',
+					display: 'flex', alignItems: 'center', justifyContent: 'center',
+				}}>
+					<div style={{
+						background: '#1e293b', border: '1px solid rgba(239,68,68,0.4)',
+						borderRadius: '0.75rem', padding: '2rem', maxWidth: '360px', width: '90%',
+						textAlign: 'center',
+					}}>
+						{confirmModal.lines.map((line, i) => (
+							<p key={i} style={{ color: i === 0 ? '#ef4444' : '#a0aec0', marginBottom: '0.5rem', fontWeight: i === 0 ? 700 : 400 }}>{line}</p>
+						))}
+						<div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '1.5rem' }}>
+							<button onClick={() => setConfirmModal(null)} style={{
+								padding: '0.5rem 1.25rem', borderRadius: '0.5rem',
+								background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
+								color: '#e8e9ed', cursor: 'pointer', fontWeight: 600,
+							}}>取消</button>
+							<button onClick={confirmModal.onConfirm} style={{
+								padding: '0.5rem 1.25rem', borderRadius: '0.5rem',
+								background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+								border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 600,
+							}}>確認刪除</button>
+						</div>
+					</div>
+				</div>
+			)}
+			{/* ── General message toast ── */}
+			{generalMsg && (
+				<div style={{
+					position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)',
+					zIndex: 9998, padding: '0.6rem 1.25rem', borderRadius: '0.5rem',
+					fontWeight: 600, fontSize: '0.95rem', pointerEvents: 'none',
+					background: generalMsg.ok ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+					color: generalMsg.ok ? '#10b981' : '#ef4444',
+					border: `1px solid ${generalMsg.ok ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}`,
+				}}>
+					{generalMsg.text}
+				</div>
+			)}
 			<div className={styles.header}>
 				<h2 className={styles.title}>
 					<Users className={styles.titleIcon} />
@@ -1279,6 +1325,19 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 								<Save size={18} />
 								儲存分組
 							</button>
+							{saveMsg && (
+								<span style={{
+									padding: '0.4rem 0.9rem',
+									borderRadius: '0.5rem',
+									fontWeight: 600,
+									fontSize: '0.9rem',
+									background: saveMsg.ok ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+									color: saveMsg.ok ? '#10b981' : '#ef4444',
+									border: `1px solid ${saveMsg.ok ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}`,
+								}}>
+									{saveMsg.text}
+								</span>
+							)}
 							<button
 								onClick={() => {
 									setShowTeams(false);

@@ -69,6 +69,10 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 	const [editNotes, setEditNotes] = useState("");       // new tag input field
 	const printRef = useRef<HTMLDivElement>(null);
 	const [savingId, setSavingId] = useState<number | null>(null);
+	const [toastMsg, setToastMsg] = useState<{ ok: boolean; text: string } | null>(null);
+	const [redoConfirm, setRedoConfirm] = useState<{
+		students: Array<{ userId: string; name: string; employeeId: string; rank: string }>;
+	} | null>(null);
 
 	// Parse extra_scenarios: stored as JSON array string or plain string
 	const parseScenarios = (raw: string | null | undefined): string[] => {
@@ -169,7 +173,8 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 			));
 		} catch (e) {
 			console.error(e);
-			alert("❌ 儲存失敗");
+			setToastMsg({ ok: false, text: "❌ 額外情境儲存失敗" });
+			setTimeout(() => setToastMsg(null), 4000);
 		} finally {
 			setSavingId(null);
 		}
@@ -197,7 +202,7 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 	// ── Export: screenshot the records div → canvas → PDF via jsPDF ────────
 	const exportPDF = async () => {
 		const el = printRef.current;
-		if (!el) { alert("找不到記錄區塊"); return; }
+		if (!el) { setToastMsg({ ok: false, text: "找不到記錄區塊" }); setTimeout(() => setToastMsg(null), 3000); return; }
 		try {
 			const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
 				import("html2canvas"),
@@ -245,7 +250,8 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 			pdf.save(`MDAfaat_訓練記錄_${dateFrom}_${dateTo}.pdf`);
 		} catch (err: any) {
 			console.error("PDF export error:", err);
-			alert(`❌ 匯出失敗：${err.message}`);
+			setToastMsg({ ok: false, text: `❌ 匯出失敗：${err.message}` });
+			setTimeout(() => setToastMsg(null), 4000);
 		}
 	};
 
@@ -259,6 +265,52 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 	// ── Render ────────────────────────────────────────────────────────────────
 	return (
 		<div className={styles.container}>
+			{/* ── Toast ── */}
+			{toastMsg && (
+				<div style={{
+					position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)',
+					zIndex: 9998, padding: '0.6rem 1.25rem', borderRadius: '0.5rem',
+					fontWeight: 600, fontSize: '0.95rem', pointerEvents: 'none',
+					background: toastMsg.ok ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+					color: toastMsg.ok ? '#10b981' : '#ef4444',
+					border: `1px solid ${toastMsg.ok ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}`,
+				}}>
+					{toastMsg.text}
+				</div>
+			)}
+			{/* ── Redo Confirm Modal ── */}
+			{redoConfirm && (
+				<div style={{
+					position: 'fixed', inset: 0, zIndex: 9999,
+					background: 'rgba(0,0,0,0.7)',
+					display: 'flex', alignItems: 'center', justifyContent: 'center',
+				}}>
+					<div style={{
+						background: '#1e293b', border: '1px solid rgba(74,158,255,0.4)',
+						borderRadius: '0.75rem', padding: '2rem', maxWidth: '360px', width: '90%',
+						textAlign: 'center',
+					}}>
+						<p style={{ color: '#4a9eff', fontWeight: 700, marginBottom: '0.5rem', fontSize: '1.1rem' }}>
+							🔄 啟動重考模式
+						</p>
+						<p style={{ color: '#a0aec0', marginBottom: '1.5rem' }}>
+							{redoConfirm.students.length} 位學員將進入重考流程
+						</p>
+						<div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+							<button onClick={() => setRedoConfirm(null)} style={{
+								padding: '0.5rem 1.25rem', borderRadius: '0.5rem',
+								background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
+								color: '#e8e9ed', cursor: 'pointer', fontWeight: 600,
+							}}>取消</button>
+							<button onClick={() => { setRedoConfirm(null); onStartRedo(redoConfirm.students); }} style={{
+								padding: '0.5rem 1.25rem', borderRadius: '0.5rem',
+								background: 'linear-gradient(135deg, #4a9eff, #2563eb)',
+								border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 600,
+							}}>確認啟動</button>
+						</div>
+					</div>
+				</div>
+			)}
 
 			{/* ── Toolbar ── */}
 			<div className={styles.toolbar}>
@@ -276,7 +328,7 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 					<Search size={14} className={styles.searchIcon} />
 					<input
 						className={styles.searchInput}
-						placeholder="搜尋姓名 / 員編..."
+						placeholder="搜尋姓名 / 工號..."
 						value={searchQuery}
 						onChange={e => setSearchQuery(e.target.value)}
 					/>
@@ -304,13 +356,15 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 							className={styles.redoBtn}
 							onClick={() => {
 								const students = collectRedoStudents();
-								if (students.length === 0) { alert("沒有待重考學員"); return; }
-								if (confirm(`啟動重考模式：${students.length} 位學員？`)) {
-									onStartRedo(students);
+								if (students.length === 0) {
+									setToastMsg({ ok: false, text: "沒有待重考學員" });
+									setTimeout(() => setToastMsg(null), 3000);
+									return;
 								}
+								setRedoConfirm({ students });
 							}}
 						>
-							🔄 啟動REDO ({redoCount} 人)
+							🔄 啟動重考 ({redoCount} 人)
 						</button>
 					)}
 					<button className={styles.exportBtn} onClick={exportPDF}>
@@ -322,8 +376,8 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 			{/* ── Stats ── */}
 			<div className={styles.statsBar}>
 				<span className={styles.statItem}>共 <strong>{totalSessions}</strong> 組</span>
-				<span className={`${styles.statItem} ${styles.statPass}`}>PASS <strong>{passCount}</strong> 人</span>
-				<span className={`${styles.statItem} ${styles.statRedo}`}>REDO <strong>{redoCount}</strong> 人</span>
+				<span className={`${styles.statItem} ${styles.statPass}`}>通過 <strong>{passCount}</strong> 人</span>
+				<span className={`${styles.statItem} ${styles.statRedo}`}>重考 <strong>{redoCount}</strong> 人</span>
 				{noResultCount > 0 && <span className={styles.statItem}>未記錄 <strong>{noResultCount}</strong></span>}
 			</div>
 
@@ -331,7 +385,7 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 			{loading ? (
 				<div className={styles.loading}>載入中...</div>
 			) : sortedDates.length === 0 ? (
-				<div className={styles.empty}>沒有訓練記錄</div>
+				<div className={styles.empty}>此區間沒有訓練記錄</div>
 			) : (
 				<div className={styles.recordList} ref={printRef}>
 					{sortedDates.map(date => (
