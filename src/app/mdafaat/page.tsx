@@ -23,6 +23,7 @@ interface GameTeam {
 		name: string;
 		employeeId: string;
 		rank: string;
+		base?: string;
 		avatarUrl?: string;
 	}>;
 }
@@ -39,16 +40,19 @@ export default function MDAfaatPage() {
 	const [activeTab, setActiveTab] = useState<Tab>("formation");
 	const [formedTeams, setFormedTeams] = useState<GameTeam[]>([]);
 	const [isRedoMode, setIsRedoMode] = useState(false);
+	const [trainingDate, setTrainingDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
 
 	// ── Handlers ──────────────────────────────────────────────────────────────
-	const handleStartGame = (teams: GameTeam[]) => {
+	const handleStartGame = (teams: GameTeam[], date: string) => {
 		setFormedTeams(teams);
 		setIsRedoMode(false);
+		setTrainingDate(date);
 		setView("game");
 	};
 
 	const handleStartRedo = (
-		redoStudents: Array<{ userId: string; name: string; employeeId: string; rank: string }>
+		redoStudents: Array<{ userId: string; name: string; employeeId: string; rank: string }>,
+		allSessionsForDate?: Array<{ employee_id: string }>
 	) => {
 		const coreScenarios = [
 			"lithium_fire", "bomb_threat", "decompression",
@@ -57,12 +61,35 @@ export default function MDAfaatPage() {
 		const shuffledScenarios = [...coreScenarios].sort(() => Math.random() - 0.5);
 		const redoTeams: GameTeam[] = [];
 
-		// ATR minimum crew is 2 — if odd number of redo students, duplicate a random
-		// existing student to fill the last group rather than leaving anyone solo
+		// ATR minimum crew is 2.
+		// If odd number of redo students, pair the last student with the student
+		// from the same training date who has appeared the fewest times.
+		// If tie, pick randomly from the tied students.
 		const students = [...redoStudents];
 		if (students.length % 2 !== 0 && students.length > 1) {
-			const randomPick = students[Math.floor(Math.random() * (students.length - 1))];
-			students.push(randomPick);
+			const redoIds = new Set(students.map(s => s.employeeId));
+			// Count appearances per non-redo student in today's sessions
+			const countMap = new Map<string, number>();
+			if (allSessionsForDate) {
+				for (const s of allSessionsForDate) {
+					if (!redoIds.has(s.employee_id)) {
+						countMap.set(s.employee_id, (countMap.get(s.employee_id) ?? 0) + 1);
+					}
+				}
+			}
+			// Find minimum count among all redo students (use them as pool if no session data)
+			let pool = students;
+			if (countMap.size > 0) {
+				const minCount = Math.min(...Array.from(countMap.values()));
+				const minIds   = Array.from(countMap.entries())
+					.filter(([, c]) => c === minCount)
+					.map(([id]) => id);
+				// Find the redo student objects that match those IDs
+				const matches = students.filter(s => minIds.includes(s.employeeId));
+				if (matches.length > 0) pool = matches;
+			}
+			const pick = pool[Math.floor(Math.random() * pool.length)];
+			students.push(pick);
 		}
 
 		for (let i = 0; i < students.length; i += 2) {
@@ -79,6 +106,7 @@ export default function MDAfaatPage() {
 
 		setFormedTeams(redoTeams);
 		setIsRedoMode(true);
+		setTrainingDate(new Date().toISOString().split("T")[0]); // redo always saves today
 		setView("game");
 	};
 
@@ -114,6 +142,7 @@ export default function MDAfaatPage() {
 					teams={formedTeams}
 					onBack={handleBackFromGame}
 					isRedoMode={isRedoMode}
+					trainingDate={trainingDate}
 				/>
 			</PermissionGuard>
 		);

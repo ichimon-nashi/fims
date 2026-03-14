@@ -17,6 +17,7 @@ interface User {
 	employee_id: string;
 	full_name: string;
 	rank: string;
+	base?: string;                     // KHH, TSA, RMQ — from DB
 	aircraft_type_ratings?: string[]; // Array of aircraft types user can fly
 }
 
@@ -32,17 +33,15 @@ interface TeamFormationProps {
 	onStartGame: (teams: Array<{
 		name: string;
 		coreScenario?: string;
-		aircraftType?: string;
-		aircraftNumber?: number;
-		pendingGroupId?: number;
 		members: Array<{
 			userId: string;
 			name: string;
 			employeeId: string;
 			rank: string;
+			base?: string;
 			avatarUrl?: string;
 		}>;
-	}>) => void;
+	}>, trainingDate: string) => void;
 	onOpenEditor: () => void;
 }
 
@@ -73,12 +72,6 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 	const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
 	const [trainedUserIds, setTrainedUserIds] = useState<Set<string>>(new Set());
 	const [loadingTrainingSessions, setLoadingTrainingSessions] = useState(false);
-	const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(null);
-	const [generalMsg, setGeneralMsg] = useState<{ ok: boolean; text: string } | null>(null);
-	const [confirmModal, setConfirmModal] = useState<{
-		lines: string[];
-		onConfirm: () => void;
-	} | null>(null);
 
 	// Core scenarios for assignment
 	const coreScenarios = [
@@ -167,7 +160,7 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 				const { data, error } = await supabase
 					.from("users")
 					.select(
-						"id, employee_id, full_name, rank, aircraft_type_ratings",
+						"id, employee_id, full_name, rank, base, aircraft_type_ratings",
 					)
 					.neq("rank", "admin"); // Exclude admin users only
 
@@ -745,129 +738,155 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 
 	const saveGroups = async () => {
 		if (teams.length === 0) {
-			setGeneralMsg({ ok: false, text: '請先分組！' });
-			setTimeout(() => setGeneralMsg(null), 3000);
+			alert('請先分組！');
 			return;
 		}
-
+		
+		if (!confirm(`確定要儲存 ${selectedDate} 的分組？`)) {
+			return;
+		}
+		
 		try {
 			const token = localStorage.getItem("token");
 			if (!token) {
-				setGeneralMsg({ ok: false, text: '請先登入' });
-				setTimeout(() => setGeneralMsg(null), 3000);
+				alert("請先登入");
 				return;
 			}
-
-			const groups = teams.map(team => ({
-				group_type:      team.aircraftType,
-				group_number:    team.aircraftNumber,
-				core_scenario:   team.coreScenario || null,
-				aircraft_type:   team.aircraftType,
-				aircraft_number: team.aircraftNumber,
-				members:         team.members.map(m => ({
-					userId:     m.id,
-					name:       m.full_name,
-					employeeId: m.employee_id,
-					rank:       m.rank,
-				})),
-			}));
-
-			const response = await fetch('/api/mdafaat/pending-groups', {
+			
+			// Flatten teams to individual records
+			const sessionsToSave = teams.flatMap(team => 
+				team.members.map(member => ({
+					training_date: selectedDate,
+					employee_id: member.employee_id,
+					group_type: team.aircraftType,
+					group_number: team.aircraftNumber,
+					core_scenario: team.coreScenario || 'unassigned',
+					team_members: team.members.map(m => m.employee_id)
+				}))
+			);
+			
+			const response = await fetch('/api/mdafaat/training-sessions', {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-				body: JSON.stringify({ groups, training_date: selectedDate }),
+				headers: {
+					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${token}`
+				},
+				body: JSON.stringify({ sessions: sessionsToSave })
 			});
-
+			
 			if (!response.ok) {
-				const errBody = await response.json().catch(() => ({}));
-				throw new Error(errBody.error || `HTTP ${response.status}`);
+				throw new Error('Failed to save groups');
 			}
-
-			setSaveMsg({ ok: true, text: `✅ 成功儲存 ${teams.length} 組！` });
-			setTimeout(() => setSaveMsg(null), 3000);
+			
+			alert(`✅ 成功儲存 ${teams.length} 組！`);
+			
+			// Reload training sessions - include today (use next day as before filter)
+			const nextDay = new Date(selectedDate);
+			nextDay.setDate(nextDay.getDate() + 1);
+			const nextDayStr = nextDay.toISOString().split('T')[0];
+			const reloadResponse = await fetch(`/api/mdafaat/training-sessions?before=${nextDayStr}`);
+			if (reloadResponse.ok) {
+				const data = await reloadResponse.json();
+				const userIds = new Set(data.map((d: any) => d.employee_id));
+				setTrainedUserIds(userIds);
+			}
 		} catch (error) {
 			console.error('Error saving groups:', error);
-			setSaveMsg({ ok: false, text: '❌ 儲存失敗！' });
-			setTimeout(() => setSaveMsg(null), 4000);
+			alert('❌ 儲存失敗！');
 		}
 	};
 
 	const loadGroupsForDate = async (date: string) => {
 		try {
-			const response = await fetch(`/api/mdafaat/pending-groups?date=${date}`);
+			const response = await fetch(`/api/mdafaat/training-sessions?date=${date}`);
 			if (!response.ok) return;
-
-			const pendingGroups = await response.json();
-			if (!pendingGroups || pendingGroups.length === 0) {
+			
+			const sessions = await response.json();
+			if (!sessions || sessions.length === 0) {
 				setTeams([]);
 				setShowTeams(false);
 				return;
 			}
-
-			// Each pending group row has a members JSONB array with full member objects.
-			// Reconstruct Team objects by matching employeeId against allUsers.
+			
+			// Group sessions by group_type and group_number
+			const groupMap = new Map<string, any>();
+			
+			sessions.forEach((session: any) => {
+				const key = `${session.group_type}-${session.group_number}`;
+				if (!groupMap.has(key)) {
+					groupMap.set(key, {
+						id: key.toLowerCase(),
+						aircraftType: session.group_type,
+						aircraftNumber: session.group_number,
+						coreScenario: session.core_scenario,
+						memberIds: new Set(session.team_members)
+					});
+				}
+			});
+			
+			// Convert to Team objects with actual user data
 			const loadedTeams: Team[] = [];
-			for (const pg of pendingGroups) {
-				const memberIds = new Set(
-					(pg.members as any[]).map((m: any) => String(m.employeeId ?? m.employee_id ?? m.userId))
-				);
-				const members = allUsers.filter(u => memberIds.has(String(u.employee_id)));
+			for (const [_, groupData] of groupMap) {
+				const members = allUsers.filter(u => groupData.memberIds.has(u.employee_id));
 				if (members.length > 0) {
 					loadedTeams.push({
-						id: `${pg.group_type}-${pg.group_number}`.toLowerCase(),
-						aircraftType: pg.aircraft_type ?? pg.group_type,
-						aircraftNumber: pg.aircraft_number ?? pg.group_number,
-						coreScenario: pg.core_scenario,
-						pendingGroupId: pg.id,
-						members,
+						id: groupData.id,
+						aircraftType: groupData.aircraftType,
+						aircraftNumber: groupData.aircraftNumber,
+						coreScenario: groupData.coreScenario,
+						members
 					});
 				}
 			}
-
+			
 			if (loadedTeams.length > 0) {
 				setTeams(loadedTeams);
 				setShowTeams(true);
-			} else {
-				setTeams([]);
-				setShowTeams(false);
+				console.log(`Loaded ${loadedTeams.length} groups for ${date}`);
 			}
 		} catch (error) {
 			console.error('Error loading groups:', error);
 		}
 	};
 
-	const clearAllTrainingData = () => {
+	const clearAllTrainingData = async () => {
 		if (!canEditScenarios) {
-			setGeneralMsg({ ok: false, text: '您沒有權限執行此操作！' });
-			setTimeout(() => setGeneralMsg(null), 3000);
+			alert('您沒有權限執行此操作！');
 			return;
 		}
-		setConfirmModal({
-			lines: ['⚠️ 這將永久刪除所有訓練記錄！', '此操作無法復原，確定要繼續嗎？'],
-			onConfirm: async () => {
-				setConfirmModal(null);
-				try {
-					const token = localStorage.getItem("token");
-					if (!token) {
-						setGeneralMsg({ ok: false, text: '請先登入' });
-						setTimeout(() => setGeneralMsg(null), 3000);
-						return;
-					}
-					const response = await fetch('/api/mdafaat/training-sessions', {
-						method: 'DELETE',
-						headers: { 'Authorization': `Bearer ${token}` },
-					});
-					if (!response.ok) throw new Error('Failed');
-					setTrainedUserIds(new Set());
-					setGeneralMsg({ ok: true, text: '✅ 所有訓練資料已清除！' });
-					setTimeout(() => setGeneralMsg(null), 3000);
-				} catch (error) {
-					console.error('Error clearing data:', error);
-					setGeneralMsg({ ok: false, text: '❌ 清除失敗！' });
-					setTimeout(() => setGeneralMsg(null), 4000);
+		
+		if (!confirm('⚠️ 這將刪除所有訓練記錄！確定要繼續嗎？')) {
+			return;
+		}
+		
+		if (!confirm('⚠️ 最後確認：真的要刪除所有訓練資料嗎？')) {
+			return;
+		}
+		
+		try {
+			const token = localStorage.getItem("token");
+			if (!token) {
+				alert("請先登入");
+				return;
+			}
+			
+			const response = await fetch('/api/mdafaat/training-sessions', {
+				method: 'DELETE',
+				headers: {
+					'Authorization': `Bearer ${token}`
 				}
-			},
-		});
+			});
+			
+			if (!response.ok) {
+				throw new Error('Failed to clear data');
+			}
+			
+			setTrainedUserIds(new Set());
+			alert('✅ 所有訓練資料已清除！');
+		} catch (error) {
+			console.error('Error clearing data:', error);
+			alert('❌ 清除失敗！');
+		}
 	};
 
 	const getRankShorthand = (rank: string): string => {
@@ -883,49 +902,6 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 
 	return (
 		<div className={styles.container}>
-			{/* ── Confirm Modal (replaces browser confirm()) ── */}
-			{confirmModal && (
-				<div style={{
-					position: 'fixed', inset: 0, zIndex: 9999,
-					background: 'rgba(0,0,0,0.7)',
-					display: 'flex', alignItems: 'center', justifyContent: 'center',
-				}}>
-					<div style={{
-						background: '#1e293b', border: '1px solid rgba(239,68,68,0.4)',
-						borderRadius: '0.75rem', padding: '2rem', maxWidth: '360px', width: '90%',
-						textAlign: 'center',
-					}}>
-						{confirmModal.lines.map((line, i) => (
-							<p key={i} style={{ color: i === 0 ? '#ef4444' : '#a0aec0', marginBottom: '0.5rem', fontWeight: i === 0 ? 700 : 400 }}>{line}</p>
-						))}
-						<div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '1.5rem' }}>
-							<button onClick={() => setConfirmModal(null)} style={{
-								padding: '0.5rem 1.25rem', borderRadius: '0.5rem',
-								background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
-								color: '#e8e9ed', cursor: 'pointer', fontWeight: 600,
-							}}>取消</button>
-							<button onClick={confirmModal.onConfirm} style={{
-								padding: '0.5rem 1.25rem', borderRadius: '0.5rem',
-								background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-								border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 600,
-							}}>確認刪除</button>
-						</div>
-					</div>
-				</div>
-			)}
-			{/* ── General message toast ── */}
-			{generalMsg && (
-				<div style={{
-					position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)',
-					zIndex: 9998, padding: '0.6rem 1.25rem', borderRadius: '0.5rem',
-					fontWeight: 600, fontSize: '0.95rem', pointerEvents: 'none',
-					background: generalMsg.ok ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
-					color: generalMsg.ok ? '#10b981' : '#ef4444',
-					border: `1px solid ${generalMsg.ok ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}`,
-				}}>
-					{generalMsg.text}
-				</div>
-			)}
 			<div className={styles.header}>
 				<h2 className={styles.title}>
 					<Users className={styles.titleIcon} />
@@ -995,32 +971,10 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 						}}
 					>
 						<Trash2 size={16} />
-						Clear All Data
+						刪除訓練紀錄
 					</button>
 				)}
-				{canEditScenarios && (
-					<button
-						onClick={onOpenEditor}
-						style={{ 
-							padding: '0.5rem 1rem',
-							borderRadius: '0.375rem',
-							background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-							color: '#ffffff',
-							border: 'none',
-							cursor: 'pointer',
-							display: 'flex',
-							alignItems: 'center',
-							gap: '0.5rem',
-							fontSize: '0.875rem',
-							fontWeight: '500',
-							whiteSpace: 'nowrap'
-						}}
-						title="編輯情境卡片"
-					>
-						<FiEdit size={16} />
-						編輯情境
-					</button>
-				)}
+
 			</div>
 
 			{/* Search Section */}
@@ -1325,19 +1279,6 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 								<Save size={18} />
 								儲存分組
 							</button>
-							{saveMsg && (
-								<span style={{
-									padding: '0.4rem 0.9rem',
-									borderRadius: '0.5rem',
-									fontWeight: 600,
-									fontSize: '0.9rem',
-									background: saveMsg.ok ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
-									color: saveMsg.ok ? '#10b981' : '#ef4444',
-									border: `1px solid ${saveMsg.ok ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}`,
-								}}>
-									{saveMsg.text}
-								</span>
-							)}
 							<button
 								onClick={() => {
 									setShowTeams(false);
@@ -1497,18 +1438,16 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 							const gameTeams = teams.map(team => ({
 								name: `${team.aircraftType} ${team.aircraftNumber}`,
 								coreScenario: team.coreScenario,
-								aircraftType: team.aircraftType,
-								aircraftNumber: team.aircraftNumber,
-								pendingGroupId: team.pendingGroupId,
 								members: team.members.map(member => ({
 									userId: member.id,
 									name: member.full_name,
 									employeeId: member.employee_id,
 									rank: member.rank,
+									base: member.base,
 									avatarUrl: undefined
 								}))
 							}));
-							onStartGame(gameTeams);
+							onStartGame(gameTeams, selectedDate);
 						}}
 						className={styles.startGameButton}
 					>

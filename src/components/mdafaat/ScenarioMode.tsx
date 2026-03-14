@@ -340,16 +340,18 @@ interface Props {
 			name: string;
 			employeeId: string;
 			rank: string;
+			base?: string;
 			avatarUrl?: string;
 		}>;
 	}>;
 	onBack: () => void;
 	isRedoMode?: boolean;
+	trainingDate?: string;  // date selected in TeamFormation — overrides today
 	/** Called with array of {employeeId, result} when scenario completes — for redo flow */
 	onSessionComplete?: (results: Array<{ employeeId: string; result: 'pass' | 'redo' }>) => void;
 }
 
-const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionComplete }) => {
+const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionComplete, trainingDate }) => {
 	// Data
 	const [allCards, setAllCards] = useState<MdafaatCard[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -555,7 +557,9 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 			const rd = getRankOrder(a.rank) - getRankOrder(b.rank);
 			return rd !== 0 ? rd : parseInt(a.employeeId) - parseInt(b.employeeId);
 		});
-		const base = sortedForBase[0] ? getBaseFromEmployeeId(sortedForBase[0].employeeId) : 'KHH';
+		// Use base from DB if available; fall back to employee ID derivation
+		const leader = sortedForBase[0];
+		const base = leader?.base || (leader ? getBaseFromEmployeeId(leader.employeeId) : 'KHH');
 		const flight = getRandomFlight(base, timeOfDay);
 
 		// Wait for shuffle animation (1150ms) BEFORE revealing conditions
@@ -573,9 +577,9 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 		setHistory([]);
 		setShowEndButton(false);
 
-		// Start timer
+		// Timer reset — instructor starts manually by clicking the stopwatch
 		setElapsedTime(0);
-		setTimerRunning(true);
+		setTimerRunning(false);
 
 		// Flip delay (300ms from production)
 		await new Promise(r => setTimeout(r, 300));
@@ -650,7 +654,7 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 			const token = localStorage.getItem("token");
 			// Save one session row per member so each gets their own result
 			const sessions = team.members.map(m => ({
-				training_date: new Date().toISOString().split('T')[0],
+				training_date: trainingDate ?? new Date().toISOString().split('T')[0],
 				employee_id: m.employeeId,
 				group_type: team.aircraftType || flightInfo?.aircraftType || 'ATR',
 				group_number: team.aircraftNumber ?? (currentTeam + 1),
@@ -780,11 +784,15 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 				<div style={{ width: '2.5rem' }} />
 			</div>
 
-			{/* Stopwatch Bar - EXACT from production */}
+			{/* Stopwatch Bar - click to start/pause */}
 			{conditions && (
 				<div className={styles.stopwatchBar}>
-					<span style={{ color: '#4ade80', fontWeight: 700, fontSize: '1.25rem' }}>
-						⏱️ {formatTime(elapsedTime)}
+					<span
+						onClick={() => setTimerRunning(r => !r)}
+						title={timerRunning ? "點擊暫停" : "點擊開始計時"}
+						style={{ color: timerRunning ? '#4ade80' : '#f59e0b', fontWeight: 700, fontSize: '1.25rem', cursor: 'pointer', userSelect: 'none' }}
+					>
+						{timerRunning ? '⏱️' : '▶️'} {formatTime(elapsedTime)}
 					</span>
 					{team.coreScenario && (
 						<span style={{ color: '#fbbf24', fontWeight: 700, fontSize: '0.95rem', background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: '0.375rem', padding: '0.2rem 0.65rem', letterSpacing: '0.02em' }}>
@@ -1043,101 +1051,6 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 							)}
 						</div>
 
-						{/* Export section */}
-						<div className={styles.exportSection} id="training-record" style={{ boxSizing: 'border-box' }}>
-							<h4>Training Record</h4>
-							<div className={styles.recordText}>
-								<div style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem', color: '#60a5fa' }}>
-									{formatDate()}
-								</div>
-								<div style={{ fontSize: '0.95rem', lineHeight: '1.8' }}>
-									<strong>Team:</strong> {team.name}<br />
-									<strong>Core Scenario:</strong> {CORE_SCENARIO_LABELS[team.coreScenario || ''] || team.coreScenario}<br />
-									{flightInfo && <><strong>Flight:</strong> {flightInfo.flightNo} ({flightInfo.departure} → {flightInfo.arrival}, {flightInfo.aircraftType})<br /></>}
-									<strong>Crew Members:</strong><br />
-									{sortedMembers.map((m, idx) => (
-										<span key={m.userId}>
-											• {m.employeeId} {m.name}{idx === 0 ? ' (Leader)' : ''}<br />
-										</span>
-									))}
-									<br />
-									<strong>Initial Conditions:</strong><br />
-									• {getTimeIcon(conditions.time)} {getTimeText(conditions.time)}: YES<br />
-									• ✈️ 客滿: {conditions.full ? "YES" : "NO"}<br />
-									• 👶 嬰兒: {conditions.infants ? "YES" : "NO"}<br />
-									• ♿ 特殊旅客: {conditions.specialPax ?? "NO"}<br />
-									<br />
-									<strong>Scenario Path:</strong><br />
-									{history.map((h, i) => (
-										<div key={i} style={{ marginLeft: '1rem', marginBottom: '0.5rem' }}>
-											{i + 1}. <strong>{h.card.code}</strong>{h.skipped ? <span style={{ color: '#94a3b8' }}> (Skipped)</span> : null}: {h.card.description || h.card.title}
-											<br />
-										</div>
-									))}
-									<br />
-									<strong>Time Elapsed:</strong> {formatTime(elapsedTime)}<br />
-									<strong>Instructor:</strong> {instructorName}
-								</div>
-							</div>
-							<div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-								<button 
-									className={styles.exportBtn}
-									onClick={() => {
-										const lines = [
-								`Training Record - ${formatDate()}`, ``,
-								`Team: ${team.name}`,
-								`Core Scenario: ${CORE_SCENARIO_LABELS[team.coreScenario || ''] || team.coreScenario}`, ``,
-								`Crew Members:`,
-								...sortedMembers.map((m, idx) => `• ${m.employeeId} ${m.name}${idx === 0 ? ' (Leader)' : ''}`),
-								``, `Initial Conditions:`,
-								`• Time: ${conditions.time}`,
-								`• Full Flight: ${conditions.full ? 'Yes' : 'No'}`,
-								`• Infants: ${conditions.infants ? 'Yes' : 'No'}`,
-								`• Special Pax: ${conditions.specialPax ?? 'No'}`,
-								``, `Scenario Path:`,
-								...history.map((h, i) => `${i + 1}. ${h.card.code}${h.skipped ? ' (Skipped)' : ''}: ${h.card.description || h.card.title}`),
-								``, `Time: ${formatTime(elapsedTime)}`, `Instructor: ${instructorName}`,
-							];
-							const record = lines.join('\n');
-										
-										navigator.clipboard.writeText(record).then(() => {
-											setToastMsg({ ok: true, text: "✅ Training record copied!" });
-											setTimeout(() => setToastMsg(null), 3000);
-										}).catch(() => {
-											setToastMsg({ ok: false, text: "❌ Copy failed" });
-											setTimeout(() => setToastMsg(null), 3000);
-										});
-									}}
-								>
-									📋 Copy Text
-								</button>
-								<button 
-									className={styles.exportBtn}
-									onClick={async () => {
-										try {
-											const element = document.getElementById('training-record');
-											if (!element) return;
-											const { default: h2c } = await import('html2canvas');
-											const canvas = await h2c(element, { backgroundColor: '#1e293b', scale: 2, useCORS: true });
-											canvas.toBlob((blob) => {
-												if (!blob) return;
-												const url = URL.createObjectURL(blob);
-												const a = document.createElement('a');
-												a.href = url;
-												a.download = `Training-Record-${team.name}-${Date.now()}.png`;
-												a.click();
-												URL.revokeObjectURL(url);
-											});
-										} catch {
-											setToastMsg({ ok: false, text: '❌ Screenshot failed — check html2canvas install' });
-											setTimeout(() => setToastMsg(null), 4000);
-										}
-									}}
-								>
-									📸 Screenshot
-								</button>
-							</div>
-						</div>
 					</div>
 				) : (
 					/* Cards Display - All at once */

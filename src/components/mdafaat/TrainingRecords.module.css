@@ -306,9 +306,9 @@
 	color: #4a9eff;
 	border: 1px solid rgba(74, 158, 255, 0.2);
 	border-radius: 0.25rem;
-	padding: 0.1rem 0.5rem;
-	font-size: 0.7rem;
-	font-weight: 600;
+	padding: 0.15rem 0.55rem;
+	font-size: 0.82rem;
+	font-weight: 700;
 }
 
 /* ── Individual session row ──────────────────────────────────────── */
@@ -323,7 +323,8 @@
 
 .sessionSummary {
 	display: grid;
-	grid-template-columns: 80px 1fr 60px 90px 70px 1fr 24px;
+	/* EID | Name | Rank | Result | Conditions | Flight | Time | chevron */
+	grid-template-columns: 76px 1fr 50px 90px minmax(100px, 160px) 80px 52px 24px;
 	align-items: center;
 	gap: 0.5rem;
 	padding: 0.6rem 1rem;
@@ -397,6 +398,38 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+.sessionConditions {
+	display: flex;
+	align-items: center;
+	gap: 0.2rem;
+	font-size: 0.85rem;
+	flex-wrap: nowrap;
+	overflow: visible;
+}
+
+.sessionCondTag {
+	font-size: 0.68rem;
+	color: #a78bfa;
+	background: rgba(167, 139, 250, 0.12);
+	border: 1px solid rgba(167, 139, 250, 0.25);
+	border-radius: 0.25rem;
+	padding: 0.05rem 0.3rem;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 100%;
+}
+
+.sessionFlight {
+	color: #60a5fa;
+	font-size: 0.75rem;
+	font-family: monospace;
+	font-weight: 600;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .expandIcon {
@@ -570,20 +603,25 @@
 /* ── Responsive ──────────────────────────────────────────────────── */
 @media (max-width: 1024px) {
 	.sessionSummary {
-		grid-template-columns: 72px 1fr 55px 80px 60px 24px;
+		/* tablet: drop rank + flight; name and conditions share remaining space equally */
+		grid-template-columns: 72px minmax(80px, 1fr) 88px minmax(120px, 1fr) 48px 24px;
 	}
-	.sessionInstructor { display: none; }
+	.sessionRank,
+	.sessionFlight { display: none; }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
 	.container { padding: 1rem; }
 	.toolbar { gap: 0.5rem; }
 	.searchBar { max-width: 100%; min-width: 100%; }
 	.actions { width: 100%; }
 	.sessionSummary {
-		grid-template-columns: 68px 1fr 75px 24px;
+		/* mobile: EID | name | result | chevron only */
+		grid-template-columns: 64px 1fr 82px 24px;
 	}
 	.sessionRank,
+	.sessionFlight,
+	.sessionConditions,
 	.sessionTime { display: none; }
 }
 
