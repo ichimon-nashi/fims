@@ -684,6 +684,8 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 						{(() => {
 							const TYPE_COLORS: Record<string, { active: string; border: string; bg: string }> = {
 								FABT: { active: '#f87171', border: 'rgba(248,113,113,0.5)', bg: 'rgba(239,68,68,0.15)' },
+								FALT: { active: '#fb923c', border: 'rgba(251,146,60,0.5)',  bg: 'rgba(234,88,12,0.15)'  },
+								FAPT: { active: '#22d3ee', border: 'rgba(34,211,238,0.5)',  bg: 'rgba(6,182,212,0.15)'  },
 								FAAT: { active: '#34d399', border: 'rgba(52,211,153,0.5)',  bg: 'rgba(16,185,129,0.15)' },
 								FATT: { active: '#60a5fa', border: 'rgba(96,165,250,0.5)',  bg: 'rgba(59,130,246,0.15)' },
 								FAQT: { active: '#fbbf24', border: 'rgba(251,191,36,0.5)',  bg: 'rgba(245,158,11,0.15)' },
@@ -691,7 +693,7 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 							};
 							return (
 								<div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem' }}>
-									{(["FABT", "FAAT", "FATT", "FAQT", "FAOT"] as const).map(type => {
+									{(["FABT", "FALT", "FAPT", "FAAT", "FATT", "FAQT", "FAOT"] as const).map(type => {
 										const c = TYPE_COLORS[type];
 										const selected = selectedTrainingType === type;
 										return (
