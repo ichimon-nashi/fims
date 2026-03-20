@@ -74,6 +74,20 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 	} | null>(null);
 	const [trainingTypeModal, setTrainingTypeModal] = useState(false);
 	const [selectedTrainingType, setSelectedTrainingType] = useState<string>("FAAT");
+	// scenarioOrder: 6 core_scenario keys in instructor-chosen order (index 0 = scenario #1)
+	const ALL_CORE_SCENARIOS = [
+		"bomb_threat", "lithium_fire", "decompression",
+		"incapacitation", "unplanned_evacuation", "planned_evacuation",
+	];
+	const CORE_SCENARIO_NAMES: Record<string, string> = {
+		bomb_threat:          "爆裂物威脅",
+		lithium_fire:         "鋰電池火災",
+		decompression:        "失壓",
+		incapacitation:       "失能",
+		unplanned_evacuation: "無預警撤離",
+		planned_evacuation:   "客艙準備 CPP",
+	};
+	const [scenarioOrder, setScenarioOrder] = useState<string[]>([...ALL_CORE_SCENARIOS]);
 
 	// Parse extra_scenarios: stored as JSON array string or plain string
 	const parseScenarios = (raw: string | null | undefined): string[] => {
@@ -142,7 +156,27 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 		return acc;
 	}, {});
 
-	const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+	// Within each group, deduplicate by employee_id keeping only the latest row (highest id).
+	// This handles legacy duplicate saves that may already exist in the DB.
+	const deduped = Object.fromEntries(
+		Object.entries(grouped).map(([date, dateGroups]) => [
+			date,
+			Object.fromEntries(
+				Object.entries(dateGroups).map(([grp, rows]) => {
+					const latest = new Map<string, TrainingSession>();
+					for (const row of rows) {
+						const existing = latest.get(row.employee_id);
+						if (!existing || row.id > existing.id) {
+							latest.set(row.employee_id, row);
+						}
+					}
+					return [grp, Array.from(latest.values())];
+				})
+			),
+		])
+	);
+
+	const sortedDates = Object.keys(deduped).sort((a, b) => b.localeCompare(a));
 
 	// ── Helpers ──────────────────────────────────────────────────────────────
 	const toggleExpand = (id: number) => {
@@ -273,8 +307,8 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 	// ── Export: fill CCTM Appendix 1.18 form image → PDF ─────────────────────
 	// All coordinates stored as fractions of source image (10200×13200px).
 	// Multiplied by actual image dimensions at runtime → resolution-independent.
-	const exportFormPDF = async (trainingType: string) => {
-		if (sortedDates.length === 0 || !grouped[selectedDate]) {
+	const exportFormPDF = async (trainingType: string, scenarioOrder: string[]) => {
+		if (sortedDates.length === 0 || !deduped[selectedDate]) {
 			setToastMsg({ ok: false, text: "沒有可匯出的記錄" });
 			setTimeout(() => setToastMsg(null), 3000);
 			return;
@@ -283,88 +317,83 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 			const { default: jsPDF } = await import("jspdf");
 
 			// ── Build flat ordered student list for this date ────────────────
-			// Each unique student gets ONE row combining all their attempts.
-			// Sort: by group_number then by rank order within group.
-			const RANK_ORDER: Record<string, number> = {
-				mg: 1, manager: 1, sc: 2, fi: 3, pr: 4, lf: 5, fa: 6, fs: 6, stewardess: 6,
-			};
+			// ONE row per unique employee across ALL groups.
+			// Each appearance (group session) adds a scenario number + duty to that employee's row.
 			const getRankOrder = (rank: string) => {
-				const r = rank.toLowerCase();
-				for (const [key, val] of Object.entries(RANK_ORDER)) if (r.includes(key)) return val;
-				return 99;
+				const r = (rank ?? "").toLowerCase();
+				if (r.includes("mg") || r.includes("manager"))    return 1;
+				if (r.includes("sc") || r.includes("section"))    return 2;
+				if (r.includes("fi") || r.includes("instructor")) return 3;
+				if (r.includes("pr") || r.includes("purser"))     return 4;
+				if (r.includes("lf") || r.includes("leading"))    return 5;
+				return 6;
 			};
+			const ATR_DUTIES  = ["F1", "F2"];
+			const B738_DUTIES = ["1L", "1R", "3L", "3R", "Z2", "3RA"];
 
-			// Duty labels per aircraft type and position index (0-based)
-			const ATR_DUTIES   = ["F1", "F2"];
-			const B738_DUTIES  = ["1L", "1R", "3L", "3R", "Z2", "3RA"];
+			// scenarioNumMap: core_scenario key → number 1-6 (based on instructor-chosen order)
+			const scenarioNumMap: Record<string, number> = {};
+			scenarioOrder.forEach((key, i) => { scenarioNumMap[key] = i + 1; });
 
-			// Collect all sessions for this date, group by group key
-			const dateGroups = grouped[selectedDate]; // Record<string, TrainingSession[]>
+			const dateGroups = deduped[selectedDate];
 
-			// Build student rows — one per unique employee across all groups
-			interface FormRow {
-				groupKey: string;
-				groupType: string;
-				groupNumber: number;
+			// employee data store: one entry per unique employee
+			interface EmpEntry {
 				employeeId: string;
 				name: string;
 				rank: string;
-				duty: string;
-				// attempts: [{result, coreScenario, isRedo}]
-				attempts: Array<{ result: "pass" | "redo" | null; coreScenario: string; isRedo: boolean }>;
+				scenarioNums: number[];  // scenario numbers in order of appearance
+				duties: string[];        // duty per appearance, parallel to scenarioNums
+				results: Array<"pass" | "redo" | null>;
 			}
+			const empMap = new Map<string, EmpEntry>();
 
-			const formRows: FormRow[] = [];
-			const seenEmployees = new Map<string, FormRow>(); // employeeId → row (for redo merging)
+			// Sort groups by group_number first
+			const sortedGroups = Object.entries(dateGroups).sort(([, a], [, b]) =>
+				(a[0]?.group_number ?? 0) - (b[0]?.group_number ?? 0)
+			);
 
-			// Sort groups by group_number
-			const sortedGroups = Object.entries(dateGroups).sort(([, a], [, b]) => {
-				return (a[0]?.group_number ?? 0) - (b[0]?.group_number ?? 0);
-			});
-
-			for (const [grpKey, grpSessions] of sortedGroups) {
+			for (const [, grpSessions] of sortedGroups) {
 				if (!grpSessions.length) continue;
-				const grpType    = grpSessions[0].group_type;   // "ATR", "B738", "REDO"
-				const grpNumber  = grpSessions[0].group_number;
-				const isRedoGrp  = grpSessions[0].is_redo;
-				const dutyList   = grpType === "B738" ? B738_DUTIES : ATR_DUTIES;
+				const grpType  = grpSessions[0].group_type;
+				const dutyList = grpType === "B738" ? B738_DUTIES : ATR_DUTIES;
 
-				// Sort members within group by rank then employeeId
+				// Sort within group by rank then employeeId
 				const sorted = [...grpSessions].sort((a, b) => {
-					const memberA = a.team_members?.find(m => String(m.employeeId) === String(a.employee_id));
-					const memberB = b.team_members?.find(m => String(m.employeeId) === String(b.employee_id));
-					const rankDiff = getRankOrder(memberA?.rank ?? "") - getRankOrder(memberB?.rank ?? "");
-					return rankDiff !== 0 ? rankDiff : parseInt(a.employee_id) - parseInt(b.employee_id);
+					const mA = a.team_members?.find((m: any) => String(m.employeeId) === String(a.employee_id));
+					const mB = b.team_members?.find((m: any) => String(m.employeeId) === String(b.employee_id));
+					const rd = getRankOrder(mA?.rank ?? "") - getRankOrder(mB?.rank ?? "");
+					return rd !== 0 ? rd : parseInt(a.employee_id) - parseInt(b.employee_id);
 				});
 
 				sorted.forEach((s, posIdx) => {
-					const member = s.team_members?.find(m => String(m.employeeId) === String(s.employee_id));
-					const name   = member?.name ?? "-";
-					const rank   = member?.rank ?? "";
+					const member = s.team_members?.find((m: any) => String(m.employeeId) === String(s.employee_id));
 					const duty   = dutyList[posIdx] ?? `P${posIdx + 1}`;
-					const attempt = { result: s.result, coreScenario: s.core_scenario, isRedo: isRedoGrp };
+					const scenNum = scenarioNumMap[s.core_scenario] ?? 0;
 
-					if (isRedoGrp && seenEmployees.has(s.employee_id)) {
-						// Merge redo attempt into existing row
-						const existing = seenEmployees.get(s.employee_id)!;
-						existing.attempts.push(attempt);
-						existing.duty += ` → ${duty}`;  // append redo duty
+					if (empMap.has(s.employee_id)) {
+						const e = empMap.get(s.employee_id)!;
+						e.scenarioNums.push(scenNum);
+						e.duties.push(duty);
+						e.results.push(s.result);
 					} else {
-						const row: FormRow = {
-							groupKey: grpKey,
-							groupType: grpType,
-							groupNumber: grpNumber,
+						empMap.set(s.employee_id, {
 							employeeId: s.employee_id,
-							name,
-							rank,
-							duty,
-							attempts: [attempt],
-						};
-						formRows.push(row);
-						seenEmployees.set(s.employee_id, row);
+							name:  member?.name ?? "-",
+							rank:  member?.rank ?? "",
+							scenarioNums: [scenNum],
+							duties: [duty],
+							results: [s.result],
+						});
 					}
 				});
 			}
+
+			// Sort final list by rank then employeeId
+			const formRows = Array.from(empMap.values()).sort((a, b) => {
+				const rd = getRankOrder(a.rank) - getRankOrder(b.rank);
+				return rd !== 0 ? rd : parseInt(a.employeeId) - parseInt(b.employeeId);
+			});
 
 			// ═══════════════════════════════════════════════════════════════
 			// COORDINATE FINE-TUNING — edit these fractions to adjust layout
@@ -506,15 +535,6 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 			drawLeft(aircraftLabel, AIRCRAFT_X(), HEADER_Y());
 
 			// ── Table rows ───────────────────────────────────────────────────
-			const CORE_LABELS: Record<string, string> = {
-				bomb_threat:          "爆裂物威脅",
-				lithium_fire:         "鋰電池火災",
-				decompression:        "失壓",
-				incapacitation:       "失能",
-				unplanned_evacuation: "無預警撤離",
-				planned_evacuation:   "客艙準備 CPP",
-			};
-
 			formRows.slice(0, 20).forEach((row, idx) => {
 				const y = ROW_Y(idx);
 
@@ -522,38 +542,21 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 				drawCentered(row.employeeId, EID_MID(),  y);
 				drawCentered(row.name,       NAME_MID(), y, NAME_MAXW());
 
-				// Determine Check / R/C marks and scenario label
-				const firstAttempt  = row.attempts[0];
-				const secondAttempt = row.attempts[1]; // undefined if no redo
+				// Check = ✓ if all results pass, ✗ if any redo
+				// R/C = ✓ if any result was redo (attempted recheck)
+				const anyRedo = row.results.some(r => r === "redo");
+				const allPass = row.results.every(r => r === "pass");
+				const checkMark = allPass ? "✓" : "✗";
+				const rcMark    = anyRedo ? "✓" : "";
 
-				let checkMark = "";   // ✓ or ✗
-				let rcMark    = "";   // ✓ if redo involved
-				let scenarioLabel = "";
-				let dutyLabel = row.duty;
+				// Scenario numbers: "1", "1, 3", etc. (deduplicated, sorted)
+				const uniqueScenNums = [...new Set(row.scenarioNums)].sort((a, b) => a - b);
+				const scenarioLabel  = uniqueScenNums.map(n => n > 0 ? String(n) : "?").join(", ");
 
-				if (!secondAttempt) {
-					// Single attempt
-					checkMark    = firstAttempt.result === "pass" ? "✓" : "✗";
-					rcMark       = "";
-					scenarioLabel = CORE_LABELS[firstAttempt.coreScenario] ?? firstAttempt.coreScenario;
-				} else {
-					// Had a redo attempt:
-					// First attempt = redo (fail), second attempt = pass or redo-again
-					if (secondAttempt.result === "pass") {
-						// Redo then pass: Check=✓, R/C=✓
-						checkMark = "✓";
-						rcMark    = "✓";
-					} else {
-						// Redo then redo again: Check=✗, R/C=✓
-						checkMark = "✗";
-						rcMark    = "✓";
-					}
-					const s1 = CORE_LABELS[firstAttempt.coreScenario]  ?? firstAttempt.coreScenario;
-					const s2 = CORE_LABELS[secondAttempt.coreScenario] ?? secondAttempt.coreScenario;
-					scenarioLabel = s1 === s2 ? s1 : `${s1} → ${s2}`;
-				}
+				// Duties: "F1", "F1, F2", etc.
+				const dutyLabel = row.duties.join(", ");
 
-				// Draw check marks in appropriate color
+				// Draw check marks
 				const checkColor = checkMark === "✗" ? "#cc0000" : "#006600";
 				ctx.fillStyle = checkColor;
 				drawCentered(checkMark, CHECK_X(), y);
@@ -565,12 +568,11 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 
 				ctx.fillStyle = "#000000";
 
-				// Scenario — centered, use small font if long
-				const scenarioLong = scenarioLabel.length > 8;
-				drawCentered(scenarioLabel, SCEN_MID(), y, SCEN_MAXW(), scenarioLong);
+				// Scenario numbers — centered
+				drawCentered(scenarioLabel, SCEN_MID(), y, SCEN_MAXW());
 
-				// Duty — centered
-				drawCentered(dutyLabel, DUTY_MID(), y, DUTY_MAXW());
+				// Duties — centered, small font if multiple
+				drawCentered(dutyLabel, DUTY_MID(), y, DUTY_MAXW(), dutyLabel.length > 4);
 			});
 
 			// ── Export canvas → PDF ──────────────────────────────────────────
@@ -610,7 +612,7 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 	};
 
 	// ── Stats bar ───────────────────────────────────────────────────────────
-	const allGroups = Object.values(grouped).flatMap(dateGroups => Object.values(dateGroups));
+	const allGroups = Object.values(deduped).flatMap(dateGroups => Object.values(dateGroups));
 	const totalSessions = allGroups.length;                                // groups
 	const passCount  = filtered.filter(s => s.result === "pass").length;  // individual students
 	const redoCount  = filtered.filter(s => s.result === "redo").length;  // individual students
@@ -666,16 +668,17 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 				</div>
 			)}
 
-			{/* ── Training Type Modal ── */}
+			{/* ── Training Type + Scenario Order Modal ── */}
 			{trainingTypeModal && (
 				<div style={{
 					position: 'fixed', inset: 0, zIndex: 9999,
 					background: 'rgba(0,0,0,0.7)',
 					display: 'flex', alignItems: 'center', justifyContent: 'center',
+					overflowY: 'auto', padding: '1rem',
 				}}>
 					<div style={{
 						background: '#1e293b', border: '1px solid rgba(16,185,129,0.4)',
-						borderRadius: '0.75rem', padding: '2rem', maxWidth: '320px', width: '90%',
+						borderRadius: '0.75rem', padding: '2rem', maxWidth: '420px', width: '90%',
 						textAlign: 'center',
 					}}>
 						<p style={{ color: '#34d399', fontWeight: 700, fontSize: '1.1rem', marginBottom: '1.25rem' }}>
@@ -720,13 +723,50 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 								</div>
 							);
 						})()}
+						{/* ── Scenario numbering ── */}
+						<div style={{ marginBottom: '1.5rem', textAlign: 'left' }}>
+							<p style={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+								情境編號順序 (1–6)
+							</p>
+							{scenarioOrder.map((key, idx) => (
+								<div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+									<span style={{
+										minWidth: '1.5rem', height: '1.5rem', borderRadius: '50%',
+										background: 'rgba(74,158,255,0.2)', color: '#60a5fa',
+										display: 'flex', alignItems: 'center', justifyContent: 'center',
+										fontWeight: 700, fontSize: '0.8rem',
+									}}>{idx + 1}</span>
+									<select
+										value={key}
+										onChange={e => {
+											const newOrder = [...scenarioOrder];
+											// Swap with whatever was in the target position
+											const swapIdx = newOrder.indexOf(e.target.value);
+											if (swapIdx !== -1) newOrder[swapIdx] = newOrder[idx];
+											newOrder[idx] = e.target.value;
+											setScenarioOrder(newOrder);
+										}}
+										style={{
+											flex: 1, background: '#0f172a', border: '1px solid rgba(148,163,184,0.2)',
+											borderRadius: '0.375rem', color: '#e2e8f0', padding: '0.3rem 0.5rem',
+											fontSize: '0.85rem', cursor: 'pointer',
+										}}
+									>
+										{ALL_CORE_SCENARIOS.map(s => (
+											<option key={s} value={s}>{CORE_SCENARIO_NAMES[s]}</option>
+										))}
+									</select>
+								</div>
+							))}
+						</div>
+
 						<div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
 							<button onClick={() => setTrainingTypeModal(false)} style={{
 								padding: '0.5rem 1.25rem', borderRadius: '0.5rem',
 								background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
 								color: '#e8e9ed', cursor: 'pointer', fontWeight: 600,
 							}}>取消</button>
-							<button onClick={() => { setTrainingTypeModal(false); exportFormPDF(selectedTrainingType); }} style={{
+							<button onClick={() => { setTrainingTypeModal(false); exportFormPDF(selectedTrainingType, scenarioOrder); }} style={{
 								padding: '0.5rem 1.25rem', borderRadius: '0.5rem',
 								background: 'linear-gradient(135deg, #10b981, #059669)',
 								border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 600,
@@ -827,12 +867,17 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 							<div className={styles.dateGroupHeader}>
 								{formatDate(date)}
 								<span className={styles.dateGroupCount}>
-									{Object.values(grouped[date]).length} 組
+									{Object.values(deduped[date]).length} 組
 								</span>
 							</div>
 
-							{Object.entries(grouped[date])
-								.sort(([a], [b]) => a.localeCompare(b))
+							{Object.entries(deduped[date])
+								.sort(([, a], [, b]) => {
+									const numA = a[0]?.group_number ?? 0;
+									const numB = b[0]?.group_number ?? 0;
+									if (numA !== numB) return numA - numB;
+									return (a[0]?.group_type ?? '').localeCompare(b[0]?.group_type ?? '');
+								})
 								.map(([grpKey, grpSessions]) => (
 									<div key={grpKey} className={styles.groupBlock}>
 										<div className={styles.groupLabel}>
@@ -902,8 +947,31 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 											);
 										})()}
 
-										{grpSessions.map(s => {
+										{(() => {
+											// Sort by rank then employeeId — same order as PDF export
+											const ATR_DUTIES_UI  = ["F1", "F2"];
+											const B738_DUTIES_UI = ["1L", "1R", "3L", "3R", "Z2", "3RA"];
+											const getRankOrderUI = (rank: string) => {
+												const r = (rank ?? "").toLowerCase();
+												if (r.includes("mg") || r.includes("manager"))    return 1;
+												if (r.includes("sc") || r.includes("section"))    return 2;
+												if (r.includes("fi") || r.includes("instructor")) return 3;
+												if (r.includes("pr") || r.includes("purser"))     return 4;
+												if (r.includes("lf") || r.includes("leading"))    return 5;
+												return 6;
+											};
+											const grpType = grpSessions[0]?.group_type ?? "ATR";
+											const dutyList = grpType === "B738" ? B738_DUTIES_UI : ATR_DUTIES_UI;
+											const sorted = [...grpSessions].sort((a, b) => {
+												const mA = resolveMember(a);
+												const mB = resolveMember(b);
+												const rd = getRankOrderUI(mA?.rank ?? "") - getRankOrderUI(mB?.rank ?? "");
+												if (rd !== 0) return rd;
+												return parseInt(a.employee_id) - parseInt(b.employee_id);
+											});
+											return sorted.map((s, posIdx) => {
 											const member = resolveMember(s);
+											const duty = dutyList[posIdx] ?? `P${posIdx + 1}`;
 											const expanded = expandedIds.has(s.id);
 
 											return (
@@ -912,7 +980,7 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 													<div className={styles.sessionSummary} onClick={() => toggleExpand(s.id)}>
 														<span className={styles.sessionEid}>{s.employee_id}</span>
 														<span className={styles.sessionName}>{member?.name ?? "-"}</span>
-														<span className={styles.sessionRank}>{member?.rank?.split(" - ")[0] ?? "-"}</span>
+														<span className={styles.sessionRank}>{duty}</span>
 														<span className={`${styles.resultPill} ${s.result === "pass" ? styles.pillPass : s.result === "redo" ? styles.pillRedo : styles.pillNone}`}>
 															{s.result === "pass" ? "✓ 通過" : s.result === "redo" ? "↺ 重考" : "—"}
 														</span>
@@ -981,7 +1049,7 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 													)}
 												</div>
 											);
-										})}
+										}); })()}
 									</div>
 								))}
 						</div>

@@ -395,6 +395,13 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 	const [timerRunning, setTimerRunning] = useState(false);
 	const [toastMsg, setToastMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
+	// Tracks which team indices have already been saved.
+	// Resets when teams prop changes (new session or redo) so saves are never skipped.
+	const savedTeamIndices = React.useRef<Set<number>>(new Set());
+	useEffect(() => {
+		savedTeamIndices.current = new Set();
+	}, [teams]);
+
 
 
 	// Computed
@@ -649,6 +656,12 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 
 	// Save training session — called on End Scenario, next group, and back navigation
 	const saveTrainingSession = async (resultsOverride?: Record<string, 'pass' | 'redo'>) => {
+		// Guard: prevent duplicate saves for the same team index
+		if (savedTeamIndices.current.has(currentTeam)) {
+			console.log(`Team ${currentTeam} already saved — skipping`);
+			return;
+		}
+		savedTeamIndices.current.add(currentTeam);
 		const results = resultsOverride ?? memberResults;
 		try {
 			const token = localStorage.getItem("token");
@@ -656,7 +669,7 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 			const sessions = team.members.map(m => ({
 				training_date: trainingDate ?? new Date().toISOString().split('T')[0],
 				employee_id: m.employeeId,
-				group_type: team.aircraftType || flightInfo?.aircraftType || 'ATR',
+				group_type: team.aircraftType || 'ATR',  // never use flight's aircraftType
 				group_number: team.aircraftNumber ?? (currentTeam + 1),
 				core_scenario: team.coreScenario,
 				flight_info: flightInfo,

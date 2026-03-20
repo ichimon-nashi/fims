@@ -1438,6 +1438,8 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 							const gameTeams = teams.map(team => ({
 								name: `${team.aircraftType} ${team.aircraftNumber}`,
 								coreScenario: team.coreScenario,
+								aircraftType: team.aircraftType,
+								aircraftNumber: team.aircraftNumber,
 								members: team.members.map(member => ({
 									userId: member.id,
 									name: member.full_name,
