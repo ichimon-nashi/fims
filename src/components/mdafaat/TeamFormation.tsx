@@ -73,6 +73,30 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 	const [trainedUserIds, setTrainedUserIds] = useState<Set<string>>(new Set());
 	const [loadingTrainingSessions, setLoadingTrainingSessions] = useState(false);
 
+	// ── Data maintenance modal ────────────────────────────────────────────
+	const [maintModal, setMaintModal] = useState(false);
+	const [maintLoading, setMaintLoading] = useState(false);
+	const [maintToast, setMaintToast] = useState<{ ok: boolean; text: string } | null>(null);
+	// Cleanup: skeleton rows that have a completed counterpart → safe to delete
+	const [skeletonsToDelete, setSkeletonsToDelete] = useState<Array<{
+		id: number; training_date: string; employee_id: string; employee_name: string;
+		group_type: string; group_number: number; core_scenario: string;
+	}>>([]);
+	// Generate: skeleton rows with NO completed counterpart → missing records
+	const [missingGroups, setMissingGroups] = useState<Array<{
+		date: string; group_type: string; group_number: number; core_scenario: string;
+		skeletonIds: number[];
+		team_members: any[];
+		selected: boolean;
+	}>>([]);
+	// Maintenance step: 'cleanup' | 'generate' | null
+	const [maintTab, setMaintTab] = useState<'cleanup' | 'generate'>('cleanup');
+	// Cleanup confirmation
+	const [cleanupConfirmed, setCleanupConfirmed] = useState(false);
+	// Toast helper for main UI (replaces all alert/confirm)
+	const [tfToast, setTfToast] = useState<{ ok: boolean; text: string } | null>(null);
+	const [tfConfirm, setTfConfirm] = useState<{ lines: string[]; onConfirm: () => void } | null>(null);
+
 	// Core scenarios for assignment
 	const coreScenarios = [
 		'lithium_fire',
@@ -849,43 +873,237 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 		}
 	};
 
-	const clearAllTrainingData = async () => {
+	const clearAllTrainingData = () => {
 		if (!canEditScenarios) {
-			alert('您沒有權限執行此操作！');
+			setTfToast({ ok: false, text: '您沒有權限執行此操作！' });
+			setTimeout(() => setTfToast(null), 3000);
 			return;
 		}
-		
-		if (!confirm('⚠️ 這將刪除所有訓練記錄！確定要繼續嗎？')) {
-			return;
-		}
-		
-		if (!confirm('⚠️ 最後確認：真的要刪除所有訓練資料嗎？')) {
-			return;
-		}
-		
+		setTfConfirm({
+			lines: ['⚠️ 這將永久刪除所有訓練記錄！', '此操作無法復原，確定要繼續嗎？'],
+			onConfirm: async () => {
+				setTfConfirm(null);
+				const token = localStorage.getItem("token");
+				if (!token) { setTfToast({ ok: false, text: '請先登入' }); setTimeout(() => setTfToast(null), 3000); return; }
+				try {
+					const res = await fetch('/api/mdafaat/training-sessions', { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+					if (!res.ok) throw new Error('Failed');
+					setTrainedUserIds(new Set());
+					setTfToast({ ok: true, text: '✅ 所有訓練資料已清除！' });
+					setTimeout(() => setTfToast(null), 3000);
+				} catch (e) {
+					setTfToast({ ok: false, text: '❌ 清除失敗！' });
+					setTimeout(() => setTfToast(null), 4000);
+				}
+			},
+		});
+	};
+
+	// ── Data maintenance: scan all sessions, find skeletons & missing groups ───
+	const openMaintModal = async () => {
+		setMaintLoading(true);
+		setMaintModal(true);
+		setCleanupConfirmed(false);
 		try {
 			const token = localStorage.getItem("token");
-			if (!token) {
-				alert("請先登入");
-				return;
-			}
-			
-			const response = await fetch('/api/mdafaat/training-sessions', {
-				method: 'DELETE',
-				headers: {
-					'Authorization': `Bearer ${token}`
+			const res = await fetch('/api/mdafaat/training-sessions', { headers: { 'Authorization': `Bearer ${token}` } });
+			const allSessions: any[] = await res.json();
+
+			// Separate completed vs skeleton rows
+			const completed = allSessions.filter(s => s.result || s.elapsed_time || s.scenario_path);
+			const skeletons = allSessions.filter(s => !s.result && !s.elapsed_time && !s.scenario_path);
+
+			// Build a Set of completed group keys: "date|type|number"
+			const completedKeys = new Set(completed.map(s => `${s.training_date}|${s.group_type}|${s.group_number}`));
+
+			// Skeletons whose group HAS a completed session → safe to delete
+			const safeToDelete = skeletons.filter(s =>
+				completedKeys.has(`${s.training_date}|${s.group_type}|${s.group_number}`)
+			);
+
+			// Skeletons whose group has NO completed session → missing records
+			// Group by date+type+number, keep one entry per group
+			const missingMap = new Map<string, any>();
+			skeletons
+				.filter(s => !completedKeys.has(`${s.training_date}|${s.group_type}|${s.group_number}`))
+				.forEach(s => {
+					const key = `${s.training_date}|${s.group_type}|${s.group_number}`;
+					if (!missingMap.has(key)) {
+						missingMap.set(key, {
+							date: s.training_date,
+							group_type: s.group_type,
+							group_number: s.group_number,
+							core_scenario: s.core_scenario,
+							skeletonIds: [],
+							team_members: s.team_members ?? [],
+							selected: false,
+						});
+					}
+					missingMap.get(key).skeletonIds.push(s.id);
+					// Accumulate team_members across rows (pick first non-empty)
+					if (missingMap.get(key).team_members.length === 0 && s.team_members?.length > 0) {
+						missingMap.get(key).team_members = s.team_members;
+					}
+				});
+
+			// Find instructor from completed sessions on same dates
+			const instructorByDate = new Map<string, string>();
+			completed.forEach(s => {
+				if (s.instructor && !instructorByDate.has(s.training_date)) {
+					instructorByDate.set(s.training_date, s.instructor);
 				}
 			});
-			
-			if (!response.ok) {
-				throw new Error('Failed to clear data');
-			}
-			
-			setTrainedUserIds(new Set());
-			alert('✅ 所有訓練資料已清除！');
-		} catch (error) {
-			console.error('Error clearing data:', error);
-			alert('❌ 清除失敗！');
+
+			// Build a lookup map from allUsers for resolving plain employee ID strings
+			const userLookup = new Map(allUsers.map(u => [u.employee_id, u]));
+
+			// Helper: normalise team_members — converts plain string IDs to full objects
+			const resolveMembers = (raw: any[]): Array<{userId:string;name:string;employeeId:string;rank:string}> => {
+				return raw.map(m => {
+					if (typeof m === 'object' && m.employeeId) return m;
+					const eid = String(m);
+					const u = userLookup.get(eid);
+					return u
+						? { userId: u.id, name: u.full_name, employeeId: u.employee_id, rank: u.rank }
+						: { userId: eid, name: eid, employeeId: eid, rank: '' };
+				});
+			};
+
+			// Resolve skeletons for cleanup display — add name for each row
+			setSkeletonsToDelete(safeToDelete.map(s => {
+				const u = userLookup.get(s.employee_id);
+				return {
+					id: s.id, training_date: s.training_date, employee_id: s.employee_id,
+					employee_name: u?.full_name ?? '',
+					group_type: s.group_type, group_number: s.group_number, core_scenario: s.core_scenario,
+				};
+			}));
+			// Resolve team_members for missing groups
+			setMissingGroups(Array.from(missingMap.values()).map(g => ({
+				...g,
+				team_members: resolveMembers(g.team_members),
+				instructor: instructorByDate.get(g.date) ?? '',
+			})));
+		} catch (e) {
+			setMaintToast({ ok: false, text: '❌ 載入失敗' });
+			setTimeout(() => setMaintToast(null), 4000);
+		} finally {
+			setMaintLoading(false);
+		}
+	};
+
+	// ── Cleanup: delete skeleton rows that have completed counterparts ────────
+	const runCleanup = async () => {
+		const ids = skeletonsToDelete.map(s => s.id);
+		if (ids.length === 0) return;
+		const token = localStorage.getItem("token");
+		try {
+			const res = await fetch(`/api/mdafaat/training-sessions?ids=${ids.join(',')}`, {
+				method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` },
+			});
+			if (!res.ok) throw new Error('Failed');
+			setMaintToast({ ok: true, text: `✅ 已清除 ${ids.length} 筆不完整資料` });
+			setSkeletonsToDelete([]);
+			setTimeout(() => setMaintToast(null), 3000);
+		} catch (e) {
+			setMaintToast({ ok: false, text: '❌ 清除失敗' });
+			setTimeout(() => setMaintToast(null), 4000);
+		}
+	};
+
+	// ── Generate fake record for a missing group ──────────────────────────────
+	const generateFakeRecord = async (grp: typeof missingGroups[number]) => {
+		const token = localStorage.getItem("token");
+		try {
+			// 1. Fetch scenario cards from API
+			const scenRes = await fetch(`/api/mdafaat/scenarios?core_scenario=${grp.core_scenario}`, {
+				headers: { 'Authorization': `Bearer ${token}` },
+			});
+			if (!scenRes.ok) throw new Error('Failed to fetch scenario');
+			const scenData = await scenRes.json();
+			if (scenData.error) throw new Error(scenData.error);
+
+			// Build scenario_path from returned cards
+			const allCards = [...(scenData.emergency ?? []), ...(scenData.equipment ?? [])];
+			const path = allCards
+				.sort((a: any, b: any) => a.id - b.id)
+				.map((c: any) => ({ code: c.code, title: c.title, description: c.description ?? '', skipped: false }));
+
+			// 2. Randomize conditions
+			const times = ['morning', 'midday', 'night'] as const;
+			const specialPaxList = ['WCHR - 輪椅旅客', 'BLND - 視障旅客', 'PRGN - 孕婦旅客', 'POXY - 需氧旅客', null, null, null];
+			const conditions = {
+				time: times[Math.floor(Math.random() * 3)],
+				full: Math.random() > 0.4,
+				infants: Math.random() > 0.6,
+				specialPax: specialPaxList[Math.floor(Math.random() * specialPaxList.length)],
+			};
+
+			// 3. Random flight (simple fallback — no base lookup here)
+			const flightNos: Record<string, string[]> = {
+				morning: ['AE-301', 'AE-333', 'AE-761', 'AE-391'],
+				midday:  ['AE-303', 'AE-343', 'AE-763', 'AE-367'],
+				night:   ['AE-349', 'AE-731', 'AE-793', 'AE-395'],
+			};
+			const fList = flightNos[conditions.time];
+			const flight_info = {
+				flightNo: fList[Math.floor(Math.random() * fList.length)],
+				departure: 'KHH', arrival: 'MZG',
+				aircraftType: grp.group_type === 'B738' ? 'B738' : 'ATR',
+			};
+
+			// 4. Random elapsed time 3–8 min
+			const elapsed_time = Math.floor(Math.random() * 300) + 180;
+
+			// 5. Build one session row per member
+			// team_members may already be resolved objects (from openMaintModal) or plain ID strings
+			const userMap = new Map(allUsers.map(u => [u.employee_id, u]));
+			const members: any[] = Array.isArray(grp.team_members)
+				? grp.team_members.map((m: any) => {
+					if (typeof m === 'object' && m.employeeId) return m;
+					const eid = String(m);
+					const u = userMap.get(eid);
+					return u
+						? { userId: u.id, name: u.full_name, employeeId: u.employee_id, rank: u.rank }
+						: { userId: eid, name: eid, employeeId: eid, rank: '' };
+				}).filter((m: any) => m.employeeId)
+				: [];
+
+			if (members.length === 0) throw new Error('No valid members found in skeleton');
+
+			const sessions = members.map((m: any) => ({
+				training_date: grp.date,
+				employee_id:   String(m.employeeId),
+				group_type:    grp.group_type,
+				group_number:  grp.group_number,
+				core_scenario: grp.core_scenario,
+				team_members:  members,
+				result:        'pass',
+				is_redo:       false,
+				scenario_path: path,
+				conditions,
+				flight_info,
+				elapsed_time,
+				instructor:    (grp as any).instructor ?? '',
+			}));
+
+			// 6. Save via POST
+			const saveRes = await fetch('/api/mdafaat/training-sessions', {
+				method: 'POST',
+				headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+				body: JSON.stringify({ sessions }),
+			});
+			if (!saveRes.ok) throw new Error('Failed to save');
+
+			// Remove from missingGroups list
+			setMissingGroups(prev => prev.filter(g =>
+				!(g.date === grp.date && g.group_type === grp.group_type && g.group_number === grp.group_number)
+			));
+			setMaintToast({ ok: true, text: `✅ 已補建 ${grp.group_type} ${grp.group_number} (${grp.date}) 訓練記錄` });
+			setTimeout(() => setMaintToast(null), 3000);
+		} catch (e: any) {
+			setMaintToast({ ok: false, text: `❌ 補建失敗：${e.message}` });
+			setTimeout(() => setMaintToast(null), 4000);
 		}
 	};
 
@@ -900,8 +1118,162 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 		return rank.split(" - ")[0] || rank.substring(0, 2);
 	};
 
+	const SCENARIO_LABELS: Record<string, string> = {
+		bomb_threat: "爆裂物威脅", lithium_fire: "鋰電池火災",
+		decompression: "失壓", incapacitation: "失能",
+		unplanned_evacuation: "無預警撤離", planned_evacuation: "客艙準備 CPP",
+	};
+
 	return (
 		<div className={styles.container}>
+			{/* ── tfToast ── */}
+			{tfToast && (
+				<div style={{
+					position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)',
+					zIndex: 9998, padding: '0.6rem 1.25rem', borderRadius: '0.5rem',
+					fontWeight: 600, fontSize: '0.95rem', pointerEvents: 'none',
+					background: tfToast.ok ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+					color: tfToast.ok ? '#10b981' : '#ef4444',
+					border: `1px solid ${tfToast.ok ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}`,
+				}}>{tfToast.text}</div>
+			)}
+			{/* ── tfConfirm modal ── */}
+			{tfConfirm && (
+				<div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+					<div style={{ background: '#1e293b', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '0.75rem', padding: '2rem', maxWidth: '360px', width: '90%', textAlign: 'center' }}>
+						{tfConfirm.lines.map((line, i) => (
+							<p key={i} style={{ color: i === 0 ? '#ef4444' : '#a0aec0', marginBottom: '0.5rem', fontWeight: i === 0 ? 700 : 400 }}>{line}</p>
+						))}
+						<div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '1.5rem' }}>
+							<button onClick={() => setTfConfirm(null)} style={{ padding: '0.5rem 1.25rem', borderRadius: '0.5rem', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#e8e9ed', cursor: 'pointer', fontWeight: 600 }}>取消</button>
+							<button onClick={tfConfirm.onConfirm} style={{ padding: '0.5rem 1.25rem', borderRadius: '0.5rem', background: 'linear-gradient(135deg,#ef4444,#dc2626)', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 600 }}>確認</button>
+						</div>
+					</div>
+				</div>
+			)}
+			{/* ── 資料維護 modal ── */}
+			{maintModal && (
+				<div style={{ position: 'fixed', inset: 0, zIndex: 9997, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+					<div style={{ background: '#1e293b', border: '1px solid rgba(124,58,237,0.4)', borderRadius: '0.75rem', padding: '1.75rem', width: '100%', maxWidth: '560px', maxHeight: '85vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+						{/* Header */}
+						<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+							<p style={{ color: '#c4b5fd', fontWeight: 700, fontSize: '1.05rem' }}>🔧 資料維護</p>
+							<button onClick={() => setMaintModal(false)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '1.2rem' }}>✕</button>
+						</div>
+						{/* Tab selector */}
+						<div style={{ display: 'flex', gap: '0.5rem' }}>
+							{(['cleanup', 'generate'] as const).map(tab => (
+								<button key={tab} onClick={() => setMaintTab(tab)} style={{
+									padding: '0.4rem 0.9rem', borderRadius: '0.375rem', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer',
+									border: maintTab === tab ? '1px solid rgba(124,58,237,0.5)' : '1px solid rgba(255,255,255,0.08)',
+									background: maintTab === tab ? 'rgba(124,58,237,0.15)' : 'rgba(255,255,255,0.03)',
+									color: maintTab === tab ? '#c4b5fd' : '#64748b',
+								}}>
+									{tab === 'cleanup' ? '🧹 清除不完整資料' : '🛠️ 補建遺漏記錄'}
+								</button>
+							))}
+						</div>
+						{/* Toast inside modal */}
+						{maintToast && (
+							<div style={{ padding: '0.5rem 0.9rem', borderRadius: '0.375rem', fontWeight: 600, fontSize: '0.85rem',
+								background: maintToast.ok ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)',
+								color: maintToast.ok ? '#10b981' : '#ef4444',
+								border: `1px solid ${maintToast.ok ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
+							}}>{maintToast.text}</div>
+						)}
+						{maintLoading ? (
+							<div style={{ color: '#94a3b8', textAlign: 'center', padding: '2rem' }}>載入中...</div>
+						) : maintTab === 'cleanup' ? (
+							/* ── Cleanup tab ── */
+							<div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+								<p style={{ color: '#94a3b8', fontSize: '0.82rem' }}>
+									以下為有完整記錄對應的不完整骨架資料，可安全刪除。<br/>
+									<span style={{ color: '#4ade80' }}>您的實際訓練記錄不會受影響。</span>
+								</p>
+								{skeletonsToDelete.length === 0 ? (
+									<div style={{ color: '#334155', padding: '1.5rem', textAlign: 'center', border: '1px dashed rgba(255,255,255,0.08)', borderRadius: '0.5rem' }}>
+										✅ 沒有需要清除的不完整資料
+									</div>
+								) : (
+									<>
+										{/* Preview table */}
+										<div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '0.5rem', overflow: 'hidden', maxHeight: '280px', overflowY: 'auto' }}>
+											<table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+												<thead>
+													<tr style={{ background: 'rgba(255,255,255,0.04)', color: '#64748b' }}>
+														<th style={{ padding: '0.4rem 0.6rem', textAlign: 'left' }}>ID</th>
+														<th style={{ padding: '0.4rem 0.6rem', textAlign: 'left' }}>日期</th>
+														<th style={{ padding: '0.4rem 0.6rem', textAlign: 'left' }}>員編</th>
+														<th style={{ padding: '0.4rem 0.6rem', textAlign: 'left' }}>姓名</th>
+														<th style={{ padding: '0.4rem 0.6rem', textAlign: 'left' }}>組別</th>
+														<th style={{ padding: '0.4rem 0.6rem', textAlign: 'left' }}>情境</th>
+													</tr>
+												</thead>
+												<tbody>
+													{skeletonsToDelete.map(s => (
+														<tr key={s.id} style={{ borderTop: '1px solid rgba(255,255,255,0.04)', color: '#e2e8f0' }}>
+															<td style={{ padding: '0.35rem 0.6rem', color: '#64748b', fontFamily: 'monospace' }}>{s.id}</td>
+															<td style={{ padding: '0.35rem 0.6rem' }}>{s.training_date}</td>
+															<td style={{ padding: '0.35rem 0.6rem', fontFamily: 'monospace', color: '#4a9eff' }}>{s.employee_id}</td>
+															<td style={{ padding: '0.35rem 0.6rem', color: '#e2e8f0' }}>{s.employee_name || '—'}</td>
+															<td style={{ padding: '0.35rem 0.6rem' }}>{s.group_type} {s.group_number}</td>
+															<td style={{ padding: '0.35rem 0.6rem', color: '#94a3b8' }}>
+																{SCENARIO_LABELS[s.core_scenario] ?? s.core_scenario}
+															</td>
+														</tr>
+													))}
+												</tbody>
+											</table>
+										</div>
+										<p style={{ color: '#94a3b8', fontSize: '0.78rem' }}>共 {skeletonsToDelete.length} 筆將被刪除</p>
+										{!cleanupConfirmed ? (
+											<button onClick={() => setCleanupConfirmed(true)} style={{ padding: '0.5rem 1.25rem', borderRadius: '0.5rem', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#f87171', cursor: 'pointer', fontWeight: 600 }}>
+												確認刪除以上資料
+											</button>
+										) : (
+											<button onClick={runCleanup} style={{ padding: '0.5rem 1.25rem', borderRadius: '0.5rem', background: 'linear-gradient(135deg,#ef4444,#dc2626)', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
+												⚠️ 最終確認：執行清除
+											</button>
+										)}
+									</>
+								)}
+							</div>
+						) : (
+							/* ── Generate tab ── */
+							<div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+								<p style={{ color: '#94a3b8', fontSize: '0.82rem' }}>
+									以下組別有分組記錄但缺少完整訓練記錄。點擊「補建」為該組生成假資料。
+								</p>
+								{missingGroups.length === 0 ? (
+									<div style={{ color: '#334155', padding: '1.5rem', textAlign: 'center', border: '1px dashed rgba(255,255,255,0.08)', borderRadius: '0.5rem' }}>
+										✅ 沒有遺漏的訓練記錄
+									</div>
+								) : missingGroups.map((grp, i) => (
+									<div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.65rem 0.9rem', background: 'rgba(0,0,0,0.2)', borderRadius: '0.5rem', border: '1px solid rgba(255,255,255,0.06)', gap: '0.75rem' }}>
+										<div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', minWidth: 0 }}>
+											<span style={{ color: '#e2e8f0', fontWeight: 600, fontSize: '0.85rem' }}>
+												{grp.group_type} {grp.group_number} &nbsp;
+												<span style={{ color: '#fbbf24', fontSize: '0.78rem' }}>
+													{SCENARIO_LABELS[grp.core_scenario] ?? grp.core_scenario}
+												</span>
+											</span>
+											<span style={{ color: '#64748b', fontSize: '0.75rem' }}>
+												{grp.date} &nbsp;·&nbsp; {grp.team_members.length} 位成員
+											</span>
+										</div>
+										<button
+											onClick={() => generateFakeRecord(grp)}
+											style={{ padding: '0.4rem 0.9rem', borderRadius: '0.375rem', background: 'rgba(74,158,255,0.15)', border: '1px solid rgba(74,158,255,0.4)', color: '#60a5fa', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', flexShrink: 0 }}
+										>
+											🛠️ 補建
+										</button>
+									</div>
+								))}
+							</div>
+						)}
+					</div>
+				</div>
+			)}
 			<div className={styles.header}>
 				<h2 className={styles.title}>
 					<Users className={styles.titleIcon} />
@@ -972,6 +1344,28 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 					>
 						<Trash2 size={16} />
 						刪除訓練紀錄
+					</button>
+				)}
+				{/* 🔧 資料維護 — admin only (employee 51892 or view_only=false) */}
+				{canEditScenarios && (
+					<button
+						onClick={openMaintModal}
+						style={{
+							padding: '0.5rem 1rem',
+							borderRadius: '0.375rem',
+							background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+							color: '#ffffff',
+							border: 'none',
+							cursor: 'pointer',
+							display: 'flex',
+							alignItems: 'center',
+							gap: '0.5rem',
+							fontSize: '0.875rem',
+							fontWeight: '500',
+							whiteSpace: 'nowrap',
+						}}
+					>
+						🔧 資料維護
 					</button>
 				)}
 

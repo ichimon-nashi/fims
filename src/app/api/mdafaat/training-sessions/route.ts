@@ -1,4 +1,4 @@
-// app/api/mdafaat/training-sessions/route.ts
+// src/app/api/mdafaat/training-sessions/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/utils/supabase/service-client";
 import { verifyToken } from "@/lib/auth";
@@ -16,41 +16,27 @@ export async function GET(request: NextRequest) {
 		.select('*')
 		.order('training_date', { ascending: false });
 	
-	if (before) {
-		query = query.lte('training_date', before);
-	}
-	
-	if (after) {
-		query = query.gte('training_date', after);
-	}
-	
-	if (date) {
-		query = query.eq('training_date', date);
-	}
+	if (before) query = query.lte('training_date', before);
+	if (after)  query = query.gte('training_date', after);
+	if (date)   query = query.eq('training_date', date);
 	
 	const { data, error } = await query;
-	
 	if (error) {
 		console.error('Error fetching training sessions:', error);
 		return NextResponse.json({ error: error.message }, { status: 500 });
 	}
-	
 	return NextResponse.json(data || []);
 }
 
 // POST: Save training sessions — pure INSERT, one row per member per group.
 // CRITICAL: Do NOT deduplicate by employee_id. A person may intentionally appear
-// in multiple groups (duplicate/overflow scenario) and every group row must be saved.
+// in multiple groups on the same date (e.g. as both a regular and redo participant).
 export async function POST(request: NextRequest) {
 	const token = request.headers.get("authorization")?.replace("Bearer ", "");
-	if (!token) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
+	if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	
 	const user = await verifyToken(token);
-	if (!user) {
-		return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-	}
+	if (!user) return NextResponse.json({ error: "Invalid token" }, { status: 401 });
 	
 	try {
 		const body = await request.json();
@@ -60,35 +46,25 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ error: "Invalid data format" }, { status: 400 });
 		}
 		
-		// Insert every session row exactly as provided — no grouping or deduplication.
-		// Each row represents one person in one group. If someone is in two groups,
-		// they have two rows with different group_type/group_number values.
 		const sessionsToSave = sessions.map((session: any) => ({
-			training_date: session.training_date,
-			employee_id: String(session.employee_id),
-			group_type: session.group_type,
-			group_number: session.group_number,
-			core_scenario: session.core_scenario,
-			team_members: session.team_members,
-			all_groups: [{ group_type: session.group_type, group_number: session.group_number, core_scenario: session.core_scenario }],
-			// ScenarioMode fields — only included when present (TeamFormation saves omit these)
-			...(session.result        != null && { result:        session.result }),
-			...(session.is_redo       != null && { is_redo:       session.is_redo }),
-			...(session.elapsed_time  != null && { elapsed_time:  session.elapsed_time }),
-			...(session.instructor    != null && { instructor:    session.instructor }),
-			...(session.flight_info   != null && { flight_info:   session.flight_info }),
-			...(session.scenario_path != null && { scenario_path: session.scenario_path }),
-			...(session.conditions    != null && { conditions:    session.conditions }),
-			created_by: user.employee_id,
-			created_at: new Date().toISOString(),
+			training_date:  session.training_date,
+			employee_id:    String(session.employee_id),
+			group_type:     session.group_type,
+			group_number:   session.group_number,
+			core_scenario:  session.core_scenario,
+			team_members:   session.team_members,
+			result:         session.result         ?? null,
+			is_redo:        session.is_redo        ?? false,
+			extra_scenarios: session.extra_scenarios ?? null,
+			flight_info:    session.flight_info    ?? null,
+			scenario_path:  session.scenario_path  ?? null,
+			conditions:     session.conditions     ?? null,
+			elapsed_time:   session.elapsed_time   ?? null,
+			instructor:     session.instructor     ?? null,
+			created_by:     user.employee_id       ?? user.id ?? "unknown",
 		}));
 		
 		const supabase = createServiceClient();
-
-		// Plain INSERT — each ScenarioMode completion is a new row.
-		// Same group training twice on the same date correctly creates two rows.
-		// (Unique constraint on training_date+employee_id+group_number was dropped
-		//  in migrate_pending_groups.sql)
 		const { data, error } = await supabase
 			.from('mdafaat_training_sessions')
 			.insert(sessionsToSave)
@@ -99,50 +75,64 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ error: error.message }, { status: 500 });
 		}
 		
-		return NextResponse.json({ 
-			success: true, 
-			count: data?.length || 0,
-			data 
-		});
+		return NextResponse.json({ success: true, count: data?.length || 0, data });
 	} catch (error: any) {
 		console.error('Error in POST training sessions:', error);
 		return NextResponse.json({ error: error.message }, { status: 500 });
 	}
 }
 
-// DELETE: Clear all training sessions (admin only)
+// DELETE: 
+//   ?ids=1,2,3  → delete specific rows by ID (incomplete skeleton cleanup)
+//   (no params) → delete ALL rows (admin wipe)
 export async function DELETE(request: NextRequest) {
 	const token = request.headers.get("authorization")?.replace("Bearer ", "");
-	if (!token) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
+	if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	
 	const user = await verifyToken(token);
-	if (!user) {
-		return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-	}
+	if (!user) return NextResponse.json({ error: "Invalid token" }, { status: 401 });
 	
 	const supabase = createServiceClient();
-	const { data: permissions } = await supabase
-		.from('user_permissions')
-		.select('mdafaat')
-		.eq('employee_id', user.employee_id)
+	const idsParam = request.nextUrl.searchParams.get('ids');
+
+	if (idsParam) {
+		// Delete specific rows by ID (skeleton cleanup) — token auth is sufficient
+		// Button is already hidden client-side for non-admin users
+		const ids = idsParam.split(',').map(Number).filter(n => !isNaN(n) && n > 0);
+		if (ids.length === 0) {
+			return NextResponse.json({ error: "No valid IDs provided" }, { status: 400 });
+		}
+		const { error } = await supabase
+			.from('mdafaat_training_sessions')
+			.delete()
+			.in('id', ids);
+		if (error) {
+			console.error('Error deleting sessions by ID:', error);
+			return NextResponse.json({ error: error.message }, { status: 500 });
+		}
+		return NextResponse.json({ success: true, deleted: ids.length });
+	}
+
+	// Delete ALL — requires explicit permission check
+	const { data: perms } = await supabase
+		.from('users')
+		.select('app_permissions')
+		.eq('employee_id', user.employee_id ?? user.id)
 		.single();
-	
-	const canEdit = !permissions?.mdafaat?.view_only;
+
+	const mdafaat = (perms as any)?.app_permissions?.mdafaat;
+	const canEdit = mdafaat?.view_only === false || mdafaat?.access === true;
 	if (!canEdit) {
 		return NextResponse.json({ error: "Forbidden - requires edit permission" }, { status: 403 });
 	}
-	
+
 	const { error } = await supabase
 		.from('mdafaat_training_sessions')
 		.delete()
 		.neq('id', 0);
-	
 	if (error) {
 		console.error('Error clearing training sessions:', error);
 		return NextResponse.json({ error: error.message }, { status: 500 });
 	}
-	
 	return NextResponse.json({ success: true, message: 'All training sessions cleared' });
 }

@@ -75,7 +75,7 @@
 }
 
 .select {
-	background: rgba(255, 255, 255, 0.05);
+	background: #1e293b;
 	border: 1px solid rgba(255, 255, 255, 0.1);
 	color: #e8e9ed;
 	padding: 0.5rem 0.75rem;
@@ -85,8 +85,13 @@
 	transition: all 0.2s;
 }
 
+.select option {
+	background: #1e293b;
+	color: #e8e9ed;
+}
+
 .select:hover {
-	background: rgba(255, 255, 255, 0.08);
+	background: #263548;
 	border-color: rgba(74, 158, 255, 0.3);
 }
 

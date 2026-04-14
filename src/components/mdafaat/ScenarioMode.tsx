@@ -788,8 +788,14 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 			{/* Header - EXACT from production */}
 			<div className={styles.header}>
 				<button onClick={async () => {
-					if (gameStarted || complete) await saveTrainingSession();
-					onBack();
+					if (gameStarted || complete) {
+						await saveTrainingSession();
+						onBack();
+					} else {
+						// Warn if leaving without having started — prevents silent missing records
+						setToastMsg({ ok: false, text: `⚠️ ${team.name} 尚未開始情境 — 請先 Shuffle Cards` });
+						setTimeout(() => setToastMsg(null), 4000);
+					}
 				}} className={styles.closeBtn} style={{ background: 'rgba(220,38,38,0.15)', borderColor: 'rgba(220,38,38,0.5)', color: '#ef4444' }}>
 					<ArrowLeft />
 				</button>
