@@ -404,9 +404,25 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 			...shuffledOthers,
 		];
 
-		const b738Qualified = allShuffled.filter((u) =>
-			canFlyAircraft(u, "B738"),
-		);
+		// Interleave B738-qualified people by rank bucket so each B738 team
+		// gets a mix of ranks rather than all seniors going to the first team.
+		const b738QualifiedByRank = [
+			shuffledHigherSeniors.filter(u => canFlyAircraft(u, "B738")),
+			shuffledLowerSeniors.filter(u => canFlyAircraft(u, "B738")),
+			shuffledJuniors.filter(u => canFlyAircraft(u, "B738")),
+			shuffledOthers.filter(u => canFlyAircraft(u, "B738")),
+		];
+		const b738Qualified: User[] = [];
+		let anyLeft = true;
+		while (anyLeft) {
+			anyLeft = false;
+			for (const bucket of b738QualifiedByRank) {
+				if (bucket.length > 0) {
+					b738Qualified.push(bucket.shift()!);
+					anyLeft = true;
+				}
+			}
+		}
 		const atrOnly = allShuffled.filter((u) => !canFlyAircraft(u, "B738"));
 
 		// Debug: Check specific user 60546
@@ -431,13 +447,27 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 				members: [],
 			};
 
-			// Add 4 B738-qualified people to this B738
-			for (
-				let j = 0;
-				j < minB738Crew && remainingPeople.length > 0;
-				j++
-			) {
-				team.members.push(remainingPeople.shift()!);
+			// Add 4 B738-qualified people, enforcing at most 1 senior (MG/SC/FI/PR) per team.
+			// If forced to add a second senior (no non-seniors left), pick the most junior senior.
+			while (team.members.length < minB738Crew && remainingPeople.length > 0) {
+				const teamHasSenior = team.members.some(m => isHigherSenior(m.rank));
+				if (teamHasSenior) {
+					// Prefer a non-senior
+					const nonSeniorIdx = remainingPeople.findIndex(m => !isHigherSenior(m.rank));
+					if (nonSeniorIdx !== -1) {
+						team.members.push(remainingPeople.splice(nonSeniorIdx, 1)[0]);
+					} else {
+						// No non-senior left — must use a senior; pick most junior senior
+						const juniormostIdx = remainingPeople
+							.map((m, idx) => ({ m, idx }))
+							.filter(({ m }) => isHigherSenior(m.rank))
+							.sort((a, b) => getRankOrder(b.m.rank) - getRankOrder(a.m.rank))[0]?.idx ?? 0;
+						team.members.push(remainingPeople.splice(juniormostIdx, 1)[0]);
+					}
+				} else {
+					// No senior yet — take next person (interleaved list starts with a senior, good)
+					team.members.push(remainingPeople.shift()!);
+				}
 			}
 
 			// Only add the team if it has at least 4 members
@@ -454,18 +484,29 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 		let atrPeople = [...remainingPeople, ...atrOnly];
 
 		// Step 3: Create ATR teams FIRST (exactly 2 per team)
+		// Smart pairing: avoid putting two seniors (MG/SC/FI/PR) in the same group.
 		while (atrPeople.length >= 2) {
+			const member1 = atrPeople.shift()!;
+			const m1IsSenior = isHigherSenior(member1.rank);
+
+			let partnerIdx = 0; // default: next person
+			if (m1IsSenior) {
+				// Prefer a non-senior partner to avoid two seniors in one group
+				const nonSeniorIdx = atrPeople.findIndex(p => !isHigherSenior(p.rank));
+				if (nonSeniorIdx !== -1) partnerIdx = nonSeniorIdx;
+			} else {
+				// Prefer a senior partner so each group gets leadership coverage
+				const seniorIdx = atrPeople.findIndex(p => isHigherSenior(p.rank));
+				if (seniorIdx !== -1) partnerIdx = seniorIdx;
+			}
+			const [partner] = atrPeople.splice(partnerIdx, 1);
+
 			const atrTeam: Team = {
 				id: `atr-${newTeams.filter((t) => t.aircraftType === "ATR").length + 1}`,
 				aircraftType: "ATR",
-				aircraftNumber:
-					newTeams.filter((t) => t.aircraftType === "ATR").length + 1,
-				members: [],
+				aircraftNumber: newTeams.filter((t) => t.aircraftType === "ATR").length + 1,
+				members: [member1, partner],
 			};
-
-			atrTeam.members.push(atrPeople.shift()!);
-			atrTeam.members.push(atrPeople.shift()!);
-
 			newTeams.push(atrTeam);
 		}
 
@@ -761,24 +802,44 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 		const atrTeams  = newTeams.filter(t => t.aircraftType === "ATR");
 		for (const b738Team of b738Teams) {
 			while (b738Team.members.length < minB738Crew) {
+				const teamAlreadyHasSenior = b738Team.members.some(m => isHigherSenior(m.rank));
+
 				// Strategy 1: steal from richest B738 (if it has > minB738Crew)
 				const richestB738 = b738Teams
 					.filter(t => t.id !== b738Team.id && t.members.length > minB738Crew)
 					.sort((a, b) => b.members.length - a.members.length)[0];
 				if (richestB738) {
-					b738Team.members.push(richestB738.members.pop()!);
+					// Prefer non-senior if team already has one
+					const nonSenior = richestB738.members
+						.filter(m => !isHigherSenior(m.rank))
+						.sort((a, b) => getRankOrder(b.rank) - getRankOrder(a.rank))[0]; // most junior non-senior
+					// Fallback: if forced to pick a senior, pick the most junior one
+					const fallbackSenior = richestB738.members
+						.filter(m => isHigherSenior(m.rank))
+						.sort((a, b) => getRankOrder(b.rank) - getRankOrder(a.rank))[0];
+					const pick = (teamAlreadyHasSenior ? nonSenior : null) ?? nonSenior ?? fallbackSenior ?? richestB738.members[richestB738.members.length - 1];
+					richestB738.members = richestB738.members.filter(m => m.id !== pick.id);
+					b738Team.members.push(pick);
 					continue;
 				}
 				// Strategy 2: pull B738-qualified member from ATR (only if ATR keeps ≥ 2)
 				let moved = false;
-				for (const atrTeam of atrTeams) {
-					const q = atrTeam.members.find(m => canFlyAircraft(m, "B738"));
-					if (q && atrTeam.members.length > 2) {
-						atrTeam.members = atrTeam.members.filter(m => m.id !== q.id);
-						b738Team.members.push(q);
-						moved = true;
-						break;
-					}
+				for (const atrTeam of atrTeams.filter(t => t.members.length > 2)) {
+					const b738Members = atrTeam.members.filter(m => canFlyAircraft(m, "B738"));
+					if (b738Members.length === 0) continue;
+					// Prefer non-senior; if forced, pick most junior senior
+					const nonSenior = b738Members
+						.filter(m => !isHigherSenior(m.rank))
+						.sort((a, b) => getRankOrder(b.rank) - getRankOrder(a.rank))[0];
+					const fallbackSenior = b738Members
+						.filter(m => isHigherSenior(m.rank))
+						.sort((a, b) => getRankOrder(b.rank) - getRankOrder(a.rank))[0];
+					const q = (teamAlreadyHasSenior ? nonSenior : null) ?? nonSenior ?? fallbackSenior;
+					if (!q) continue;
+					atrTeam.members = atrTeam.members.filter(m => m.id !== q.id);
+					b738Team.members.push(q);
+					moved = true;
+					break;
 				}
 				if (!moved) {
 					console.warn(`Cannot fill ${b738Team.id} to min ${minB738Crew}`);
@@ -790,34 +851,48 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 				// ===== ASSIGN CORE SCENARIOS TO TEAMS =====
 		// Ensure minimum 6 teams for 6 scenarios
 		
-		// If we have fewer than 6 teams, create extra ATR teams with random members
+		// If we have fewer than 6 teams, create extra ATR teams using balanced duplicates.
+		// Track how many times each person has been assigned — prefer least-appeared.
 		while (newTeams.length < 6) {
-			const allMembers = newTeams.flatMap(t => t.members);
-			
-			// Get unique members by ID
+			// Build appearance count map
+			const appearCount = new Map<string, number>();
+			newTeams.forEach(t => t.members.forEach(m => {
+				appearCount.set(m.id, (appearCount.get(m.id) ?? 0) + 1);
+			}));
+
+			// All unique people, sorted by appearance count ascending (least duplicated first)
 			const uniqueMembers = Array.from(
-				new Map(allMembers.map(m => [m.id, m])).values()
-			);
-			
+				new Map(newTeams.flatMap(t => t.members).map(m => [m.id, m])).values()
+			).sort((a, b) => (appearCount.get(a.id) ?? 0) - (appearCount.get(b.id) ?? 0));
+
 			if (uniqueMembers.length < 2) {
 				console.warn('Not enough unique people to create 6 teams');
 				break;
 			}
-			
-			// Randomly pick 2 DIFFERENT members
-			const shuffled = [...uniqueMembers].sort(() => Math.random() - 0.5);
-			const member1 = shuffled[0];
-			const member2 = shuffled[1]; // Guaranteed to be different from member1
-			
+
+			// Pick member1: least appeared
+			const member1 = uniqueMembers[0];
+			const m1IsSenior = isHigherSenior(member1.rank);
+
+			// Pick member2: least appeared who avoids same-senior pairing.
+			// If forced to pair two seniors, pick the most junior one (highest getRankOrder).
+			const candidates = uniqueMembers.slice(1); // exclude member1
+			const preferredPartner = m1IsSenior
+				? candidates.find(p => !isHigherSenior(p.rank)) // member1 is senior → prefer non-senior
+				: candidates.find(p => isHigherSenior(p.rank));  // member1 is not senior → prefer senior
+			// Fallback: must pair two seniors — pick the most junior senior available
+			const juniormostSenior = candidates
+				.filter(p => isHigherSenior(p.rank))
+				.sort((a, b) => getRankOrder(b.rank) - getRankOrder(a.rank))[0];
+			const member2 = preferredPartner ?? juniormostSenior ?? candidates[0];
+
 			const extraTeam: Team = {
 				id: `atr-extra-${newTeams.filter((t) => t.aircraftType === "ATR").length + 1}`,
 				aircraftType: "ATR",
 				aircraftNumber: newTeams.filter((t) => t.aircraftType === "ATR").length + 1,
-				members: [member1, member2]
+				members: [member1, member2],
 			};
-			
 			newTeams.push(extraTeam);
-			console.log(`Created extra ATR team ${extraTeam.id} to reach 6 teams minimum`);
 		}
 		
 		// Shuffle scenarios and assign to teams
@@ -1449,6 +1524,11 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 						</span>
 					)}
 				</div>
+				{trainedUserIds.size > 0 && (
+					<span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>
+						隱藏 {trainedUserIds.size} 位已訓練人員
+					</span>
+				)}
 				{loadingTrainingSessions && (
 					<span style={{ fontSize: '0.875rem', color: '#4a9eff' }}>
 						載入中... Loading...
