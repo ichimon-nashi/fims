@@ -69,8 +69,12 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 	const [configWarning, setConfigWarning] = useState<string>("");
 	
 	// Date filter and training sessions
-	const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+	const [selectedDate, setSelectedDate] = useState<string>(
+		(new Date(Date.now() - new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0]
+	);
 	const [trainedUserIds, setTrainedUserIds] = useState<Set<string>>(new Set());
+	// Dates that have pending groups saved — shown with indicator in date selector
+	const [datesWithGroups, setDatesWithGroups] = useState<Set<string>>(new Set());
 	const [loadingTrainingSessions, setLoadingTrainingSessions] = useState(false);
 
 	// ── Data maintenance modal ────────────────────────────────────────────
@@ -250,10 +254,39 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 		loadTrainingSessions();
 	}, [selectedDate, allUsers]); // Add allUsers dependency
 
+	// Load all dates that have saved groups (training-sessions + pending-groups)
+	useEffect(() => {
+		const loadDatesWithGroups = async () => {
+			try {
+				const token = localStorage.getItem("token");
+				const headers: Record<string,string> = token ? { Authorization: `Bearer ${token}` } : {};
+				const dates = new Set<string>();
+				// From training-sessions (completed records)
+				const tsRes = await fetch('/api/mdafaat/training-sessions');
+				if (tsRes.ok) {
+					const sessions: any[] = await tsRes.json();
+					sessions.forEach((s: any) => { if (s.training_date) dates.add(s.training_date); });
+				}
+				// From pending-groups (formed but not yet trained)
+				const pgRes = await fetch('/api/mdafaat/pending-groups?all=1', { headers }).catch(() => null);
+				if (pgRes?.ok) {
+					const pg: any[] = await pgRes.json().catch(() => []);
+					pg.forEach((g: any) => { if (g.training_date) dates.add(g.training_date); });
+				}
+				setDatesWithGroups(dates);
+			} catch (e) {
+				console.error('Error loading dates with groups:', e);
+			}
+		};
+		loadDatesWithGroups();
+	}, []); // run once on mount
+
 	// Filter users based on search query and exclude those in pool AND trained users
 	const getAvailableUsers = (): User[] => {
 		const poolIds = userPool.map((u) => u.id);
-		let available = allUsers.filter((u) => 
+		// Hide trained users from pool for easier searching
+		// They can be restored by clicking their training date and pressing 返回編輯
+		let available = allUsers.filter((u) =>
 			!poolIds.includes(u.id) && !trainedUserIds.has(u.employee_id)
 		);
 
@@ -590,47 +623,6 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 			);
 		}
 
-		// ===== B738 REBALANCING: Ensure all B738 teams have minimum crew =====
-		// This fixes the bug where senior redistribution can leave B738s with < 4 crew
-		const b738Teams = newTeams.filter(t => t.aircraftType === "B738");
-		const atrTeams = newTeams.filter(t => t.aircraftType === "ATR");
-		
-		for (const b738Team of b738Teams) {
-			while (b738Team.members.length < minB738Crew) {
-				console.log(`Rebalancing ${b738Team.id}: has ${b738Team.members.length}, needs ${minB738Crew}`);
-				
-				// Strategy 1: Pull from richest B738 team (if it has >4 crew)
-				const richestB738 = b738Teams
-					.filter(t => t.id !== b738Team.id && t.members.length > minB738Crew)
-					.sort((a, b) => b.members.length - a.members.length)[0];
-				
-				if (richestB738) {
-					const memberToMove = richestB738.members[richestB738.members.length - 1];
-					richestB738.members.pop();
-					b738Team.members.push(memberToMove);
-					console.log(`Moved ${memberToMove.name_chinese} from ${richestB738.id} to ${b738Team.id}`);
-					continue;
-				}
-				
-				// Strategy 2: Pull B738-qualified member from ATR teams
-				let moved = false;
-				for (const atrTeam of atrTeams) {
-					const b738QualifiedMember = atrTeam.members.find(m => canFlyAircraft(m, "B738"));
-					if (b738QualifiedMember && atrTeam.members.length > 2) {
-						atrTeam.members = atrTeam.members.filter(m => m.id !== b738QualifiedMember.id);
-						b738Team.members.push(b738QualifiedMember);
-						console.log(`Moved ${b738QualifiedMember.name_chinese} from ${atrTeam.id} to ${b738Team.id}`);
-						moved = true;
-						break;
-					}
-				}
-				
-				if (!moved) {
-					console.warn(`Unable to fill ${b738Team.id} to minimum ${minB738Crew} crew`);
-					break;
-				}
-			}
-		}
 
 		// FINAL VALIDATION: Remove any ATR-only people from B738 teams
 		const b738TeamsForValidation = newTeams.filter(
@@ -687,7 +679,52 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 			}
 		}
 
-		// Any remaining person is unassigned (should not happen)
+		// Last resort: 1 ATR-only person with no pair.
+		// Correct approach: find a B738-qualified person sitting in ATR,
+		// move them to the needy B738, then pair their old ATR partner with the ATR-only person.
+		if (invalidPeople.length === 1) {
+			const atrOnlyPerson = invalidPeople[0];
+			let placed = false;
+
+			// Look for an ATR team that has a B738-qualified member AND a non-B738 partner
+			const currentAtrTeams = newTeams.filter(t => t.aircraftType === "ATR");
+			const needyB738 = b738TeamsForValidation
+				.filter(t => t.members.length < minB738Crew)
+				.sort((a, b) => a.members.length - b.members.length)[0];
+
+			if (needyB738) {
+				for (const atrTeam of currentAtrTeams) {
+					const b738Qualified = atrTeam.members.find(m => canFlyAircraft(m, "B738"));
+					if (b738Qualified) {
+						// Move the B738-qualified person to B738
+						atrTeam.members = atrTeam.members.filter(m => m.id !== b738Qualified.id);
+						needyB738.members.push(b738Qualified);
+						// Pair the remaining ATR member with the ATR-only person
+						atrTeam.members.push(atrOnlyPerson);
+						invalidPeople.shift();
+						placed = true;
+						break;
+					}
+				}
+			}
+
+			// If still not placed — pair with any existing ATR member as a duplicate group
+			if (!placed && invalidPeople.length === 1) {
+				const anyAtr = newTeams.find(t => t.aircraftType === "ATR");
+				if (anyAtr && anyAtr.members.length > 0) {
+					const pair = anyAtr.members[anyAtr.members.length - 1];
+					const extraTeam: Team = {
+						id: `atr-extra-orphan`,
+						aircraftType: "ATR",
+						aircraftNumber: newTeams.filter(t => t.aircraftType === "ATR").length + 1,
+						members: [invalidPeople.shift()!, pair],
+					};
+					newTeams.push(extraTeam);
+				}
+			}
+		}
+
+		// Any still-remaining person is truly unassignable
 		if (invalidPeople.length > 0) {
 			console.warn(
 				"Warning: Could not assign:",
@@ -696,7 +733,7 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 		}
 
 		// CRITICAL VALIDATION: Ensure ATR teams have EXACTLY 2 people
-		atrTeams.forEach((team) => {
+		newTeams.filter(t => t.aircraftType === "ATR").forEach((team) => {
 			if (team.members.length > 2) {
 				console.error(
 					"CRITICAL ERROR: ATR team has more than 2 members:",
@@ -717,7 +754,40 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 			}
 		});
 
-		// ===== ASSIGN CORE SCENARIOS TO TEAMS =====
+
+		// ===== B738 REBALANCING: run AFTER removing invalid members =====
+		// So any members removed by validation don't leave B738 under minimum.
+		const b738Teams = newTeams.filter(t => t.aircraftType === "B738");
+		const atrTeams  = newTeams.filter(t => t.aircraftType === "ATR");
+		for (const b738Team of b738Teams) {
+			while (b738Team.members.length < minB738Crew) {
+				// Strategy 1: steal from richest B738 (if it has > minB738Crew)
+				const richestB738 = b738Teams
+					.filter(t => t.id !== b738Team.id && t.members.length > minB738Crew)
+					.sort((a, b) => b.members.length - a.members.length)[0];
+				if (richestB738) {
+					b738Team.members.push(richestB738.members.pop()!);
+					continue;
+				}
+				// Strategy 2: pull B738-qualified member from ATR (only if ATR keeps ≥ 2)
+				let moved = false;
+				for (const atrTeam of atrTeams) {
+					const q = atrTeam.members.find(m => canFlyAircraft(m, "B738"));
+					if (q && atrTeam.members.length > 2) {
+						atrTeam.members = atrTeam.members.filter(m => m.id !== q.id);
+						b738Team.members.push(q);
+						moved = true;
+						break;
+					}
+				}
+				if (!moved) {
+					console.warn(`Cannot fill ${b738Team.id} to min ${minB738Crew}`);
+					break;
+				}
+			}
+		}
+
+				// ===== ASSIGN CORE SCENARIOS TO TEAMS =====
 		// Ensure minimum 6 teams for 6 scenarios
 		
 		// If we have fewer than 6 teams, create extra ATR teams with random members
@@ -822,19 +892,52 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 
 	const loadGroupsForDate = async (date: string) => {
 		try {
-			const response = await fetch(`/api/mdafaat/training-sessions?date=${date}`);
-			if (!response.ok) return;
-			
-			const sessions = await response.json();
+			const token = localStorage.getItem("token");
+			const headers: Record<string,string> = token ? { Authorization: `Bearer ${token}` } : {};
+
+			// Try pending-groups first (formed but not yet trained)
+			const pgRes = await fetch(`/api/mdafaat/pending-groups?date=${date}`, { headers });
+			if (pgRes.ok) {
+				const pendingGroups = await pgRes.json();
+				if (Array.isArray(pendingGroups) && pendingGroups.length > 0) {
+					const loadedTeams: Team[] = [];
+					for (const pg of pendingGroups) {
+						const memberIds = new Set(
+							(pg.members as any[]).map((m: any) =>
+								String(m.employeeId ?? m.employee_id ?? m.userId ?? m)
+							)
+						);
+						const members = allUsers.filter(u => memberIds.has(u.employee_id));
+						if (members.length > 0) {
+							loadedTeams.push({
+								id: `${pg.group_type}-${pg.group_number}`.toLowerCase(),
+								aircraftType: pg.aircraft_type ?? pg.group_type,
+								aircraftNumber: pg.aircraft_number ?? pg.group_number,
+								coreScenario: pg.core_scenario,
+								pendingGroupId: pg.id,
+								members,
+							});
+						}
+					}
+					if (loadedTeams.length > 0) {
+						setTeams(loadedTeams);
+						setShowTeams(true);
+						// Do NOT populate pool here — only restored via 返回編輯
+						return;
+					}
+				}
+			}
+
+			// Fall back: load from training-sessions (completed records)
+			const tsRes = await fetch(`/api/mdafaat/training-sessions?date=${date}`);
+			if (!tsRes.ok) return;
+			const sessions = await tsRes.json();
 			if (!sessions || sessions.length === 0) {
 				setTeams([]);
 				setShowTeams(false);
 				return;
 			}
-			
-			// Group sessions by group_type and group_number
 			const groupMap = new Map<string, any>();
-			
 			sessions.forEach((session: any) => {
 				const key = `${session.group_type}-${session.group_number}`;
 				if (!groupMap.has(key)) {
@@ -843,14 +946,20 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 						aircraftType: session.group_type,
 						aircraftNumber: session.group_number,
 						coreScenario: session.core_scenario,
-						memberIds: new Set(session.team_members)
+						memberIds: new Set(
+							Array.isArray(session.team_members)
+								? session.team_members.map((m: any) =>
+										typeof m === "object"
+											? String(m.employeeId ?? m.employee_id)
+											: String(m)
+									)
+								: []
+						),
 					});
 				}
 			});
-			
-			// Convert to Team objects with actual user data
 			const loadedTeams: Team[] = [];
-			for (const [_, groupData] of groupMap) {
+			for (const [, groupData] of groupMap) {
 				const members = allUsers.filter(u => groupData.memberIds.has(u.employee_id));
 				if (members.length > 0) {
 					loadedTeams.push({
@@ -858,15 +967,14 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 						aircraftType: groupData.aircraftType,
 						aircraftNumber: groupData.aircraftNumber,
 						coreScenario: groupData.coreScenario,
-						members
+						members,
 					});
 				}
 			}
-			
 			if (loadedTeams.length > 0) {
 				setTeams(loadedTeams);
 				setShowTeams(true);
-				console.log(`Loaded ${loadedTeams.length} groups for ${date}`);
+				// Do NOT populate pool here — only restored via 返回編輯
 			}
 		} catch (error) {
 			console.error('Error loading groups:', error);
@@ -1296,29 +1404,51 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 				<label style={{ color: '#e2e8f0', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
 					訓練日期 Training Date:
 				</label>
-				<input 
-					type="date" 
-					value={selectedDate}
-					onChange={(e) => setSelectedDate(e.target.value)}
-					style={{
-						padding: '0.5rem',
-						borderRadius: '0.375rem',
-						border: '1px solid rgba(148, 163, 184, 0.3)',
-						background: 'rgba(30, 41, 59, 0.8)',
-						color: '#e2e8f0',
-						fontSize: '0.875rem'
-					}}
-				/>
-				{trainedUserIds.size > 0 && (
-					<span style={{ 
-						fontSize: '0.875rem', 
-						color: '#94a3b8',
-						flex: '1 1 auto',
-						minWidth: '200px'
-					}}>
-						隱藏{trainedUserIds.size}位已訓練人員
-					</span>
-				)}
+				{/* Date selector — keep the manual input for flexibility, but add a
+				    dropdown of dates that already have records (with 📋 indicator).
+				    Selecting a date with records restores teams via loadGroupsForDate. */}
+				<div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+					<input
+						type="date"
+						value={selectedDate}
+						onChange={(e) => setSelectedDate(e.target.value)}
+						style={{
+							padding: '0.5rem',
+							borderRadius: '0.375rem',
+							border: datesWithGroups.has(selectedDate)
+								? '1px solid rgba(74, 158, 255, 0.6)'
+								: '1px solid rgba(148, 163, 184, 0.3)',
+							background: '#1e293b',
+							color: '#e2e8f0',
+							fontSize: '0.875rem',
+						}}
+					/>
+					{datesWithGroups.size > 0 && (
+						<select
+							value={selectedDate}
+							onChange={(e) => setSelectedDate(e.target.value)}
+							style={{
+								padding: '0.5rem',
+								borderRadius: '0.375rem',
+								border: '1px solid rgba(74, 158, 255, 0.3)',
+								background: '#1e293b',
+								color: '#e2e8f0',
+								fontSize: '0.875rem',
+								cursor: 'pointer',
+							}}
+						>
+							<option value="" disabled>📋 已有記錄的日期</option>
+							{Array.from(datesWithGroups).sort((a, b) => b.localeCompare(a)).map(d => (
+								<option key={d} value={d}>📋 {d}</option>
+							))}
+						</select>
+					)}
+					{datesWithGroups.has(selectedDate) && (
+						<span style={{ fontSize: '0.8rem', color: '#4a9eff', whiteSpace: 'nowrap' }}>
+							📋 此日已有分組記錄
+						</span>
+					)}
+				</div>
 				{loadingTrainingSessions && (
 					<span style={{ fontSize: '0.875rem', color: '#4a9eff' }}>
 						載入中... Loading...
@@ -1675,6 +1805,10 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 							</button>
 							<button
 								onClick={() => {
+									// Restore all group members back into the selectable pool
+									const allMembers = teams.flatMap(t => t.members);
+									const unique = Array.from(new Map(allMembers.map(m => [m.id, m])).values());
+									setUserPool(unique);
 									setShowTeams(false);
 									setTeams([]);
 								}}
@@ -1769,11 +1903,11 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 													}
 												>
 													<span
-														className={
-															styles.memberNumber
-														}
+														className={styles.memberNumber}
 													>
-														{idx + 1}
+														{team.aircraftType === "B738"
+															? (["1L","1R","3L","3R","Z2","3RA"][idx] ?? `P${idx+1}`)
+															: (["F1","F2"][idx] ?? `P${idx+1}`)}
 													</span>
 													<Avatar
 														employeeId={

@@ -667,7 +667,8 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 			const token = localStorage.getItem("token");
 			// Save one session row per member so each gets their own result
 			const sessions = team.members.map(m => ({
-				training_date: trainingDate ?? new Date().toISOString().split('T')[0],
+				// Use trainingDate from TeamFormation if available, otherwise local date (UTC+8 safe)
+				training_date: trainingDate ?? (new Date(Date.now() - new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0],
 				employee_id: m.employeeId,
 				group_type: team.aircraftType || 'ATR',  // never use flight's aircraftType
 				group_number: team.aircraftNumber ?? (currentTeam + 1),
