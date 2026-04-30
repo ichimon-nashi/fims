@@ -19,8 +19,13 @@ const CORE_SCENARIO_LABELS: Record<string, string> = {
 	planned_evacuation: "客艙準備程序 Cabin Preparation",
 };
 
-// ─── Training criteria —  
-type CriteriaEntry = { ref: string; icon: string; shortLabel: string; items: string[] };
+// ─── Training criteria —
+type CriteriaEntry = {
+	ref: string;
+	icon: string;
+	shortLabel: string;
+	items: string[];
+};
 const CRITERIA_DATA: Record<string, CriteriaEntry> = {
 	cpp: {
 		shortLabel: "客艙準備 CPP",
@@ -206,77 +211,292 @@ interface FlightEntry {
 const FLIGHT_DATA: Record<string, Record<string, FlightEntry[]>> = {
 	TSA: {
 		morning: [
-			{ flightNo: "AE-391",  departure: "TSA", arrival: "TTT", aircraftType: "ATR" },
-			{ flightNo: "AE-7901", departure: "TSA", arrival: "LZN", aircraftType: "ATR" },
-			{ flightNo: "AE-361",  departure: "TSA", arrival: "MZG", aircraftType: "ATR" },
-			{ flightNo: "AE-211",  departure: "TSA", arrival: "FOC", aircraftType: "B738" },
-			{ flightNo: "AE-1263", departure: "TSA", arrival: "KNH", aircraftType: "B738" },
+			{
+				flightNo: "AE-391",
+				departure: "TSA",
+				arrival: "TTT",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-7901",
+				departure: "TSA",
+				arrival: "LZN",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-361",
+				departure: "TSA",
+				arrival: "MZG",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-211",
+				departure: "TSA",
+				arrival: "FOC",
+				aircraftType: "B738",
+			},
+			{
+				flightNo: "AE-1263",
+				departure: "TSA",
+				arrival: "KNH",
+				aircraftType: "B738",
+			},
 		],
 		midday: [
-			{ flightNo: "AE-367",  departure: "TSA", arrival: "MZG", aircraftType: "ATR" },
-			{ flightNo: "AE-371",  departure: "TSA", arrival: "MZG", aircraftType: "ATR" },
-			{ flightNo: "AE-1269", departure: "TSA", arrival: "KNH", aircraftType: "ATR" },
-			{ flightNo: "AE-1265", departure: "TSA", arrival: "KNH", aircraftType: "ATR" },
-			{ flightNo: "AE-1271", departure: "TSA", arrival: "KNH", aircraftType: "ATR" },
-			{ flightNo: "AE-1273", departure: "TSA", arrival: "KNH", aircraftType: "ATR" },
-			{ flightNo: "AE-1275", departure: "TSA", arrival: "KNH", aircraftType: "B738" },
+			{
+				flightNo: "AE-367",
+				departure: "TSA",
+				arrival: "MZG",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-371",
+				departure: "TSA",
+				arrival: "MZG",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-1269",
+				departure: "TSA",
+				arrival: "KNH",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-1265",
+				departure: "TSA",
+				arrival: "KNH",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-1271",
+				departure: "TSA",
+				arrival: "KNH",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-1273",
+				departure: "TSA",
+				arrival: "KNH",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-1275",
+				departure: "TSA",
+				arrival: "KNH",
+				aircraftType: "B738",
+			},
 		],
 		night: [
-			{ flightNo: "AE-395",  departure: "TSA", arrival: "TTT", aircraftType: "ATR" },
-			{ flightNo: "AE-385",  departure: "TSA", arrival: "MZG", aircraftType: "ATR" },
-			{ flightNo: "AE-1277", departure: "TSA", arrival: "KNH", aircraftType: "ATR" },
-			{ flightNo: "AE-377",  departure: "TSA", arrival: "MZG", aircraftType: "ATR" },
-			{ flightNo: "AE-387",  departure: "TSA", arrival: "MZG", aircraftType: "ATR" },
+			{
+				flightNo: "AE-395",
+				departure: "TSA",
+				arrival: "TTT",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-385",
+				departure: "TSA",
+				arrival: "MZG",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-1277",
+				departure: "TSA",
+				arrival: "KNH",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-377",
+				departure: "TSA",
+				arrival: "MZG",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-387",
+				departure: "TSA",
+				arrival: "MZG",
+				aircraftType: "ATR",
+			},
 		],
 	},
 	RMQ: {
 		morning: [
-			{ flightNo: "AE-761",  departure: "RMQ", arrival: "KNH", aircraftType: "ATR" },
-			{ flightNo: "AE-781",  departure: "RMQ", arrival: "MZG", aircraftType: "ATR" },
-			{ flightNo: "AE-1857", departure: "RMQ", arrival: "SGN", aircraftType: "B738" },
+			{
+				flightNo: "AE-761",
+				departure: "RMQ",
+				arrival: "KNH",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-781",
+				departure: "RMQ",
+				arrival: "MZG",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-1857",
+				departure: "RMQ",
+				arrival: "SGN",
+				aircraftType: "B738",
+			},
 		],
 		midday: [
-			{ flightNo: "AE-785",  departure: "RMQ", arrival: "MZG", aircraftType: "ATR" },
-			{ flightNo: "AE-787",  departure: "RMQ", arrival: "MZG", aircraftType: "ATR" },
-			{ flightNo: "AE-763",  departure: "RMQ", arrival: "KNH", aircraftType: "ATR" },
-			{ flightNo: "AE-767",  departure: "RMQ", arrival: "KNH", aircraftType: "ATR" },
-			{ flightNo: "AE-791",  departure: "RMQ", arrival: "MZG", aircraftType: "ATR" },
-			{ flightNo: "AE-769",  departure: "RMQ", arrival: "KNH", aircraftType: "B738" },
+			{
+				flightNo: "AE-785",
+				departure: "RMQ",
+				arrival: "MZG",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-787",
+				departure: "RMQ",
+				arrival: "MZG",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-763",
+				departure: "RMQ",
+				arrival: "KNH",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-767",
+				departure: "RMQ",
+				arrival: "KNH",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-791",
+				departure: "RMQ",
+				arrival: "MZG",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-769",
+				departure: "RMQ",
+				arrival: "KNH",
+				aircraftType: "B738",
+			},
 		],
 		night: [
-			{ flightNo: "AE-793",  departure: "RMQ", arrival: "MZG", aircraftType: "ATR" },
-			{ flightNo: "AE-731",  departure: "RMQ", arrival: "HUN", aircraftType: "ATR" },
-			{ flightNo: "AE-795",  departure: "RMQ", arrival: "MZG", aircraftType: "B738" },
+			{
+				flightNo: "AE-793",
+				departure: "RMQ",
+				arrival: "MZG",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-731",
+				departure: "RMQ",
+				arrival: "HUN",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-795",
+				departure: "RMQ",
+				arrival: "MZG",
+				aircraftType: "B738",
+			},
 		],
 	},
 	KHH: {
 		morning: [
-			{ flightNo: "AE-301",  departure: "KHH", arrival: "KNH", aircraftType: "ATR" },
-			{ flightNo: "AE-331",  departure: "KHH", arrival: "MZG", aircraftType: "ATR" },
-			{ flightNo: "AE-333",  departure: "KHH", arrival: "MZG", aircraftType: "ATR" },
+			{
+				flightNo: "AE-301",
+				departure: "KHH",
+				arrival: "KNH",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-331",
+				departure: "KHH",
+				arrival: "MZG",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-333",
+				departure: "KHH",
+				arrival: "MZG",
+				aircraftType: "ATR",
+			},
 		],
 		midday: [
-			{ flightNo: "AE-303",  departure: "KHH", arrival: "KNH", aircraftType: "ATR" },
-			{ flightNo: "AE-343",  departure: "KHH", arrival: "MZG", aircraftType: "ATR" },
-			{ flightNo: "AE-7925", departure: "KHH", arrival: "LZN", aircraftType: "ATR" },
-			{ flightNo: "AE-335",  departure: "KHH", arrival: "MZG", aircraftType: "ATR" },
-			{ flightNo: "AE-307",  departure: "KHH", arrival: "KNH", aircraftType: "ATR" },
-			{ flightNo: "AE-337",  departure: "KHH", arrival: "MZG", aircraftType: "ATR" },
-			{ flightNo: "AE-341",  departure: "KHH", arrival: "MZG", aircraftType: "ATR" },
-			{ flightNo: "AE-305",  departure: "KHH", arrival: "KNH", aircraftType: "ATR" },
-			{ flightNo: "AE-339",  departure: "KHH", arrival: "MZG", aircraftType: "ATR" },
+			{
+				flightNo: "AE-303",
+				departure: "KHH",
+				arrival: "KNH",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-343",
+				departure: "KHH",
+				arrival: "MZG",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-7925",
+				departure: "KHH",
+				arrival: "LZN",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-335",
+				departure: "KHH",
+				arrival: "MZG",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-307",
+				departure: "KHH",
+				arrival: "KNH",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-337",
+				departure: "KHH",
+				arrival: "MZG",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-341",
+				departure: "KHH",
+				arrival: "MZG",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-305",
+				departure: "KHH",
+				arrival: "KNH",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-339",
+				departure: "KHH",
+				arrival: "MZG",
+				aircraftType: "ATR",
+			},
 		],
 		night: [
-			{ flightNo: "AE-349",  departure: "KHH", arrival: "MZG", aircraftType: "ATR" },
-			{ flightNo: "AE-7931", departure: "KHH", arrival: "HUN", aircraftType: "ATR" },
+			{
+				flightNo: "AE-349",
+				departure: "KHH",
+				arrival: "MZG",
+				aircraftType: "ATR",
+			},
+			{
+				flightNo: "AE-7931",
+				departure: "KHH",
+				arrival: "HUN",
+				aircraftType: "ATR",
+			},
 		],
 	},
 };
 
 const FALLBACK_FLIGHTS: Record<string, string[]> = {
 	morning: ["AE-101", "AE-103", "AE-105"],
-	midday:  ["AE-151", "AE-153", "AE-251"],
-	night:   ["AE-171", "AE-173", "AE-271"],
+	midday: ["AE-151", "AE-153", "AE-251"],
+	night: ["AE-171", "AE-173", "AE-271"],
 };
 
 const getBaseFromEmployeeId = (employeeId: string): string => {
@@ -288,26 +508,38 @@ const getBaseFromEmployeeId = (employeeId: string): string => {
 	return "KHH";
 };
 
-const getRandomFlight = (base: string, timeOfDay: string): FlightEntry | null => {
+const getRandomFlight = (
+	base: string,
+	timeOfDay: string,
+): FlightEntry | null => {
 	const list = FLIGHT_DATA[base]?.[timeOfDay];
-	if (list && list.length > 0) return list[Math.floor(Math.random() * list.length)];
+	if (list && list.length > 0)
+		return list[Math.floor(Math.random() * list.length)];
 	const fallback = FALLBACK_FLIGHTS[timeOfDay] || FALLBACK_FLIGHTS.midday;
-	return { flightNo: fallback[Math.floor(Math.random() * fallback.length)], departure: base, arrival: "???", aircraftType: "ATR" };
+	return {
+		flightNo: fallback[Math.floor(Math.random() * fallback.length)],
+		departure: base,
+		arrival: "???",
+		aircraftType: "ATR",
+	};
 };
 const SPECIAL_PASSENGERS = [
-	"WCHR - 輪椅旅客",
-	"WCHC - 客艙輪椅旅客",
+	"AGED - 長者",
 	"BLND - 視障旅客",
 	"DEAF - 聽障旅客",
-	"PRGN - 孕婦旅客",
+	"DEPA - 受戒護人員",
 	"DPNA - 自閉症",
 	"DPNA - 腦性麻痺",
-	"POXY - 需氧旅客"
+	"DRUN - 酒醉旅客",
+	"POXY - 需氧旅客",
+	"PRGN - 孕婦旅客",
+	"UM - 單獨旅行孩童",
+	"WCHC - 客艙輪椅旅客",
+	"WCHR - 輪椅旅客",
 ];
 
 const getRandomSpecialPax = (): string =>
 	SPECIAL_PASSENGERS[Math.floor(Math.random() * SPECIAL_PASSENGERS.length)];
-
 
 interface MdafaatCard {
 	id: number;
@@ -346,19 +578,29 @@ interface Props {
 	}>;
 	onBack: () => void;
 	isRedoMode?: boolean;
-	trainingDate?: string;  // date selected in TeamFormation — overrides today
+	trainingDate?: string; // date selected in TeamFormation — overrides today
 	/** Called with array of {employeeId, result} when scenario completes — for redo flow */
-	onSessionComplete?: (results: Array<{ employeeId: string; result: 'pass' | 'redo' }>) => void;
+	onSessionComplete?: (
+		results: Array<{ employeeId: string; result: "pass" | "redo" }>,
+	) => void;
 }
 
-const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionComplete, trainingDate }) => {
+const ScenarioMode: React.FC<Props> = ({
+	teams,
+	onBack,
+	isRedoMode,
+	onSessionComplete,
+	trainingDate,
+}) => {
 	// Data
 	const [allCards, setAllCards] = useState<MdafaatCard[]>([]);
 	const [loading, setLoading] = useState(true);
 
 	// Criteria panel state
 	const [criteriaOpen, setCriteriaOpen] = useState<string | null>(null);
-	const [checkedItems, setCheckedItems] = useState<Record<string, Set<number>>>({});
+	const [checkedItems, setCheckedItems] = useState<
+		Record<string, Set<number>>
+	>({});
 
 	// Game state
 	const [currentTeam, setCurrentTeam] = useState(0);
@@ -388,12 +630,18 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 	const [showEndButton, setShowEndButton] = useState(false);
 
 	// Pass/fail results — keyed by employeeId, default 'pass'
-	const [memberResults, setMemberResults] = useState<Record<string, 'pass' | 'redo'>>({});
+	const [memberResults, setMemberResults] = useState<
+		Record<string, "pass" | "redo">
+	>({});
 
 	// Timer
 	const [elapsedTime, setElapsedTime] = useState(0);
 	const [timerRunning, setTimerRunning] = useState(false);
-	const [toastMsg, setToastMsg] = useState<{ ok: boolean; text: string } | null>(null);
+	const [toastMsg, setToastMsg] = useState<{
+		ok: boolean;
+		text: string;
+	} | null>(null);
+	const [reloading, setReloading] = useState(false); // for reshuffle cards button
 
 	// Tracks which team indices have already been saved.
 	// Resets when teams prop changes (new session or redo) so saves are never skipped.
@@ -401,8 +649,6 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 	useEffect(() => {
 		savedTeamIndices.current = new Set();
 	}, [teams]);
-
-
 
 	// Computed
 	const team = teams[currentTeam];
@@ -417,7 +663,7 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 			}
 			return false;
 		};
-		
+
 		if (!checkUser()) {
 			setTimeout(checkUser, 500);
 			setTimeout(checkUser, 1000);
@@ -425,27 +671,37 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 		}
 	}, []);
 
-	// Load cards
+	// Load cards — depends on currentTeam (not coreScenario) so it always
+	// re-fires when advancing groups, even if two consecutive groups share
+	// the same coreScenario. Cards are cleared immediately so handleShuffle
+	// never captures stale allCards from the previous group.
 	useEffect(() => {
 		const load = async () => {
+			// Clear immediately — prevents stale cards from previous group
+			setAllCards([]);
+			setScenarioCards([]);
 			try {
 				const token = localStorage.getItem("token");
-				const coreScenario = team?.coreScenario || 'bomb_threat';
-				
-				const res = await fetch(`/api/mdafaat/scenarios?core_scenario=${coreScenario}`, {
-					headers: { Authorization: `Bearer ${token}` },
-				});
+				const coreScenario =
+					teams[currentTeam]?.coreScenario || "bomb_threat";
+
+				const res = await fetch(
+					`/api/mdafaat/scenarios?core_scenario=${coreScenario}`,
+					{
+						headers: { Authorization: `Bearer ${token}` },
+					},
+				);
 				const data = await res.json();
-				
+
 				if (data.error) {
-					console.error('Error loading scenarios:', data.error);
+					console.error("Error loading scenarios:", data.error);
 					setLoading(false);
 					return;
 				}
-				
+
 				setAllCards([
-					...data.emergency, 
-					...data.passenger, 
+					...data.emergency,
+					...data.passenger,
 					...data.equipment,
 				]);
 				setLoading(false);
@@ -455,14 +711,14 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 			}
 		};
 		load();
-	}, [team?.coreScenario]);
+	}, [currentTeam]); // currentTeam always changes between groups
 
 	// Timer effect
 	useEffect(() => {
 		let interval: NodeJS.Timeout;
 		if (timerRunning) {
 			interval = setInterval(() => {
-				setElapsedTime(prev => prev + 1);
+				setElapsedTime((prev) => prev + 1);
 			}, 1000);
 		}
 		return () => clearInterval(interval);
@@ -472,15 +728,15 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 	const formatTime = (seconds: number) => {
 		const mins = Math.floor(seconds / 60);
 		const secs = seconds % 60;
-		return `${mins}:${secs.toString().padStart(2, '0')}`;
+		return `${mins}:${secs.toString().padStart(2, "0")}`;
 	};
 
 	const formatDate = (d = new Date()) => {
 		const yyyy = d.getFullYear();
-		const mm = String(d.getMonth() + 1).padStart(2, '0');
-		const dd = String(d.getDate()).padStart(2, '0');
-		const hh = String(d.getHours()).padStart(2, '0');
-		const min = String(d.getMinutes()).padStart(2, '0');
+		const mm = String(d.getMonth() + 1).padStart(2, "0");
+		const dd = String(d.getDate()).padStart(2, "0");
+		const hh = String(d.getHours()).padStart(2, "0");
+		const min = String(d.getMinutes()).padStart(2, "0");
 		return `${yyyy}/${mm}/${dd} ${hh}:${min}`;
 	};
 
@@ -488,62 +744,81 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 	const getRankOrder = (rank: string): number => {
 		if (!rank) return 999;
 		const r = rank.toLowerCase();
-		if (r.includes('mg') || r.includes('manager')) return 1;
-		if (r.includes('sc') || (r.includes('section') && r.includes('chief'))) return 2;
-		if (r.includes('fi') || r.includes('flight instructor')) return 3;
-		if (r.includes('pr') || r.includes('purser')) return 4;
-		if (r.includes('lf') || r.includes('leading')) return 5;
-		if (r.includes('fs') || r.includes('fa') || r.includes('flight attendant') || r.includes('stewardess')) return 6;
+		if (r.includes("mg") || r.includes("manager")) return 1;
+		if (r.includes("sc") || (r.includes("section") && r.includes("chief")))
+			return 2;
+		if (r.includes("fi") || r.includes("flight instructor")) return 3;
+		if (r.includes("pr") || r.includes("purser")) return 4;
+		if (r.includes("lf") || r.includes("leading")) return 5;
+		if (
+			r.includes("fs") ||
+			r.includes("fa") ||
+			r.includes("flight attendant") ||
+			r.includes("stewardess")
+		)
+			return 6;
 		return 99;
 	};
 
 	// Get time functions (EXACT from production)
 	const getTimeIcon = (time: string) => {
-		switch(time) {
-			case 'morning': return '🌅';
-			case 'midday': return '☀️';
-			case 'night': return '🌙';
-			default: return '☀️';
+		switch (time) {
+			case "morning":
+				return "🌅";
+			case "midday":
+				return "☀️";
+			case "night":
+				return "🌙";
+			default:
+				return "☀️";
 		}
 	};
 
 	const getTimeText = (time: string) => {
-		switch(time) {
-			case 'morning': return '早上';
-			case 'midday': return '中午';
-			case 'night': return '晚上';
-			default: return '中午';
+		switch (time) {
+			case "morning":
+				return "早上";
+			case "midday":
+				return "中午";
+			case "night":
+				return "晚上";
+			default:
+				return "中午";
 		}
 	};
 
 	// Get card style class by title (A/B/C/D/E), not card_type which is legacy
 	const getCardStyleClass = (title: string): string => {
-		if (title.includes('A. 背景')) return styles.cardBackground;
-		if (title.includes('B. 觸發')) return styles.cardTrigger;
-		if (title.includes('C. 併發')) return styles.cardComplication;
-		if (title.includes('D. Outcome')) return styles.cardOutcome;
+		if (title.includes("A. 背景")) return styles.cardBackground;
+		if (title.includes("B. 觸發")) return styles.cardTrigger;
+		if (title.includes("C. 併發")) return styles.cardComplication;
+		if (title.includes("D. Outcome")) return styles.cardOutcome;
 		return styles.cardBackground;
 	};
 
 	// Get suit — each card gets a distinct suit so they're visually distinguishable
 	const getSuit = (cardType: string, cardTitle?: string): string => {
-		if (cardTitle?.includes('C. 併發')) return '♥'; // optional = hearts (red)
-		if (cardTitle?.includes('A. 背景')) return '♠'; // background = spades
-		if (cardTitle?.includes('B. 觸發')) return '♦'; // trigger = diamonds
-		if (cardTitle?.includes('D. Outcome')) return '♣'; // outcome = clubs
+		if (cardTitle?.includes("C. 併發")) return "♥"; // optional = hearts (red)
+		if (cardTitle?.includes("A. 背景")) return "♠"; // background = spades
+		if (cardTitle?.includes("B. 觸發")) return "♦"; // trigger = diamonds
+		if (cardTitle?.includes("D. Outcome")) return "♣"; // outcome = clubs
 		// fallback by card_type
-		switch(cardType) {
-			case 'emergency': return '♠';
-			case 'passenger': return '♦';
-			case 'equipment': return '♣';
-			default: return '♠';
+		switch (cardType) {
+			case "emergency":
+				return "♠";
+			case "passenger":
+				return "♦";
+			case "equipment":
+				return "♣";
+			default:
+				return "♠";
 		}
 	};
 
 	const getSuitColor = (cardType: string, cardTitle?: string): string => {
-		if (cardTitle?.includes('C. 併發')) return '#dc2626'; // hearts = red
-		if (cardTitle?.includes('B. 觸發')) return '#dc2626'; // diamonds = red
-		return '#1e293b'; // spades/clubs = dark
+		if (cardTitle?.includes("C. 併發")) return "#dc2626"; // hearts = red
+		if (cardTitle?.includes("B. 觸發")) return "#dc2626"; // diamonds = red
+		return "#1e293b"; // spades/clubs = dark
 	};
 
 	// Shuffle (EXACT animation from production)
@@ -553,24 +828,30 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 		// Pre-calculate conditions and flight — set AFTER animation so layout
 		// stays stable during the shuffle (setting conditions immediately would
 		// render the bars and collapse the gameArea mid-animation)
-		const timeOfDay = (["morning", "midday", "night"] as const)[Math.floor(Math.random() * 3)];
+		const timeOfDay = (["morning", "midday", "night"] as const)[
+			Math.floor(Math.random() * 3)
+		];
 		const cond = {
 			time: timeOfDay,
 			full: Math.random() > 0.5,
-			infants: Math.random() > 0.70,
-			specialPax: Math.random() > 0.70 ? getRandomSpecialPax() : null,
+			infants: Math.random() > 0.7,
+			specialPax: Math.random() > 0.7 ? getRandomSpecialPax() : null,
 		};
 		const sortedForBase = [...team.members].sort((a, b) => {
 			const rd = getRankOrder(a.rank) - getRankOrder(b.rank);
-			return rd !== 0 ? rd : parseInt(a.employeeId) - parseInt(b.employeeId);
+			return rd !== 0
+				? rd
+				: parseInt(a.employeeId) - parseInt(b.employeeId);
 		});
 		// Use base from DB if available; fall back to employee ID derivation
 		const leader = sortedForBase[0];
-		const base = leader?.base || (leader ? getBaseFromEmployeeId(leader.employeeId) : 'KHH');
+		const base =
+			leader?.base ||
+			(leader ? getBaseFromEmployeeId(leader.employeeId) : "KHH");
 		const flight = getRandomFlight(base, timeOfDay);
 
 		// Wait for shuffle animation (1150ms) BEFORE revealing conditions
-		await new Promise(r => setTimeout(r, 1150));
+		await new Promise((r) => setTimeout(r, 1150));
 
 		// Now set conditions — bars appear after animation completes
 		setConditions(cond);
@@ -589,8 +870,8 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 		setTimerRunning(false);
 
 		// Flip delay (300ms from production)
-		await new Promise(r => setTimeout(r, 300));
-		
+		await new Promise((r) => setTimeout(r, 300));
+
 		setGameStarted(true);
 		setShuffling(false);
 	};
@@ -598,26 +879,29 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 	// Card click handler
 	const handleCardClick = (index: number) => {
 		const card = scenarioCards[index];
-		
+
 		// Can't click if already done
 		if (clickedCards.has(index) || skippedCards.has(index)) return;
-		
+
 		// Must click in order
 		const expectedNext = clickedCards.size + skippedCards.size;
 		if (index !== expectedNext) return;
-		
+
 		// If clicking C or D, show inline YES/NO on the card
-		if (card.title.includes('C. 併發')) {
+		if (card.title.includes("C. 併發")) {
 			setPendingOptional(index);
 			return;
 		}
-		
+
 		// Mark as clicked
-		setClickedCards(prev => new Set([...prev, index]));
-		setHistory(prev => [...prev, { card, timestamp: Date.now(), skipped: false }]);
-		
+		setClickedCards((prev) => new Set([...prev, index]));
+		setHistory((prev) => [
+			...prev,
+			{ card, timestamp: Date.now(), skipped: false },
+		]);
+
 		// Check if this is the Outcome card
-		if (card.title.includes('D. Outcome')) {
+		if (card.title.includes("D. Outcome")) {
 			setShowEndButton(true);
 		}
 	};
@@ -629,33 +913,73 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 		const card = scenarioCards[index];
 		setPendingOptional(null);
 		if (include) {
-			setClickedCards(prev => new Set([...prev, index]));
-			setHistory(prev => [...prev, { card, timestamp: Date.now(), skipped: false }]);
+			setClickedCards((prev) => new Set([...prev, index]));
+			setHistory((prev) => [
+				...prev,
+				{ card, timestamp: Date.now(), skipped: false },
+			]);
 		} else {
-			setSkippedCards(prev => new Set([...prev, index]));
-			setHistory(prev => [...prev, { card, timestamp: Date.now(), skipped: true }]);
+			setSkippedCards((prev) => new Set([...prev, index]));
+			setHistory((prev) => [
+				...prev,
+				{ card, timestamp: Date.now(), skipped: true },
+			]);
 		}
 	};
 
 	// End scenario — initialise all members as 'pass', then save
 	const handleEndScenario = async () => {
 		// Pre-populate all members as pass so the UI shows the toggles
-		const initial: Record<string, 'pass' | 'redo'> = {};
-		team.members.forEach(m => { initial[m.employeeId] = 'pass'; });
+		const initial: Record<string, "pass" | "redo"> = {};
+		team.members.forEach((m) => {
+			initial[m.employeeId] = "pass";
+		});
 		setMemberResults(initial);
 		setComplete(true);
 		setTimerRunning(false);
 	};
 
 	const toggleMemberResult = (employeeId: string) => {
-		setMemberResults(prev => ({
+		setMemberResults((prev) => ({
 			...prev,
-			[employeeId]: prev[employeeId] === 'pass' ? 'redo' : 'pass',
+			[employeeId]: prev[employeeId] === "pass" ? "redo" : "pass",
 		}));
 	};
 
+	// Force-reload cards for current group — safety net if cards are stale
+	const reloadCards = async () => {
+		setReloading(true);
+		setAllCards([]);
+		setScenarioCards([]);
+		try {
+			const token = localStorage.getItem("token");
+			const coreScenario =
+				teams[currentTeam]?.coreScenario || "bomb_threat";
+			const res = await fetch(
+				`/api/mdafaat/scenarios?core_scenario=${coreScenario}`,
+				{
+					headers: { Authorization: `Bearer ${token}` },
+				},
+			);
+			const data = await res.json();
+			if (!data.error) {
+				setAllCards([
+					...data.emergency,
+					...data.passenger,
+					...data.equipment,
+				]);
+			}
+		} catch (err) {
+			console.error("reloadCards error:", err);
+		} finally {
+			setReloading(false);
+		}
+	};
+
 	// Save training session — called on End Scenario, next group, and back navigation
-	const saveTrainingSession = async (resultsOverride?: Record<string, 'pass' | 'redo'>) => {
+	const saveTrainingSession = async (
+		resultsOverride?: Record<string, "pass" | "redo">,
+	) => {
 		// Guard: prevent duplicate saves for the same team index
 		if (savedTeamIndices.current.has(currentTeam)) {
 			console.log(`Team ${currentTeam} already saved — skipping`);
@@ -666,21 +990,27 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 		try {
 			const token = localStorage.getItem("token");
 			// Save one session row per member so each gets their own result
-			const sessions = team.members.map(m => ({
+			const sessions = team.members.map((m) => ({
 				// Use trainingDate from TeamFormation if available, otherwise local date (UTC+8 safe)
-				training_date: trainingDate ?? (new Date(Date.now() - new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0],
+				training_date:
+					trainingDate ??
+					new Date(
+						Date.now() - new Date().getTimezoneOffset() * 60000,
+					)
+						.toISOString()
+						.split("T")[0],
 				employee_id: m.employeeId,
-				group_type: team.aircraftType || 'ATR',  // never use flight's aircraftType
-				group_number: team.aircraftNumber ?? (currentTeam + 1),
+				group_type: team.aircraftType || "ATR", // never use flight's aircraftType
+				group_number: team.aircraftNumber ?? currentTeam + 1,
 				core_scenario: team.coreScenario,
 				flight_info: flightInfo,
-				team_members: team.members.map(tm => ({
+				team_members: team.members.map((tm) => ({
 					userId: tm.userId,
 					name: tm.name,
 					employeeId: tm.employeeId,
 					rank: tm.rank,
 				})),
-				scenario_path: history.map(h => ({
+				scenario_path: history.map((h) => ({
 					code: h.card.code,
 					title: h.card.title,
 					description: h.card.description,
@@ -689,48 +1019,58 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 				conditions,
 				elapsed_time: elapsedTime,
 				instructor: instructorName,
-				result: results[m.employeeId] ?? 'pass',
+				result: results[m.employeeId] ?? "pass",
 				is_redo: isRedoMode ?? false,
 			}));
 
-			const saveRes = await fetch('/api/mdafaat/training-sessions', {
-				method: 'POST',
+			const saveRes = await fetch("/api/mdafaat/training-sessions", {
+				method: "POST",
 				headers: {
-					'Authorization': `Bearer ${token}`,
-					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`,
+					"Content-Type": "application/json",
 				},
 				body: JSON.stringify({ sessions }),
 			});
 			if (!saveRes.ok) {
 				const errBody = await saveRes.json().catch(() => ({}));
-				console.error('❌ Save failed:', saveRes.status, errBody);
+				console.error("❌ Save failed:", saveRes.status, errBody);
 			} else {
-				console.log('✅ Saved team', currentTeam, 'isRedo:', isRedoMode, 'sessions:', sessions.length);
+				console.log(
+					"✅ Saved team",
+					currentTeam,
+					"isRedo:",
+					isRedoMode,
+					"sessions:",
+					sessions.length,
+				);
 			}
 
 			// Delete the pending group now that training is complete
 			if (team.pendingGroupId) {
 				try {
-					await fetch(`/api/mdafaat/pending-groups?id=${team.pendingGroupId}`, {
-						method: 'DELETE',
-						headers: { 'Authorization': `Bearer ${token}` },
-					});
+					await fetch(
+						`/api/mdafaat/pending-groups?id=${team.pendingGroupId}`,
+						{
+							method: "DELETE",
+							headers: { Authorization: `Bearer ${token}` },
+						},
+					);
 				} catch (e) {
-					console.warn('Could not delete pending group:', e);
+					console.warn("Could not delete pending group:", e);
 				}
 			}
 
 			// Notify parent (used by redo flow to collect redo students)
 			if (onSessionComplete) {
 				onSessionComplete(
-					team.members.map(m => ({
+					team.members.map((m) => ({
 						employeeId: m.employeeId,
-						result: results[m.employeeId] ?? 'pass',
-					}))
+						result: results[m.employeeId] ?? "pass",
+					})),
 				);
 			}
 		} catch (error) {
-			console.error('Error saving training session:', error);
+			console.error("Error saving training session:", error);
 		}
 	};
 
@@ -765,63 +1105,108 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 	}
 
 	// Single source of truth for member order — leader is always index 0
-	const sortedMembers = team ? [...team.members].sort((a, b) => {
-		const rankDiff = getRankOrder(a.rank) - getRankOrder(b.rank);
-		if (rankDiff !== 0) return rankDiff;
-		return parseInt(a.employeeId) - parseInt(b.employeeId);
-	}) : [];
+	const sortedMembers = team
+		? [...team.members].sort((a, b) => {
+				const rankDiff = getRankOrder(a.rank) - getRankOrder(b.rank);
+				if (rankDiff !== 0) return rankDiff;
+				return parseInt(a.employeeId) - parseInt(b.employeeId);
+			})
+		: [];
 
 	return (
 		<div className={styles.container}>
 			{/* ── Toast ── */}
 			{toastMsg && (
-				<div style={{
-					position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)',
-					zIndex: 9999, padding: '0.6rem 1.25rem', borderRadius: '0.5rem',
-					fontWeight: 600, fontSize: '0.95rem', pointerEvents: 'none',
-					background: toastMsg.ok ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
-					color: toastMsg.ok ? '#10b981' : '#ef4444',
-					border: `1px solid ${toastMsg.ok ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}`,
-				}}>
+				<div
+					style={{
+						position: "fixed",
+						bottom: "2rem",
+						left: "50%",
+						transform: "translateX(-50%)",
+						zIndex: 9999,
+						padding: "0.6rem 1.25rem",
+						borderRadius: "0.5rem",
+						fontWeight: 600,
+						fontSize: "0.95rem",
+						pointerEvents: "none",
+						background: toastMsg.ok
+							? "rgba(16,185,129,0.15)"
+							: "rgba(239,68,68,0.15)",
+						color: toastMsg.ok ? "#10b981" : "#ef4444",
+						border: `1px solid ${toastMsg.ok ? "rgba(16,185,129,0.4)" : "rgba(239,68,68,0.4)"}`,
+					}}
+				>
 					{toastMsg.text}
 				</div>
 			)}
 			{/* Header - EXACT from production */}
 			<div className={styles.header}>
-				<button onClick={async () => {
-					if (gameStarted || complete) {
-						await saveTrainingSession();
-						onBack();
-					} else {
-						// Warn if leaving without having started — prevents silent missing records
-						setToastMsg({ ok: false, text: `⚠️ ${team.name} 尚未開始情境 — 請先 Shuffle Cards` });
-						setTimeout(() => setToastMsg(null), 4000);
-					}
-				}} className={styles.closeBtn} style={{ background: 'rgba(220,38,38,0.15)', borderColor: 'rgba(220,38,38,0.5)', color: '#ef4444' }}>
+				<button
+					onClick={async () => {
+						if (gameStarted || complete) {
+							await saveTrainingSession();
+							onBack();
+						} else {
+							// Warn if leaving without having started — prevents silent missing records
+							setToastMsg({
+								ok: false,
+								text: `⚠️ ${team.name} 尚未開始情境 — 請先 Shuffle Cards`,
+							});
+							setTimeout(() => setToastMsg(null), 4000);
+						}
+					}}
+					className={styles.closeBtn}
+					style={{
+						background: "rgba(220,38,38,0.15)",
+						borderColor: "rgba(220,38,38,0.5)",
+						color: "#ef4444",
+					}}
+				>
 					<ArrowLeft />
 				</button>
 				<h1 className={styles.title}>客艙組員情境演練</h1>
-				<div style={{ width: '2.5rem' }} />
+				<div style={{ width: "2.5rem" }} />
 			</div>
 
 			{/* Stopwatch Bar - click to start/pause */}
 			{conditions && (
 				<div className={styles.stopwatchBar}>
 					<span
-						onClick={() => setTimerRunning(r => !r)}
+						onClick={() => setTimerRunning((r) => !r)}
 						title={timerRunning ? "點擊暫停" : "點擊開始計時"}
-						style={{ color: timerRunning ? '#4ade80' : '#f59e0b', fontWeight: 700, fontSize: '1.25rem', cursor: 'pointer', userSelect: 'none' }}
+						style={{
+							color: timerRunning ? "#4ade80" : "#f59e0b",
+							fontWeight: 700,
+							fontSize: "1.25rem",
+							cursor: "pointer",
+							userSelect: "none",
+						}}
 					>
-						{timerRunning ? '⏱️' : '▶️'} {formatTime(elapsedTime)}
+						{timerRunning ? "⏱️" : "▶️"} {formatTime(elapsedTime)}
 					</span>
 					{team.coreScenario && (
-						<span style={{ color: '#fbbf24', fontWeight: 700, fontSize: '0.95rem', background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: '0.375rem', padding: '0.2rem 0.65rem', letterSpacing: '0.02em' }}>
-							🎯 {CORE_SCENARIO_LABELS[team.coreScenario] || team.coreScenario}
+						<span
+							style={{
+								color: "#fbbf24",
+								fontWeight: 700,
+								fontSize: "0.95rem",
+								background: "rgba(251,191,36,0.12)",
+								border: "1px solid rgba(251,191,36,0.3)",
+								borderRadius: "0.375rem",
+								padding: "0.2rem 0.65rem",
+								letterSpacing: "0.02em",
+							}}
+						>
+							🎯{" "}
+							{CORE_SCENARIO_LABELS[team.coreScenario] ||
+								team.coreScenario}
 						</span>
 					)}
 					{flightInfo && (
-						<span style={{ color: '#94a3b8', fontSize: '0.9rem' }}>
-							✈️ {flightInfo.flightNo}&nbsp;&nbsp;{flightInfo.departure} → {flightInfo.arrival}&nbsp;({flightInfo.aircraftType})
+						<span style={{ color: "#94a3b8", fontSize: "0.9rem" }}>
+							✈️ {flightInfo.flightNo}&nbsp;&nbsp;
+							{flightInfo.departure} → {flightInfo.arrival}&nbsp;(
+							{flightInfo.aircraftType})
 						</span>
 					)}
 				</div>
@@ -831,30 +1216,58 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 			{conditions && (
 				<div className={styles.conditionsTeamRow}>
 					<div className={styles.conditionsGroup}>
-						<span>{getTimeIcon(conditions.time)} {getTimeText(conditions.time)}</span>
-						<span><FaPeopleGroup style={{ color: '#60a5fa' }} /> 客滿: {conditions.full ? "YES" : "NO"}</span>
-						<span><FaBaby style={{ color: '#fb923c' }} /> 嬰兒: {conditions.infants ? "YES" : "NO"}</span>
-						<span><FaWheelchair style={{ color: '#a78bfa' }} /> 特殊旅客: {conditions.specialPax ?? "NO"}</span>
+						<span>
+							{getTimeIcon(conditions.time)}{" "}
+							{getTimeText(conditions.time)}
+						</span>
+						<span>
+							<FaPeopleGroup style={{ color: "#60a5fa" }} /> 客滿:{" "}
+							{conditions.full ? "YES" : "NO"}
+						</span>
+						<span>
+							<FaBaby style={{ color: "#fb923c" }} /> 嬰兒:{" "}
+							{conditions.infants ? "YES" : "NO"}
+						</span>
+						<span>
+							<FaWheelchair style={{ color: "#a78bfa" }} />{" "}
+							特殊旅客: {conditions.specialPax ?? "NO"}
+						</span>
 					</div>
 
 					{team && (
 						<div className={styles.teamGroup}>
-							<span className={styles.teamLabel}>Team {team.name}:</span>
+							<span className={styles.teamLabel}>
+								Team {team.name}:
+							</span>
 							<div className={styles.membersList}>
-								{sortedMembers
-									.map((m, idx) => (
-										<div 
-											key={m.userId} 
-											className={`${styles.teamMember} ${idx === 0 ? styles.teamLeader : ''}`}
-										>
-											{m.avatarUrl && (
-												<div style={{ position: 'relative', width: '1.75rem', height: '1.75rem' }}>
-													<Image src={m.avatarUrl} alt={m.name} fill className={styles.memberAvatar} />
-												</div>
-											)}
-											<span className={styles.memberName}>{m.name}</span>
-										</div>
-									))}
+								{sortedMembers.map((m, idx) => (
+									<div
+										key={m.userId}
+										className={`${styles.teamMember} ${idx === 0 ? styles.teamLeader : ""}`}
+									>
+										{m.avatarUrl && (
+											<div
+												style={{
+													position: "relative",
+													width: "1.75rem",
+													height: "1.75rem",
+												}}
+											>
+												<Image
+													src={m.avatarUrl}
+													alt={m.name}
+													fill
+													className={
+														styles.memberAvatar
+													}
+												/>
+											</div>
+										)}
+										<span className={styles.memberName}>
+											{m.name}
+										</span>
+									</div>
+								))}
 							</div>
 						</div>
 					)}
@@ -872,15 +1285,25 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 						return (
 							<button
 								key={key}
-								className={`${styles.criteriaChip} ${isActive ? styles.active : ''}`}
-								onClick={() => setCriteriaOpen(isActive ? null : key)}
+								className={`${styles.criteriaChip} ${isActive ? styles.active : ""}`}
+								onClick={() =>
+									setCriteriaOpen(isActive ? null : key)
+								}
 							>
 								{/* eslint-disable-next-line @next/next/no-img-element */}
-							<img src={data.icon} alt="" className={styles.criteriaChipIcon} />
-							<span className={styles.criteriaChipLabel}>{data.shortLabel}</span>
-							{checked > 0 && (
-								<span className={styles.criteriaChipCount}>{checked}/{total}</span>
-							)}
+								<img
+									src={data.icon}
+									alt=""
+									className={styles.criteriaChipIcon}
+								/>
+								<span className={styles.criteriaChipLabel}>
+									{data.shortLabel}
+								</span>
+								{checked > 0 && (
+									<span className={styles.criteriaChipCount}>
+										{checked}/{total}
+									</span>
+								)}
 							</button>
 						);
 					})}
@@ -888,60 +1311,136 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 			)}
 
 			{/* ── Criteria Modal (anchored bottom-left) ────────── */}
-			{criteriaOpen && (() => {
-				const data = CRITERIA_DATA[criteriaOpen];
-				if (!data) return null;
-				const checked = checkedItems[criteriaOpen] ?? new Set<number>();
-				return (
-					<div className={styles.criteriaOverlay} onClick={() => setCriteriaOpen(null)}>
-						<div className={styles.criteriaModal} onClick={e => e.stopPropagation()}>
-							<div className={styles.criteriaModalHeader}>
-								<div>
-									<div className={styles.criteriaModalTitle} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-									{/* eslint-disable-next-line @next/next/no-img-element */}
-									<img src={data.icon} alt="" style={{ width: '1rem', height: '1rem', objectFit: 'contain' }} />
-									{data.shortLabel}
-								</div>
-									<div className={styles.criteriaModalRef}>{data.ref}</div>
-								</div>
-								<button className={styles.criteriaCloseBtn} onClick={() => setCriteriaOpen(null)}>
-									<X size={16} />
-								</button>
-							</div>
-							<div className={styles.criteriaList}>
-								{data.items.map((item, idx) => {
-									const isChecked = checked.has(idx);
-									return (
+			{criteriaOpen &&
+				(() => {
+					const data = CRITERIA_DATA[criteriaOpen];
+					if (!data) return null;
+					const checked =
+						checkedItems[criteriaOpen] ?? new Set<number>();
+					return (
+						<div
+							className={styles.criteriaOverlay}
+							onClick={() => setCriteriaOpen(null)}
+						>
+							<div
+								className={styles.criteriaModal}
+								onClick={(e) => e.stopPropagation()}
+							>
+								<div className={styles.criteriaModalHeader}>
+									<div>
 										<div
-											key={idx}
-											className={`${styles.criteriaItem} ${isChecked ? styles.checked : ''}`}
-											onClick={() => {
-								setCheckedItems(prev => {
-									const next = new Set(prev[criteriaOpen!] ?? []);
-									next.has(idx) ? next.delete(idx) : next.add(idx);
-									return { ...prev, [criteriaOpen!]: next };
-								});
-							}}
+											className={
+												styles.criteriaModalTitle
+											}
+											style={{
+												display: "flex",
+												alignItems: "center",
+												gap: "0.4rem",
+											}}
 										>
-											<div className={styles.criteriaCheckbox}>
-												{isChecked && <span className={styles.criteriaCheckMark}>✓</span>}
-											</div>
-											<span className={styles.criteriaText}>{item}</span>
+											{/* eslint-disable-next-line @next/next/no-img-element */}
+											<img
+												src={data.icon}
+												alt=""
+												style={{
+													width: "1rem",
+													height: "1rem",
+													objectFit: "contain",
+												}}
+											/>
+											{data.shortLabel}
 										</div>
-									);
-								})}
-							</div>
-							<div className={styles.criteriaFooter}>
-								<span className={styles.criteriaProgress}>
-									<span className={styles.criteriaProgressFill}>{checked.size}</span>
-									/{data.items.length} 已確認
-								</span>
-								<button className={styles.criteriaResetBtn} onClick={() => setCheckedItems(prev => ({ ...prev, [criteriaOpen!]: new Set() }))}>重置</button>
+										<div
+											className={styles.criteriaModalRef}
+										>
+											{data.ref}
+										</div>
+									</div>
+									<button
+										className={styles.criteriaCloseBtn}
+										onClick={() => setCriteriaOpen(null)}
+									>
+										<X size={16} />
+									</button>
+								</div>
+								<div className={styles.criteriaList}>
+									{data.items.map((item, idx) => {
+										const isChecked = checked.has(idx);
+										return (
+											<div
+												key={idx}
+												className={`${styles.criteriaItem} ${isChecked ? styles.checked : ""}`}
+												onClick={() => {
+													setCheckedItems((prev) => {
+														const next = new Set(
+															prev[
+																criteriaOpen!
+															] ?? [],
+														);
+														next.has(idx)
+															? next.delete(idx)
+															: next.add(idx);
+														return {
+															...prev,
+															[criteriaOpen!]:
+																next,
+														};
+													});
+												}}
+											>
+												<div
+													className={
+														styles.criteriaCheckbox
+													}
+												>
+													{isChecked && (
+														<span
+															className={
+																styles.criteriaCheckMark
+															}
+														>
+															✓
+														</span>
+													)}
+												</div>
+												<span
+													className={
+														styles.criteriaText
+													}
+												>
+													{item}
+												</span>
+											</div>
+										);
+									})}
+								</div>
+								<div className={styles.criteriaFooter}>
+									<span className={styles.criteriaProgress}>
+										<span
+											className={
+												styles.criteriaProgressFill
+											}
+										>
+											{checked.size}
+										</span>
+										/{data.items.length} 已確認
+									</span>
+									<button
+										className={styles.criteriaResetBtn}
+										onClick={() =>
+											setCheckedItems((prev) => ({
+												...prev,
+												[criteriaOpen!]: new Set(),
+											}))
+										}
+									>
+										重置
+									</button>
+								</div>
 							</div>
 						</div>
-					</div>
-				);
-			})()}
+					);
+				})()}
 
 			{/* Game Area - GREEN POKER TABLE */}
 			<div className={styles.gameArea}>
@@ -955,35 +1454,49 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 									{[...Array(10)].map((_, i) => {
 										const z = i / 4;
 										const delay = i * 10;
-										const plusMinus = Math.round(Math.random()) ? -1 : 1;
-										const randomOffset = plusMinus * (Math.random() * 150 + 200);
-										
+										const plusMinus = Math.round(
+											Math.random(),
+										)
+											? -1
+											: 1;
+										const randomOffset =
+											plusMinus *
+											(Math.random() * 150 + 200);
+
 										return (
 											<div
 												key={i}
 												className={`${styles.cardBack} ${styles.shuffleCard}`}
 												style={{
-													position: 'absolute',
+													position: "absolute",
 													zIndex: i,
 													animationDelay: `${delay}ms`,
-													['--random-x' as any]: `${randomOffset}px`,
-													['--z' as any]: `${-z}px`,
-													['--init-y' as any]: `${-i * 2}px`,
+													["--random-x" as any]: `${randomOffset}px`,
+													["--z" as any]: `${-z}px`,
+													["--init-y" as any]: `${-i * 2}px`,
 												}}
 											>
-												<Image 
-													src="/images/deckback.png" 
-													alt="Card" 
+												<Image
+													src="/images/deckback.png"
+													alt="Card"
 													fill
 													sizes="320px"
-													className={styles.cardBackImage}
+													className={
+														styles.cardBackImage
+													}
 													onError={(e) => {
-														const target = e.currentTarget as HTMLElement;
-														target.style.display = 'none';
+														const target =
+															e.currentTarget as HTMLElement;
+														target.style.display =
+															"none";
 													}}
 												/>
 												{i === 0 && (
-													<div className={styles.cardBackInner}>
+													<div
+														className={
+															styles.cardBackInner
+														}
+													>
 														MDAfaat
 													</div>
 												)}
@@ -993,53 +1506,120 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 								</div>
 							) : (
 								<div className={styles.cardBack}>
-									<Image 
-										src="/images/deckback.png" 
-										alt="Card Back" 
+									<Image
+										src="/images/deckback.png"
+										alt="Card Back"
 										fill
 										sizes="320px"
 										className={styles.cardBackImage}
 										onError={() => {
-											const fallback = document.getElementById('card-back-fallback');
-											if (fallback) fallback.style.display = 'flex';
+											const fallback =
+												document.getElementById(
+													"card-back-fallback",
+												);
+											if (fallback)
+												fallback.style.display = "flex";
 										}}
 									/>
-									<div id="card-back-fallback" className={styles.cardBackInner} style={{ display: 'none' }}>
+									<div
+										id="card-back-fallback"
+										className={styles.cardBackInner}
+										style={{ display: "none" }}
+									>
 										MDAfaat
 									</div>
 								</div>
 							)}
 						</div>
 						{!shuffling && (
-							<button onClick={handleShuffle} className={styles.shuffleBtn}>
-								<Shuffle />
-								Shuffle Cards
-							</button>
+							<div
+								style={{
+									display: "flex",
+									gap: "0.75rem",
+									justifyContent: "center",
+									flexWrap: "wrap",
+								}}
+							>
+								<button
+									onClick={handleShuffle}
+									className={styles.shuffleBtn}
+								>
+									<Shuffle />
+									Shuffle Cards
+								</button>
+								{scenarioCards.length > 0 && !complete && (
+									<button
+										onClick={reloadCards}
+										disabled={reloading}
+										style={{
+											display: "flex",
+											alignItems: "center",
+											gap: "0.4rem",
+											padding: "0.6rem 1rem",
+											borderRadius: "0.5rem",
+											background: "rgba(74,158,255,0.12)",
+											border: "1px solid rgba(74,158,255,0.3)",
+											color: "#60a5fa",
+											cursor: reloading
+												? "not-allowed"
+												: "pointer",
+											fontSize: "0.82rem",
+											fontWeight: 600,
+											opacity: reloading ? 0.6 : 1,
+										}}
+										title="重新載入此組情境牌 (如牌組顯示異常)"
+									>
+										🔄{" "}
+										{reloading ? "載入中..." : "重新發牌"}
+									</button>
+								)}
+							</div>
 						)}
 					</div>
 				) : complete ? (
 					/* Complete Screen */
 					<div className={styles.completeContainer}>
-
 						{/* ── Pass / Fail selector ── */}
 						<div className={styles.resultPanel}>
 							<h3 className={styles.resultPanelTitle}>
-								{isRedoMode ? '🔄 重考結果' : '✅ 訓練結果'} — {team.name}
+								{isRedoMode ? "🔄 重考結果" : "✅ 訓練結果"} —{" "}
+								{team.name}
 							</h3>
-							<p className={styles.resultPanelHint}>點擊切換通過 / 重考</p>
+							<p className={styles.resultPanelHint}>
+								點擊切換通過 / 重考
+							</p>
 							<div className={styles.resultMemberList}>
-								{sortedMembers.map(m => {
-									const result = memberResults[m.employeeId] ?? 'pass';
+								{sortedMembers.map((m) => {
+									const result =
+										memberResults[m.employeeId] ?? "pass";
 									return (
 										<button
 											key={m.employeeId}
-											className={`${styles.resultMemberBtn} ${result === 'redo' ? styles.resultRedo : styles.resultPass}`}
-											onClick={() => toggleMemberResult(m.employeeId)}
+											className={`${styles.resultMemberBtn} ${result === "redo" ? styles.resultRedo : styles.resultPass}`}
+											onClick={() =>
+												toggleMemberResult(m.employeeId)
+											}
 										>
-											<span className={styles.resultMemberName}>{m.name}</span>
-											<span className={styles.resultMemberEid}>{m.employeeId}</span>
-											<span className={styles.resultBadge}>
-												{result === 'pass' ? '✓ 通過' : '↺ 重考'}
+											<span
+												className={
+													styles.resultMemberName
+												}
+											>
+												{m.name}
+											</span>
+											<span
+												className={
+													styles.resultMemberEid
+												}
+											>
+												{m.employeeId}
+											</span>
+											<span
+												className={styles.resultBadge}
+											>
+												{result === "pass"
+													? "✓ 通過"
+													: "↺ 重考"}
 											</span>
 										</button>
 									);
@@ -1049,7 +1629,10 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 								className={styles.confirmResultBtn}
 								onClick={async () => {
 									await saveTrainingSession();
-									setToastMsg({ ok: true, text: '✅ 訓練結果已儲存！' });
+									setToastMsg({
+										ok: true,
+										text: "✅ 訓練結果已儲存！",
+									});
 									setTimeout(() => setToastMsg(null), 3000);
 								}}
 							>
@@ -1060,135 +1643,314 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 						<div className={styles.completeActions}>
 							<h3>Scenario Complete!</h3>
 							{hasNextTeam ? (
-								<button onClick={nextTeam} className={styles.nextBtn}>
+								<button
+									onClick={nextTeam}
+									className={styles.nextBtn}
+								>
 									<ArrowRight />
 									Next Group
 								</button>
 							) : (
-								<button onClick={async () => { await saveTrainingSession(); onBack(); }} className={styles.nextBtn}>
+								<button
+									onClick={async () => {
+										await saveTrainingSession();
+										onBack();
+									}}
+									className={styles.nextBtn}
+								>
 									Return to Formation
 								</button>
 							)}
 						</div>
-
 					</div>
 				) : (
 					/* Cards Display - All at once */
 					<>
-					<div className={styles.cardsRow}>
+						<div className={styles.cardsRow}>
 							{scenarioCards.map((card, index) => {
-							const isClicked = clickedCards.has(index);
-							const isSkipped = skippedCards.has(index);
-							const isCurrent = !isClicked && !isSkipped && (clickedCards.size + skippedCards.size === index);
-							
-							return (
-								<div key={card.id} className={styles.cardColumn}>
-									{card.title.includes('C. 併發') && !isClicked && !isSkipped && (
-										<div style={{ background: 'rgba(251,191,36,0.12)', border: '1px dashed #fbbf24', borderRadius: '0.5rem', padding: '0.3rem 0.6rem', color: '#fbbf24', fontSize: '0.72rem', fontWeight: 700, textAlign: 'center', marginBottom: '0.35rem', letterSpacing: '0.04em' }}>
-											🛑 FREEZE — ⚡ OPTIONAL
-										</div>
-									)}
-									<AnimatePresence mode="wait">
-										<motion.div
-											key={card.id}
-											initial={{ rotateY: 90, opacity: 0 }}
-											animate={{ rotateY: 0, opacity: 1 }}
-											exit={{ rotateY: -90, opacity: 0 }}
-											transition={{ duration: 0.3, delay: index * 0.1 }}
-										>
-											<div 
-												className={`${styles.card} ${getCardStyleClass(card.title)} ${isClicked ? styles.cardClicked : ''} ${isSkipped ? styles.cardSkipped : ''} ${isCurrent && pendingOptional !== index ? styles.cardCurrent : ''}`}
-												onClick={() => handleCardClick(index)}
-												style={{ 
-													cursor: isCurrent ? 'pointer' : 'default',
-													opacity: isSkipped ? 0.4 : 1,
-													boxShadow: pendingOptional === index ? '0 0 0 3px #fbbf24, 0 0 20px rgba(251,191,36,0.5)' : undefined
+								const isClicked = clickedCards.has(index);
+								const isSkipped = skippedCards.has(index);
+								const isCurrent =
+									!isClicked &&
+									!isSkipped &&
+									clickedCards.size + skippedCards.size ===
+										index;
+
+								return (
+									<div
+										key={card.id}
+										className={styles.cardColumn}
+									>
+										{card.title.includes("C. 併發") &&
+											!isClicked &&
+											!isSkipped && (
+												<div
+													style={{
+														background:
+															"rgba(251,191,36,0.12)",
+														border: "1px dashed #fbbf24",
+														borderRadius: "0.5rem",
+														padding:
+															"0.3rem 0.6rem",
+														color: "#fbbf24",
+														fontSize: "0.72rem",
+														fontWeight: 700,
+														textAlign: "center",
+														marginBottom: "0.35rem",
+														letterSpacing: "0.04em",
+													}}
+												>
+													🛑 FREEZE — ⚡ OPTIONAL
+												</div>
+											)}
+										<AnimatePresence mode="wait">
+											<motion.div
+												key={card.id}
+												initial={{
+													rotateY: 90,
+													opacity: 0,
+												}}
+												animate={{
+													rotateY: 0,
+													opacity: 1,
+												}}
+												exit={{
+													rotateY: -90,
+													opacity: 0,
+												}}
+												transition={{
+													duration: 0.3,
+													delay: index * 0.1,
 												}}
 											>
-												{/* Top Left: Code */}
-												<div className={styles.cardCornerTopLeft}>
-													<span className={styles.cardCode}>{card.code}</span>
-												</div>
-												
-												{/* Top Right: Suit */}
-												<div className={styles.cardCornerTopRight}>
-													<span className={styles.cardSuit} style={{ color: getSuitColor(card.card_type, card.title) }}>
-														{getSuit(card.card_type, card.title)}
-													</span>
-												</div>
-												
-												{/* Center: Title & Description */}
-												<div className={styles.cardCenter}>
-													<h3>{card.title}</h3>
-													<p>{card.description}</p>
+												<div
+													className={`${styles.card} ${getCardStyleClass(card.title)} ${isClicked ? styles.cardClicked : ""} ${isSkipped ? styles.cardSkipped : ""} ${isCurrent && pendingOptional !== index ? styles.cardCurrent : ""}`}
+													onClick={() =>
+														handleCardClick(index)
+													}
+													style={{
+														cursor: isCurrent
+															? "pointer"
+															: "default",
+														opacity: isSkipped
+															? 0.4
+															: 1,
+														boxShadow:
+															pendingOptional ===
+															index
+																? "0 0 0 3px #fbbf24, 0 0 20px rgba(251,191,36,0.5)"
+																: undefined,
+													}}
+												>
+													{/* Top Left: Code */}
+													<div
+														className={
+															styles.cardCornerTopLeft
+														}
+													>
+														<span
+															className={
+																styles.cardCode
+															}
+														>
+															{card.code}
+														</span>
+													</div>
 
-													{/* Inline YES/NO for optional C/D cards */}
-													{pendingOptional === index && (
-														<div style={{ marginTop: '1rem', display: 'flex', gap: '0.6rem', justifyContent: 'center' }}>
-															<button
-																onClick={(e) => { e.stopPropagation(); handleOptionalDecision(true); }}
-																style={{ padding: '0.45rem 1rem', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '0.5rem', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}
-															>
-																✓ Include
-															</button>
-															<button
-																onClick={(e) => { e.stopPropagation(); handleOptionalDecision(false); }}
-																style={{ padding: '0.45rem 1rem', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '0.5rem', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}
-															>
-																⊘ Skip
-															</button>
-														</div>
-													)}
+													{/* Top Right: Suit */}
+													<div
+														className={
+															styles.cardCornerTopRight
+														}
+													>
+														<span
+															className={
+																styles.cardSuit
+															}
+															style={{
+																color: getSuitColor(
+																	card.card_type,
+																	card.title,
+																),
+															}}
+														>
+															{getSuit(
+																card.card_type,
+																card.title,
+															)}
+														</span>
+													</div>
 
-													{/* Checkmark for clicked */}
-													{isClicked && (
-														<div style={{ 
-															position: 'absolute', 
-															top: '50%', 
-															left: '50%', 
-															transform: 'translate(-50%, -50%)', 
-															fontSize: '4rem', 
-															color: '#10b981', 
-															opacity: 0.5,
-															pointerEvents: 'none',
-															fontWeight: 700
-														}}>✓</div>
-													)}
-													
-													{/* Cross for skipped */}
-													{isSkipped && (
-														<div style={{ 
-															position: 'absolute', 
-															top: '50%', 
-															left: '50%', 
-															transform: 'translate(-50%, -50%)', 
-															fontSize: '4rem', 
-															color: '#94a3b8', 
-															opacity: 0.5,
-															pointerEvents: 'none'
-														}}>⊘</div>
-													)}
+													{/* Center: Title & Description */}
+													<div
+														className={
+															styles.cardCenter
+														}
+													>
+														<h3>{card.title}</h3>
+														<p>
+															{card.description}
+														</p>
+
+														{/* Inline YES/NO for optional C/D cards */}
+														{pendingOptional ===
+															index && (
+															<div
+																style={{
+																	marginTop:
+																		"1rem",
+																	display:
+																		"flex",
+																	gap: "0.6rem",
+																	justifyContent:
+																		"center",
+																}}
+															>
+																<button
+																	onClick={(
+																		e,
+																	) => {
+																		e.stopPropagation();
+																		handleOptionalDecision(
+																			true,
+																		);
+																	}}
+																	style={{
+																		padding:
+																			"0.45rem 1rem",
+																		background:
+																			"#16a34a",
+																		color: "#fff",
+																		border: "none",
+																		borderRadius:
+																			"0.5rem",
+																		fontWeight: 700,
+																		fontSize:
+																			"0.85rem",
+																		cursor: "pointer",
+																	}}
+																>
+																	✓ Include
+																</button>
+																<button
+																	onClick={(
+																		e,
+																	) => {
+																		e.stopPropagation();
+																		handleOptionalDecision(
+																			false,
+																		);
+																	}}
+																	style={{
+																		padding:
+																			"0.45rem 1rem",
+																		background:
+																			"#dc2626",
+																		color: "#fff",
+																		border: "none",
+																		borderRadius:
+																			"0.5rem",
+																		fontWeight: 700,
+																		fontSize:
+																			"0.85rem",
+																		cursor: "pointer",
+																	}}
+																>
+																	⊘ Skip
+																</button>
+															</div>
+														)}
+
+														{/* Checkmark for clicked */}
+														{isClicked && (
+															<div
+																style={{
+																	position:
+																		"absolute",
+																	top: "50%",
+																	left: "50%",
+																	transform:
+																		"translate(-50%, -50%)",
+																	fontSize:
+																		"4rem",
+																	color: "#10b981",
+																	opacity: 0.5,
+																	pointerEvents:
+																		"none",
+																	fontWeight: 700,
+																}}
+															>
+																✓
+															</div>
+														)}
+
+														{/* Cross for skipped */}
+														{isSkipped && (
+															<div
+																style={{
+																	position:
+																		"absolute",
+																	top: "50%",
+																	left: "50%",
+																	transform:
+																		"translate(-50%, -50%)",
+																	fontSize:
+																		"4rem",
+																	color: "#94a3b8",
+																	opacity: 0.5,
+																	pointerEvents:
+																		"none",
+																}}
+															>
+																⊘
+															</div>
+														)}
+													</div>
+
+													{/* Bottom Left: Suit */}
+													<div
+														className={
+															styles.cardCornerBottomLeft
+														}
+													>
+														<span
+															className={
+																styles.cardSuit
+															}
+															style={{
+																color: getSuitColor(
+																	card.card_type,
+																	card.title,
+																),
+															}}
+														>
+															{getSuit(
+																card.card_type,
+																card.title,
+															)}
+														</span>
+													</div>
+
+													{/* Bottom Right: Code */}
+													<div
+														className={
+															styles.cardCornerBottomRight
+														}
+													>
+														<span
+															className={
+																styles.cardCode
+															}
+														>
+															{card.code}
+														</span>
+													</div>
 												</div>
-												
-												{/* Bottom Left: Suit */}
-												<div className={styles.cardCornerBottomLeft}>
-													<span className={styles.cardSuit} style={{ color: getSuitColor(card.card_type, card.title) }}>
-														{getSuit(card.card_type, card.title)}
-													</span>
-												</div>
-												
-												{/* Bottom Right: Code */}
-												<div className={styles.cardCornerBottomRight}>
-													<span className={styles.cardCode}>
-														{card.code}
-													</span>
-												</div>
-											</div>
-										</motion.div>
-									</AnimatePresence>
-								</div>
-							);
-						})}
+											</motion.div>
+										</AnimatePresence>
+									</div>
+								);
+							})}
 						</div>
 					</>
 				)}
@@ -1196,17 +1958,24 @@ const ScenarioMode: React.FC<Props> = ({ teams, onBack, isRedoMode, onSessionCom
 
 			{/* End Scenario Button */}
 			{showEndButton && !complete && (
-				<div style={{ 
-					display: 'flex', 
-					justifyContent: 'center', 
-					padding: '2rem',
-					background: '#1e293b'
-				}}>
-					<button onClick={handleEndScenario} className={styles.nextBtn} style={{
-						background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-						fontSize: '1.25rem',
-						padding: '1rem 2rem'
-					}}>
+				<div
+					style={{
+						display: "flex",
+						justifyContent: "center",
+						padding: "2rem",
+						background: "#1e293b",
+					}}
+				>
+					<button
+						onClick={handleEndScenario}
+						className={styles.nextBtn}
+						style={{
+							background:
+								"linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+							fontSize: "1.25rem",
+							padding: "1rem 2rem",
+						}}
+					>
 						<ArrowRight />
 						End Scenario
 					</button>

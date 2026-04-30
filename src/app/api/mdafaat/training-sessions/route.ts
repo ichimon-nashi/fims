@@ -136,3 +136,99 @@ export async function DELETE(request: NextRequest) {
 	}
 	return NextResponse.json({ success: true, message: 'All training sessions cleared' });
 }
+// PATCH: Update a group's training sessions
+// Body: { training_date, group_type, group_number, updates: { core_scenario?, conditions?, flight_info?, result_map?: Record<employee_id, 'pass'|'redo'>, team_members? } }
+export async function PATCH(request: NextRequest) {
+	const token = request.headers.get("authorization")?.replace("Bearer ", "");
+	if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+	const user = await verifyToken(token);
+	if (!user) return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+
+	try {
+		const body = await request.json();
+		const { training_date, group_type, group_number, updates } = body;
+
+		if (!training_date || !group_type || group_number === undefined) {
+			return NextResponse.json({ error: "Missing group identifiers" }, { status: 400 });
+		}
+
+		const supabase = createServiceClient();
+
+		// Fetch existing rows for this group
+		const { data: rows, error: fetchErr } = await supabase
+			.from('mdafaat_training_sessions')
+			.select('*')
+			.eq('training_date', training_date)
+			.eq('group_type', group_type)
+			.eq('group_number', group_number);
+
+		if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 });
+		if (!rows || rows.length === 0) return NextResponse.json({ error: "Group not found" }, { status: 404 });
+
+		// Build per-row updates
+		const { core_scenario, conditions, flight_info, team_members, result_map } = updates ?? {};
+
+		// If team_members changed, we need to delete old rows and insert new ones
+		if (team_members && Array.isArray(team_members)) {
+			// Delete existing rows
+			const { error: delErr } = await supabase
+				.from('mdafaat_training_sessions')
+				.delete()
+				.eq('training_date', training_date)
+				.eq('group_type', group_type)
+				.eq('group_number', group_number);
+			if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 });
+
+			// Insert new rows — one per member, using updated values from request
+			const template = rows[0];
+			const newRows = team_members.map((m: any) => ({
+				training_date,
+				employee_id:     String(m.employeeId ?? m.employee_id),
+				group_type,
+				group_number,
+				core_scenario:   core_scenario          ?? template.core_scenario,
+				team_members:    team_members,
+				result:          result_map?.[String(m.employeeId ?? m.employee_id)] ?? template.result,
+				is_redo:         template.is_redo,
+				extra_scenarios: updates.extra_scenarios ?? template.extra_scenarios,
+				flight_info:     flight_info             ?? template.flight_info,
+				scenario_path:   updates.scenario_path   ?? template.scenario_path,
+				conditions:      conditions              ?? template.conditions,
+				elapsed_time:    template.elapsed_time,
+				instructor:      template.instructor,
+				created_by:      user.employee_id ?? user.id ?? "unknown",
+			}));
+
+			const { error: insErr } = await supabase
+				.from('mdafaat_training_sessions')
+				.insert(newRows);
+			if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 });
+			return NextResponse.json({ success: true });
+		}
+
+		// Otherwise update fields in-place for each existing row
+		for (const row of rows) {
+			const patch: Record<string, any> = {};
+			if (core_scenario       !== undefined) patch.core_scenario       = core_scenario;
+			if (conditions          !== undefined) patch.conditions          = conditions;
+			if (flight_info         !== undefined) patch.flight_info         = flight_info;
+			if (updates.scenario_path !== undefined) patch.scenario_path    = updates.scenario_path;
+			if (updates.extra_scenarios !== undefined) patch.extra_scenarios = updates.extra_scenarios;
+			if (result_map !== undefined && result_map[row.employee_id] !== undefined)
+				patch.result = result_map[row.employee_id];
+
+			if (Object.keys(patch).length > 0) {
+				const { error: updErr } = await supabase
+					.from('mdafaat_training_sessions')
+					.update(patch)
+					.eq('id', row.id);
+				if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 });
+			}
+		}
+
+		return NextResponse.json({ success: true });
+	} catch (err: any) {
+		return NextResponse.json({ error: err.message }, { status: 500 });
+	}
+}

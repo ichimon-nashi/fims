@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Search, X, ChevronDown, ChevronUp, Edit2, Download, RefreshCw } from "lucide-react";
 import styles from "./TrainingRecords.module.css";
+import Avatar from "@/components/ui/Avatar/Avatar";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface ScenarioStep {
@@ -199,6 +200,163 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 
 	// Group-level extra_scenarios — one note per group, patched to all rows in group
 	const [editingGroup, setEditingGroup] = useState<string | null>(null);
+
+	// ── Edit modal state (admin only) ────────────────────────────────────────
+	const [editModal, setEditModal] = useState<{
+		grpKey: string;
+		sessions: TrainingSession[];
+	} | null>(null);
+	const [editSaving, setEditSaving] = useState(false);
+	// Edit form fields
+	const [editScenario,  setEditScenario]  = useState("");
+	const [editCondTime,  setEditCondTime]  = useState<"morning"|"midday"|"night">("morning");
+	const [editCondFull,  setEditCondFull]  = useState(false);
+	const [editCondInfants, setEditCondInfants] = useState(false);
+	const [editCondPax,   setEditCondPax]   = useState<string>("");
+	const [editFlightNo,  setEditFlightNo]  = useState("");
+	const [editDeparture, setEditDeparture] = useState("");
+	const [editArrival,   setEditArrival]   = useState("");
+	const [editAcType,    setEditAcType]    = useState("");
+	// Per-member result map: employee_id → 'pass'|'redo'
+	const [editResults,   setEditResults]   = useState<Record<string, "pass"|"redo">>({});
+	// Members list (editable)
+	const [editMembers,   setEditMembers]   = useState<Array<{employeeId:string;name:string;rank:string;userId:string}>>([]);
+	const [editScenarioPath, setEditScenarioPath] = useState<any[]>([]);
+	const [editExtraScenarios, setEditExtraScenarios] = useState<string[] | null>(null);
+	const [editTagInput, setEditTagInput] = useState("");
+	const [fetchingDeck,  setFetchingDeck]  = useState(false);
+	const [availableDecks, setAvailableDecks] = useState<Array<{
+		scenario_code:string; background:string; trigger:string;
+		complication:string|null; outcome:string;
+	}>>([]);
+	const [selectedDeckCode, setSelectedDeckCode] = useState<string|null>(null);
+	const [includeComp, setIncludeComp] = useState(true); // include complication card by default
+	const [showCardChooser, setShowCardChooser] = useState(false);
+
+	const fetchDeckForEdit = async (scenario: string) => {
+		setFetchingDeck(true);
+		try {
+			const token = localStorage.getItem("token");
+			const res = await fetch(`/api/mdafaat/scenarios?core_scenario=${scenario}&list=1`, {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			const data = await res.json();
+			if (!data.error && data.decks?.length > 0) {
+				setAvailableDecks(data.decks);
+				setSelectedDeckCode(null); // no pre-selection — admin must choose
+				setEditScenarioPath([]);
+				setShowCardChooser(true);
+			}
+		} catch (e) { console.error('fetchDeckForEdit:', e); }
+		finally { setFetchingDeck(false); }
+	};
+
+	// Build scenario_path from a chosen deck
+	const buildPathFromDeck = (deck: typeof availableDecks[number], withComp: boolean) => [
+		{ code: `${deck.scenario_code}-BG`,   title: 'A. 背景 Background',     description: deck.background,   skipped: false },
+		{ code: `${deck.scenario_code}-TR`,   title: 'B. 觸發事件 Trigger',    description: deck.trigger,      skipped: false },
+		...(deck.complication && withComp ? [{ code: `${deck.scenario_code}-COMP`, title: 'C. 併發 Complication', description: deck.complication, skipped: false }] : []),
+		{ code: `${deck.scenario_code}-OUT`,  title: 'D. Outcome',              description: deck.outcome,      skipped: false },
+	];
+
+	const applyDeckSelection = () => {
+		const deck = availableDecks.find(d => d.scenario_code === selectedDeckCode);
+		if (!deck) return;
+		setEditScenarioPath(buildPathFromDeck(deck, includeComp));
+		setShowCardChooser(false);
+	};
+
+	const SPECIAL_PAX_OPTIONS = [
+		"AGED - 長者",
+		"BLND - 視障旅客",
+		"DEAF - 聽障旅客",
+		"DEPA - 受戒護人員",
+		"DPNA - 自閉症",
+		"DPNA - 腦性麻痺",
+		"DRUN - 酒醉旅客",
+		"POXY - 需氧旅客",
+		"PRGN - 孕婦旅客",
+		"UM - 單獨旅行孩童",
+		"WCHC - 客艙輪椅旅客",
+		"WCHR - 輪椅旅客",
+	];
+
+	const openEditModal = (grpKey: string, grpSessions: TrainingSession[]) => {
+		const s0 = grpSessions[0];
+		setEditScenario(s0?.core_scenario ?? "bomb_threat");
+		setEditCondTime((s0?.conditions?.time as any) ?? "morning");
+		setEditCondFull(s0?.conditions?.full ?? false);
+		setEditCondInfants(s0?.conditions?.infants ?? false);
+		setEditCondPax(s0?.conditions?.specialPax ?? "");
+		setEditFlightNo(s0?.flight_info?.flightNo ?? "");
+		setEditDeparture(s0?.flight_info?.departure ?? "");
+		setEditArrival(s0?.flight_info?.arrival ?? "");
+		setEditAcType(s0?.flight_info?.aircraftType ?? "");
+		const resultMap: Record<string,"pass"|"redo"> = {};
+		grpSessions.forEach(s => { if (s.result) resultMap[s.employee_id] = s.result; });
+		setEditResults(resultMap);
+		const members = s0?.team_members
+			?.filter((m:any) => typeof m === "object" && m.employeeId)
+			?.map((m:any) => ({ employeeId: String(m.employeeId), name: m.name ?? m.employeeId, rank: m.rank ?? "", userId: m.userId ?? "" }))
+			?? [];
+		setEditMembers(members);
+		setEditScenarioPath([]);
+		setEditExtraScenarios(parseScenarios(s0?.extra_scenarios)); // pre-populate from existing tags
+		setEditTagInput("");
+		setEditModal({ grpKey, sessions: grpSessions });
+	};
+
+	const saveEditModal = async () => {
+		if (!editModal) return;
+		setEditSaving(true);
+		try {
+			const s0 = editModal.sessions[0];
+			const token = localStorage.getItem("token");
+			const body = {
+				training_date: s0.training_date,
+				group_type:    s0.group_type,
+				group_number:  s0.group_number,
+				updates: {
+					core_scenario: editScenario,
+					...(editScenarioPath.length > 0 ? { scenario_path: editScenarioPath } : {}),
+					...(editExtraScenarios !== null ? { extra_scenarios: JSON.stringify(editExtraScenarios) } : {}),
+					conditions: {
+						time:       editCondTime,
+						full:       editCondFull,
+						infants:    editCondInfants,
+						specialPax: editCondPax || null,
+					},
+					flight_info: {
+						flightNo:    editFlightNo,
+						departure:   editDeparture,
+						arrival:     editArrival,
+						aircraftType: editAcType,
+					},
+					result_map:   editResults,
+					team_members: editMembers,
+				},
+			};
+			const res = await fetch("/api/mdafaat/training-sessions", {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+				body: JSON.stringify(body),
+			});
+			if (!res.ok) throw new Error("Save failed");
+			setEditModal(null);
+			setShowCardChooser(false);
+			setAvailableDecks([]);
+			setSelectedDeckCode(null);
+			setIncludeComp(true);
+			setToastMsg({ ok: true, text: "✅ 已更新訓練記錄" });
+			setTimeout(() => setToastMsg(null), 3000);
+			await fetchSessions();
+		} catch (e: any) {
+			setToastMsg({ ok: false, text: `❌ 更新失敗：${e.message}` });
+			setTimeout(() => setToastMsg(null), 4000);
+		} finally {
+			setEditSaving(false);
+		}
+	};
 
 	const startGroupEdit = (groupId: string) => {
 		setEditingGroup(groupId);
@@ -668,6 +826,218 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 				</div>
 			)}
 
+			{/* ── Admin Edit Training Record Modal ── */}
+			{editModal && (
+				<div style={{ position:'fixed',inset:0,zIndex:9999,background:'rgba(0,0,0,0.8)',display:'flex',alignItems:'center',justifyContent:'center',padding:'1rem',overflowY:'auto' }}>
+					<div style={{ background:'#1e293b',border:'1px solid rgba(74,158,255,0.3)',borderRadius:'0.75rem',padding:'1.75rem',width:'100%',maxWidth:'560px',maxHeight:'90vh',overflowY:'auto',display:'flex',flexDirection:'column',gap:'1rem' }}>
+						<div style={{ display:'flex',alignItems:'center',justifyContent:'space-between' }}>
+							<p style={{ color:'#60a5fa',fontWeight:700,fontSize:'1.05rem',margin:0 }}>✏️ 編輯訓練記錄 — {editModal.grpKey}</p>
+							<button onClick={()=>{setEditModal(null);setShowCardChooser(false);setAvailableDecks([]);setSelectedDeckCode(null);setIncludeComp(true);}} style={{ background:'none',border:'none',color:'#64748b',cursor:'pointer',fontSize:'1.2rem' }}>✕</button>
+						</div>
+
+						{/* Scenario */}
+						<div>
+							<label style={{ color:'#94a3b8',fontSize:'0.78rem',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.05em',display:'block',marginBottom:'0.3rem' }}>情境 Card Deck</label>
+							<div style={{ display:'flex',gap:'0.5rem',alignItems:'center' }}>
+								<select value={editScenario} onChange={e=>{
+									setEditScenario(e.target.value);
+									setEditScenarioPath([]);
+									setAvailableDecks([]);
+									setSelectedDeckCode(null);
+									setIncludeComp(true);
+									setShowCardChooser(false);
+								}}
+									style={{ flex:1,background:'#0f172a',border:'1px solid rgba(148,163,184,0.2)',borderRadius:'0.375rem',color:'#e2e8f0',padding:'0.5rem 0.6rem',fontSize:'0.9rem' }}>
+									{Object.entries(CORE_SCENARIO_LABELS).map(([k,v])=>(
+										<option key={k} value={k}>{v}</option>
+									))}
+								</select>
+								<button onClick={()=>fetchDeckForEdit(editScenario)} disabled={fetchingDeck}
+									style={{ padding:'0.45rem 0.75rem',borderRadius:'0.375rem',border:`1px solid ${editScenarioPath.length>0?'rgba(74,222,128,0.3)':'rgba(74,158,255,0.3)'}`,background:editScenarioPath.length>0?'rgba(74,222,128,0.1)':'rgba(74,158,255,0.1)',color:editScenarioPath.length>0?'#4ade80':'#60a5fa',fontSize:'0.78rem',fontWeight:600,cursor:fetchingDeck?'not-allowed':'pointer',whiteSpace:'nowrap',opacity:fetchingDeck?0.6:1 }}>
+									{fetchingDeck?'載入中...':editScenarioPath.length>0?'✓ 已選牌組 (點擊重選)':'🎴 選擇牌組'}
+								</button>
+							</div>
+							{editScenarioPath.length>0 && (
+								<div style={{ marginTop:'0.3rem',fontSize:'0.7rem',color:'#4ade80',fontFamily:'monospace' }}>
+									{editScenarioPath.filter((p:any)=>!p.skipped).map((p:any)=>p.code).join(' → ')}
+								</div>
+							)}
+							{/* Card chooser panel */}
+							{showCardChooser && availableDecks.length > 0 && (
+								<div style={{ marginTop:'0.5rem',background:'#0f172a',border:'1px solid rgba(74,158,255,0.2)',borderRadius:'0.5rem',overflow:'hidden' }}>
+									<div style={{ padding:'0.4rem 0.75rem',background:'rgba(74,158,255,0.08)',borderBottom:'1px solid rgba(74,158,255,0.15)' }}>
+										<span style={{ color:'#60a5fa',fontSize:'0.75rem',fontWeight:700 }}>選擇牌組 ({availableDecks.length} 組可選)</span>
+									</div>
+									<div style={{ maxHeight:'260px',overflowY:'auto' }}>
+										{[...availableDecks].sort((a,b)=>a.scenario_code.localeCompare(b.scenario_code)).map(deck => (
+											<label key={deck.scenario_code} style={{ display:'flex',alignItems:'flex-start',gap:'0.6rem',padding:'0.6rem 0.75rem',borderBottom:'1px solid rgba(255,255,255,0.04)',cursor:'pointer',background:selectedDeckCode===deck.scenario_code?'rgba(74,158,255,0.08)':'transparent' }}>
+												<input type="radio" name="deckChoice" checked={selectedDeckCode===deck.scenario_code}
+													onChange={()=>setSelectedDeckCode(deck.scenario_code)}
+													style={{ accentColor:'#4a9eff',marginTop:'0.25rem',flexShrink:0 }}/>
+												<div style={{ minWidth:0 }}>
+													<div style={{ color:'#4a9eff',fontFamily:'monospace',fontSize:'0.8rem',fontWeight:700,marginBottom:'0.3rem' }}>{deck.scenario_code}</div>
+													<div style={{ display:'flex',flexDirection:'column',gap:'0.2rem' }}>
+														<div style={{ fontSize:'0.75rem' }}><span style={{ color:'#4a9eff',fontWeight:600,marginRight:'0.35rem' }}>BG</span><span style={{ color:'#e2e8f0' }}>{deck.background}</span></div>
+														<div style={{ fontSize:'0.75rem' }}><span style={{ color:'#4a9eff',fontWeight:600,marginRight:'0.35rem' }}>TR</span><span style={{ color:'#e2e8f0' }}>{deck.trigger}</span></div>
+														{deck.complication && <div style={{ fontSize:'0.75rem' }}><span style={{ color:'#db2777',fontWeight:600,marginRight:'0.35rem' }}>COMP</span><span style={{ color:'#e2e8f0' }}>{deck.complication}</span></div>}
+														<div style={{ fontSize:'0.75rem' }}><span style={{ color:'#64748b',fontWeight:600,marginRight:'0.35rem' }}>OUT</span><span style={{ color:'#e2e8f0' }}>{deck.outcome}</span></div>
+													</div>
+												</div>
+											</label>
+										))}
+									</div>
+									<div style={{ padding:'0.4rem 0.75rem',display:'flex',justifyContent:'space-between',alignItems:'center',gap:'0.5rem',borderTop:'1px solid rgba(255,255,255,0.05)',flexWrap:'wrap' }}>
+										{availableDecks.find(d=>d.scenario_code===selectedDeckCode)?.complication ? (
+											<label style={{ display:'flex',alignItems:'center',gap:'0.4rem',cursor:'pointer',fontSize:'0.78rem',color:includeComp?'#db2777':'#64748b' }}>
+												<input type="checkbox" checked={includeComp} onChange={e=>setIncludeComp(e.target.checked)} style={{ accentColor:'#db2777' }}/>
+												包含 C. 併發 Complication
+											</label>
+										) : <div/>}
+										<div style={{ display:'flex',gap:'0.4rem' }}>
+											<button onClick={()=>{setShowCardChooser(false);setSelectedDeckCode(null);setIncludeComp(true);}} style={{ padding:'0.3rem 0.75rem',fontSize:'0.78rem',background:'rgba(100,116,139,0.15)',border:'1px solid rgba(100,116,139,0.2)',color:'#94a3b8',borderRadius:'0.375rem',cursor:'pointer' }}>取消</button>
+											<button onClick={applyDeckSelection} disabled={!selectedDeckCode}
+												style={{ padding:'0.3rem 0.75rem',fontSize:'0.78rem',fontWeight:700,background:'linear-gradient(135deg,#16a34a,#15803d)',border:'none',color:'#fff',borderRadius:'0.375rem',cursor:selectedDeckCode?'pointer':'not-allowed',opacity:selectedDeckCode?1:0.5 }}>✓ 套用牌組</button>
+										</div>
+									</div>
+								</div>
+							)}
+						</div>
+
+						{/* Conditions */}
+						<div>
+							<label style={{ color:'#94a3b8',fontSize:'0.78rem',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.05em',display:'block',marginBottom:'0.4rem' }}>飛行條件</label>
+							<div style={{ display:'flex',gap:'0.5rem',flexWrap:'wrap',alignItems:'center' }}>
+								{(['morning','midday','night'] as const).map(t=>(
+									<button key={t} onClick={()=>setEditCondTime(t)}
+										style={{ padding:'0.35rem 0.75rem',borderRadius:'0.375rem',border:'1px solid',fontSize:'0.82rem',fontWeight:600,cursor:'pointer',
+											background: editCondTime===t ? 'rgba(74,158,255,0.2)' : 'rgba(30,41,59,0.6)',
+											borderColor: editCondTime===t ? '#4a9eff' : 'rgba(148,163,184,0.2)',
+											color: editCondTime===t ? '#60a5fa' : '#94a3b8' }}>
+										{t==='morning'?'🌅 早上':t==='midday'?'☀️ 中午':'🌙 晚上'}
+									</button>
+								))}
+								<label style={{ display:'flex',alignItems:'center',gap:'0.3rem',color:'#94a3b8',fontSize:'0.82rem',cursor:'pointer' }}>
+									<input type="checkbox" checked={editCondFull} onChange={e=>setEditCondFull(e.target.checked)}/> ✈️ 客滿
+								</label>
+								<label style={{ display:'flex',alignItems:'center',gap:'0.3rem',color:'#94a3b8',fontSize:'0.82rem',cursor:'pointer' }}>
+									<input type="checkbox" checked={editCondInfants} onChange={e=>setEditCondInfants(e.target.checked)}/> 👶 嬰兒
+								</label>
+							</div>
+							<div style={{ marginTop:'0.5rem' }}>
+								<label style={{ color:'#94a3b8',fontSize:'0.78rem',display:'block',marginBottom:'0.25rem' }}>特殊旅客</label>
+								<select value={editCondPax} onChange={e=>setEditCondPax(e.target.value)}
+									style={{ width:'100%',background:'#0f172a',border:'1px solid rgba(148,163,184,0.2)',borderRadius:'0.375rem',color:'#e2e8f0',padding:'0.45rem 0.6rem',fontSize:'0.85rem' }}>
+									<option value="">— 無特殊旅客 —</option>
+									{SPECIAL_PAX_OPTIONS.map(p=>(<option key={p} value={p}>{p}</option>))}
+								</select>
+							</div>
+						</div>
+
+						{/* Flight info */}
+						<div>
+							<label style={{ color:'#94a3b8',fontSize:'0.78rem',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.05em',display:'block',marginBottom:'0.4rem' }}>航班資訊</label>
+							<div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.5rem' }}>
+								{[['航班號',editFlightNo,setEditFlightNo],['機型',editAcType,setEditAcType],['出發',editDeparture,setEditDeparture],['到達',editArrival,setEditArrival]].map(([label,val,setter]:any)=>(
+									<div key={label}>
+										<label style={{ color:'#64748b',fontSize:'0.75rem',display:'block',marginBottom:'0.2rem' }}>{label}</label>
+										<input value={val} onChange={e=>setter(e.target.value)}
+											style={{ width:'100%',background:'#0f172a',border:'1px solid rgba(148,163,184,0.2)',borderRadius:'0.375rem',color:'#e2e8f0',padding:'0.4rem 0.6rem',fontSize:'0.85rem',boxSizing:'border-box' }}/>
+									</div>
+								))}
+							</div>
+						</div>
+
+						{/* Per-member results */}
+						<div>
+							<label style={{ color:'#94a3b8',fontSize:'0.78rem',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.05em',display:'block',marginBottom:'0.4rem' }}>成員結果</label>
+							<div style={{ display:'flex',flexDirection:'column',gap:'0.35rem' }}>
+								{[...editModal.sessions].sort((a,b)=>{
+									const rankOrder = (s: typeof a) => {
+										const r = (resolveMember(s)?.rank ?? '').toLowerCase();
+										if (r.includes('mg')||r.includes('manager')) return 1;
+										if (r.includes('sc')||r.includes('section')) return 2;
+										if (r.includes('fi')||r.includes('instructor')) return 3;
+										if (r.includes('pr')||r.includes('purser')) return 4;
+										if (r.includes('lf')||r.includes('leading')) return 5;
+										return 6;
+									};
+									const rd = rankOrder(a) - rankOrder(b);
+									return rd !== 0 ? rd : parseInt(a.employee_id) - parseInt(b.employee_id);
+								}).map(s=>{
+									const m = resolveMember(s);
+									return (
+										<div key={s.employee_id} style={{ display:'flex',alignItems:'center',gap:'0.6rem',padding:'0.4rem 0.6rem',background:'rgba(0,0,0,0.2)',borderRadius:'0.375rem' }}>
+											<span style={{ color:'#4a9eff',fontFamily:'monospace',fontSize:'0.82rem',minWidth:'56px' }}>{s.employee_id}</span>
+											<span style={{ color:'#e2e8f0',fontSize:'0.85rem',flex:1 }}>{m?.name ?? '—'}</span>
+											{(['pass','redo'] as const).map(r=>(
+												<button key={r} onClick={()=>setEditResults(prev=>({...prev,[s.employee_id]:r}))}
+													style={{ padding:'0.25rem 0.65rem',borderRadius:'0.375rem',border:'1px solid',fontSize:'0.78rem',fontWeight:700,cursor:'pointer',
+														background: editResults[s.employee_id]===r ? (r==='pass'?'rgba(74,222,128,0.2)':'rgba(248,113,113,0.2)') : 'rgba(30,41,59,0.6)',
+														borderColor: editResults[s.employee_id]===r ? (r==='pass'?'rgba(74,222,128,0.4)':'rgba(248,113,113,0.4)') : 'rgba(148,163,184,0.2)',
+														color: editResults[s.employee_id]===r ? (r==='pass'?'#4ade80':'#f87171') : '#64748b' }}>
+													{r==='pass'?'✓ 通過':'↺ 重考'}
+												</button>
+											))}
+										</div>
+									);
+								})}
+							</div>
+						</div>
+
+						{/* Members */}
+						<div>
+							<label style={{ color:'#94a3b8',fontSize:'0.78rem',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.05em',display:'block',marginBottom:'0.4rem' }}>組員名單</label>
+							<div style={{ display:'flex',flexDirection:'column',gap:'0.3rem',marginBottom:'0.4rem' }}>
+								{editMembers.map((m,i)=>(
+									<div key={m.employeeId} style={{ display:'flex',alignItems:'center',gap:'0.5rem',padding:'0.35rem 0.6rem',background:'rgba(0,0,0,0.2)',borderRadius:'0.375rem' }}>
+										<span style={{ color:'#4a9eff',fontFamily:'monospace',fontSize:'0.8rem',minWidth:'56px' }}>{m.employeeId}</span>
+										<span style={{ color:'#e2e8f0',fontSize:'0.84rem',flex:1 }}>{m.name}</span>
+										<span style={{ color:'#64748b',fontSize:'0.75rem' }}>{m.rank?.split(' - ')[0]}</span>
+										<button onClick={()=>setEditMembers(prev=>prev.filter((_,j)=>j!==i))}
+											style={{ background:'none',border:'none',color:'#f87171',cursor:'pointer',fontSize:'0.85rem' }}>✕</button>
+									</div>
+								))}
+							</div>
+						</div>
+
+						{/* Extra scenarios */}
+						<div>
+							<label style={{ color:'#94a3b8',fontSize:'0.78rem',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.05em',display:'block',marginBottom:'0.4rem' }}>額外情境 Tags</label>
+							<div style={{ display:'flex',flexWrap:'wrap',gap:'0.35rem',marginBottom:'0.4rem' }}>
+								{(editExtraScenarios ?? []).map((tag,idx) => (
+									<span key={idx} className={styles.tagChip}>{tag}
+										<button className={styles.tagDeleteBtn} onClick={()=>setEditExtraScenarios(prev=>(prev??[]).filter((_,i)=>i!==idx))}>×</button>
+									</span>
+								))}
+							</div>
+							<div style={{ display:'flex',gap:'0.4rem' }}>
+								<input
+									value={editTagInput}
+									onChange={e=>setEditTagInput(e.target.value)}
+									onKeyDown={e=>{ if(e.key==="Enter"&&editTagInput.trim()){ e.preventDefault(); setEditExtraScenarios(prev=>[...(prev??[]),editTagInput.trim()]); setEditTagInput(""); }}}
+									placeholder="輸入額外情境後按 Enter..."
+									style={{ flex:1,background:'#0f172a',border:'1px solid rgba(74,158,255,0.3)',borderRadius:'0.375rem',color:'#e2e8f0',fontSize:'0.82rem',padding:'0.38rem 0.6rem' }}
+								/>
+								<button
+									onClick={()=>{ if(editTagInput.trim()){ setEditExtraScenarios(prev=>[...(prev??[]),editTagInput.trim()]); setEditTagInput(""); }}}
+									style={{ padding:'0.38rem 0.75rem',borderRadius:'0.375rem',background:'rgba(74,158,255,0.12)',border:'1px solid rgba(74,158,255,0.3)',color:'#60a5fa',fontSize:'0.82rem',fontWeight:600,cursor:'pointer' }}>
+									+ 新增
+								</button>
+							</div>
+						</div>
+
+						{/* Save / Cancel */}
+						<div style={{ display:'flex',gap:'0.75rem',justifyContent:'flex-end',marginTop:'0.5rem' }}>
+							<button onClick={()=>{setEditModal(null);setShowCardChooser(false);setAvailableDecks([]);setSelectedDeckCode(null);setIncludeComp(true);}} style={{ padding:'0.5rem 1.25rem',borderRadius:'0.5rem',background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.15)',color:'#e8e9ed',cursor:'pointer',fontWeight:600 }}>取消</button>
+							<button onClick={saveEditModal} disabled={editSaving}
+								style={{ padding:'0.5rem 1.25rem',borderRadius:'0.5rem',background:'linear-gradient(135deg,#16a34a,#15803d)',border:'none',color:'#fff',cursor:'pointer',fontWeight:700,opacity:editSaving?0.7:1 }}>
+								{editSaving ? '儲存中...' : '💾 儲存'}
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
 			{/* ── Training Type + Scenario Order Modal ── */}
 			{trainingTypeModal && (
 				<div style={{
@@ -878,180 +1248,160 @@ const TrainingRecords: React.FC<Props> = ({ onStartRedo, canEdit }) => {
 									if (numA !== numB) return numA - numB;
 									return (a[0]?.group_type ?? '').localeCompare(b[0]?.group_type ?? '');
 								})
-								.map(([grpKey, grpSessions]) => (
-									<div key={grpKey} className={styles.groupBlock}>
-										<div className={styles.groupLabel}>
-											{grpSessions[0]?.is_redo && <span className={styles.redoBadge}>重考</span>}
-											{grpKey}
-											<span className={styles.scenarioBadge}>
-												{CORE_SCENARIO_LABELS[grpSessions[0]?.core_scenario] ?? grpSessions[0]?.core_scenario}
-											</span>
+								.map(([grpKey, grpSessions]) => {
+									// Sort members by rank then employeeId
+									const getRankOrd = (rank: string) => {
+										const r = (rank ?? "").toLowerCase();
+										if (r.includes("mg")||r.includes("manager")) return 1;
+										if (r.includes("sc")||r.includes("section")) return 2;
+										if (r.includes("fi")||r.includes("instructor")) return 3;
+										if (r.includes("pr")||r.includes("purser")) return 4;
+										if (r.includes("lf")||r.includes("leading")) return 5;
+										return 6;
+									};
+									const grpType = grpSessions[0]?.group_type ?? "ATR";
+									const dutyList = grpType === "B738" ? ["1L","1R","3L","3R","Z2","3RA"] : ["F1","F2"];
+									const sorted = [...grpSessions].sort((a, b) => {
+										const mA = resolveMember(a), mB = resolveMember(b);
+										const rd = getRankOrd(mA?.rank ?? "") - getRankOrd(mB?.rank ?? "");
+										return rd !== 0 ? rd : parseInt(a.employee_id) - parseInt(b.employee_id);
+									});
+									const s0 = sorted[0];
+									const allPass = sorted.every(s => s.result === "pass");
+									const anyRedo = sorted.some(s => s.result === "redo");
+									const grpCardId = -(grpSessions[0]?.id ?? 0);
+									// Compact scenario path: show step codes inline
+									const path: ScenarioStep[] = s0?.scenario_path ?? [];
+									const pathSummary = path.filter(p => !p.skipped).map(p => p.code).join(" → ");
+										// Scenario colour accent
+										const SCEN_COLORS: Record<string,[string,string,string]> = {
+											bomb_threat:          ['rgba(239,68,68,0.15)',  '#f87171', 'rgba(239,68,68,0.4)'],
+											lithium_fire:         ['rgba(251,146,60,0.15)', '#fb923c', 'rgba(251,146,60,0.4)'],
+											decompression:        ['rgba(99,102,241,0.15)', '#818cf8', 'rgba(99,102,241,0.4)'],
+											incapacitation:       ['rgba(234,179,8,0.15)',  '#fbbf24', 'rgba(234,179,8,0.4)'],
+											unplanned_evacuation: ['rgba(34,197,94,0.15)',  '#4ade80', 'rgba(34,197,94,0.4)'],
+											planned_evacuation:   ['rgba(14,165,233,0.15)', '#38bdf8', 'rgba(14,165,233,0.4)'],
+										};
+										const [sBg, sColor, sBorder] = SCEN_COLORS[s0?.core_scenario ?? ''] ?? ['rgba(100,116,139,0.15)', '#94a3b8', 'rgba(100,116,139,0.4)'];
+										const groupId = `${s0?.training_date}|${grpKey}`;
+										const isEditingG = editingGroup === groupId;
+										const tags = parseScenarios(s0?.extra_scenarios);
+									return (
+									<div key={grpKey} className={styles.groupCard}>
+										{/* ── Header: scenario colour strip ── */}
+										<div style={{ background:sBg, borderBottom:`1px solid ${sBorder}`, padding:'0.5rem 0.9rem', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'0.5rem', flexWrap:'wrap' }}>
+											<div style={{ display:'flex', alignItems:'center', gap:'0.4rem', flexWrap:'wrap' }}>
+												<span style={{ fontWeight:800, fontSize:'0.82rem', color:'#e2e8f0', letterSpacing:'0.05em', textTransform:'uppercase' }}>{grpKey}</span>
+												{s0?.is_redo && <span className={styles.redoBadge}>重考</span>}
+												<span style={{ background:sBg, color:sColor, border:`1px solid ${sBorder}`, borderRadius:'0.25rem', padding:'0.1rem 0.5rem', fontSize:'0.73rem', fontWeight:700 }}>
+													{CORE_SCENARIO_LABELS[s0?.core_scenario] ?? s0?.core_scenario}
+												</span>
+												<span className={`${styles.resultPill} ${allPass?styles.pillPass:anyRedo?styles.pillRedo:styles.pillNone}`}>
+													{allPass?"✓ 全通過":anyRedo?"↺ 含重考":"—"}
+												</span>
+											</div>
+											{s0?.elapsed_time ? <span className={styles.sessionTime}>{formatTime(s0.elapsed_time)}</span> : null}
 										</div>
-
-										{/* ── Extra scenarios — tag chips per group ── */}
-										{(() => {
-											const groupId = `${grpSessions[0]?.training_date}|${grpKey}`;
-											const isEditingGroup = editingGroup === groupId;
-											const tags = parseScenarios(grpSessions[0]?.extra_scenarios);
-											const addTag = async () => {
-												const val = editNotes.trim();
-												if (!val) return;
-												const next = [...tags, val];
-												setEditNotes("");
-												await saveGroupScenarios(grpSessions, next);
-											};
-											const removeTag = async (idx: number) => {
-												const next = tags.filter((_, i) => i !== idx);
-												await saveGroupScenarios(grpSessions, next);
-											};
-											return (
-												<div className={styles.groupExtraRow}>
-													<span className={styles.detailLabel}>額外情境</span>
-													<div className={styles.tagList}>
-														{tags.map((tag, idx) => (
-															<span key={idx} className={styles.tagChip}>
-																{tag}
-																{canEdit && (
-																	<button
-																		className={styles.tagDeleteBtn}
-																		onClick={() => removeTag(idx)}
-																		title="刪除"
-																	>×</button>
-																)}
+									
+										{/* ── Two-column body ── */}
+										<div className={styles.cardBody}>
+											{/* Left: members */}
+											<div className={styles.cardMembersCol}>
+												{sorted.map((s, posIdx) => {
+													const member = resolveMember(s);
+													const duty = dutyList[posIdx] ?? `P${posIdx+1}`;
+													const isPassed = s.result === "pass";
+													const isRedo   = s.result === "redo";
+													return (
+														<div key={s.id} className={styles.memberCard}>
+															<span className={styles.memberDutyBadge} style={{ color:sColor, borderColor:sBorder }}>{duty}</span>
+															<div style={{ width:'2rem', height:'2rem', borderRadius:'50%', overflow:'hidden', flexShrink:0 }}>
+																<Avatar employeeId={s.employee_id} size={32} />
+															</div>
+															<div className={styles.memberCardInfo}>
+																<span className={styles.sessionName}>{member?.name ?? "—"}</span>
+																<span className={styles.memberCardMeta}>{s.employee_id} · {member?.rank?.split(" - ")[0] ?? "—"}</span>
+															</div>
+															<span className={`${styles.resultPill} ${isPassed?styles.pillPass:isRedo?styles.pillRedo:styles.pillNone}`}>
+																{isPassed?"✓ 通過":isRedo?"↺ 重考":"—"}
 															</span>
-														))}
-														{canEdit && (
-															isEditingGroup ? (
-																<div className={styles.tagInputRow}>
-																	<input
-																		className={styles.tagInput}
-																		value={editNotes}
-																		onChange={e => setEditNotes(e.target.value)}
-																		onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
-																		placeholder="輸入情境後按 Enter..."
-																		autoFocus
-																	/>
-																	<button className={styles.saveBtnSmall} onClick={addTag} disabled={savingId !== null}>
-																		{savingId !== null ? "..." : "+ 新增"}
-																	</button>
-																	<button className={styles.cancelBtnSmall} onClick={() => setEditingGroup(null)}>完成</button>
-																</div>
-															) : (
-																<button className={styles.tagAddBtn} onClick={() => startGroupEdit(groupId)}>
-																	<Edit2 size={11} /> 新增
-																</button>
-															)
-														)}
-													</div>
-												</div>
-											);
-										})()}
-
-										{(() => {
-											// Sort by rank then employeeId — same order as PDF export
-											const ATR_DUTIES_UI  = ["F1", "F2"];
-											const B738_DUTIES_UI = ["1L", "1R", "3L", "3R", "Z2", "3RA"];
-											const getRankOrderUI = (rank: string) => {
-												const r = (rank ?? "").toLowerCase();
-												if (r.includes("mg") || r.includes("manager"))    return 1;
-												if (r.includes("sc") || r.includes("section"))    return 2;
-												if (r.includes("fi") || r.includes("instructor")) return 3;
-												if (r.includes("pr") || r.includes("purser"))     return 4;
-												if (r.includes("lf") || r.includes("leading"))    return 5;
-												return 6;
-											};
-											const grpType = grpSessions[0]?.group_type ?? "ATR";
-											const dutyList = grpType === "B738" ? B738_DUTIES_UI : ATR_DUTIES_UI;
-											const sorted = [...grpSessions].sort((a, b) => {
-												const mA = resolveMember(a);
-												const mB = resolveMember(b);
-												const rd = getRankOrderUI(mA?.rank ?? "") - getRankOrderUI(mB?.rank ?? "");
-												if (rd !== 0) return rd;
-												return parseInt(a.employee_id) - parseInt(b.employee_id);
-											});
-											return sorted.map((s, posIdx) => {
-											const member = resolveMember(s);
-											const duty = dutyList[posIdx] ?? `P${posIdx + 1}`;
-											const expanded = expandedIds.has(s.id);
-
-											return (
-												<div key={s.id} className={`${styles.sessionRow} ${s.result === "redo" ? styles.sessionRedo : s.result === "pass" ? styles.sessionPass : ""}`}>
-													{/* ── Row summary ── */}
-													<div className={styles.sessionSummary} onClick={() => toggleExpand(s.id)}>
-														<span className={styles.sessionEid}>{s.employee_id}</span>
-														<span className={styles.sessionName}>{member?.name ?? "-"}</span>
-														<span className={styles.sessionRank}>{duty}</span>
-														<span className={`${styles.resultPill} ${s.result === "pass" ? styles.pillPass : s.result === "redo" ? styles.pillRedo : styles.pillNone}`}>
-															{s.result === "pass" ? "✓ 通過" : s.result === "redo" ? "↺ 重考" : "—"}
-														</span>
-														{/* Conditions: time icon + full/infants/specialPax */}
-														<span className={styles.sessionConditions}>
-															{s.conditions ? (
-																<>
-																	<span title={s.conditions.time === "morning" ? "早上" : s.conditions.time === "night" ? "晚上" : "中午"}>
-																		{s.conditions.time === "morning" ? "🌅" : s.conditions.time === "night" ? "🌙" : "☀️"}
-																	</span>
-																	{s.conditions.full    && <span title="客滿">✈️</span>}
-																	{s.conditions.infants && <span title="嬰兒">👶</span>}
-																	{s.conditions.specialPax && <span className={styles.sessionCondTag}>{s.conditions.specialPax}</span>}
-																</>
-															) : <span style={{color:"#334155"}}>—</span>}
-														</span>
-														{/* Flight number */}
-														<span className={styles.sessionFlight}>
-															{s.flight_info ? s.flight_info.flightNo : "—"}
-														</span>
-														<span className={styles.sessionTime}>{formatTime(s.elapsed_time ?? 0)}</span>
-														<span className={styles.expandIcon}>{expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</span>
-													</div>
-
-													{/* ── Expanded detail ── */}
-													{expanded && (
-														<div className={styles.sessionDetail}>
-															{s.conditions && (
-																<div className={styles.detailSection}>
-																	<span className={styles.detailLabel}>初始條件</span>
-																	<span>
-																		{s.conditions.time === "morning" ? "🌅 早上" : s.conditions.time === "night" ? "🌙 晚上" : "☀️ 中午"}
-																		{" "} · 客滿: {s.conditions.full ? "YES" : "NO"}
-																		{" "} · 嬰兒: {s.conditions.infants ? "YES" : "NO"}
-																		{s.conditions.specialPax && ` · ${s.conditions.specialPax}`}
-																	</span>
-																</div>
-															)}
-
-															{s.flight_info && (
-																<div className={styles.detailSection}>
-																	<span className={styles.detailLabel}>航班</span>
-																	<span>{s.flight_info.flightNo} {s.flight_info.departure} → {s.flight_info.arrival} ({s.flight_info.aircraftType})</span>
-																</div>
-															)}
-
-															{s.scenario_path && s.scenario_path.length > 0 && (
-																<div className={styles.detailSection}>
-																	<span className={styles.detailLabel}>情境路徑</span>
-																	<div className={styles.scenarioPath}>
-																		{s.scenario_path.map((step, i) => (
-																			<div key={i} className={`${styles.scenarioStep} ${step.skipped ? styles.stepSkipped : ""}`}>
-																				<span className={styles.stepCode}>{step.code}</span>
-																				<div>
-																					<div className={styles.stepTitle}>{step.title}{step.skipped && <span className={styles.skippedTag}> (略過)</span>}</div>
-																					{step.description && !step.skipped && (
-																						<div className={styles.stepDesc}>{step.description}</div>
-																					)}
-																				</div>
-																			</div>
-																		))}
-																	</div>
-																</div>
-															)}
 														</div>
-													)}
+													);
+												})}
+											</div>
+									
+											{/* Right: flight details panel */}
+											<div className={styles.cardDetailsCol}>
+												{s0?.conditions && (
+													<div className={styles.detailRow}>
+														<span className={styles.detailKey}>時間</span>
+														<span className={styles.detailVal}>
+															{s0.conditions.time==="morning"?"🌅 早上":s0.conditions.time==="night"?"🌙 晚上":"☀️ 中午"}
+														</span>
+													</div>
+												)}
+												{s0?.flight_info && (
+													<div className={styles.detailRow}>
+														<span className={styles.detailKey}>航班</span>
+														<span className={styles.detailVal} style={{ fontFamily:'monospace', color:'#60a5fa' }}>
+															{s0.flight_info.flightNo} {s0.flight_info.departure}→{s0.flight_info.arrival}
+														</span>
+													</div>
+												)}
+												{s0?.conditions && (
+													<div className={styles.detailRow}>
+														<span className={styles.detailKey}>客況</span>
+														<span className={styles.detailVal}>
+															{[s0.conditions.full?"客滿✈️":null, s0.conditions.infants?"嬰兒👶":null, s0.conditions.specialPax||null].filter(Boolean).join("  ") || "—"}
+														</span>
+													</div>
+												)}
+												{s0?.instructor && (
+													<div className={styles.detailRow}>
+														<span className={styles.detailKey}>教師</span>
+														<span className={styles.detailVal}>{s0.instructor}</span>
+													</div>
+												)}
+											</div>
+										</div>
+									
+										{/* ── Scenario path: always fully expanded ── */}
+										{path.length > 0 && (
+											<div className={styles.groupCardPath}>
+												<div className={styles.pathSummaryLine}>
+													{path.filter(p=>!p.skipped).map(p=>p.code).join(" → ")}
 												</div>
-											);
-										}); })()}
+												<div className={styles.scenarioPath} style={{ marginTop:'0.4rem' }}>
+													{path.map((step, i) => (
+														<div key={i} className={`${styles.scenarioStep} ${step.skipped?styles.stepSkipped:""}`}>
+															<span className={styles.stepCode}>{step.code}</span>
+															<div>
+																<span className={styles.stepTitle}>{step.title}{step.skipped&&<span className={styles.skippedTag}> (略過)</span>}</span>
+																{step.description&&<div className={styles.stepDesc}>{step.description}</div>}
+															</div>
+														</div>
+													))}
+												</div>
+											</div>
+										)}
+									
+										{/* ── Footer: extra tags + merged edit button ── */}
+										<div className={styles.groupCardFooter}>
+											<div className={styles.tagList}>
+												{tags.map((tag,idx) => (
+													<span key={idx} className={styles.tagChip}>{tag}</span>
+												))}
+											</div>
+											{canEdit && (
+												<button className={styles.adminEditBtn} onClick={()=>openEditModal(grpKey, grpSessions)}>
+													<Edit2 size={12}/> 編輯
+												</button>
+											)}
+										</div>
 									</div>
-								))}
+									);
+								}
+							)}
 						</div>
 					))}
 				</div>

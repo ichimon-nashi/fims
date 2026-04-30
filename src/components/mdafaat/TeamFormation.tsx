@@ -79,6 +79,15 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 
 	// ── Data maintenance modal ────────────────────────────────────────────
 	const [maintModal, setMaintModal] = useState(false);
+	// Delete records modal
+	const [deleteModal, setDeleteModal] = useState(false);
+	const [deleteGroups, setDeleteGroups] = useState<Array<{
+		key: string; date: string; group_type: string; group_number: number;
+		core_scenario: string; member_count: number; row_ids: number[];
+		member_names: string[]; selected: boolean;
+	}>>([]);
+	const [deleteLoading, setDeleteLoading] = useState(false);
+	const [deleteMsg, setDeleteMsg] = useState<{ok:boolean;text:string}|null>(null);
 	const [maintLoading, setMaintLoading] = useState(false);
 	const [maintToast, setMaintToast] = useState<{ ok: boolean; text: string } | null>(null);
 	// Cleanup: skeleton rows that have a completed counterpart → safe to delete
@@ -860,31 +869,36 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 				appearCount.set(m.id, (appearCount.get(m.id) ?? 0) + 1);
 			}));
 
-			// All unique people, sorted by appearance count ascending (least duplicated first)
+			// Sort: non-seniors first, then least appeared, then random tiebreaker.
+			// PRs/seniors only used when no non-senior is available.
 			const uniqueMembers = Array.from(
 				new Map(newTeams.flatMap(t => t.members).map(m => [m.id, m])).values()
-			).sort((a, b) => (appearCount.get(a.id) ?? 0) - (appearCount.get(b.id) ?? 0));
+			).sort((a, b) => {
+				const aSenior = isHigherSenior(a.rank) ? 1 : 0;
+				const bSenior = isHigherSenior(b.rank) ? 1 : 0;
+				if (aSenior !== bSenior) return aSenior - bSenior; // non-seniors first
+				const countDiff = (appearCount.get(a.id) ?? 0) - (appearCount.get(b.id) ?? 0);
+				if (countDiff !== 0) return countDiff; // then least appeared
+				return Math.random() - 0.5; // random tiebreaker within same tier+count
+			});
 
 			if (uniqueMembers.length < 2) {
 				console.warn('Not enough unique people to create 6 teams');
 				break;
 			}
 
-			// Pick member1: least appeared
+			// Pick member1: least appeared non-senior (or senior if no non-senior left)
 			const member1 = uniqueMembers[0];
-			const m1IsSenior = isHigherSenior(member1.rank);
 
-			// Pick member2: least appeared who avoids same-senior pairing.
-			// If forced to pair two seniors, pick the most junior one (highest getRankOrder).
-			const candidates = uniqueMembers.slice(1); // exclude member1
-			const preferredPartner = m1IsSenior
-				? candidates.find(p => !isHigherSenior(p.rank)) // member1 is senior → prefer non-senior
-				: candidates.find(p => isHigherSenior(p.rank));  // member1 is not senior → prefer senior
-			// Fallback: must pair two seniors — pick the most junior senior available
+			// Pick member2: another least-appeared non-senior if possible.
+			// For duplicate extra groups, avoid forcing a senior unless truly necessary.
+			const candidates = uniqueMembers.slice(1);
+			const nonSeniorCandidate = candidates.find(p => !isHigherSenior(p.rank));
 			const juniormostSenior = candidates
 				.filter(p => isHigherSenior(p.rank))
 				.sort((a, b) => getRankOrder(b.rank) - getRankOrder(a.rank))[0];
-			const member2 = preferredPartner ?? juniormostSenior ?? candidates[0];
+			// Prefer non-senior partner; only use senior as fallback
+			const member2 = nonSeniorCandidate ?? juniormostSenior ?? candidates[0];
 
 			const extraTeam: Team = {
 				id: `atr-extra-${newTeams.filter((t) => t.aircraftType === "ATR").length + 1}`,
@@ -1056,30 +1070,61 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 		}
 	};
 
-	const clearAllTrainingData = () => {
+	const openDeleteModal = async () => {
 		if (!canEditScenarios) {
 			setTfToast({ ok: false, text: '您沒有權限執行此操作！' });
 			setTimeout(() => setTfToast(null), 3000);
 			return;
 		}
-		setTfConfirm({
-			lines: ['⚠️ 這將永久刪除所有訓練記錄！', '此操作無法復原，確定要繼續嗎？'],
-			onConfirm: async () => {
-				setTfConfirm(null);
-				const token = localStorage.getItem("token");
-				if (!token) { setTfToast({ ok: false, text: '請先登入' }); setTimeout(() => setTfToast(null), 3000); return; }
-				try {
-					const res = await fetch('/api/mdafaat/training-sessions', { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-					if (!res.ok) throw new Error('Failed');
-					setTrainedUserIds(new Set());
-					setTfToast({ ok: true, text: '✅ 所有訓練資料已清除！' });
-					setTimeout(() => setTfToast(null), 3000);
-				} catch (e) {
-					setTfToast({ ok: false, text: '❌ 清除失敗！' });
-					setTimeout(() => setTfToast(null), 4000);
+		setDeleteLoading(true);
+		setDeleteModal(true);
+		setDeleteMsg(null);
+		try {
+			const res = await fetch('/api/mdafaat/training-sessions');
+			const sessions: any[] = await res.json();
+			const groupMap = new Map<string, typeof deleteGroups[number]>();
+			sessions.forEach(s => {
+				const key = `${s.training_date}|${s.group_type}|${s.group_number}`;
+				if (!groupMap.has(key)) {
+					const rawMembers: any[] = s.team_members ?? [];
+					const memberNames: string[] = Array.isArray(rawMembers)
+						? rawMembers.filter((m:any)=>typeof m==='object'&&(m.name||m.employeeId)).map((m:any)=>m.name??String(m.employeeId))
+						: [];
+					groupMap.set(key, {
+						key, date: s.training_date, group_type: s.group_type,
+						group_number: s.group_number, core_scenario: s.core_scenario,
+						member_count: 0, row_ids: [], member_names: memberNames, selected: false,
+					});
 				}
-			},
-		});
+				const g = groupMap.get(key)!;
+				g.row_ids.push(s.id);
+				g.member_count++;
+			});
+			setDeleteGroups(Array.from(groupMap.values())
+				.sort((a,b)=>b.date.localeCompare(a.date)||a.group_number-b.group_number));
+		} catch (e) {
+			setDeleteMsg({ ok:false, text:'❌ 載入失敗' });
+		} finally {
+			setDeleteLoading(false);
+		}
+	};
+
+	const runDeleteSelected = async () => {
+		const selected = deleteGroups.filter(g=>g.selected);
+		if (selected.length===0) return;
+		const ids = selected.flatMap(g=>g.row_ids);
+		const token = localStorage.getItem("token");
+		try {
+			const res = await fetch(`/api/mdafaat/training-sessions?ids=${ids.join(',')}`,{
+				method:'DELETE', headers:{'Authorization':`Bearer ${token}`},
+			});
+			if (!res.ok) throw new Error('Failed');
+			setDeleteMsg({ok:true, text:`✅ 已刪除 ${selected.length} 組訓練記錄`});
+			setDeleteGroups(prev=>prev.filter(g=>!g.selected));
+			setTrainedUserIds(new Set());
+		} catch (e) {
+			setDeleteMsg({ok:false, text:'❌ 刪除失敗'});
+		}
 	};
 
 	// ── Data maintenance: scan all sessions, find skeletons & missing groups ───
@@ -1334,6 +1379,63 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 					</div>
 				</div>
 			)}
+
+			{/* ── Delete Records Modal ── */}
+			{deleteModal && (
+				<div style={{position:'fixed',inset:0,zIndex:9998,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'center',justifyContent:'center',padding:'1rem'}}>
+					<div style={{background:'#1e293b',border:'1px solid rgba(239,68,68,0.3)',borderRadius:'0.75rem',padding:'1.75rem',width:'100%',maxWidth:'560px',maxHeight:'85vh',overflowY:'auto',display:'flex',flexDirection:'column',gap:'0.9rem'}}>
+						<div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+							<p style={{color:'#f87171',fontWeight:700,fontSize:'1.05rem',margin:0}}>🗑️ 刪除訓練記錄</p>
+							<button onClick={()=>setDeleteModal(false)} style={{background:'none',border:'none',color:'#64748b',cursor:'pointer',fontSize:'1.2rem'}}>✕</button>
+						</div>
+						<p style={{color:'#94a3b8',fontSize:'0.82rem',margin:0}}>選擇要刪除的分組記錄。刪除後無法復原。</p>
+						{deleteMsg && (
+							<div style={{padding:'0.5rem 0.9rem',borderRadius:'0.375rem',fontWeight:600,fontSize:'0.85rem',background:deleteMsg.ok?'rgba(16,185,129,0.12)':'rgba(239,68,68,0.12)',color:deleteMsg.ok?'#10b981':'#ef4444',border:`1px solid ${deleteMsg.ok?'rgba(16,185,129,0.3)':'rgba(239,68,68,0.3)'}`}}>{deleteMsg.text}</div>
+						)}
+						{deleteLoading ? (
+							<div style={{color:'#94a3b8',textAlign:'center',padding:'1.5rem'}}>載入中...</div>
+						) : (
+							<>
+								<div style={{display:'flex',gap:'0.5rem',alignItems:'center'}}>
+									<button onClick={()=>setDeleteGroups(p=>p.map(g=>({...g,selected:true})))} style={{padding:'0.25rem 0.7rem',borderRadius:'0.375rem',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',color:'#f87171',fontSize:'0.78rem',cursor:'pointer',fontWeight:600}}>全選</button>
+									<button onClick={()=>setDeleteGroups(p=>p.map(g=>({...g,selected:false})))} style={{padding:'0.25rem 0.7rem',borderRadius:'0.375rem',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',color:'#94a3b8',fontSize:'0.78rem',cursor:'pointer'}}>全不選</button>
+									<span style={{color:'#64748b',fontSize:'0.78rem',marginLeft:'auto'}}>{deleteGroups.filter(g=>g.selected).length} / {deleteGroups.length} 組已選</span>
+								</div>
+								<div style={{display:'flex',flexDirection:'column',gap:'0.3rem',maxHeight:'340px',overflowY:'auto'}}>
+									{(() => {
+										const SCEN_MAP: Record<string,string> = {bomb_threat:"爆裂物威脅",lithium_fire:"鋰電池火災",decompression:"失壓",incapacitation:"失能",unplanned_evacuation:"無預警撤離",planned_evacuation:"客艙準備 CPP"};
+										let lastDate = '';
+										return deleteGroups.map((g,i) => {
+											const showSep = g.date !== lastDate; lastDate = g.date;
+											return (
+												<React.Fragment key={g.key}>
+													{showSep && <div style={{display:'flex',alignItems:'center',gap:'0.5rem',padding:'0.3rem 0',marginTop:i>0?'0.5rem':0}}><span style={{color:'#f59e0b',fontWeight:700,fontSize:'0.78rem',whiteSpace:'nowrap'}}>{g.date}</span><div style={{flex:1,height:'1px',background:'rgba(245,158,11,0.2)'}}/></div>}
+													<label style={{display:'flex',alignItems:'flex-start',gap:'0.6rem',padding:'0.5rem 0.75rem',background:g.selected?'rgba(239,68,68,0.08)':'rgba(0,0,0,0.15)',borderRadius:'0.375rem',border:`1px solid ${g.selected?'rgba(239,68,68,0.25)':'rgba(255,255,255,0.05)'}`,cursor:'pointer'}}>
+														<input type="checkbox" checked={g.selected} onChange={e=>setDeleteGroups(p=>p.map((x,j)=>j===i?{...x,selected:e.target.checked}:x))} style={{accentColor:'#f87171',marginTop:'0.15rem',flexShrink:0}}/>
+														<div style={{flex:1,minWidth:0}}>
+															<div style={{display:'flex',alignItems:'center',gap:'0.4rem',flexWrap:'wrap'}}>
+																<span style={{color:'#e2e8f0',fontWeight:700,fontSize:'0.85rem'}}>{g.group_type} {g.group_number}</span>
+																<span style={{color:'#cbd5e1',fontSize:'0.8rem'}}>{SCEN_MAP[g.core_scenario]??g.core_scenario}</span>
+																{g.member_names.length>0&&<span style={{color:'#94a3b8',fontSize:'0.78rem'}}>· {g.member_names.join(' · ')}</span>}
+															</div>
+														</div>
+													</label>
+												</React.Fragment>
+											);
+										});
+									})()}
+								</div>
+								<div style={{display:'flex',gap:'0.75rem',justifyContent:'flex-end'}}>
+									<button onClick={()=>setDeleteModal(false)} style={{padding:'0.5rem 1.25rem',borderRadius:'0.5rem',background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.15)',color:'#e8e9ed',cursor:'pointer',fontWeight:600}}>取消</button>
+									<button onClick={runDeleteSelected} disabled={deleteGroups.filter(g=>g.selected).length===0} style={{padding:'0.5rem 1.25rem',borderRadius:'0.5rem',background:'linear-gradient(135deg,#ef4444,#dc2626)',border:'none',color:'#fff',cursor:'pointer',fontWeight:700,opacity:deleteGroups.filter(g=>g.selected).length===0?0.4:1}}>
+										🗑️ 刪除已選 ({deleteGroups.filter(g=>g.selected).length} 組)
+									</button>
+								</div>
+							</>
+						)}
+					</div>
+				</div>
+			)}
 			{/* ── 資料維護 modal ── */}
 			{maintModal && (
 				<div style={{ position: 'fixed', inset: 0, zIndex: 9997, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
@@ -1536,7 +1638,7 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 				)}
 				{canEditScenarios && (
 					<button
-						onClick={clearAllTrainingData}
+						onClick={openDeleteModal}
 						style={{ 
 							padding: '0.5rem 1rem',
 							borderRadius: '0.375rem',

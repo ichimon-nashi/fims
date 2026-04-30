@@ -51,6 +51,20 @@ export async function GET(request: NextRequest) {
 			);
 		}
 
+		// ?list=1 — return all available decks for admin card chooser (no random pick)
+		const listMode = searchParams.get("list") === "1";
+		if (listMode) {
+			return NextResponse.json({
+				decks: scenarios.map((s: any) => ({
+					scenario_code: s.scenario_code,
+					background:   s.background,
+					trigger:      s.trigger,
+					complication: s.complication ?? null,
+					outcome:      s.outcome,
+				})),
+			});
+		}
+
 		// Pick random scenario from the available ones
 		const scenario =
 			scenarios[Math.floor(Math.random() * scenarios.length)];
