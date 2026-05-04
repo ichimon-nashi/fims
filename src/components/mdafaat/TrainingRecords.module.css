@@ -739,6 +739,15 @@
 	flex: 1; /* fills remaining height so short cards match tall ones */
 }
 
+@media (max-width: 639px) {
+	.groupCard {
+		height: auto; /* let card grow naturally on mobile — no peer to match */
+	}
+	.cardBody {
+		flex: none; /* don't stretch body on mobile */
+	}
+}
+
 @media (max-width: 520px) {
 	.cardBody {
 		grid-template-columns: 1fr;
