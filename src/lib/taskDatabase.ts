@@ -1,5 +1,5 @@
 // src/lib/taskDatabase.ts - COMPLETE: Added sort_order support for subtask reordering
-import { createClient } from "@/utils/supabase/server";
+import { createServiceClient } from "@/utils/supabase/service-client";
 
 // Define a specific User interface for task management
 export interface TaskUser {

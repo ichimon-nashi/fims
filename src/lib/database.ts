@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
+import { createServiceClient } from "@/utils/supabase/service-client";
 import { User, ScheduleEntry, ScheduleFilters, ExportData } from "./types";
 
 export const getAllUsers = async (): Promise<User[]> => {
