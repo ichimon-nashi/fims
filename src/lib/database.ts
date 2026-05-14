@@ -5,7 +5,7 @@ export const getAllUsers = async (): Promise<User[]> => {
 	try {
 		console.log("Getting all users from database");
 		
-		const supabase = await createClient();
+		const supabase = await createServiceClient();
 		
 		const { data: users, error } = await supabase
 			.from('users')
@@ -44,7 +44,7 @@ export const getAllUsers = async (): Promise<User[]> => {
 export async function getUserByEmail(email: string): Promise<User | null> {
 	console.log("Getting user by email:", email);
 	
-	const supabase = await createClient();
+	const supabase = await createServiceClient();
 	
 	const { data, error } = await supabase
 		.from("users")
@@ -69,7 +69,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
 export async function getUserById(id: string): Promise<User | null> {
 	console.log("Getting user by id:", id);
 	
-	const supabase = await createClient();
+	const supabase = await createServiceClient();
 	
 	const { data, error } = await supabase
 		.from("users")
@@ -94,7 +94,7 @@ export async function getUserById(id: string): Promise<User | null> {
 export async function getUserByEmployeeId(employeeId: string): Promise<User | null> {
 	console.log("Getting user by employee ID:", employeeId);
 	
-	const supabase = await createClient();
+	const supabase = await createServiceClient();
 	
 	const { data, error } = await supabase
 		.from("users")
@@ -129,7 +129,7 @@ export async function createUser(userData: {
 }): Promise<User> {
 	console.log("Creating user with email:", userData.email);
 	
-	const supabase = await createClient();
+	const supabase = await createServiceClient();
 	
 	const { data, error } = await supabase
 		.from("users")
@@ -161,7 +161,7 @@ export async function createUser(userData: {
 export async function getFIInstructors(): Promise<User[]> {
 	console.log("Getting FI instructors");
 	
-	const supabase = await createClient();
+	const supabase = await createServiceClient();
 	
 	const { data, error } = await supabase
 		.from("users")
@@ -191,7 +191,7 @@ export async function createOrUpdateScheduleEntry(scheduleData: {
 }): Promise<ScheduleEntry> {
 	console.log("Creating/updating schedule entry for:", scheduleData.employee_id, "on", scheduleData.date);
 	
-	const supabase = await createClient();
+	const supabase = await createServiceClient();
 	
 	const year = new Date(scheduleData.date).getFullYear();
 	
@@ -223,7 +223,7 @@ export async function createOrUpdateScheduleEntry(scheduleData: {
 export async function getScheduleEntries(filters: ScheduleFilters): Promise<ScheduleEntry[]> {
 	console.log("Getting schedule entries with filters:", filters);
 	
-	const supabase = await createClient();
+	const supabase = await createServiceClient();
 	
 	let query = supabase
 		.from("fi_schedule")
@@ -261,7 +261,7 @@ export async function getScheduleEntries(filters: ScheduleFilters): Promise<Sche
 export async function getScheduleEntry(employeeId: string, date: string): Promise<ScheduleEntry | null> {
 	console.log("Getting schedule entry for employee:", employeeId, "on date:", date);
 	
-	const supabase = await createClient();
+	const supabase = await createServiceClient();
 	
 	const { data, error } = await supabase
 		.from("fi_schedule")
@@ -287,7 +287,7 @@ export async function getScheduleEntry(employeeId: string, date: string): Promis
 export async function deleteScheduleEntry(employeeId: string, date: string): Promise<void> {
 	console.log("Deleting schedule entry for employee:", employeeId, "on date:", date);
 	
-	const supabase = await createClient();
+	const supabase = await createServiceClient();
 	
 	const { error } = await supabase
 		.from("fi_schedule")
@@ -307,7 +307,7 @@ export async function deleteScheduleEntry(employeeId: string, date: string): Pro
 export async function cleanupOldScheduleRecords(): Promise<number> {
 	console.log("Cleaning up old schedule records");
 	
-	const supabase = await createClient();
+	const supabase = await createServiceClient();
 	
 	const currentYear = new Date().getFullYear();
 	const cutoffYear = currentYear - 2; // Keep current year, previous year, and next year
