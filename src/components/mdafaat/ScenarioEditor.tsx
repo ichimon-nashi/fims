@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { Search, Eye, Edit2, Trash2, Plus, X, ArrowLeft, ChevronDown } from "lucide-react";
 import LoadingScreen from "@/components/common/LoadingScreen";
+import { createServiceClient } from "@/utils/supabase/service-client";
 import styles from "./ScenarioEditor.module.css";
 
 interface Scenario {
@@ -106,9 +107,13 @@ export default function ScenarioManager({ onClose }: Props) {
 	const loadScenarios = async () => {
 		setLoading(true);
 		try {
-			const response = await fetch("/api/mdafaat/scenarios");
-			if (!response.ok) throw new Error("Failed to load scenarios");
-			const data = await response.json();
+			const supabase = createServiceClient();
+			const { data, error } = await supabase
+				.from("mdafaat_cards")
+				.select("*")
+				.order("scenario_code");
+
+			if (error) throw error;
 			setScenarios(data || []);
 		} catch (error) {
 			console.error("Error loading scenarios:", error);
@@ -150,10 +155,10 @@ export default function ScenarioManager({ onClose }: Props) {
 			return;
 		}
 		try {
-			const response = await fetch("/api/mdafaat/scenarios", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
+			const supabase = createServiceClient();
+			const { error } = await supabase
+				.from('mdafaat_cards')
+				.insert({
 					scenario_code: selectedScenario.scenario_code,
 					core_scenario: selectedScenario.core_scenario,
 					title: selectedScenario.title,
@@ -164,9 +169,8 @@ export default function ScenarioManager({ onClose }: Props) {
 					trigger: selectedScenario.trigger,
 					complication: selectedScenario.complication,
 					outcome: selectedScenario.outcome,
-				}),
-			});
-			if (!response.ok) throw new Error("Failed to create scenario");
+				});
+			if (error) throw error;
 			alert('✅ 新增成功');
 			setIsCreating(false);
 			setSelectedScenario(null);
@@ -193,10 +197,13 @@ export default function ScenarioManager({ onClose }: Props) {
 		if (!confirm(`確定要刪除 ${scenario.scenario_code}？`)) return;
 
 		try {
-			const response = await fetch(`/api/mdafaat/scenarios?id=${scenario.id}`, {
-				method: "DELETE",
-			});
-			if (!response.ok) throw new Error("Failed to delete scenario");
+			const supabase = createServiceClient();
+			const { error } = await supabase
+				.from("mdafaat_cards")
+				.delete()
+				.eq("id", scenario.id);
+
+			if (error) throw error;
 			alert("✅ 刪除成功");
 			loadScenarios();
 		} catch (error) {
@@ -209,19 +216,21 @@ export default function ScenarioManager({ onClose }: Props) {
 		if (!selectedScenario) return;
 
 		try {
-			const response = await fetch(`/api/mdafaat/scenarios?id=${selectedScenario.id}`, {
-				method: "PATCH",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
+			const supabase = createServiceClient();
+			const { error } = await supabase
+				.from("mdafaat_cards")
+				.update({
 					category: selectedScenario.category,
 					core_scenario: selectedScenario.core_scenario,
 					background: selectedScenario.background,
 					trigger: selectedScenario.trigger,
 					complication: selectedScenario.complication,
 					outcome: selectedScenario.outcome,
-				}),
-			});
-			if (!response.ok) throw new Error("Failed to update scenario");
+					updated_at: new Date().toISOString(),
+				})
+				.eq("id", selectedScenario.id);
+
+			if (error) throw error;
 			alert("✅ 儲存成功");
 			setIsEditing(false);
 			setIsViewing(false);

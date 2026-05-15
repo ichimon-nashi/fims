@@ -3,28 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/utils/supabase/service-client";
 import { verifyToken } from "@/lib/auth";
 
-// GET: Fetch pending groups for a specific date, or all dates if all=1
+// GET: Fetch pending groups for a specific date
 export async function GET(request: NextRequest) {
-	const { searchParams } = request.nextUrl;
-	const all = searchParams.get("all");
-
-	// all=1: return all pending groups (used to determine which dates have saved groups)
-	if (all === "1") {
-		const supabase = createServiceClient();
-		const { data, error } = await supabase
-			.from("mdafaat_pending_groups")
-			.select("training_date, group_number")
-			.order("training_date", { ascending: false });
-
-		if (error) {
-			console.error("Error fetching all pending groups:", error);
-			return NextResponse.json({ error: error.message }, { status: 500 });
-		}
-
-		return NextResponse.json(data || []);
-	}
-
-	const date = searchParams.get("date");
+	const date = request.nextUrl.searchParams.get("date");
 	if (!date) {
 		return NextResponse.json({ error: "date param required" }, { status: 400 });
 	}

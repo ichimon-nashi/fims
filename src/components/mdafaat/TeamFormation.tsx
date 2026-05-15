@@ -9,6 +9,7 @@ import { IoAirplane } from "react-icons/io5";
 import Image from "next/image";
 import Avatar from "@/components/ui/Avatar/Avatar";
 import { useAuth } from "@/context/AuthContext";
+import { createServiceClient } from "@/utils/supabase/service-client";
 import styles from "./TeamFormation.module.css";
 
 interface User {
@@ -192,19 +193,18 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 		const loadAllUsers = async () => {
 			setLoadingUsers(true);
 			try {
-				const token = localStorage.getItem("token");
-				const response = await fetch("/api/users", {
-					headers: token ? { Authorization: `Bearer ${token}` } : {},
-				});
-				if (!response.ok) throw new Error("Failed to fetch users");
-				const json = await response.json();
-				const data = json.users || json;
+				const supabase = createServiceClient();
+				const { data, error } = await supabase
+					.from("users")
+					.select(
+						"id, employee_id, full_name, rank, base, aircraft_type_ratings",
+					)
+					.neq("rank", "admin"); // Exclude admin users only
 
-				// Exclude admin users (matching original .neq("rank", "admin"))
-				const filtered = (data || []).filter((u: User) => u.rank !== "admin");
+				if (error) throw error;
 
 				// Sort by rank hierarchy, then by employee_id ascending
-				const sorted = (filtered || []).sort((a: User, b: User) => {
+				const sorted = (data || []).sort((a, b) => {
 					const aRankOrder = getRankOrder(a.rank);
 					const bRankOrder = getRankOrder(b.rank);
 
