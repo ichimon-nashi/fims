@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
 		const { searchParams } = req.nextUrl;
 		const cycleId = searchParams.get("cycle_id");
 		const discipline = searchParams.get("discipline") || "CAB";
-		const section = searchParams.get("section");
+		// No section filter — load all sections at once so client-side counts are accurate
 
 		if (!cycleId)
 			return NextResponse.json(
@@ -29,20 +29,14 @@ export async function GET(req: NextRequest) {
 				{ status: 400 },
 			);
 
-		// ISARPs are now cycle-scoped — filter by cycle_id + discipline
-		let isarpQuery = supabase
+		const { data: isarps, error: isarpErr } = await supabase
 			.from("audit_iosa_isarps")
 			.select("*")
 			.eq("cycle_id", cycleId)
 			.eq("discipline", discipline)
-			.order("isarp_code", { ascending: true });
-
-		if (section) isarpQuery = isarpQuery.eq("section", parseInt(section));
-
-		const { data: isarps, error: isarpErr } = await isarpQuery;
+			.order("row_order", { ascending: true });
 		if (isarpErr) throw isarpErr;
 
-		// Records are cycle-scoped already
 		const { data: records, error: recErr } = await supabase
 			.from("audit_iosa_records")
 			.select("*")
@@ -77,16 +71,7 @@ export async function PATCH(req: NextRequest) {
 		const decoded = verifyToken(token);
 
 		const body = await req.json();
-		const {
-			cycle_id,
-			isarp_code,
-			discipline,
-			doc_references,
-			aa_responses,
-			prep_flagged,
-			prep_flag_reason,
-			prep_status,
-		} = body;
+		const { cycle_id, isarp_code, discipline } = body;
 
 		if (!cycle_id || !isarp_code) {
 			return NextResponse.json(
@@ -95,23 +80,53 @@ export async function PATCH(req: NextRequest) {
 			);
 		}
 
+		// Fetch existing record first so we never overwrite fields not included in patch
+		const { data: existing } = await supabase
+			.from("audit_iosa_records")
+			.select("*")
+			.eq("cycle_id", cycle_id)
+			.eq("isarp_code", isarp_code)
+			.maybeSingle();
+
+		// Merge: start from existing, apply only the fields present in body
+		const merged: any = {
+			cycle_id,
+			isarp_code,
+			discipline: discipline || isarp_code.split(" ")[0],
+			doc_references: existing?.doc_references ?? "",
+			aa_responses: existing?.aa_responses ?? {},
+			prep_flagged: existing?.prep_flagged ?? false,
+			prep_flag_reason: existing?.prep_flag_reason ?? "",
+			prep_status: existing?.prep_status ?? "not_started",
+			conformance_status: existing?.conformance_status ?? null,
+			nonconformity_desc: existing?.nonconformity_desc ?? "",
+			root_cause: existing?.root_cause ?? "",
+			corrective_action: existing?.corrective_action ?? "",
+			last_audit_date: existing?.last_audit_date ?? null,
+			last_auditor_name: existing?.last_auditor_name ?? null,
+			updated_by: decoded.userId,
+			updated_at: new Date().toISOString(),
+		};
+
+		// Apply only the fields explicitly sent in the body
+		const patchableFields = [
+			"doc_references",
+			"aa_responses",
+			"prep_flagged",
+			"prep_flag_reason",
+			"prep_status",
+			"conformance_status",
+			"nonconformity_desc",
+			"root_cause",
+			"corrective_action",
+		];
+		for (const field of patchableFields) {
+			if (field in body) merged[field] = body[field];
+		}
+
 		const { data, error } = await supabase
 			.from("audit_iosa_records")
-			.upsert(
-				{
-					cycle_id,
-					isarp_code,
-					discipline: discipline || isarp_code.split(" ")[0],
-					doc_references: doc_references ?? "",
-					aa_responses: aa_responses ?? {},
-					prep_flagged: prep_flagged ?? false,
-					prep_flag_reason: prep_flag_reason ?? "",
-					prep_status: prep_status ?? "in_progress",
-					updated_by: decoded.userId,
-					updated_at: new Date().toISOString(),
-				},
-				{ onConflict: "cycle_id,isarp_code" },
-			)
+			.upsert(merged, { onConflict: "cycle_id,isarp_code" })
 			.select()
 			.single();
 

@@ -20,7 +20,8 @@ interface AuditCycle {
 interface DisciplineStats {
 	discipline: string;
 	total: number;
-	completed: number;
+	prep_ready: number; // ISARPs marked ready in AuditPrep
+	audit_completed: number; // ISARPs with conformance status recorded
 	findings: number;
 	observations: number;
 	inScope: boolean;
@@ -40,15 +41,17 @@ interface DashboardData {
 	linkedAlerts: string[];
 }
 
-const DISCIPLINE_TOTALS: Record<string, number> = {
-	CAB: 233,
-	FLT: 578,
-	DSP: 244,
-	MNT: 205,
-	GRH: 218,
-	ORG: 160,
-	CGO: 148,
-	SEC: 129,
+// Fallback totals used only before ISM import
+// Real totals come from audit_iosa_isarps seeded per cycle
+const DISCIPLINE_TOTALS_FALLBACK: Record<string, number> = {
+	CAB: 107,
+	FLT: 267,
+	DSP: 115,
+	MNT: 103,
+	GRH: 115,
+	ORG: 77,
+	CGO: 71,
+	SEC: 53,
 };
 const DISCIPLINE_ORDER = [
 	"CAB",
@@ -83,7 +86,7 @@ function CreateCycleModal({
 	const [name, setName] = useState(`IOSA ${currentYear}`);
 	const [year, setYear] = useState(currentYear);
 	const [ismEdition, setIsmEdition] = useState("Ed.18 Rev1");
-	const [disciplines, setDisciplines] = useState<string[]>(["CAB"]);
+	const [disciplines, setDisciplines] = useState<string[]>(DISCIPLINE_ORDER); // all selected by default
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
 	const [confirmOverwrite, setConfirmOverwrite] = useState(false);
@@ -236,13 +239,6 @@ function CreateCycleModal({
 											>
 												{d}
 											</span>
-											<span
-												className={
-													styles.disciplineCount
-												}
-											>
-												{DISCIPLINE_TOTALS[d]}
-											</span>
 										</button>
 									))}
 								</div>
@@ -352,7 +348,8 @@ interface CycleSelectorProps {
 	onRename: (id: string, name: string) => void;
 	onStatusChange: (id: string, status: string) => void;
 	onDelete: (id: string) => void;
-	isPrivileged: boolean; // admin or 51892
+	onDisciplineUpdate: (id: string, disciplines: string[]) => void;
+	isPrivileged: boolean;
 }
 
 function CycleSelector({
@@ -363,6 +360,7 @@ function CycleSelector({
 	onRename,
 	onStatusChange,
 	onDelete,
+	onDisciplineUpdate,
 	isPrivileged,
 }: CycleSelectorProps) {
 	const [historyOpen, setHistoryOpen] = useState(false);
@@ -370,11 +368,16 @@ function CycleSelector({
 	const [editing, setEditing] = useState(false);
 	const [editName, setEditName] = useState(activeCycle.name);
 	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [showDiscEdit, setShowDiscEdit] = useState(false);
+	const [editDiscs, setEditDiscs] = useState<string[]>(
+		activeCycle.disciplines ?? [],
+	);
 	const inputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
 		setEditName(activeCycle.name);
 		setEditing(false);
+		setEditDiscs(activeCycle.disciplines ?? []);
 	}, [activeCycle]);
 	useEffect(() => {
 		if (editing) inputRef.current?.focus();
@@ -390,6 +393,16 @@ function CycleSelector({
 	const handleDelete = () => {
 		setShowDeleteModal(false);
 		onDelete(activeCycle.id);
+	};
+
+	const toggleEditDisc = (d: string) =>
+		setEditDiscs((prev) =>
+			prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d],
+		);
+
+	const saveDiscs = () => {
+		onDisciplineUpdate(activeCycle.id, editDiscs);
+		setShowDiscEdit(false);
 	};
 
 	return (
@@ -465,11 +478,92 @@ function CycleSelector({
 
 				{/* Right: actions */}
 				<div className={styles.cycleRight}>
+					{/* Edit disciplines */}
+					<div className={styles.cycleDropdownWrap}>
+						<button
+							className={styles.btnNewCycle}
+							onClick={() => setShowDiscEdit((o) => !o)}
+							title="Edit in-scope disciplines"
+						>
+							✎ Scope
+						</button>
+						{showDiscEdit && (
+							<div
+								className={styles.cycleDropdown}
+								style={{ minWidth: 240, padding: "0.75rem" }}
+							>
+								<div
+									style={{
+										fontSize: "0.6875rem",
+										color: "#a0aec0",
+										marginBottom: "0.5rem",
+										letterSpacing: "0.5px",
+									}}
+								>
+									IN-SCOPE DISCIPLINES
+								</div>
+								<div
+									style={{
+										display: "grid",
+										gridTemplateColumns: "repeat(4,1fr)",
+										gap: "0.375rem",
+										marginBottom: "0.625rem",
+									}}
+								>
+									{DISCIPLINE_ORDER.map((d) => (
+										<button
+											key={d}
+											className={`${styles.disciplineToggle} ${editDiscs.includes(d) ? styles.disciplineToggleOn : ""}`}
+											onClick={() => toggleEditDisc(d)}
+											type="button"
+										>
+											<span
+												className={
+													styles.disciplineCode
+												}
+											>
+												{d}
+											</span>
+										</button>
+									))}
+								</div>
+								<div
+									style={{
+										display: "flex",
+										gap: "0.375rem",
+										justifyContent: "flex-end",
+									}}
+								>
+									<button
+										className={styles.btnGhost}
+										style={{
+											fontSize: "0.6875rem",
+											padding: "3px 8px",
+										}}
+										onClick={() => setShowDiscEdit(false)}
+									>
+										Cancel
+									</button>
+									<button
+										className={styles.btnPrimary}
+										style={{
+											fontSize: "0.6875rem",
+											padding: "3px 8px",
+										}}
+										onClick={saveDiscs}
+									>
+										Save
+									</button>
+								</div>
+							</div>
+						)}
+					</div>
+
 					<button className={styles.btnNewCycle} onClick={onNewCycle}>
 						+ 新週期
 					</button>
 
-					{/* History dropdown — only if multiple cycles */}
+					{/* History dropdown */}
 					{cycles.length > 1 && (
 						<div className={styles.cycleDropdownWrap}>
 							<button
@@ -666,12 +760,42 @@ export default function IOSADashboard({
 		}
 	};
 
-	// Discipline cards
+	const handleDisciplineUpdate = async (
+		id: string,
+		disciplines: string[],
+	) => {
+		if (!token) return;
+		try {
+			const res = await fetch(`/api/audit/iosa/cycles/${id}`, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify({ disciplines }),
+			});
+			if (!res.ok) return;
+			const { cycle } = await res.json();
+			setAllCycles((prev) => prev.map((c) => (c.id === id ? cycle : c)));
+			setActiveCycle(cycle);
+		} catch {
+			/* silent */
+		}
+	};
+
+	// Discipline cards — use prep_ready for progress bar (AuditPrep phase)
+	// use audit_completed for findings/obs (live Audit phase)
+	const isAuditPhase =
+		activeCycle?.status === "active" || activeCycle?.status === "completed";
+
 	const disciplineCards = DISCIPLINE_ORDER.map((disc) => {
 		const inScope = activeCycle?.disciplines?.includes(disc) ?? false;
 		const stats = data.disciplineStats.find((s) => s.discipline === disc);
-		const total = DISCIPLINE_TOTALS[disc];
-		const completed = stats?.completed ?? 0;
+		const total = stats?.total ?? DISCIPLINE_TOTALS_FALLBACK[disc] ?? 0;
+		// Show prep_ready during prep, audit_completed during/after audit
+		const completed = isAuditPhase
+			? (stats?.audit_completed ?? 0)
+			: (stats?.prep_ready ?? 0);
 		const findings = stats?.findings ?? 0;
 		const observations = stats?.observations ?? 0;
 		const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -731,6 +855,7 @@ export default function IOSADashboard({
 					onRename={handleRename}
 					onStatusChange={handleStatusChange}
 					onDelete={handleDelete}
+					onDisciplineUpdate={handleDisciplineUpdate}
 					isPrivileged={isPrivileged}
 				/>
 			)}
@@ -799,7 +924,7 @@ export default function IOSADashboard({
 							cls: "",
 						},
 						{
-							label: "Completed",
+							label: isAuditPhase ? "Audited" : "Prep Ready",
 							val: activeStats?.completed ?? 0,
 							cls: styles.green,
 						},

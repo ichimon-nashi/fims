@@ -20,10 +20,11 @@ export async function PATCH(
     const { id } = await context.params;
     const body = await req.json();
 
-    // Only allow updating name and status
+    // Only allow updating name, status, and disciplines
     const updates: Record<string, any> = {};
-    if (body.name !== undefined)   updates.name   = body.name.trim();
-    if (body.status !== undefined) updates.status = body.status;
+    if (body.name        !== undefined) updates.name        = body.name.trim();
+    if (body.status      !== undefined) updates.status      = body.status;
+    if (body.disciplines !== undefined) updates.disciplines = body.disciplines;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });

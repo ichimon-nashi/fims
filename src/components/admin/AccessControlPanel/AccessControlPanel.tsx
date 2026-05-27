@@ -4,7 +4,6 @@
 import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
-
 import {
 	getAllAuthLevels,
 	getAuthLevelConfig,
@@ -29,6 +28,10 @@ interface MDAfaatPermissions {
 	view_only: boolean; // Can they edit scenarios, or just view?
 }
 
+interface AuditPermissions {
+	view_only: boolean;
+}
+
 interface AppPermissions {
 	roster: boolean;
 	tasks: boolean;
@@ -41,6 +44,7 @@ interface AppPermissions {
 	mdafaat_edit?: MDAfaatPermissions; // Sub-permissions for MDAfaat
 	ads: boolean;
 	ccom_review: boolean;
+	audit: boolean;
 }
 
 interface User {
@@ -128,6 +132,11 @@ const AccessControlPanel = () => {
 			mdafaat_edit: mdafaatEdit,
 			ads: dbPermissions.ads?.access ?? false,
 			ccom_review: dbPermissions.ccom_review?.access ?? false,
+			audit: dbPermissions.audit?.access ?? false,
+				audit_edit: {
+					view_only: dbPermissions.audit?.view_only ?? true,
+				},
+			audit: dbPermissions.audit?.access ?? false,
 		};
 	};
 
@@ -254,6 +263,8 @@ const AccessControlPanel = () => {
 			},
 			ads: true,
 			ccom_review: true,
+			audit: false,
+			audit_edit: { view_only: true },
 		};
 	};
 
@@ -374,8 +385,26 @@ const AccessControlPanel = () => {
 			ccom_review: {
 				access: permissions.ccom_review ?? false,
 			},
+			audit: {
+				access: permissions.audit ?? false,
+			},
 		};
 	};
+	const handleAuditEditToggle = () => {
+		if (!selectedUser) return;
+		const currentEdit = selectedUser.app_permissions?.audit_edit || { view_only: true };
+		setSelectedUser({
+			...selectedUser,
+			app_permissions: {
+				...selectedUser.app_permissions,
+				audit_edit: {
+					view_only: !currentEdit.view_only,
+				},
+			},
+		});
+	};
+
+
 
 	// Handle save permissions
 	const handleSavePermissions = async () => {
@@ -940,18 +969,7 @@ const AccessControlPanel = () => {
 																	styles.appName
 																}
 															>
-																<Image
-																	src="/images/roster.png"
-																	alt="roster"
-																	width={16}
-																	height={16}
-																	style={{
-																		objectFit:
-																			"contain",
-																		verticalAlign:
-																			"middle",
-																	}}
-																/>{" "}
+																<Image src="/images/roster.png" alt="roster" width={16} height={16} style={{ objectFit: 'contain', verticalAlign: 'middle' }} />{" "}
 																教師班表
 																(Roster)
 															</span>
@@ -995,18 +1013,7 @@ const AccessControlPanel = () => {
 																	styles.appName
 																}
 															>
-																<Image
-																	src="/images/task.png"
-																	alt="tasks"
-																	width={16}
-																	height={16}
-																	style={{
-																		objectFit:
-																			"contain",
-																		verticalAlign:
-																			"middle",
-																	}}
-																/>{" "}
+																<Image src="/images/task.png" alt="tasks" width={16} height={16} style={{ objectFit: 'contain', verticalAlign: 'middle' }} />{" "}
 																任務管理 (Task
 																Manger)
 															</span>
@@ -1050,18 +1057,7 @@ const AccessControlPanel = () => {
 																	styles.appName
 																}
 															>
-																<Image
-																	src="/images/sms.png"
-																	alt="sms"
-																	width={16}
-																	height={16}
-																	style={{
-																		objectFit:
-																			"contain",
-																		verticalAlign:
-																			"middle",
-																	}}
-																/>{" "}
+																<Image src="/images/sms.png" alt="sms" width={16} height={16} style={{ objectFit: 'contain', verticalAlign: 'middle' }} />{" "}
 																SMS (Safety
 																Management
 																System)
@@ -1151,18 +1147,7 @@ const AccessControlPanel = () => {
 																	styles.appName
 																}
 															>
-																<Image
-																	src="/images/oraltest.png"
-																	alt="oral test"
-																	width={16}
-																	height={16}
-																	style={{
-																		objectFit:
-																			"contain",
-																		verticalAlign:
-																			"middle",
-																	}}
-																/>{" "}
+																<Image src="/images/oraltest.png" alt="oral test" width={16} height={16} style={{ objectFit: 'contain', verticalAlign: 'middle' }} />{" "}
 																翻書口試 (Oral
 																Test)
 															</span>
@@ -1406,18 +1391,7 @@ const AccessControlPanel = () => {
 																	styles.appName
 																}
 															>
-																<Image
-																	src="/images/bctraining.png"
-																	alt="bc training"
-																	width={16}
-																	height={16}
-																	style={{
-																		objectFit:
-																			"contain",
-																		verticalAlign:
-																			"middle",
-																	}}
-																/>{" "}
+																<Image src="/images/bctraining.png" alt="bc training" width={16} height={16} style={{ objectFit: 'contain', verticalAlign: 'middle' }} />{" "}
 																B/C訓練
 																(商務艙服務訓練)
 															</span>
@@ -1461,18 +1435,7 @@ const AccessControlPanel = () => {
 																	styles.appName
 																}
 															>
-																<Image
-																	src="/images/mdafaat.png"
-																	alt="mdafaat"
-																	width={16}
-																	height={16}
-																	style={{
-																		objectFit:
-																			"contain",
-																		verticalAlign:
-																			"middle",
-																	}}
-																/>{" "}
+																<Image src="/images/mdafaat.png" alt="mdafaat" width={16} height={16} style={{ objectFit: 'contain', verticalAlign: 'middle' }} />{" "}
 																情境演練
 																(緊急撤離演練)
 															</span>
@@ -1562,18 +1525,7 @@ const AccessControlPanel = () => {
 																	styles.appName
 																}
 															>
-																<Image
-																	src="/images/ads.png"
-																	alt="ads"
-																	width={16}
-																	height={16}
-																	style={{
-																		objectFit:
-																			"contain",
-																		verticalAlign:
-																			"middle",
-																	}}
-																/>{" "}
+																<Image src="/images/ads.png" alt="ads" width={16} height={16} style={{ objectFit: 'contain', verticalAlign: 'middle' }} />{" "}
 																AdS
 																(注意力測試器)
 															</span>
@@ -1617,23 +1569,104 @@ const AccessControlPanel = () => {
 																	styles.appName
 																}
 															>
-																<Image
-																	src="/images/ccomreview.png"
-																	alt="ccom review"
-																	width={16}
-																	height={16}
-																	style={{
-																		objectFit:
-																			"contain",
-																		verticalAlign:
-																			"middle",
-																	}}
-																/>{" "}
+																<Image src="/images/ccomreview.png" alt="ccom review" width={16} height={16} style={{ objectFit: 'contain', verticalAlign: 'middle' }} />{" "}
 																CCOM抽問
 																(目錄抽問)
 															</span>
 														</label>
 													</div>
+												</div>
+											</div>
+										</div>
+
+										{/* Audit */}
+										<div
+											className={
+												styles.appPermissionCard
+											}
+										>
+											<div
+												className={
+													styles.appPermissionHeader
+												}
+											>
+												<label
+													className={
+														styles.appPermissionLabel
+													}
+												>
+													<input
+														type="checkbox"
+														className={
+															styles.appCheckbox
+														}
+														checked={
+															selectedUser
+																.app_permissions
+																?.audit ??
+															false
+														}
+														onChange={() =>
+															handlePermissionToggle(
+																"audit",
+															)
+														}
+													/>
+													<span
+														className={
+															styles.appName
+														}
+													>
+														<Image src="/images/audit.png" alt="audit" width={16} height={16} style={{ objectFit: 'contain', verticalAlign: 'middle' }} />{" "}
+														查核管理
+														(Audit)
+													</span>
+												</label>
+											</div>
+											{/* Audit Edit Sub-Permission */}
+											<div
+												className={
+													styles.appSubPermissions
+												}
+											>
+												<div
+													className={
+														styles.subPermissionItem
+													}
+												>
+													<label
+														className={
+															styles.subPermissionLabel
+														}
+													>
+														<input
+															type="checkbox"
+															className={
+																styles.subCheckbox
+															}
+															checked={
+																!(
+																	selectedUser
+																		.app_permissions
+																		?.audit_edit
+																		?.view_only ??
+																	true
+																)
+															}
+															onChange={
+																handleAuditEditToggle
+															}
+															disabled={
+																!selectedUser
+																	.app_permissions
+																	?.audit
+															}
+														/>
+														<span>
+															Can Edit
+															(可編輯)
+														</span>
+													</label>
 												</div>
 											</div>
 										</div>

@@ -99,7 +99,7 @@ export async function GET(req: NextRequest) {
 		const { data: records, error: recErr } = await supabase
 			.from("audit_iosa_records")
 			.select(
-				"discipline, conformance_status, prep_flagged, prep_flag_reason, isarp_code",
+				"discipline, conformance_status, prep_status, prep_flagged, prep_flag_reason, isarp_code",
 			)
 			.eq("cycle_id", cycle.id);
 		if (recErr) throw recErr;
@@ -110,9 +110,11 @@ export async function GET(req: NextRequest) {
 			const dr = allRecords.filter((r) => r.discipline === disc);
 			return {
 				discipline: disc,
-				// Use actual seeded count for this cycle, fallback to 0 if not imported yet
 				total: cycleTotals[disc] ?? 0,
-				completed: dr.filter(
+				// Prep progress — ISARPs marked ready by internal team
+				prep_ready: dr.filter((r) => r.prep_status === "ready").length,
+				// Audit outcomes — ISARPs with a conformance status recorded
+				audit_completed: dr.filter(
 					(r) =>
 						r.conformance_status &&
 						COMPLETED_STATUSES.includes(r.conformance_status),
