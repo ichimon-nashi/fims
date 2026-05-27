@@ -1,0 +1,58 @@
+/* src/app/audit/iosa/iosa.module.css */
+
+.pageShell {
+	min-height: calc(100vh - 60px); /* account for Navbar */
+	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+	display: flex;
+	flex-direction: column;
+}
+
+.loadingCenter {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.spinner {
+	width: 32px;
+	height: 32px;
+	border: 2px solid rgba(255, 255, 255, 0.1);
+	border-top-color: #4a9eff;
+	border-radius: 50%;
+	animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Under construction pages */
+.underConstruction {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 1rem;
+	color: #a0aec0;
+}
+
+.ucIcon {
+	font-size: 3rem;
+}
+
+.ucTitle {
+	font-size: 1.5rem;
+	font-weight: 600;
+	color: #e8e9ed;
+	margin: 0;
+}
+
+.ucText {
+	font-size: 1rem;
+	color: #a0aec0;
+	margin: 0;
+}

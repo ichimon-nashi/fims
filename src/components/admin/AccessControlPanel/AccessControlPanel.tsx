@@ -4,17 +4,12 @@
 import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
+
 import {
-	FaCalendarAlt,
-	FaClipboardList,
-	FaUserShield,
-	FaUtensils,
-	FaRunning,
-} from "react-icons/fa";
-import { FaBookSkull } from "react-icons/fa6";
-import { IoBookSharp } from "react-icons/io5";
-import { GiDistraction } from "react-icons/gi";
-import { getAllAuthLevels, getAuthLevelConfig, getAuthLevelGifPath } from "@/lib/authLevelConfig";
+	getAllAuthLevels,
+	getAuthLevelConfig,
+	getAuthLevelGifPath,
+} from "@/lib/authLevelConfig";
 import { getCustomAvatarGif } from "@/lib/customAvatarMapping";
 import styles from "./AccessControlPanel.module.css";
 
@@ -188,7 +183,7 @@ const AccessControlPanel = () => {
 	const filteredUsers = useMemo(() => {
 		// First filter out admin account
 		const withoutAdmin = users.filter(
-			(user) => !["admin", ,"20580", "21531"].includes(user.employee_id),
+			(user) => !["admin", , "20580", "21531"].includes(user.employee_id),
 			//add users into array to hide them
 		);
 
@@ -213,7 +208,7 @@ const AccessControlPanel = () => {
 		// Priority 2: Use authLevelConfig with user's gender
 		const gender = user.gender?.toLowerCase().trim() || "";
 		const genderType = gender === "m" || gender === "male" ? "m" : "f";
-		
+
 		return getAuthLevelGifPath(level, genderType);
 	};
 
@@ -322,7 +317,8 @@ const AccessControlPanel = () => {
 	const handleMDAfaatEditToggle = () => {
 		if (!selectedUser || !selectedUser.app_permissions) return;
 
-		const currentMDAfaatEdit = selectedUser.app_permissions.mdafaat_edit || {
+		const currentMDAfaatEdit = selectedUser.app_permissions
+			.mdafaat_edit || {
 			view_only: true,
 		};
 
@@ -838,11 +834,29 @@ const AccessControlPanel = () => {
 														});
 													}}
 												>
-													{getAllAuthLevels().map((authLevel) => (
-														<option key={authLevel.level} value={authLevel.level}>
-															{authLevel.level} - {authLevel.nameChinese} ({authLevel.name})
-														</option>
-													))}
+													{getAllAuthLevels().map(
+														(authLevel) => (
+															<option
+																key={
+																	authLevel.level
+																}
+																value={
+																	authLevel.level
+																}
+															>
+																{
+																	authLevel.level
+																}{" "}
+																-{" "}
+																{
+																	authLevel.nameChinese
+																}{" "}
+																(
+																{authLevel.name}
+																)
+															</option>
+														),
+													)}
 												</select>
 												<div
 													className={
@@ -926,12 +940,20 @@ const AccessControlPanel = () => {
 																	styles.appName
 																}
 															>
-																<FaCalendarAlt
+																<Image
+																	src="/images/roster.png"
+																	alt="roster"
+																	width={16}
+																	height={16}
 																	style={{
-																		color: "#3b82f6",
+																		objectFit:
+																			"contain",
+																		verticalAlign:
+																			"middle",
 																	}}
 																/>{" "}
-																教師班表 (Roster)
+																教師班表
+																(Roster)
 															</span>
 														</label>
 													</div>
@@ -973,12 +995,20 @@ const AccessControlPanel = () => {
 																	styles.appName
 																}
 															>
-																<FaClipboardList
+																<Image
+																	src="/images/task.png"
+																	alt="tasks"
+																	width={16}
+																	height={16}
 																	style={{
-																		color: "#10b981",
+																		objectFit:
+																			"contain",
+																		verticalAlign:
+																			"middle",
 																	}}
 																/>{" "}
-																任務管理 (Task Manger)
+																任務管理 (Task
+																Manger)
 															</span>
 														</label>
 													</div>
@@ -1020,12 +1050,21 @@ const AccessControlPanel = () => {
 																	styles.appName
 																}
 															>
-																<FaUserShield
+																<Image
+																	src="/images/sms.png"
+																	alt="sms"
+																	width={16}
+																	height={16}
 																	style={{
-																		color: "#ef4444",
+																		objectFit:
+																			"contain",
+																		verticalAlign:
+																			"middle",
 																	}}
 																/>{" "}
-																SMS (Safety Management System)
+																SMS (Safety
+																Management
+																System)
 															</span>
 														</label>
 													</div>
@@ -1112,9 +1151,16 @@ const AccessControlPanel = () => {
 																	styles.appName
 																}
 															>
-																<FaBookSkull
+																<Image
+																	src="/images/oraltest.png"
+																	alt="oral test"
+																	width={16}
+																	height={16}
 																	style={{
-																		color: "#f59e0b",
+																		objectFit:
+																			"contain",
+																		verticalAlign:
+																			"middle",
 																	}}
 																/>{" "}
 																翻書口試 (Oral
@@ -1278,8 +1324,7 @@ const AccessControlPanel = () => {
 																	}
 																/>
 																<span>
-																	Test
-																	(測試)
+																	Test (測試)
 																</span>
 															</label>
 														</div>
@@ -1361,12 +1406,20 @@ const AccessControlPanel = () => {
 																	styles.appName
 																}
 															>
-																<FaUtensils
+																<Image
+																	src="/images/bctraining.png"
+																	alt="bc training"
+																	width={16}
+																	height={16}
 																	style={{
-																		color: "#8b5cf6",
+																		objectFit:
+																			"contain",
+																		verticalAlign:
+																			"middle",
 																	}}
 																/>{" "}
-																B/C訓練 (商務艙服務訓練)
+																B/C訓練
+																(商務艙服務訓練)
 															</span>
 														</label>
 													</div>
@@ -1408,18 +1461,34 @@ const AccessControlPanel = () => {
 																	styles.appName
 																}
 															>
-																<FaRunning
+																<Image
+																	src="/images/mdafaat.png"
+																	alt="mdafaat"
+																	width={16}
+																	height={16}
 																	style={{
-																		color: "#ec4899",
+																		objectFit:
+																			"contain",
+																		verticalAlign:
+																			"middle",
 																	}}
 																/>{" "}
-																情境演練 (緊急撤離演練)
+																情境演練
+																(緊急撤離演練)
 															</span>
 														</label>
 													</div>
 													{/* MDAfaat Edit Sub-Permission */}
-													<div className={styles.appSubPermissions}>
-														<div className={styles.subPermissionItem}>
+													<div
+														className={
+															styles.appSubPermissions
+														}
+													>
+														<div
+															className={
+																styles.subPermissionItem
+															}
+														>
 															<label
 																className={
 																	styles.subPermissionLabel
@@ -1430,9 +1499,23 @@ const AccessControlPanel = () => {
 																	className={
 																		styles.subCheckbox
 																	}
-																	checked={!(selectedUser.app_permissions?.mdafaat_edit?.view_only ?? true)}
-																	onChange={handleMDAfaatEditToggle}
-																	disabled={!selectedUser.app_permissions?.mdafaat}
+																	checked={
+																		!(
+																			selectedUser
+																				.app_permissions
+																				?.mdafaat_edit
+																				?.view_only ??
+																			true
+																		)
+																	}
+																	onChange={
+																		handleMDAfaatEditToggle
+																	}
+																	disabled={
+																		!selectedUser
+																			.app_permissions
+																			?.mdafaat
+																	}
 																/>
 																<span>
 																	Can Edit
@@ -1479,12 +1562,20 @@ const AccessControlPanel = () => {
 																	styles.appName
 																}
 															>
-																<GiDistraction
+																<Image
+																	src="/images/ads.png"
+																	alt="ads"
+																	width={16}
+																	height={16}
 																	style={{
-																		color: "#14b8a6",
+																		objectFit:
+																			"contain",
+																		verticalAlign:
+																			"middle",
 																	}}
 																/>{" "}
-																AdS (注意力測試器)
+																AdS
+																(注意力測試器)
 															</span>
 														</label>
 													</div>
@@ -1526,12 +1617,20 @@ const AccessControlPanel = () => {
 																	styles.appName
 																}
 															>
-																<IoBookSharp
+																<Image
+																	src="/images/ccomreview.png"
+																	alt="ccom review"
+																	width={16}
+																	height={16}
 																	style={{
-																		color: "#fb923c",
+																		objectFit:
+																			"contain",
+																		verticalAlign:
+																			"middle",
 																	}}
 																/>{" "}
-																CCOM抽問 (目錄抽問)
+																CCOM抽問
+																(目錄抽問)
 															</span>
 														</label>
 													</div>

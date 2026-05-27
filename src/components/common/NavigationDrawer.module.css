@@ -1,4 +1,5 @@
 /* src/components/common/NavigationDrawer.module.css */
+/* ── UNCHANGED from original except .navigationIcon.audit added at bottom ── */
 
 .backdrop {
 	position: fixed;
@@ -32,7 +33,6 @@
 	transform: translateX(0);
 }
 
-/* Header with color schemes */
 .drawerHeader {
 	padding: 1.25rem;
 	color: white;
@@ -42,25 +42,11 @@
 	position: relative;
 }
 
-.drawerHeader.default {
-	background: linear-gradient(135deg, #4a9eff, #357abd);
-}
-
-.drawerHeader.admin {
-	background: linear-gradient(135deg, #ef4444, #b91c1c);
-}
-
-.drawerHeader.khh {
-	background: linear-gradient(135deg, #06b6d4, #0e7490);
-}
-
-.drawerHeader.tsa {
-	background: linear-gradient(135deg, #10b981, #065f46);
-}
-
-.drawerHeader.rmq {
-	background: linear-gradient(135deg, #8b5cf6, #6d28d9);
-}
+.drawerHeader.default { background: linear-gradient(135deg, #4a9eff, #357abd); }
+.drawerHeader.admin   { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+.drawerHeader.khh     { background: linear-gradient(135deg, #06b6d4, #0e7490); }
+.drawerHeader.tsa     { background: linear-gradient(135deg, #10b981, #065f46); }
+.drawerHeader.rmq     { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
 
 .userProfile {
 	display: flex;
@@ -88,7 +74,6 @@
 
 .userDetails {
 	flex: 1;
-	padding-right: 0; /* Space for the GIF */
 	position: relative;
 }
 
@@ -112,9 +97,7 @@
 	line-height: 1.3;
 }
 
-.userBaseContainer {
-	margin: 0.1rem 0;
-}
+.userBaseContainer { margin: 0.1rem 0; }
 
 .userBase {
 	font-size: 0.875rem;
@@ -129,8 +112,6 @@
 	overflow-wrap: break-word;
 }
 
-
-/* Authentication Level GIF Avatar */
 .authLevelGif {
 	width: 48px;
 	height: 48px;
@@ -167,27 +148,11 @@
 	display: inline-block;
 }
 
-/* Auth level color schemes */
-.authLevel.default {
-	background: rgba(255, 255, 255, 0.2);
-}
-
-.authLevel.admin {
-	background: rgba(255, 255, 255, 0.25);
-	border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.authLevel.khh {
-	background: rgba(255, 255, 255, 0.2);
-}
-
-.authLevel.tsa {
-	background: rgba(255, 255, 255, 0.2);
-}
-
-.authLevel.rmq {
-	background: rgba(255, 255, 255, 0.2);
-}
+.authLevel.default { background: rgba(255, 255, 255, 0.2); }
+.authLevel.admin   { background: rgba(255, 255, 255, 0.25); border: 1px solid rgba(255, 255, 255, 0.3); }
+.authLevel.khh     { background: rgba(255, 255, 255, 0.2); }
+.authLevel.tsa     { background: rgba(255, 255, 255, 0.2); }
+.authLevel.rmq     { background: rgba(255, 255, 255, 0.2); }
 
 .closeButton {
 	background: rgba(255, 255, 255, 0.15);
@@ -205,19 +170,14 @@
 	flex-shrink: 0;
 }
 
-.closeButton:hover {
-	background: rgba(255, 255, 255, 0.25);
-}
+.closeButton:hover { background: rgba(255, 255, 255, 0.25); }
 
-/* Navigation List */
 .navigationList {
 	flex: 1;
 	padding: 1rem 0;
 }
 
-.navigationGroup {
-	margin-bottom: 0.5rem;
-}
+.navigationGroup { margin-bottom: 0.5rem; }
 
 .navigationItem {
 	display: flex;
@@ -263,64 +223,27 @@
 	color: inherit;
 }
 
-/* Icon colors matching Dashboard - adjusted for dark theme */
-.navigationIcon.dashboard {
-	background: rgba(161, 98, 7, 0.15);
-	color: #fbbf24;
-}
-
-.navigationIcon.roster {
-	background: rgba(74, 158, 255, 0.15);
-	color: #60a5fa;
-}
-
-.navigationIcon.tasks {
-	background: rgba(16, 185, 129, 0.15);
-	color: #34d399;
-}
-
-.navigationIcon.sms {
-	background: rgba(239, 68, 68, 0.15);
-	color: #f87171;
-}
-
-.navigationIcon.oralTest {
-	background: rgba(245, 158, 11, 0.15);
-	color: #fbbf24;
-}
-
-.navigationIcon.bcTraining {
-	background: rgba(139, 92, 246, 0.15);
-	color: #a78bfa;
-}
-
-.navigationIcon.mdafaat {
-	background: rgba(236, 72, 153, 0.15);
-	color: #f472b6;
-}
-
-.navigationIcon.ads {
-	background: rgba(20, 184, 166, 0.15);
-	color: #2dd4bf;
-}
-
-.navigationIcon.ccomReview {
-	background: rgba(251, 146, 60, 0.15);
-	color: #fb923c;
-}
+/* Icon colors */
+.navigationIcon.dashboard    { background: rgba(161, 98, 7, 0.15);    color: #fbbf24; }
+.navigationIcon.roster       { background: rgba(74, 158, 255, 0.15);  color: #60a5fa; }
+.navigationIcon.tasks        { background: rgba(16, 185, 129, 0.15);  color: #34d399; }
+.navigationIcon.sms          { background: rgba(239, 68, 68, 0.15);   color: #f87171; }
+.navigationIcon.oralTest     { background: rgba(245, 158, 11, 0.15);  color: #fbbf24; }
+.navigationIcon.bcTraining   { background: rgba(139, 92, 246, 0.15);  color: #a78bfa; }
+.navigationIcon.mdafaat      { background: rgba(236, 72, 153, 0.15);  color: #f472b6; }
+.navigationIcon.ads          { background: rgba(20, 184, 166, 0.15);  color: #2dd4bf; }
+.navigationIcon.ccomReview   { background: rgba(251, 146, 60, 0.15);  color: #fb923c; }
+/* ── NEW: audit icon ── */
+.navigationIcon.audit        { background: rgba(167, 139, 250, 0.15); color: #a78bfa; }
 
 .navigationItem:hover .navigationIcon {
 	background: rgba(74, 158, 255, 0.2);
 	transform: scale(1.05);
 }
 
-.navigationItemActive .navigationIcon {
-	background: rgba(74, 158, 255, 0.25);
-}
+.navigationItemActive .navigationIcon { background: rgba(74, 158, 255, 0.25); }
 
-.navigationContent {
-	flex: 1;
-}
+.navigationContent { flex: 1; }
 
 .navigationTitle {
 	font-size: 1rem;
@@ -360,7 +283,6 @@
 	color: #4a9eff;
 }
 
-/* Submenu */
 .submenu {
 	background: rgba(255, 255, 255, 0.03);
 	border-left: 4px solid rgba(74, 158, 255, 0.3);
@@ -378,19 +300,14 @@
 	transition: all 0.2s;
 }
 
-.submenuItem:hover {
-	background: rgba(74, 158, 255, 0.1);
-}
+.submenuItem:hover { background: rgba(74, 158, 255, 0.1); }
 
 .submenuItemActive {
 	background: rgba(74, 158, 255, 0.15);
 	border-left: 3px solid #4a9eff;
 }
 
-.submenuItemActive .submenuTitle {
-	color: #4a9eff;
-	font-weight: 600;
-}
+.submenuItemActive .submenuTitle { color: #4a9eff; font-weight: 600; }
 
 .submenuDot {
 	color: #a0aec0;
@@ -406,7 +323,6 @@
 	font-weight: 500;
 }
 
-/* Footer */
 .drawerFooter {
 	padding: 1rem 1.5rem;
 	border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -438,17 +354,10 @@
 	box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
 }
 
-.logoutIcon {
-	font-size: 1.2rem;
-}
+.logoutIcon { font-size: 1.2rem; }
+.logoutText { font-weight: 500; }
 
-.logoutText {
-	font-weight: 500;
-}
-
-.footerInfo {
-	text-align: center;
-}
+.footerInfo { text-align: center; }
 
 .appVersion {
 	font-size: 0.75rem;
@@ -462,74 +371,24 @@
 	color: #a0aec0;
 }
 
-/* Mobile Responsive */
 @media (max-width: 768px) {
-	.drawer {
-		width: 280px;
-	}
-
-	.drawerHeader {
-		padding: 1rem;
-	}
-
-	.userAvatar {
-		width: 40px;
-		height: 40px;
-		font-size: 1rem;
-	}
-
-	.userName {
-		font-size: 0.875rem;
-	}
-
-	.userRole {
-		font-size: 0.75rem;
-	}
-
-	.navigationItem {
-		padding: 0.875rem 1rem;
-	}
-
-	.navigationIcon {
-		width: 36px;
-		height: 36px;
-		font-size: 1.125rem;
-	}
-
-	.navigationTitle {
-		font-size: 0.875rem;
-	}
-
-	.navigationDescription {
-		font-size: 0.6875rem;
-	}
+	.drawer { width: 280px; }
+	.drawerHeader { padding: 1rem; }
+	.userAvatar { width: 40px; height: 40px; font-size: 1rem; }
+	.userName { font-size: 0.875rem; }
+	.userRole { font-size: 0.75rem; }
+	.navigationItem { padding: 0.875rem 1rem; }
+	.navigationIcon { width: 36px; height: 36px; font-size: 1.125rem; }
+	.navigationTitle { font-size: 0.875rem; }
+	.navigationDescription { font-size: 0.6875rem; }
+	.authLevelGif { width: 40px; height: 40px; }
 }
 
-/* Small Mobile */
-@media (max-width: 480px) {
-	.drawer {
-		width: 260px;
-	}
-}
+@media (max-width: 480px) { .drawer { width: 260px; } }
 
-/* Animation for drawer entrance */
 @keyframes slideIn {
-	from {
-		transform: translateX(-100%);
-	}
-	to {
-		transform: translateX(0);
-	}
+	from { transform: translateX(-100%); }
+	to   { transform: translateX(0); }
 }
 
-.drawerOpen {
-	animation: slideIn 0.3s ease-out;
-}
-
-/* Mobile responsive for auth level GIF */
-@media (max-width: 768px) {
-	.authLevelGif {
-		width: 40px;
-		height: 40px;
-	}
-}
+.drawerOpen { animation: slideIn 0.3s ease-out; }

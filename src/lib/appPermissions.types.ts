@@ -3,62 +3,46 @@
 
 import React from 'react';
 
-/**
- * Roster App Permissions
- */
 export interface RosterPermissions {
-  access: boolean;           // Can they access the Roster app at all?
-  own_data_only: boolean;    // Can they only edit their own schedule? (false = can edit anyone's)
+  access: boolean;
+  own_data_only: boolean;
 }
 
-/**
- * Tasks App Permissions
- */
 export interface TasksPermissions {
-  access: boolean;           // Can they access the Tasks app?
-  can_create: boolean;       // Can they create new tasks?
-  can_edit_assigned: boolean; // Can they edit tasks they're assigned to?
+  access: boolean;
+  can_create: boolean;
+  can_edit_assigned: boolean;
 }
 
-/**
- * SMS App Permissions
- */
 export interface SMSPermissions {
-  access: boolean;           // Can they access the SMS app?
-  view_only: boolean;        // If true, they can only view (no create/edit/delete buttons)
+  access: boolean;
+  view_only: boolean;
 }
 
-/**
- * Oral Test App Permissions
- * Updated to include granular permissions for specific features
- */
 export interface OralTestPermissions {
-  access: boolean;           // Can they access the Oral Test app?
-  view_only?: boolean;       // If true, they can only view (no create/edit/delete)
-  conduct_test?: boolean;    // Can they conduct tests? (test page)
-  manage_questions?: boolean; // Can they manage questions? (questions page)
-  manage_users?: boolean;    // Can they manage users? (users page)
+  access: boolean;
+  view_only?: boolean;
+  conduct_test?: boolean;
+  manage_questions?: boolean;
+  manage_users?: boolean;
 }
 
-/**
- * Simple App Permissions (BC Training, AdS, CCOM Review)
- */
 export interface SimpleAppPermissions {
-  access: boolean;           // Can they access this app?
+  access: boolean;
 }
 
-/**
- * MDAfaat App Permissions
- */
 export interface MDAfaatPermissions {
-  access: boolean;           // Can they access MDAfaat?
-  view_only: boolean;        // If true, they can only view (no scenario editing)
+  access: boolean;
+  view_only: boolean;
 }
 
-/**
- * Complete App Permissions Structure
- * This matches the JSONB structure in the database
- */
+// ── NEW ──────────────────────────────────────────
+export interface AuditPermissions {
+  access: boolean;
+  view_only: boolean; // future-proof: false = full edit, true = read-only
+}
+// ─────────────────────────────────────────────────
+
 export interface AppPermissions {
   roster: RosterPermissions;
   tasks: TasksPermissions;
@@ -68,29 +52,22 @@ export interface AppPermissions {
   mdafaat: MDAfaatPermissions;
   ads: SimpleAppPermissions;
   ccom_review: SimpleAppPermissions;
+  audit: AuditPermissions; // ── NEW ──
 }
 
-/**
- * Valid Oral Test page names
- */
 export type OralTestPage = 'dashboard' | 'results' | 'test' | 'questions' | 'users';
 
-/**
- * Valid app names
- */
-export type AppName = 
-  | 'roster' 
-  | 'tasks' 
-  | 'sms' 
-  | 'oral_test' 
-  | 'bc_training' 
-  | 'mdafaat' 
-  | 'ads' 
-  | 'ccom_review';
+export type AppName =
+  | 'roster'
+  | 'tasks'
+  | 'sms'
+  | 'oral_test'
+  | 'bc_training'
+  | 'mdafaat'
+  | 'ads'
+  | 'ccom_review'
+  | 'audit'; // ── NEW ──
 
-/**
- * App metadata for UI display
- */
 export interface AppMetadata {
   id: AppName;
   title: string;
@@ -105,18 +82,12 @@ export interface AppMetadata {
   }[];
 }
 
-/**
- * Bulk edit operation
- */
 export interface BulkPermissionUpdate {
-  userIds: string[];        // Array of user IDs to update
-  permissions: Partial<AppPermissions>; // Only the permissions being changed
+  userIds: string[];
+  permissions: Partial<AppPermissions>;
 }
 
-/**
- * Permission check result
- */
 export interface PermissionCheckResult {
   granted: boolean;
-  reason?: string;          // Why permission was denied (for debugging)
+  reason?: string;
 }

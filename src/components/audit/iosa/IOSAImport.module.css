@@ -1,0 +1,467 @@
+/* src/components/audit/iosa/IOSAImport.module.css */
+
+.backdrop {
+	position: fixed;
+	inset: 0;
+	background: rgba(26, 31, 53, 0.88);
+	backdrop-filter: blur(4px);
+	z-index: 1000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 1rem;
+}
+
+.modal {
+	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 14px;
+	width: 100%;
+	max-width: 640px;
+	max-height: 90vh;
+	display: flex;
+	flex-direction: column;
+	box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+	overflow: hidden;
+}
+
+/* Header */
+.header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	padding: 1.25rem 1.375rem;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+	flex-shrink: 0;
+}
+
+.title {
+	font-size: 1.125rem;
+	font-weight: 600;
+	color: #e8e9ed;
+	margin: 0 0 3px 0;
+}
+.subtitle {
+	font-size: 0.8125rem;
+	color: #a0aec0;
+	margin: 0;
+}
+
+.closeBtn {
+	background: rgba(255, 255, 255, 0.08);
+	border: none;
+	border-radius: 50%;
+	width: 30px;
+	height: 30px;
+	color: #a0aec0;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 0.75rem;
+	flex-shrink: 0;
+	transition: background 0.15s;
+}
+
+.closeBtn:hover {
+	background: rgba(255, 255, 255, 0.15);
+}
+
+/* Body */
+.body {
+	padding: 1.25rem 1.375rem;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	flex: 1;
+	overflow: auto;
+}
+
+/* Dropzone */
+.dropzone {
+	border: 2px dashed rgba(255, 255, 255, 0.12);
+	border-radius: 10px;
+	padding: 2rem;
+	text-align: center;
+	cursor: pointer;
+	transition: all 0.2s;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.dropzone:hover {
+	border-color: rgba(74, 158, 255, 0.4);
+	background: rgba(74, 158, 255, 0.04);
+}
+.dropzoneReady {
+	border-color: rgba(72, 187, 120, 0.4);
+	background: rgba(72, 187, 120, 0.04);
+}
+
+.uploadIcon {
+	font-size: 2rem;
+	color: #a0aec0;
+}
+.uploadText {
+	font-size: 1rem;
+	font-weight: 500;
+	color: #e8e9ed;
+}
+.uploadHint {
+	font-size: 0.8125rem;
+	color: #a0aec0;
+}
+
+.fileIcon {
+	font-size: 2rem;
+}
+.fileName {
+	font-size: 0.9375rem;
+	font-weight: 500;
+	color: #e8e9ed;
+}
+.fileSize {
+	font-size: 0.75rem;
+	color: #a0aec0;
+}
+
+.infoBox {
+	font-size: 0.8125rem;
+	color: #a0aec0;
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 8px;
+	padding: 0.75rem 1rem;
+	line-height: 1.5;
+}
+
+/* Processing */
+.processingCenter {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 1rem;
+	padding: 3rem 0;
+}
+
+.spinner {
+	width: 36px;
+	height: 36px;
+	border: 3px solid rgba(255, 255, 255, 0.08);
+	border-top-color: #4a9eff;
+	border-radius: 50%;
+	animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.processingText {
+	font-size: 0.9375rem;
+	color: #a0aec0;
+}
+
+/* Conflict summary chips */
+.conflictSummary {
+	display: flex;
+	gap: 6px;
+	padding: 0.75rem 1.375rem;
+	flex-shrink: 0;
+	flex-wrap: wrap;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.summaryChip {
+	font-size: 0.75rem;
+	padding: 3px 10px;
+	border-radius: 20px;
+	background: rgba(255, 255, 255, 0.07);
+	color: #a0aec0;
+}
+
+/* Conflict list */
+.conflictList {
+	flex: 1;
+	overflow-y: auto;
+	padding: 0.75rem 1.375rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.875rem;
+}
+
+.conflictCard {
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 10px;
+	overflow: hidden;
+}
+
+.conflictHeader {
+	display: flex;
+	align-items: center;
+	gap: 0.625rem;
+	padding: 0.75rem 1rem;
+	background: rgba(255, 255, 255, 0.03);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+	flex-wrap: wrap;
+}
+
+.conflictCode {
+	font-size: 0.9375rem;
+	font-weight: 600;
+	color: #4a9eff;
+}
+.conflictDisc {
+	font-size: 0.75rem;
+	color: #a0aec0;
+	background: rgba(255, 255, 255, 0.06);
+	padding: 2px 7px;
+	border-radius: 4px;
+}
+
+.conflictBulkBtns {
+	display: flex;
+	gap: 5px;
+	margin-left: auto;
+}
+
+.btnBulk {
+	font-size: 0.6875rem;
+	padding: 3px 9px;
+	border-radius: 5px;
+	cursor: pointer;
+	font-family: inherit;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	color: #a0aec0;
+	transition: all 0.12s;
+}
+
+.btnBulk:hover {
+	border-color: rgba(74, 158, 255, 0.35);
+	color: #e8e9ed;
+}
+
+.btnBulkFile {
+	font-size: 0.6875rem;
+	padding: 3px 9px;
+	border-radius: 5px;
+	cursor: pointer;
+	font-family: inherit;
+	background: rgba(74, 158, 255, 0.08);
+	border: 1px solid rgba(74, 158, 255, 0.2);
+	color: #4a9eff;
+	transition: all 0.12s;
+}
+
+.btnBulkFile:hover {
+	background: rgba(74, 158, 255, 0.15);
+}
+
+/* Field conflict */
+.fieldConflict {
+	padding: 0.75rem 1rem;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.fieldConflict:last-child {
+	border-bottom: none;
+}
+
+.fieldName {
+	font-size: 0.75rem;
+	color: #a0aec0;
+	font-weight: 500;
+	letter-spacing: 0.4px;
+	margin-bottom: 0.5rem;
+}
+
+.fieldChoices {
+	display: flex;
+	align-items: stretch;
+	gap: 0.5rem;
+}
+
+.choiceBtn {
+	flex: 1;
+	padding: 0.625rem 0.75rem;
+	border-radius: 8px;
+	cursor: pointer;
+	font-family: inherit;
+	text-align: left;
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	transition: all 0.15s;
+}
+
+.choiceBtn:hover {
+	border-color: rgba(160, 174, 192, 0.35);
+}
+
+.choiceBtnActive {
+	background: rgba(72, 187, 120, 0.1);
+	border-color: rgba(72, 187, 120, 0.4);
+}
+
+.choiceBtnFile:hover {
+	border-color: rgba(74, 158, 255, 0.35);
+}
+
+.choiceBtnFileActive {
+	background: rgba(74, 158, 255, 0.1);
+	border-color: rgba(74, 158, 255, 0.4);
+}
+
+.choiceLabel {
+	font-size: 0.625rem;
+	color: #a0aec0;
+	margin-bottom: 4px;
+	letter-spacing: 0.4px;
+	text-transform: uppercase;
+}
+
+.choiceVal {
+	font-size: 0.8125rem;
+	color: #e8e9ed;
+	line-height: 1.4;
+	word-break: break-word;
+}
+
+.choiceDivider {
+	font-size: 0.75rem;
+	color: #a0aec0;
+	display: flex;
+	align-items: center;
+	flex-shrink: 0;
+}
+
+/* Done */
+.doneCenter {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.875rem;
+	padding: 2rem 0 1rem;
+}
+
+.doneIcon {
+	width: 52px;
+	height: 52px;
+	border-radius: 50%;
+	background: rgba(72, 187, 120, 0.15);
+	border: 2px solid rgba(72, 187, 120, 0.4);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 1.5rem;
+	color: #48bb78;
+}
+
+.doneTitle {
+	font-size: 1.125rem;
+	font-weight: 600;
+	color: #e8e9ed;
+	margin: 0;
+}
+
+.doneSummary {
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 8px;
+	padding: 0.875rem 1.25rem;
+	width: 100%;
+	max-width: 260px;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.doneRow {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-size: 0.875rem;
+	color: #a0aec0;
+}
+
+.doneVal {
+	font-weight: 600;
+	color: #e8e9ed;
+}
+
+/* Footer */
+.footer {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.625rem;
+	padding: 1rem 1.375rem;
+	border-top: 1px solid rgba(255, 255, 255, 0.08);
+	flex-shrink: 0;
+}
+
+/* Buttons */
+.btnPrimary {
+	padding: 0.5625rem 1.25rem;
+	border-radius: 8px;
+	font-size: 0.9375rem;
+	cursor: pointer;
+	font-family: inherit;
+	font-weight: 600;
+	background: #4a9eff;
+	border: none;
+	color: #fff;
+	transition: opacity 0.15s;
+}
+
+.btnPrimary:hover {
+	opacity: 0.88;
+}
+.btnPrimary:disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+
+.btnGhost {
+	padding: 0.5rem 1rem;
+	border-radius: 8px;
+	font-size: 0.875rem;
+	cursor: pointer;
+	font-family: inherit;
+	background: transparent;
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	color: #a0aec0;
+	transition: all 0.15s;
+}
+
+.btnGhost:hover {
+	border-color: rgba(74, 158, 255, 0.4);
+	color: #e8e9ed;
+}
+
+.errorMsg {
+	font-size: 0.875rem;
+	color: #fc8181;
+	background: rgba(252, 129, 129, 0.08);
+	border: 1px solid rgba(252, 129, 129, 0.2);
+	border-radius: 6px;
+	padding: 0.625rem 0.875rem;
+}
+
+@media (max-width: 640px) {
+	.fieldChoices {
+		flex-direction: column;
+	}
+	.choiceDivider {
+		justify-content: center;
+	}
+	.conflictBulkBtns {
+		margin-left: 0;
+		width: 100%;
+	}
+}
