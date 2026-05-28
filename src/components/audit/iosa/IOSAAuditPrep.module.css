@@ -7,6 +7,7 @@
 	overflow: hidden;
 	padding: 0.75rem;
 	gap: 0.625rem;
+	min-height: 0;
 }
 
 .noCycle {
@@ -240,6 +241,7 @@
 	flex-direction: column;
 	overflow: hidden;
 	position: relative;
+	min-height: 0;
 }
 
 .wsHeader {
@@ -328,6 +330,8 @@
 
 /* Body */
 .wsBody {
+	flex: 1;
+	min-height: 0; /* alongside existing overflow-y: auto */
 	flex: 1;
 	overflow-y: auto;
 	padding: 0.75rem 0.875rem;
@@ -878,8 +882,17 @@
 .listPrefix {
 	color: #4a9eff;
 	font-weight: 600;
-	margin-right: 2px;
+	margin-right: 4px;
 	flex-shrink: 0;
+	min-width: 1.5em;
+	display: inline-block;
+	font-variant-numeric: tabular-nums;
+}
+
+.listBullet {
+	font-size: 1.1em;
+	line-height: 1;
+	min-width: 1em;
 }
 
 /* Table display in ref popup */
@@ -930,4 +943,176 @@
 }
 .tableCell:last-child {
 	border-right: none;
+}
+
+/* Side panel list row badges */
+.listRowBadges {
+	display: flex;
+	align-items: center;
+	gap: 3px;
+	margin-left: auto;
+	flex-shrink: 0;
+}
+
+.listRPBadge {
+	font-size: 0.6rem;
+	font-weight: 700;
+	padding: 1px 4px;
+	border-radius: 3px;
+	background: rgba(255, 184, 0, 0.15);
+	border: 1px solid rgba(255, 184, 0, 0.4);
+	color: #ffb800;
+	line-height: 1.4;
+	letter-spacing: 0.02em;
+}
+
+.listLinkBadge {
+	font-size: 0.7rem;
+	line-height: 1;
+	opacity: 0.75;
+	cursor: default;
+}
+
+/* IRM term underline in standard text */
+.irmTerm {
+	text-decoration: underline;
+	text-decoration-style: dotted;
+	text-decoration-color: rgba(160, 174, 192, 0.6);
+	cursor: pointer;
+	transition:
+		text-decoration-color 0.15s,
+		color 0.15s;
+}
+.irmTerm:hover {
+	text-decoration-color: #a0aec0;
+	color: #e8e9ed;
+}
+
+/* IRM popup */
+.irmPopupBackdrop {
+	position: fixed;
+	inset: 0;
+	background: rgba(26, 31, 53, 0.65);
+	backdrop-filter: blur(2px);
+	z-index: 350;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 1.5rem;
+}
+
+.irmPopup {
+	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-top: 2px solid rgba(160, 174, 192, 0.4);
+	border-radius: 12px;
+	width: min(540px, calc(100vw - 3rem));
+	max-height: calc(100vh - 3rem);
+	display: flex;
+	flex-direction: column;
+	box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+	overflow: hidden;
+}
+
+.irmPopupHeader {
+	display: flex;
+	align-items: center;
+	gap: 0.625rem;
+	padding: 0.875rem 1.125rem;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+	flex-shrink: 0;
+}
+
+.irmPopupTerm {
+	font-size: 1rem;
+	font-weight: 600;
+	color: #e8e9ed;
+	flex: 1;
+}
+
+.irmEditionBadge {
+	font-size: 0.6875rem;
+	padding: 2px 7px;
+	border-radius: 20px;
+	background: rgba(160, 174, 192, 0.12);
+	border: 1px solid rgba(160, 174, 192, 0.25);
+	color: #a0aec0;
+	font-weight: 500;
+	white-space: nowrap;
+}
+
+.irmPopupBody {
+	padding: 1rem 1.125rem;
+	font-size: 0.9375rem;
+	color: #a0aec0;
+	line-height: 1.7;
+	overflow-y: auto;
+}
+
+/* Rich cell content (para-aware table cells) */
+.richCell {
+	display: flex;
+	flex-direction: column;
+	gap: 0.2rem;
+}
+
+.richCellPara {
+	display: flex;
+	align-items: baseline;
+	gap: 0;
+	line-height: 1.5;
+	font-size: 0.875rem;
+	color: #a0aec0;
+}
+
+.richCellListItem {
+	padding-left: 0.25rem;
+}
+
+/* Conformance Applicability Table */
+.conformanceTable {
+	border: 1px solid rgba(74, 158, 255, 0.2);
+	border-radius: 8px;
+	overflow: hidden;
+	font-size: 0.875rem;
+}
+
+.conformanceTitle {
+	background: rgba(74, 158, 255, 0.1);
+	color: #4a9eff;
+	font-weight: 600;
+	padding: 0.5rem 0.75rem;
+	font-size: 0.8125rem;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	border-bottom: 1px solid rgba(74, 158, 255, 0.2);
+}
+
+.conformanceRow {
+	display: flex;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.conformanceRow:last-child {
+	border-bottom: none;
+}
+
+.conformanceRowHeader {
+	background: rgba(255, 255, 255, 0.04);
+}
+
+.conformanceCell {
+	flex: 1;
+	padding: 0.4rem 0.625rem;
+	color: #a0aec0;
+	border-right: 1px solid rgba(255, 255, 255, 0.05);
+	line-height: 1.4;
+	font-size: 0.8125rem;
+}
+.conformanceCell:last-child {
+	border-right: none;
+}
+.conformanceRowHeader .conformanceCell {
+	color: #e8e9ed;
+	font-weight: 500;
+	font-size: 0.75rem;
 }

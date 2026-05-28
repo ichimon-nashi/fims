@@ -1576,98 +1576,98 @@ const AccessControlPanel = () => {
 														</label>
 													</div>
 												</div>
-											</div>
-										</div>
-
-										{/* Audit */}
-										<div
-											className={
-												styles.appPermissionCard
-											}
-										>
-											<div
-												className={
-													styles.appPermissionHeader
-												}
-											>
-												<label
-													className={
-														styles.appPermissionLabel
-													}
-												>
-													<input
-														type="checkbox"
-														className={
-															styles.appCheckbox
-														}
-														checked={
-															selectedUser
-																.app_permissions
-																?.audit ??
-															false
-														}
-														onChange={() =>
-															handlePermissionToggle(
-																"audit",
-															)
-														}
-													/>
-													<span
-														className={
-															styles.appName
-														}
-													>
-														<Image src="/images/audit.png" alt="audit" width={16} height={16} style={{ objectFit: 'contain', verticalAlign: 'middle' }} />{" "}
-														查核管理
-														(Audit)
-													</span>
-												</label>
-											</div>
-											{/* Audit Edit Sub-Permission */}
-											<div
-												className={
-													styles.appSubPermissions
-												}
-											>
+												{/* Audit */}
 												<div
 													className={
-														styles.subPermissionItem
+														styles.appPermissionCard
 													}
 												>
-													<label
+													<div
 														className={
-															styles.subPermissionLabel
+															styles.appPermissionHeader
 														}
 													>
-														<input
-															type="checkbox"
+														<label
 															className={
-																styles.subCheckbox
+																styles.appPermissionLabel
 															}
-															checked={
-																!(
+														>
+															<input
+																type="checkbox"
+																className={
+																	styles.appCheckbox
+																}
+																checked={
 																	selectedUser
 																		.app_permissions
-																		?.audit_edit
-																		?.view_only ??
-																	true
-																)
+																		?.audit ??
+																	false
+																}
+																onChange={() =>
+																	handlePermissionToggle(
+																		"audit",
+																	)
+																}
+															/>
+															<span
+																className={
+																	styles.appName
+																}
+															>
+																<Image src="/images/audit.png" alt="audit" width={16} height={16} style={{ objectFit: 'contain', verticalAlign: 'middle' }} />{" "}
+																查核管理
+																(Audit)
+															</span>
+														</label>
+													</div>
+													{/* Audit Edit Sub-Permission */}
+													<div
+														className={
+															styles.appSubPermissions
+														}
+													>
+														<div
+															className={
+																styles.subPermissionItem
 															}
-															onChange={
-																handleAuditEditToggle
-															}
-															disabled={
-																!selectedUser
-																	.app_permissions
-																	?.audit
-															}
-														/>
-														<span>
-															Can Edit
-															(可編輯)
-														</span>
-													</label>
+														>
+															<label
+																className={
+																	styles.subPermissionLabel
+																}
+															>
+																<input
+																	type="checkbox"
+																	className={
+																		styles.subCheckbox
+																	}
+																	checked={
+																		!(
+																			selectedUser
+																				.app_permissions
+																				?.audit_edit
+																				?.view_only ??
+																			true
+																		)
+																	}
+																	onChange={
+																		handleAuditEditToggle
+																	}
+																	disabled={
+																		!selectedUser
+																			.app_permissions
+																			?.audit
+																	}
+																/>
+																<span>
+																	Can Edit
+																	(可編輯)
+																</span>
+															</label>
+														</div>
+													</div>
 												</div>
+
 											</div>
 										</div>
 

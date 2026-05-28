@@ -1,7 +1,9 @@
 /* src/components/audit/iosa/IOSAPage.module.css */
 
 .shell {
-	min-height: calc(100vh - 60px);
+	height: calc(
+		100vh - 60px
+	); /* exact height, not min-height — prevents page scroll */
 	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
 	display: flex;
 	flex-direction: column;
@@ -16,7 +18,7 @@
 	padding: 0 1rem;
 	display: flex;
 	align-items: center;
-	height: 42px;
+	height: 52px;
 	gap: 0;
 	flex-shrink: 0;
 }
@@ -27,11 +29,11 @@
 }
 
 .auditTab {
-	padding: 0 1rem;
-	height: 42px;
+	padding: 0 1.25rem;
+	height: 52px;
 	display: flex;
 	align-items: center;
-	font-size: 0.75rem;
+	font-size: 1.0625rem;
 	color: #a0aec0;
 	cursor: pointer;
 	border: none;
@@ -66,8 +68,8 @@
 .ismBadge {
 	background: rgba(74, 158, 255, 0.15);
 	color: #4a9eff;
-	font-size: 0.625rem;
-	padding: 2px 7px;
+	font-size: 0.9375rem;
+	padding: 3px 9px;
 	border-radius: 20px;
 	font-weight: 500;
 }
@@ -79,17 +81,17 @@
 	padding: 0 1rem;
 	display: flex;
 	gap: 2px;
-	height: 36px;
+	height: 46px;
 	align-items: center;
 	flex-shrink: 0;
 }
 
 .subtab {
-	padding: 0 0.75rem;
-	height: 36px;
+	padding: 0 1rem;
+	height: 46px;
 	display: flex;
 	align-items: center;
-	font-size: 0.6875rem;
+	font-size: 1rem;
 	color: #a0aec0;
 	cursor: pointer;
 	border: none;
@@ -117,28 +119,50 @@
 }
 
 .importBtn {
-	padding: 4px 10px;
+	padding: 6px 14px;
 	border-radius: 6px;
-	font-size: 0.625rem;
+	font-size: 0.9375rem;
 	cursor: pointer;
 	font-family: inherit;
-	background: transparent;
-	border: 1px solid rgba(255, 255, 255, 0.08);
-	color: #a0aec0;
+	background: rgba(255, 140, 0, 0.15);
+	border: 1px solid rgba(255, 140, 0, 0.5);
+	color: #ff8c00;
 	transition:
-		border-color 0.15s,
-		color 0.15s;
+		background 0.15s,
+		border-color 0.15s;
+	font-weight: 500;
 }
 
 .importBtn:hover {
-	border-color: rgba(74, 158, 255, 0.4);
-	color: #e8e9ed;
+	background: rgba(255, 140, 0, 0.25);
+	border-color: rgba(255, 140, 0, 0.8);
+}
+
+.exportBtn {
+	padding: 6px 14px;
+	border-radius: 6px;
+	font-size: 0.9375rem;
+	cursor: pointer;
+	font-family: inherit;
+	background: rgba(72, 187, 120, 0.12);
+	border: 1px solid rgba(72, 187, 120, 0.4);
+	color: #48bb78;
+	transition:
+		background 0.15s,
+		border-color 0.15s;
+	font-weight: 500;
+}
+
+.exportBtn:hover {
+	background: rgba(72, 187, 120, 0.22);
+	border-color: rgba(72, 187, 120, 0.7);
 }
 
 /* ── Content area ── */
 .content {
 	flex: 1;
-	overflow: auto;
+	overflow: hidden; /* panels scroll internally, not the whole page */
 	display: flex;
 	flex-direction: column;
+	min-height: 0;
 }

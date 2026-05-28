@@ -1,8 +1,10 @@
 // src/app/api/audit/iosa/import-ism/route.ts
-// Parses ISM discipline docx files → seeds audit_iosa_isarps for a cycle
+// Requires: npm install @xmldom/xmldom
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
+import JSZip from "jszip";
+import { DOMParser } from "@xmldom/xmldom";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,114 +12,160 @@ const supabase = createClient(
 );
 
 const VALID_DISCIPLINES = ["ORG","FLT","DSP","CAB","GRH","MNT","CGO","SEC"];
-const ISARP_RE = /^([A-Z]{2,3} \d+\.\d+(?:\.\d+)?[A-Z]?)$/;
-const REF_RE   = /\b([A-Z]{2,3} \d+\.\d+(?:\.\d+)?[A-Z]?)\b/g;
-const W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+const ISARP_RE  = /^([A-Z]{2,3} \d+\.\d+(?:\.\d+)?[A-Z]?)$/;
+const REF_RE    = /\b([A-Z]{2,3} \d+\.\d+(?:\.\d+)?[A-Z]?)\b/g;
+const TABLE_RE  = /^(Table\s+[\d.]+)/i;
+const W         = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 
-// Get text from a w:r run element
+// ── DOM helpers ───────────────────────────────────────────────────────────────
+
+function kids(el: Element, localName: string): Element[] {
+  return Array.from(el.childNodes).filter(n => (n as Element).localName === localName) as Element[];
+}
+
 function runText(r: Element): string {
   return Array.from(r.getElementsByTagNameNS(W, "t"))
-    .map(t => t.textContent || "")
+    .map(t => t.textContent ?? "")
     .join("");
 }
 
-// Get text from a w:p paragraph element (direct runs only, not nested)
 function paraText(p: Element): string {
-  return Array.from(p.childNodes)
-    .filter(n => (n as Element).localName === "r")
-    .map(r => runText(r as Element))
+  return kids(p, "r")
+    .map(runText)
     .join("")
-    .replace(/[\u2610\u2611\u2612\u25A1\u25A0☐☑]/g, "") // strip checkbox chars
+    .replace(/[\u2610\u2611\u2612\u25A1\u25A0☐☑◄]/g, "")
     .trim();
 }
 
-// Get style of a w:p element
 function paraStyle(p: Element): string {
-  const pPr = Array.from(p.childNodes).find(n => (n as Element).localName === "pPr") as Element | undefined;
+  const pPr = kids(p, "pPr")[0];
   if (!pPr) return "Normal";
-  const pStyle = Array.from(pPr.childNodes).find(n => (n as Element).localName === "pStyle") as Element | undefined;
+  const pStyle = kids(pPr, "pStyle")[0];
   if (!pStyle) return "Normal";
   return pStyle.getAttributeNS(W, "val") || pStyle.getAttribute("w:val") || "Normal";
 }
 
-// Get DIRECT child w:tr elements of a w:tbl (avoid nested table rows)
-function directRows(tbl: Element): Element[] {
-  return Array.from(tbl.childNodes)
-    .filter(n => (n as Element).localName === "tr") as Element[];
+function paraNumId(p: Element): string | null {
+  const pPr = kids(p, "pPr")[0];
+  if (!pPr) return null;
+  const numPrEl = kids(pPr, "numPr")[0];
+  if (!numPrEl) return null;
+  const numId = kids(numPrEl, "numId")[0];
+  if (!numId) return null;
+  return numId.getAttributeNS(W, "val") || numId.getAttribute("w:val") || null;
 }
 
-// Get DIRECT child w:tc of a w:tr
-function firstCell(tr: Element): Element | null {
-  return Array.from(tr.childNodes).find(n => (n as Element).localName === "tc") as Element || null;
-}
+function directRows(tbl: Element): Element[] { return kids(tbl, "tr"); }
+function firstCell(tr: Element): Element | null { return kids(tr, "tc")[0] ?? null; }
+function allCells(tr: Element): Element[] { return kids(tr, "tc"); }
 
-// Get paragraphs from a cell (direct w:p children only, not from nested tables)
-function cellParas(tc: Element): { text: string; style: string }[] {
-  const results: { text: string; style: string }[] = [];
-  for (const node of Array.from(tc.childNodes)) {
-    const el = node as Element;
-    if (el.localName === "p") {
-      const txt = paraText(el);
-      if (txt) results.push({ text: txt, style: paraStyle(el) });
+function cellParas(tc: Element, numFmts?: Record<string, string>): { text: string; style: string; numFmt?: string }[] {
+  return kids(tc, "p").map(p => {
+    const text = paraText(p);
+    if (!text) return null;
+    const style = paraStyle(p);
+    let numFmt: string | undefined;
+    if (style === "iatalistitem" && numFmts) {
+      const id = paraNumId(p);
+      if (id && numFmts[id]) numFmt = numFmts[id];
     }
-    // Skip w:tbl nodes (nested tables like Assessment Tool)
-  }
-  return results;
+    return { text, style, ...(numFmt ? { numFmt } : {}) };
+  }).filter(Boolean) as { text: string; style: string; numFmt?: string }[];
 }
 
-async function parseISMDocx(buffer: Buffer): Promise<any[]> {
-  const JSZip = (await import("jszip")).default;
-  const { DOMParser } = await import("@xmldom/xmldom");
+// Build numId → numFmt from numbering.xml
+async function buildNumFormats(zip: InstanceType<typeof JSZip>): Promise<Record<string, string>> {
+  const numFile = zip.file("word/numbering.xml");
+  if (!numFile) return {};
+  const xml = await numFile.async("text");
+  const abstractFormats: Record<string, string> = {};
+  for (const m of xml.matchAll(/<w:abstractNum[^>]*w:abstractNumId="(\d+)"[^>]*>([\s\S]*?)<\/w:abstractNum>/g)) {
+    const lvl0 = m[2].match(/<w:lvl[^>]*w:ilvl="0"[^>]*>([\s\S]*?)<\/w:lvl>/);
+    if (!lvl0) continue;
+    const fmt = lvl0[1].match(/w:numFmt[^>]*w:val="([^"]+)"/)?.[1] ?? "decimal";
+    abstractFormats[m[1]] = fmt;
+  }
+  const result: Record<string, string> = {};
+  for (const m of xml.matchAll(/<w:num[^>]*w:numId="(\d+)"[^>]*>([\s\S]*?)<\/w:num>/g)) {
+    const am = m[2].match(/w:abstractNumId w:val="(\d+)"/);
+    if (am && abstractFormats[am[1]]) result[m[1]] = abstractFormats[am[1]];
+  }
+  return result;
+}
 
+// ── Parse docx → ISARPs ───────────────────────────────────────────────────────
+
+async function parseDocx(buffer: Buffer) {
   const zip    = await JSZip.loadAsync(buffer);
   const xmlStr = await zip.file("word/document.xml")!.async("text");
-  const parser = new DOMParser();
-  const xmlDoc = parser.parseFromString(xmlStr, "application/xml");
+  const body   = new DOMParser()
+    .parseFromString(xmlStr, "application/xml")
+    .getElementsByTagNameNS(W, "body")[0];
+  const numFmts = await buildNumFormats(zip);
 
-  const body = xmlDoc.getElementsByTagNameNS(W, "body")[0];
-
-  const results: any[] = [];
-  let rowOrder  = 0;
+  const isarps: any[] = [];
+  const tables: any[] = [];
+  let rowOrder = 0;
   let curH2 = "", curH3 = "", curH4 = "";
 
-  // Iterate ALL direct body children to track heading context per table
   for (const node of Array.from(body.childNodes)) {
-    const el   = node as Element;
-    const tag  = el.localName;
+    const el  = node as Element;
+    const tag = el.localName;
 
-    // Track headings from w:p elements
+    // Track headings
     if (tag === "p") {
       const style = paraStyle(el);
-      const txt   = paraText(el).trim();
+      const txt   = paraText(el);
       if (!txt) continue;
-      if (style === "Heading2") { curH2 = txt; curH3 = ""; curH4 = ""; }
+      if      (style === "Heading2") { curH2 = txt; curH3 = ""; curH4 = ""; }
       else if (style === "Heading3") { curH3 = txt; curH4 = ""; }
       else if (style === "Heading4") { curH4 = txt; }
       continue;
     }
 
-    // Process w:tbl elements
     if (tag !== "tbl") continue;
 
     const rows = directRows(el);
-    if (rows.length < 5) continue;
+    if (rows.length < 2) continue;
 
     const cell0    = firstCell(rows[0]);
     if (!cell0) continue;
-    const codeText = cellParas(cell0).map(p => p.text).join("").trim();
-    if (!ISARP_RE.test(codeText)) continue;
+    const firstText = cellParas(cell0).map(p => p.text).join("").trim();
 
-    const isarpCode = codeText;
+    // ── Named table (Table 1.1 etc.) ──
+    const tMatch = TABLE_RE.exec(firstText);
+    if (tMatch) {
+      const tableRef   = tMatch[1].trim();
+      const tableTitle = firstText.replace(/\s+/g, " ").trim();
+      // Store each cell's paragraphs with style info (not joined strings)
+      const contentRows: { cells: { paras: { text: string; style: string; numFmt?: string }[] }[]; is_header: boolean }[] = [];
+      const seenKeys = new Set<string>();
+      for (let ri = 0; ri < rows.length; ri++) {
+        const cells = allCells(rows[ri]).map(tc => ({
+          paras: cellParas(tc, numFmts)
+        }));
+        const key = cells.map(c => c.paras.map(p => p.text).join("|")).join("|||");
+        if (seenKeys.has(key) || cells.every(c => !c.paras.length)) continue;
+        seenKeys.add(key);
+        contentRows.push({ cells, is_header: ri <= 1 });
+      }
+      tables.push({ tableRef, tableTitle, contentRows });
+      continue;
+    }
+
+    // ── ISARP table ──
+    if (rows.length < 5) continue;
+    if (!ISARP_RE.test(firstText)) continue;
+
+    const isarpCode = firstText;
     const discMatch = isarpCode.match(/^([A-Z]{2,3})/);
     if (!discMatch || !VALID_DISCIPLINES.includes(discMatch[1])) continue;
 
     const discipline = discMatch[1];
-    const secMatch   = isarpCode.match(/\s(\d+)\./);
-    const section    = secMatch ? parseInt(secMatch[1]) : 1;
+    const section    = parseInt(isarpCode.match(/\s(\d+)\./)?.[1] ?? "1");
 
-    // Row 1: Standard text paragraphs
-    const cell1   = firstCell(rows[1]);
-    const stdParas = cell1 ? cellParas(cell1) : [];
+    const cell1    = firstCell(rows[1]);
+    const stdParas = cell1 ? cellParas(cell1, numFmts) : [];
     const stdText  = stdParas.map(p => p.text).join("\n");
 
     const hasGm  = stdText.includes("(GM)");
@@ -125,62 +173,72 @@ async function parseISMDocx(buffer: Buffer): Promise<any[]> {
     const isRp   = stdText.toLowerCase().includes(" should ") &&
                    !stdText.toLowerCase().includes(" shall ");
 
-    // Cross-references
     const refs: string[] = [];
     REF_RE.lastIndex = 0;
-    let refMatch: RegExpExecArray | null;
-    while ((refMatch = REF_RE.exec(stdText)) !== null) {
-      const ref = refMatch[1];
-      if (ref !== isarpCode && !refs.includes(ref)) refs.push(ref);
+    let rm: RegExpExecArray | null;
+    while ((rm = REF_RE.exec(stdText)) !== null) {
+      if (rm[1] !== isarpCode && !refs.includes(rm[1])) refs.push(rm[1]);
     }
 
-    // Row 4: Auditor Actions
-    const cell4  = firstCell(rows[4]);
-    const aaParas = cell4 ? cellParas(cell4) : [];
-    const aaItems: { num: string; text: string }[] = [];
-    let   aaNum = 1;
-    for (const para of aaParas) {
-      const txt = para.text.trim();
-      if (!txt) continue;
-      if (txt === "Auditor Actions") continue;
-      if (txt.toLowerCase().startsWith("other actions")) continue;
-      aaItems.push({ num: `AA${aaNum}`, text: txt });
-      aaNum++;
-    }
-
-    // Row 5: Guidance
-    let guidance = "";
-    if (rows.length >= 6) {
-      const cell5 = firstCell(rows[5]);
-      if (cell5) {
-        const guidText = cellParas(cell5).map(p => p.text).join("\n").trim();
-        if (guidText.startsWith("Guidance")) {
-          guidance = guidText.replace(/^Guidance\s*\n?/, "").trim();
+    // Extract conformance applicability table from row 2 (nested w:tbl in status cell)
+    let conformanceTable: any = null;
+    if (rows.length >= 3) {
+      const cell2 = firstCell(rows[2]);
+      if (cell2) {
+        const nestedTbls = kids(cell2, "tbl");
+        for (const nt of nestedTbls) {
+          const ntRows = directRows(nt);
+          if (!ntRows.length) continue;
+          const ntText = kids(ntRows[0], "tc")
+            .flatMap(tc => kids(tc, "p").map(p => paraText(p)))
+            .join(" ").trim();
+          if (ntText.toLowerCase().includes("conformance")) {
+            const confRows = ntRows.map(nr => ({
+              cells: kids(nr, "tc").map(tc =>
+                kids(tc, "p").map(p => paraText(p)).filter(Boolean).join(" ").trim()
+              )
+            }));
+            conformanceTable = confRows;
+            break;
+          }
         }
       }
     }
 
-    results.push({
-      isarp_code:      isarpCode,
-      discipline,
-      section,
-      standard_text:   stdText,
-      standard_paras:  stdParas,
-      isarp_type:      isRp ? "Recommended Practice" : "Standard",
-      has_gm:          hasGm,
-      has_sms:         hasSms,
-      linked_isarps:   refs,
-      auditor_actions: aaItems,
-      guidance,
-      heading_h2:      curH2,
-      heading_h3:      curH3,
-      heading_h4:      curH4,
-      row_order:       rowOrder++,
+    const cell4   = firstCell(rows[4]);
+    const aaItems: { num: string; text: string }[] = [];
+    let aaNum = 1;
+    for (const p of cell4 ? cellParas(cell4) : []) {
+      const t = p.text.trim();
+      if (!t || t === "Auditor Actions" || t.toLowerCase().startsWith("other actions")) continue;
+      aaItems.push({ num: `AA${aaNum++}`, text: t });
+    }
+
+    let guidance = "";
+    if (rows.length >= 6) {
+      const cell5 = firstCell(rows[5]);
+      if (cell5) {
+        const g = cellParas(cell5).map(p => p.text).join("\n").trim();
+        if (g.startsWith("Guidance")) guidance = g.replace(/^Guidance\s*\n?/, "").trim();
+      }
+    }
+
+    isarps.push({
+      isarp_code: isarpCode, discipline, section,
+      standard_text: stdText, standard_paras: stdParas,
+      isarp_type: isRp ? "Recommended Practice" : "Standard",
+      has_gm: hasGm, has_sms: hasSms, linked_isarps: refs,
+      auditor_actions: aaItems, guidance,
+      conformance_table: conformanceTable,
+      heading_h2: curH2, heading_h3: curH3, heading_h4: curH4,
+      row_order: rowOrder++,
     });
   }
 
-  return results;
+  return { isarps, tables };
 }
+
+// ── POST ──────────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
   try {
@@ -193,108 +251,60 @@ export async function POST(req: NextRequest) {
     const cycleId    = formData.get("cycle_id") as string | null;
     const ismEdition = (formData.get("ism_edition") as string) || "Ed.18 Rev1";
 
-    if (!cycleId)       return NextResponse.json({ error: "cycle_id required" }, { status: 400 });
-    if (!files?.length) return NextResponse.json({ error: "No files provided" }, { status: 400 });
+    if (!cycleId)       return NextResponse.json({ error: "cycle_id required" },  { status: 400 });
+    if (!files?.length) return NextResponse.json({ error: "No files provided" },   { status: 400 });
 
-    const allIsarps: any[]      = [];
-    const allTables: any[]          = [];
-    const disciplinesSeen: string[] = [];
-    let   globalRowOrder = 0;
+    const allIsarps: any[] = [];
+    const allTables: any[] = [];
+    const disciplines: string[] = [];
+    let globalOrder = 0;
 
     for (const file of files) {
       if (!file.name.endsWith(".docx")) continue;
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const parsed = await parseISMDocx(buffer);
-      if (!parsed.length) continue;
+      const { isarps, tables } = await parseDocx(Buffer.from(await file.arrayBuffer()));
+      if (!isarps.length) continue;
 
-      disciplinesSeen.push(parsed[0].discipline);
+      const disc = isarps[0].discipline;
+      disciplines.push(disc);
 
-      for (const isarp of parsed) {
-        allIsarps.push({
-          cycle_id:        cycleId,
-          isarp_code:      isarp.isarp_code,
-          discipline:      isarp.discipline,
-          section:         isarp.section,
-          standard_text:   isarp.standard_text,
-          standard_paras:  isarp.standard_paras,
-          isarp_type:      isarp.isarp_type,
-          has_gm:          isarp.has_gm,
-          has_sms:         isarp.has_sms,
-          linked_isarps:   isarp.linked_isarps,
-          auditor_actions: isarp.auditor_actions,
-          guidance:        isarp.guidance,
-          heading_h2:      isarp.heading_h2,
-          heading_h3:      isarp.heading_h3,
-          heading_h4:      isarp.heading_h4,
-          ism_edition:     ismEdition,
-          row_order:       globalRowOrder++,
-        });
+      for (const i of isarps) {
+        allIsarps.push({ ...i, cycle_id: cycleId, ism_edition: ismEdition, row_order: globalOrder++ });
       }
-
-      // Extract named tables from this docx
-      const TABLE_NAME_RE = /^(Table\s+[\d.]+)/i;
-      const JSZipT = (await import("jszip")).default;
-      const { DOMParser: DPT } = await import("@xmldom/xmldom");
-      const zipT    = await JSZipT.loadAsync(buffer);
-      const xmlStrT = await zipT.file("word/document.xml")!.async("text");
-      const xmlDocT = new DPT().parseFromString(xmlStrT, "application/xml");
-      const bodyT   = xmlDocT.getElementsByTagNameNS(W, "body")[0];
-
-      for (const nodeT of Array.from(bodyT.childNodes)) {
-        const elT = nodeT as Element;
-        if (elT.localName !== "tbl") continue;
-        const rowsT = directRows(elT);
-        if (!rowsT.length) continue;
-        const cellT = firstCell(rowsT[0]);
-        if (!cellT) continue;
-        const firstTextT = cellParas(cellT).map(p => p.text).join(" ").trim();
-        const mT = TABLE_NAME_RE.exec(firstTextT);
-        if (!mT) continue;
-
-        const tableRef   = mT[1].trim();
-        const tableTitle = firstTextT.replace(/\s+/g, " ").trim();
-        const contentRows: { cells: string[]; is_header: boolean }[] = [];
-        const seenRows = new Set<string>();
-        for (let ri = 0; ri < rowsT.length; ri++) {
-          const tcs = Array.from(rowsT[ri].childNodes).filter(n => (n as Element).localName === "tc") as Element[];
-          const cells = tcs.map(tc => cellParas(tc).map(p => p.text).join(" ").trim());
-          const key = cells.join("|||");
-          if (seenRows.has(key)) continue;
-          seenRows.add(key);
-          if (cells.every(c => !c)) continue;
-          contentRows.push({ cells, is_header: ri <= 1 });
-        }
-        allTables.push({ cycle_id: cycleId, table_ref: tableRef, title: tableTitle, discipline: parsed[0].discipline, content_json: contentRows, ism_edition: ismEdition });
+      for (const t of tables) {
+        allTables.push({
+          cycle_id: cycleId, table_ref: t.tableRef, title: t.tableTitle,
+          discipline: disc, content_json: t.contentRows, ism_edition: ismEdition,
+        });
       }
     }
 
     if (!allIsarps.length) {
-      return NextResponse.json({ error: "No valid ISARPs found in uploaded files" }, { status: 400 });
+      return NextResponse.json({ error: "No valid ISARPs found" }, { status: 400 });
     }
 
-    // Upsert in batches of 50 (JSONB fields can be large)
+    // Replace existing data for affected disciplines
+    for (const disc of disciplines) {
+      await supabase.from("audit_iosa_isarps").delete().eq("cycle_id", cycleId).eq("discipline", disc);
+      await supabase.from("audit_iosa_tables").delete().eq("cycle_id", cycleId).eq("discipline", disc);
+    }
+
     for (let i = 0; i < allIsarps.length; i += 50) {
-      const { error } = await supabase
-        .from("audit_iosa_isarps")
+      const { error } = await supabase.from("audit_iosa_isarps")
         .upsert(allIsarps.slice(i, i + 50), { onConflict: "cycle_id,isarp_code" });
       if (error) throw error;
     }
 
-    // Upsert tables
-    if (allTables.length > 0) {
-      for (let i = 0; i < allTables.length; i += 50) {
-        const { error: tErr } = await supabase
-          .from("audit_iosa_tables")
-          .upsert(allTables.slice(i, i + 50), { onConflict: "cycle_id,table_ref" });
-        if (tErr) console.warn("[import-ism] table upsert warn:", tErr.message);
-      }
+    for (let i = 0; i < allTables.length; i += 50) {
+      const { error } = await supabase.from("audit_iosa_tables")
+        .upsert(allTables.slice(i, i + 50), { onConflict: "cycle_id,table_ref" });
+      if (error) throw new Error(`Table upsert failed: ${error.message}`);
     }
 
     return NextResponse.json({
-      success:         true,
+      success: true,
       isarps_imported: allIsarps.length,
       tables_imported: allTables.length,
-      disciplines:     disciplinesSeen,
+      disciplines,
     });
 
   } catch (e: any) {

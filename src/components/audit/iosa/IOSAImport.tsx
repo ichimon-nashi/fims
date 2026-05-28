@@ -23,6 +23,7 @@ interface Conflict {
 interface ImportResult {
 	isarps_seeded?: number;
 	isarps_imported?: number;
+	tables_imported?: number;
 	auto_imported?: number;
 	conflicts?: Conflict[];
 	disciplines?: string[];
@@ -378,6 +379,21 @@ export default function IOSAImport({
 										<span>ISARPs imported</span>
 										<span className={styles.doneVal}>
 											{ismResult?.isarps_imported}
+										</span>
+									</div>
+									<div className={styles.doneRow}>
+										<span>Tables imported</span>
+										<span
+											className={styles.doneVal}
+											style={{
+												color:
+													(ismResult?.tables_imported ??
+														0) > 0
+														? "#48bb78"
+														: "#fc8181",
+											}}
+										>
+											{ismResult?.tables_imported ?? 0}
 										</span>
 									</div>
 									<div className={styles.doneRow}>

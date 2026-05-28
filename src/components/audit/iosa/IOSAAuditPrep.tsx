@@ -5,6 +5,20 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import styles from "./IOSAAuditPrep.module.css";
 
+// ── IRM definitions — loaded once from public/irm-definitions.json ──
+let IRM_CACHE: Record<string, string> | null = null;
+async function getIRMDefs(): Promise<Record<string, string>> {
+	if (IRM_CACHE !== null) return IRM_CACHE;
+	try {
+		const r = await fetch("/irm-definitions.json");
+		const d = await r.json();
+		IRM_CACHE = d.terms ?? {};
+	} catch {
+		IRM_CACHE = {};
+	}
+	return IRM_CACHE!;
+}
+
 // ── Types ─────────────────────────────────────────────────────
 interface AuditRecord {
 	id?: string;
@@ -24,13 +38,14 @@ interface ISARPWithRecord {
 	discipline: string;
 	section: number;
 	standard_text: string;
-	standard_paras: { text: string; style: string }[];
+	standard_paras: { text: string; style: string; numFmt?: string }[];
 	isarp_type: string;
 	has_gm: boolean;
 	has_sms: boolean;
 	linked_isarps: string[];
 	auditor_actions: { num: string; text: string }[];
 	guidance: string;
+	conformance_table?: { cells: string[] }[] | null;
 	heading_h2: string;
 	heading_h3: string;
 	heading_h4: string;
@@ -76,43 +91,117 @@ function useDebounce<T>(value: T, delay: number): T {
 function GuidanceText({
 	text,
 	onRefClick,
+	onIRMClick,
+	irmDefs,
 }: {
 	text: string;
 	onRefClick: (code: string) => void;
+	onIRMClick?: (term: string) => void;
+	irmDefs?: Record<string, string>;
 }) {
-	const REF_RE = /\b([A-Z]{2,3}\s\d+\.\d+(?:\.\d+)?[A-Z]?)\b/g;
-	const lines = text.split(/\r\n|\n/);
+	// Matches ISARP codes (e.g. ORG 2.5.1) AND table refs (e.g. Table 1.1)
+	const REF_RE =
+		/\b([A-Z]{2,3}\s\d+\.\d+(?:\.\d+)?[A-Z]?)\b|(Table\s+\d+\.\d+)/g;
 
+	// IRM terms sorted longest-first to match "Cabin Crew" before "Crew"
+	const irmTerms = irmDefs
+		? Object.keys(irmDefs).sort((a, b) => b.length - a.length)
+		: [];
+
+	const renderLine = (line: string, lineIdx: number): React.ReactNode => {
+		const hasIRM = /\bIRM\b/.test(line);
+		const allMatches: {
+			start: number;
+			end: number;
+			text: string;
+			type: "isarp" | "table" | "irm";
+		}[] = [];
+
+		// ISARP + table refs
+		REF_RE.lastIndex = 0;
+		let m: RegExpExecArray | null;
+		while ((m = REF_RE.exec(line)) !== null) {
+			allMatches.push({
+				start: m.index,
+				end: m.index + m[0].length,
+				text: m[0],
+				type: /^Table\s+\d/.test(m[0]) ? "table" : "isarp",
+			});
+		}
+
+		// IRM terms — only when "IRM" appears in this line
+		if (hasIRM && onIRMClick && irmTerms.length) {
+			for (const term of irmTerms) {
+				const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+				const re = new RegExp(`\\b${escaped}\\b`, "g");
+				let tm: RegExpExecArray | null;
+				while ((tm = re.exec(line)) !== null) {
+					const overlaps = allMatches.some(
+						(x) =>
+							tm!.index < x.end &&
+							tm!.index + term.length > x.start,
+					);
+					if (!overlaps) {
+						allMatches.push({
+							start: tm.index,
+							end: tm.index + term.length,
+							text: term,
+							type: "irm",
+						});
+					}
+				}
+			}
+		}
+
+		allMatches.sort((a, b) => a.start - b.start);
+
+		const parts: React.ReactNode[] = [];
+		let last = 0;
+		for (const match of allMatches) {
+			if (match.start < last) continue;
+			if (match.start > last) parts.push(line.slice(last, match.start));
+			if (match.type === "irm") {
+				parts.push(
+					<span
+						key={`${lineIdx}-irm-${match.start}`}
+						className={styles.irmTerm}
+						onClick={() => onIRMClick!(match.text)}
+						title={`IRM: ${match.text}`}
+					>
+						{match.text}
+					</span>,
+				);
+			} else {
+				parts.push(
+					<span
+						key={`${lineIdx}-${match.start}`}
+						className={
+							match.type === "isarp"
+								? styles.isarpRef
+								: styles.tableRef
+						}
+						onClick={() => onRefClick(match.text)}
+						title={`View ${match.text}`}
+						style={{ cursor: "pointer" }}
+					>
+						{match.text}
+					</span>,
+				);
+			}
+			last = match.end;
+		}
+		if (last < line.length) parts.push(line.slice(last));
+		return parts;
+	};
+
+	const lines = text.split(/\r\n|\n/);
 	return (
 		<div className={styles.guidanceText}>
-			{lines.map((line, idx) => {
-				const parts: React.ReactNode[] = [];
-				let last = 0;
-				let match: RegExpExecArray | null;
-				REF_RE.lastIndex = 0;
-				while ((match = REF_RE.exec(line)) !== null) {
-					if (match.index > last)
-						parts.push(line.slice(last, match.index));
-					const ref = match[0];
-					parts.push(
-						<span
-							key={`${idx}-${match.index}`}
-							className={styles.isarpRef}
-							onClick={() => onRefClick(ref)}
-							title={`View ${ref}`}
-						>
-							{ref}
-						</span>,
-					);
-					last = match.index + ref.length;
-				}
-				if (last < line.length) parts.push(line.slice(last));
-				return (
-					<span key={idx} className={styles.stdLine}>
-						{parts}
-					</span>
-				);
-			})}
+			{lines.map((line, idx) => (
+				<span key={idx} className={styles.stdLine}>
+					{renderLine(line, idx)}
+				</span>
+			))}
 		</div>
 	);
 }
@@ -121,38 +210,115 @@ function GuidanceText({
 function ISARPText({
 	isarp,
 	onRefClick,
+	onIRMClick,
+	irmDefs,
 }: {
 	isarp: ISARPWithRecord;
 	onRefClick: (code: string) => void;
+	onIRMClick: (term: string) => void;
+	irmDefs: Record<string, string>;
 }) {
 	// Matches ISARP codes like "CAB 1.2.1" OR table refs like "Table 1.1" or "Table 5.2"
 	const REF_RE =
 		/\b([A-Z]{2,3}\s\d+\.\d+(?:\.\d+)?[A-Z]?)\b|(Table\s+\d+\.\d+)/g;
 
+	// Build sorted IRM term list for detection (longest first to match "Post Holder" before "Holder")
+	const irmTerms = Object.keys(irmDefs).sort((a, b) => b.length - a.length);
+
 	const renderSpans = (text: string, key: string) => {
+		// First detect IRM terms if "IRM" appears in the same paragraph
+		const hasIRM = /\bIRM\b/.test(text);
+
+		// Build a combined regex: ISARP refs, table refs, and (if IRM context) IRM terms
+		// Process character-by-character using both regexes
 		const parts: React.ReactNode[] = [];
-		let last = 0;
-		let match: RegExpExecArray | null;
+		let remaining = text;
+		let posOffset = 0;
+
+		// Simple approach: find all match positions, sort, render in order
+		const allMatches: {
+			start: number;
+			end: number;
+			text: string;
+			type: "isarp" | "table" | "irm";
+		}[] = [];
+
+		// ISARP + table refs
 		REF_RE.lastIndex = 0;
-		while ((match = REF_RE.exec(text)) !== null) {
-			if (match.index > last) parts.push(text.slice(last, match.index));
-			const ref = match[0];
-			const isIsarp = /^[A-Z]{2,3}\s\d/.test(ref);
-			const isTable = /^Table\s+\d/.test(ref);
-			parts.push(
-				<span
-					key={`${key}-${match.index}`}
-					className={isIsarp ? styles.isarpRef : styles.tableRef}
-					onClick={() => (isIsarp || isTable) && onRefClick(ref)}
-					title={
-						isIsarp ? `View ${ref}` : isTable ? `View ${ref}` : ref
+		let m: RegExpExecArray | null;
+		while ((m = REF_RE.exec(text)) !== null) {
+			const ref = m[0];
+			allMatches.push({
+				start: m.index,
+				end: m.index + ref.length,
+				text: ref,
+				type: /^Table\s+\d/.test(ref) ? "table" : "isarp",
+			});
+		}
+
+		// IRM terms (only when "IRM" in paragraph — avoids false positives)
+		if (hasIRM) {
+			for (const term of irmTerms) {
+				if (!irmDefs[term]) continue;
+				// Escape for regex
+				const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+				const re = new RegExp(`\\b${escaped}\\b`, "g");
+				let tm: RegExpExecArray | null;
+				while ((tm = re.exec(text)) !== null) {
+					const start = tm.index;
+					const end = start + term.length;
+					// Don't overlap with existing matches
+					const overlaps = allMatches.some(
+						(x) => start < x.end && end > x.start,
+					);
+					if (!overlaps) {
+						allMatches.push({
+							start,
+							end,
+							text: term,
+							type: "irm",
+						});
 					}
-					style={isIsarp || isTable ? { cursor: "pointer" } : {}}
-				>
-					{ref}
-				</span>,
-			);
-			last = match.index + ref.length;
+				}
+			}
+		}
+
+		// Sort by position
+		allMatches.sort((a, b) => a.start - b.start);
+
+		let last = 0;
+		for (const match of allMatches) {
+			if (match.start < last) continue; // skip overlaps
+			if (match.start > last) parts.push(text.slice(last, match.start));
+			if (match.type === "irm") {
+				parts.push(
+					<span
+						key={`${key}-irm-${match.start}`}
+						className={styles.irmTerm}
+						onClick={() => onIRMClick(match.text)}
+						title={`IRM definition: ${match.text}`}
+					>
+						{match.text}
+					</span>,
+				);
+			} else {
+				parts.push(
+					<span
+						key={`${key}-${match.start}`}
+						className={
+							match.type === "isarp"
+								? styles.isarpRef
+								: styles.tableRef
+						}
+						onClick={() => onRefClick(match.text)}
+						title={`View ${match.text}`}
+						style={{ cursor: "pointer" }}
+					>
+						{match.text}
+					</span>,
+				);
+			}
+			last = match.end;
 		}
 		if (last < text.length) parts.push(text.slice(last));
 		return parts;
@@ -160,7 +326,6 @@ function ISARPText({
 
 	// Use standard_paras if available (from ISM docx — has style info)
 	if (isarp.standard_paras?.length > 0) {
-		// Auto-number iatalistitem paragraphs with Roman numerals
 		const ROMAN = [
 			"i",
 			"ii",
@@ -183,24 +348,50 @@ function ISARPText({
 			"xix",
 			"xx",
 		];
-		let listCounter = 0;
+		// Track per-numFmt counters so each list resets independently
+		const counters: Record<string, number> = {};
+		let lastStyle = "Normal";
+
 		return (
 			<div className={styles.stdText}>
 				{isarp.standard_paras.map((para, idx) => {
 					const isSubItem = para.style === "iatalistitem";
 					const isPlainSubItem =
 						!isSubItem && /^\s*\([ivxabcIVXABC]+\)/.test(para.text);
-					if (!isSubItem) listCounter = 0; // reset counter on non-list paragraphs
-					const prefix = isSubItem
-						? `(${ROMAN[listCounter++] || listCounter}) `
-						: "";
+
+					// Reset counter when transitioning from non-list to list
+					if (isSubItem && lastStyle !== "iatalistitem") {
+						counters[para.numFmt ?? "default"] = 0;
+					}
+					lastStyle = para.style;
+
+					let prefix = "";
+					if (isSubItem) {
+						const fmt = para.numFmt ?? "lowerRoman";
+						const n = counters[fmt] ?? 0;
+						counters[fmt] = n + 1;
+						if (fmt === "bullet") {
+							prefix = "•";
+						} else if (fmt === "lowerRoman") {
+							prefix = (ROMAN[n] ?? String(n + 1)) + ".";
+						} else if (fmt === "decimal") {
+							prefix = String(n + 1) + ".";
+						} else if (fmt === "lowerLetter") {
+							prefix = String.fromCharCode(97 + n) + ".";
+						} else {
+							prefix = (ROMAN[n] ?? String(n + 1)) + ".";
+						}
+					}
+
 					return (
 						<span
 							key={idx}
 							className={`${styles.stdLine} ${isSubItem || isPlainSubItem ? styles.stdSubItem : ""}`}
 						>
 							{isSubItem && (
-								<span className={styles.listPrefix}>
+								<span
+									className={`${styles.listPrefix} ${para.numFmt === "bullet" ? styles.listBullet : ""}`}
+								>
 									{prefix}
 								</span>
 							)}
@@ -231,19 +422,151 @@ function ISARPText({
 	);
 }
 
-// ── ISARP Ref Popup — centered modal, auto-sizes to content ──
+// ── IRM Term Popup ─────────────────────────────────────────────
+// ── Rich cell content: renders paras with bullets from stored para data ─────
+function RichCellContent({ cell }: { cell: any }) {
+	if (typeof cell === "string") return <span>{cell}</span>;
+	const paras: { text: string; style: string; numFmt?: string }[] =
+		cell?.paras ?? [];
+	if (!paras.length) return null;
+	const ROMAN = [
+		"i",
+		"ii",
+		"iii",
+		"iv",
+		"v",
+		"vi",
+		"vii",
+		"viii",
+		"ix",
+		"x",
+		"xi",
+		"xii",
+		"xiii",
+		"xiv",
+		"xv",
+		"xvi",
+		"xvii",
+		"xviii",
+		"xix",
+		"xx",
+	];
+	const counters: Record<string, number> = {};
+	let lastStyle = "Normal";
+	return (
+		<div className={styles.richCell}>
+			{paras.map((p, idx) => {
+				const isListItem = p.style === "iatalistitem";
+				if (isListItem && lastStyle !== "iatalistitem")
+					counters[p.numFmt ?? "def"] = 0;
+				lastStyle = p.style;
+				let prefix = "";
+				if (isListItem) {
+					const fmt = p.numFmt ?? "lowerRoman";
+					const n = counters[fmt] ?? 0;
+					counters[fmt] = n + 1;
+					prefix =
+						fmt === "bullet"
+							? "•"
+							: fmt === "decimal"
+								? String(n + 1) + "."
+								: fmt === "lowerLetter"
+									? String.fromCharCode(97 + n) + "."
+									: (ROMAN[n] ?? String(n + 1)) + ".";
+				}
+				return (
+					<div
+						key={idx}
+						className={`${styles.richCellPara} ${isListItem ? styles.richCellListItem : ""}`}
+					>
+						{isListItem && (
+							<span
+								className={`${styles.listPrefix} ${p.numFmt === "bullet" ? styles.listBullet : ""}`}
+							>
+								{prefix}
+							</span>
+						)}
+						<span>{p.text}</span>
+					</div>
+				);
+			})}
+		</div>
+	);
+}
+
+// ── Conformance Applicability Table ──────────────────────────────────────────
+function ConformanceTable({ rows }: { rows: { cells: string[] }[] }) {
+	if (!rows?.length) return null;
+	return (
+		<div className={styles.conformanceTable}>
+			{rows.map((row, i) => {
+				if (row.cells.length === 1) {
+					return (
+						<div key={i} className={styles.conformanceTitle}>
+							{row.cells[0]}
+						</div>
+					);
+				}
+				return (
+					<div
+						key={i}
+						className={`${styles.conformanceRow} ${i <= 1 ? styles.conformanceRowHeader : ""}`}
+					>
+						{row.cells.map((cell, j) => (
+							<div key={j} className={styles.conformanceCell}>
+								{cell}
+							</div>
+						))}
+					</div>
+				);
+			})}
+		</div>
+	);
+}
+
+function IRMPopup({
+	term,
+	definition,
+	onClose,
+}: {
+	term: string;
+	definition: string;
+	onClose: () => void;
+}) {
+	return (
+		<div className={styles.irmPopupBackdrop} onClick={onClose}>
+			<div
+				className={styles.irmPopup}
+				onClick={(e) => e.stopPropagation()}
+			>
+				<div className={styles.irmPopupHeader}>
+					<span className={styles.irmPopupTerm}>{term}</span>
+					<span className={styles.irmEditionBadge}>IRM Ed.15</span>
+					<button className={styles.refPopupClose} onClick={onClose}>
+						✕
+					</button>
+				</div>
+				<div className={styles.irmPopupBody}>{definition}</div>
+			</div>
+		</div>
+	);
+}
 function RefPopup({
 	refCode,
 	allIsarps,
 	cycleId,
 	token,
 	onClose,
+	onIRMClick,
+	irmDefs,
 }: {
 	refCode: string;
 	allIsarps: ISARPWithRecord[];
 	cycleId: string;
 	token: string;
 	onClose: () => void;
+	onIRMClick?: (term: string) => void;
+	irmDefs?: Record<string, string>;
 }) {
 	const isTable = /^Table\s+\d/.test(refCode);
 	const [fetched, setFetched] = useState<any>("loading");
@@ -328,7 +651,7 @@ function RefPopup({
 						<div className={styles.refPopupNotFound}>
 							{refCode} could not be found.{" "}
 							{isTable
-								? "Upload the ISM docx files to populate table data."
+								? "Re-import the ISM docx files — table extraction is now included."
 								: `Import the ${refCode.split(" ")[0]} discipline docx first.`}
 						</div>
 					)}
@@ -365,9 +688,12 @@ function RefPopup({
 									<div className={styles.guidanceLabel}>
 										Guidance
 									</div>
-									<div className={styles.guidanceText}>
-										{isarp.guidance}
-									</div>
+									<GuidanceText
+										text={isarp.guidance}
+										onRefClick={onClose}
+										onIRMClick={onIRMClick}
+										irmDefs={irmDefs}
+									/>
 								</div>
 							)}
 						</>
@@ -384,12 +710,14 @@ function RefPopup({
 										className={`${styles.tableRow} ${row.is_header ? styles.tableRowHeader : ""}`}
 									>
 										{(row.cells ?? []).map(
-											(cell: string, j: number) => (
+											(cell: any, j: number) => (
 												<div
 													key={j}
 													className={styles.tableCell}
 												>
-													{cell}
+													<RichCellContent
+														cell={cell}
+													/>
 												</div>
 											),
 										)}
@@ -441,7 +769,17 @@ function Workspace({
 		Record<string, { completed: boolean; remarks: string }>
 	>(record?.aa_responses ?? {});
 	const [refPopup, setRefPopup] = useState<string | null>(null);
+	const [irmPopup, setIrmPopup] = useState<{
+		term: string;
+		def: string;
+	} | null>(null);
+	const [irmDefs, setIrmDefs] = useState<Record<string, string>>({});
 	const saveTimeout = useRef<NodeJS.Timeout>();
+
+	// Load IRM definitions once
+	useEffect(() => {
+		getIRMDefs().then(setIrmDefs);
+	}, []);
 
 	useEffect(() => {
 		setDocRefs(record?.doc_references ?? "");
@@ -449,6 +787,7 @@ function Workspace({
 		setFlagReason(record?.prep_flag_reason ?? "");
 		setAaResponses(record?.aa_responses ?? {});
 		setRefPopup(null);
+		setIrmPopup(null);
 	}, [isarp.isarp_code]);
 
 	const debouncedDocRefs = useDebounce(docRefs, 800);
@@ -476,7 +815,17 @@ function Workspace({
 	const toggleFlag = () => {
 		const v = !flagged;
 		setFlagged(v);
-		onSave({ isarp_code: isarp.isarp_code, prep_flagged: v });
+		// If flagging (v=true) and currently ready → demote to in_progress
+		const currentStatus = getPrepStatus(record);
+		if (v && currentStatus === "ready") {
+			onSave({
+				isarp_code: isarp.isarp_code,
+				prep_flagged: true,
+				prep_status: "in_progress",
+			});
+		} else {
+			onSave({ isarp_code: isarp.isarp_code, prep_flagged: v });
+		}
 	};
 
 	const toggleAA = (num: string) => {
@@ -582,7 +931,22 @@ function Workspace({
 			{/* Body */}
 			<div className={styles.wsBody}>
 				{/* Standard text — always full */}
-				<ISARPText isarp={isarp} onRefClick={setRefPopup} />
+				<ISARPText
+					isarp={isarp}
+					onRefClick={setRefPopup}
+					onIRMClick={(term) =>
+						setIrmPopup({ term, def: irmDefs[term] ?? "" })
+					}
+					irmDefs={irmDefs}
+				/>
+
+				{/* Conformance Applicability Table */}
+				{isarp.conformance_table &&
+					isarp.conformance_table.length > 0 && (
+						<div className={styles.fieldGroup}>
+							<ConformanceTable rows={isarp.conformance_table} />
+						</div>
+					)}
 
 				{/* Guidance with clickable refs */}
 				{isarp.guidance && (
@@ -591,6 +955,10 @@ function Workspace({
 						<GuidanceText
 							text={isarp.guidance}
 							onRefClick={setRefPopup}
+							onIRMClick={(term) =>
+								setIrmPopup({ term, def: irmDefs[term] ?? "" })
+							}
+							irmDefs={irmDefs}
 						/>
 					</div>
 				)}
@@ -700,7 +1068,6 @@ function Workspace({
 
 			{/* Footer */}
 			<div className={styles.wsFooter}>
-				<button className={styles.btnExport}>↓ Export</button>
 				<div className={styles.navBtns}>
 					<button
 						className={styles.btnNav}
@@ -726,6 +1093,18 @@ function Workspace({
 					cycleId={cycleId}
 					token={token}
 					onClose={() => setRefPopup(null)}
+					onIRMClick={(term) => {
+						setRefPopup(null);
+						setIrmPopup({ term, def: irmDefs[term] ?? "" });
+					}}
+					irmDefs={irmDefs}
+				/>
+			)}
+			{irmPopup && (
+				<IRMPopup
+					term={irmPopup.term}
+					definition={irmPopup.def}
+					onClose={() => setIrmPopup(null)}
 				/>
 			)}
 		</div>
@@ -823,6 +1202,12 @@ function GroupedISARPList({
 												const status = getPrepStatus(
 													isarp.record,
 												);
+												const isRP =
+													isarp.isarp_type ===
+													"Recommended Practice";
+												const hasLinks =
+													(isarp.linked_isarps
+														?.length ?? 0) > 0;
 												return (
 													<div
 														key={isarp.isarp_code}
@@ -849,17 +1234,43 @@ function GroupedISARPList({
 														>
 															{isarp.isarp_code}
 														</div>
-														{isarp.record
-															?.prep_flagged && (
-															<div
-																className={
-																	styles.flagDot
-																}
-																title="Flagged"
-															>
-																⚑
-															</div>
-														)}
+														<div
+															className={
+																styles.listRowBadges
+															}
+														>
+															{isRP && (
+																<span
+																	className={
+																		styles.listRPBadge
+																	}
+																	title="Recommended Practice"
+																>
+																	RP
+																</span>
+															)}
+															{hasLinks && (
+																<span
+																	className={
+																		styles.listLinkBadge
+																	}
+																	title={`Interlinked with: ${isarp.linked_isarps.join(", ")}`}
+																>
+																	🔗
+																</span>
+															)}
+															{isarp.record
+																?.prep_flagged && (
+																<div
+																	className={
+																		styles.flagDot
+																	}
+																	title="Flagged"
+																>
+																	⚑
+																</div>
+															)}
+														</div>
 													</div>
 												);
 											})}

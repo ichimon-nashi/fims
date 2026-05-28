@@ -97,6 +97,7 @@ export default function IOSAPage() {
 					</button>
 				))}
 				<div className={styles.subtabbarRight}>
+					<button className={styles.exportBtn}>↓ Export</button>
 					<button
 						className={styles.importBtn}
 						onClick={() => setShowImport(true)}
