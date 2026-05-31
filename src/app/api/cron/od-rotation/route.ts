@@ -2,6 +2,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = 'force-dynamic';
+
 // Core logic shared by both automatic (GET) and manual (POST) triggers
 async function runCronTasks(forceOD: boolean, testYear?: string, testMonth?: string, executedBy: string = 'system-cron') {
 	const results: any = {
