@@ -749,6 +749,7 @@
 	padding: 1.125rem 1.25rem;
 	overflow-y: auto;
 	flex: 1;
+	min-height: 0; /* critical: allows flex child to shrink and scroll */
 	display: flex;
 	flex-direction: column;
 	gap: 0.75rem;
@@ -902,8 +903,9 @@
 	gap: 0;
 	border: 1px solid rgba(255, 255, 255, 0.1);
 	border-radius: 6px;
-	overflow: hidden;
+	overflow: visible; /* allow content to be seen; scroll is on refPopupBody */
 	font-size: 0.875rem;
+	flex-shrink: 0; /* don't squash — let refPopupBody scroll instead */
 }
 
 .tableTitle {
@@ -913,11 +915,13 @@
 	padding: 0.75rem 1rem;
 	background: rgba(74, 158, 255, 0.08);
 	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 6px 6px 0 0; /* clip top corners since tableDisplay no longer clips */
 }
 
 .tableRow {
 	display: flex;
 	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+	min-width: 0;
 }
 
 .tableRow:last-child {
@@ -931,11 +935,14 @@
 
 .tableCell {
 	flex: 1;
+	min-width: 0; /* allows cell to shrink below content size */
 	padding: 0.5rem 0.75rem;
 	color: #a0aec0;
 	border-right: 1px solid rgba(255, 255, 255, 0.06);
 	font-size: 0.8125rem;
-	line-height: 1.4;
+	line-height: 1.5;
+	overflow-wrap: break-word;
+	word-break: break-word;
 }
 
 .tableRowHeader .tableCell {
@@ -1063,6 +1070,16 @@
 	line-height: 1.5;
 	font-size: 0.875rem;
 	color: #a0aec0;
+	overflow-wrap: break-word;
+	word-break: break-word;
+	min-width: 0;
+}
+
+.richCellPara span:last-child {
+	min-width: 0;
+	flex: 1;
+	overflow-wrap: break-word;
+	word-break: break-word;
 }
 
 .richCellListItem {
