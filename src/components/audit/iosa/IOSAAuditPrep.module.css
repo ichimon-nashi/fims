@@ -702,7 +702,7 @@
 	border: 1px solid rgba(255, 255, 255, 0.1);
 	border-radius: 12px;
 	/* Auto-size: grows with content, caps at viewport height */
-	width: min(680px, calc(100vw - 3rem));
+	width: min(960px, calc(100vw - 2rem));
 	max-height: calc(100vh - 3rem);
 	display: flex;
 	flex-direction: column;
@@ -903,9 +903,10 @@
 	gap: 0;
 	border: 1px solid rgba(255, 255, 255, 0.1);
 	border-radius: 6px;
-	overflow: visible; /* allow content to be seen; scroll is on refPopupBody */
+	overflow: hidden;
 	font-size: 0.875rem;
-	flex-shrink: 0; /* don't squash — let refPopupBody scroll instead */
+	flex-shrink: 0;
+	width: 100%;
 }
 
 .tableTitle {
@@ -919,9 +920,10 @@
 }
 
 .tableRow {
-	display: flex;
+	display: grid;
+	/* grid-template-columns set inline via style prop */
 	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-	min-width: 0;
+	width: 100%;
 }
 
 .tableRow:last-child {
@@ -934,15 +936,15 @@
 }
 
 .tableCell {
-	flex: 1;
-	min-width: 0; /* allows cell to shrink below content size */
-	padding: 0.5rem 0.75rem;
+	padding: 0.5rem 0.875rem;
 	color: #a0aec0;
 	border-right: 1px solid rgba(255, 255, 255, 0.06);
-	font-size: 0.8125rem;
-	line-height: 1.5;
+	font-size: 0.875rem;
+	line-height: 1.6;
 	overflow-wrap: break-word;
 	word-break: break-word;
+	min-width: 0;
+	overflow: hidden;
 }
 
 .tableRowHeader .tableCell {
@@ -1160,4 +1162,56 @@
 .aaRemarksInput:disabled {
 	opacity: 0.45;
 	cursor: not-allowed;
+}
+
+/* ── Table responsive ── */
+/* Narrow modal on mobile */
+@media (max-width: 600px) {
+	.refPopupBackdrop {
+		padding: 0.5rem;
+	}
+	.refPopup {
+		width: calc(100vw - 1rem);
+	}
+}
+
+/* Multi-column tables: contained horizontal scroll within the modal body.
+   The modal itself only scrolls vertically. The table scrolls horizontally
+   inside its own wrapper so there is never a double-scroll situation. */
+.tableScrollWrap {
+	overflow-x: hidden; /* desktop: no horizontal scroll */
+	width: 100%;
+}
+
+@media (max-width: 600px) {
+	/* On mobile: allow horizontal scroll within the table wrapper only */
+	.tableScrollWrap {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+		scrollbar-width: thin;
+		scrollbar-color: rgba(74, 158, 255, 0.3) transparent;
+	}
+	.tableScrollWrap::-webkit-scrollbar {
+		height: 4px;
+	}
+	.tableScrollWrap::-webkit-scrollbar-thumb {
+		background: rgba(74, 158, 255, 0.3);
+		border-radius: 2px;
+	}
+
+	.tableDisplay {
+		width: max-content;
+		min-width: 100%;
+	}
+	.tableRow {
+		width: max-content;
+		min-width: 100%;
+	}
+	.tableCell {
+		min-width: 110px;
+	}
+	.tableCell:first-child {
+		min-width: 48px;
+		max-width: 64px;
+	}
 }

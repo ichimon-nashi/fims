@@ -55,9 +55,35 @@ function paraNumId(p: Element): string | null {
   return numId.getAttributeNS(W, "val") || numId.getAttribute("w:val") || null;
 }
 
+function cellGridSpan(tc: Element): number {
+  const tcPr = kids(tc, "tcPr")[0];
+  if (!tcPr) return 1;
+  const gs = kids(tcPr, "gridSpan")[0];
+  if (!gs) return 1;
+  return parseInt(gs.getAttributeNS(W, "val") || gs.getAttribute("w:val") || "1", 10) || 1;
+}
+
 function directRows(tbl: Element): Element[] { return kids(tbl, "tr"); }
 function firstCell(tr: Element): Element | null { return kids(tr, "tc")[0] ?? null; }
 function allCells(tr: Element): Element[] { return kids(tr, "tc"); }
+
+/** Expand a row's physical cells into N logical columns, repeating content across spans */
+function expandRow(
+  tr: Element,
+  numFmts?: Record<string, string>
+): { paras: { text: string; style: string; numFmt?: string }[]; span: number }[] {
+  const expanded: { paras: { text: string; style: string; numFmt?: string }[]; span: number }[] = [];
+  for (const tc of allCells(tr)) {
+    const span = cellGridSpan(tc);
+    const paras = cellParas(tc, numFmts);
+    expanded.push({ paras, span });
+    // Fill spanned columns with empty cells so grid alignment is preserved
+    for (let s = 1; s < span; s++) {
+      expanded.push({ paras: [], span: 1 });
+    }
+  }
+  return expanded;
+}
 
 function cellParas(tc: Element, numFmts?: Record<string, string>): { text: string; style: string; numFmt?: string }[] {
   return kids(tc, "p").map(p => {
@@ -137,19 +163,33 @@ async function parseDocx(buffer: Buffer) {
     if (tMatch) {
       const tableRef   = tMatch[1].trim();
       const tableTitle = firstText.replace(/\s+/g, " ").trim();
-      // Store each cell's paragraphs with style info (not joined strings)
-      const contentRows: { cells: { paras: { text: string; style: string; numFmt?: string }[] }[]; is_header: boolean }[] = [];
+
+      // Expand all rows respecting colspan so every row has the same number of columns
+      type TableCell = { paras: { text: string; style: string; numFmt?: string }[]; span: number };
+      type TableRow  = { cells: TableCell[]; is_header: boolean };
+      const contentRows: TableRow[] = [];
       const seenKeys = new Set<string>();
+      let colCount = 0;
+
+      // First pass: compute max column count across all rows
       for (let ri = 0; ri < rows.length; ri++) {
-        const cells = allCells(rows[ri]).map(tc => ({
-          paras: cellParas(tc, numFmts)
-        }));
-        const key = cells.map(c => c.paras.map(p => p.text).join("|")).join("|||");
-        if (seenKeys.has(key) || cells.every(c => !c.paras.length)) continue;
-        seenKeys.add(key);
-        contentRows.push({ cells, is_header: ri <= 1 });
+        const expanded = expandRow(rows[ri], numFmts);
+        colCount = Math.max(colCount, expanded.length);
       }
-      tables.push({ tableRef, tableTitle, contentRows });
+
+      // Second pass: store expanded rows, skip title row (already in tableTitle) and empty rows
+      for (let ri = 0; ri < rows.length; ri++) {
+        const expanded = expandRow(rows[ri], numFmts);
+        const key = expanded.map(c => c.paras.map(p => p.text).join("|")).join("|||");
+        if (seenKeys.has(key)) continue;
+        // Skip the title row (same text as tableTitle)
+        const rowText = expanded.map(c => c.paras.map(p => p.text).join("")).join("").trim();
+        if (!rowText || rowText === tableTitle.replace(/\s+/g, " ").trim()) continue;
+        seenKeys.add(key);
+        contentRows.push({ cells: expanded, is_header: ri <= 3 });
+      }
+
+      tables.push({ tableRef, tableTitle, colCount, contentRows });
       continue;
     }
 

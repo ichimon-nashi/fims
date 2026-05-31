@@ -657,29 +657,12 @@ function RefPopup({
 					)}
 					{isarp && (
 						<>
-							<div className={styles.stdText}>
-								{(isarp.standard_paras?.length > 0
-									? isarp.standard_paras
-									: isarp.standard_text
-											.split(/\r\n|\n/)
-											.map((t) => ({
-												text: t,
-												style: "Normal",
-											}))
-								).map((p, i) => {
-									const isSubItem =
-										p.style === "iatalistitem" ||
-										/^\s*\([ivxabcIVXABC]+\)/.test(p.text);
-									return (
-										<span
-											key={i}
-											className={`${styles.stdLine} ${isSubItem ? styles.stdSubItem : ""}`}
-										>
-											{p.text}
-										</span>
-									);
-								})}
-							</div>
+							<ISARPText
+								isarp={isarp}
+								onRefClick={onClose}
+								onIRMClick={onIRMClick}
+								irmDefs={irmDefs}
+							/>
 							{isarp.guidance && (
 								<div
 									className={styles.guidanceBox}
@@ -698,34 +681,97 @@ function RefPopup({
 							)}
 						</>
 					)}
-					{tableData && (
-						<div className={styles.tableDisplay}>
-							<div className={styles.tableTitle}>
-								{tableData.title}
-							</div>
-							{(tableData.content_json ?? []).map(
-								(row: any, i: number) => (
-									<div
-										key={i}
-										className={`${styles.tableRow} ${row.is_header ? styles.tableRowHeader : ""}`}
-									>
-										{(row.cells ?? []).map(
-											(cell: any, j: number) => (
-												<div
-													key={j}
-													className={styles.tableCell}
-												>
-													<RichCellContent
-														cell={cell}
-													/>
-												</div>
-											),
-										)}
+					{tableData &&
+						(() => {
+							const rows: any[] = tableData.content_json ?? [];
+							// Use stored colCount, or derive from widest row as fallback
+							const colCount: number =
+								tableData.col_count ??
+								rows.reduce(
+									(max: number, r: any) =>
+										Math.max(max, (r.cells ?? []).length),
+									1,
+								);
+
+							// Smart column sizing: detect narrow index col, use minmax to prevent overflow
+							const firstColNarrow = rows.some((r: any) => {
+								const firstText = (r.cells?.[0]?.paras ?? [])
+									.map((p: any) => p.text)
+									.join("")
+									.trim();
+								return /^\(([ivxlcIVXLC]+|[a-z]{1,4})\)$/.test(
+									firstText,
+								);
+							});
+							// minmax(0, Xfr) ensures columns shrink to fit within grid width — no overflow
+							const gridCols =
+								colCount === 1
+									? "1fr"
+									: firstColNarrow
+										? `max-content ${Array(colCount - 1)
+												.fill("minmax(0, 1fr)")
+												.join(" ")}`
+										: Array(colCount)
+												.fill("minmax(0, 1fr)")
+												.join(" ");
+
+							// Extract column labels from last header row (most specific header)
+							const headerRows = rows.filter(
+								(r: any) => r.is_header,
+							);
+							const labelRow = headerRows[headerRows.length - 1];
+							const headerLabels: string[] = (
+								labelRow?.cells ?? []
+							).map((c: any) =>
+								(c?.paras ?? [])
+									.map((p: any) => p.text)
+									.join(" ")
+									.trim(),
+							);
+
+							return (
+								<div className={styles.tableScrollWrap}>
+									<div className={styles.tableDisplay}>
+										<div className={styles.tableTitle}>
+											{tableData.title}
+										</div>
+										{rows.map((row: any, i: number) => (
+											<div
+												key={i}
+												className={`${styles.tableRow} ${row.is_header ? styles.tableRowHeader : ""}`}
+												style={{
+													gridTemplateColumns:
+														gridCols,
+												}}
+											>
+												{(row.cells ?? []).map(
+													(cell: any, j: number) => {
+														const label =
+															headerLabels[j] ??
+															"";
+														return (
+															<div
+																key={j}
+																className={
+																	styles.tableCell
+																}
+																data-label={
+																	label
+																}
+															>
+																<RichCellContent
+																	cell={cell}
+																/>
+															</div>
+														);
+													},
+												)}
+											</div>
+										))}
 									</div>
-								),
-							)}
-						</div>
-					)}
+								</div>
+							);
+						})()}
 				</div>
 			</div>
 		</div>
