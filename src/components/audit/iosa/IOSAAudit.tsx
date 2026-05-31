@@ -3,7 +3,13 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { createClient } from "@supabase/supabase-js";
 import styles from "./IOSAAudit.module.css";
+
+const supabaseClient = createClient(
+	process.env.NEXT_PUBLIC_SUPABASE_URL!,
+	process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
 
 // ── Types ─────────────────────────────────────────────────────
 interface AuditRecord {
@@ -61,7 +67,7 @@ const CONFORMANCE_OPTIONS = [
 	},
 	{
 		value: "Finding (Not Documented, Not Implemented)",
-		short: "Finding (Not Doc, Not Impl)",
+		short: "Not Documented · Not Implemented",
 		color: "#fc8181",
 		bg: "rgba(252,129,129,0.12)",
 		border: "rgba(252,129,129,0.4)",
@@ -69,7 +75,7 @@ const CONFORMANCE_OPTIONS = [
 	},
 	{
 		value: "Finding (Not Documented, Implemented)",
-		short: "Finding (Not Doc, Impl)",
+		short: "Not Documented · Implemented",
 		color: "#fc8181",
 		bg: "rgba(252,129,129,0.12)",
 		border: "rgba(252,129,129,0.4)",
@@ -77,7 +83,7 @@ const CONFORMANCE_OPTIONS = [
 	},
 	{
 		value: "Finding (Documented, Not Implemented)",
-		short: "Finding (Doc, Not Impl)",
+		short: "Documented · Not Implemented",
 		color: "#fc8181",
 		bg: "rgba(252,129,129,0.12)",
 		border: "rgba(252,129,129,0.4)",
@@ -85,7 +91,7 @@ const CONFORMANCE_OPTIONS = [
 	},
 	{
 		value: "Observation (Not Documented, Not Implemented)",
-		short: "Obs (Not Doc, Not Impl)",
+		short: "Not Documented · Not Implemented",
 		color: "#f6ad55",
 		bg: "rgba(246,173,85,0.12)",
 		border: "rgba(246,173,85,0.4)",
@@ -93,7 +99,7 @@ const CONFORMANCE_OPTIONS = [
 	},
 	{
 		value: "Observation (Not Documented, Implemented)",
-		short: "Obs (Not Doc, Impl)",
+		short: "Not Documented · Implemented",
 		color: "#f6ad55",
 		bg: "rgba(246,173,85,0.12)",
 		border: "rgba(246,173,85,0.4)",
@@ -101,7 +107,7 @@ const CONFORMANCE_OPTIONS = [
 	},
 	{
 		value: "Observation (Documented, Not Implemented)",
-		short: "Obs (Doc, Not Impl)",
+		short: "Documented · Not Implemented",
 		color: "#f6ad55",
 		bg: "rgba(246,173,85,0.12)",
 		border: "rgba(246,173,85,0.4)",
@@ -144,6 +150,7 @@ function AuditWorkspace({
 	hasNext,
 	hasPrev,
 	saving,
+	readOnly,
 }: {
 	isarp: ISARPWithRecord;
 	record: AuditRecord | null;
@@ -155,6 +162,7 @@ function AuditWorkspace({
 	hasNext: boolean;
 	hasPrev: boolean;
 	saving: boolean;
+	readOnly: boolean;
 }) {
 	const status = record?.conformance_status ?? null;
 	const category = conformanceCategory(status);
@@ -184,11 +192,31 @@ function AuditWorkspace({
 
 	const setConformance = (value: string) => {
 		const isClearing = value === status;
-		onSave({
-			isarp_code: isarp.isarp_code,
-			discipline: isarp.discipline,
-			conformance_status: isClearing ? null : value,
-		});
+		const newStatus = isClearing ? null : value;
+		const newCat = conformanceCategory(newStatus);
+		const wasNC = category === "finding" || category === "observation";
+		const isNowNC = newCat === "finding" || newCat === "observation";
+
+		// Switching away from finding/observation — clear the detail fields
+		if (wasNC && !isNowNC) {
+			setNonconfDesc("");
+			setRootCause("");
+			setCorrAction("");
+			onSave({
+				isarp_code: isarp.isarp_code,
+				discipline: isarp.discipline,
+				conformance_status: newStatus,
+				nonconformity_desc: "",
+				root_cause: "",
+				corrective_action: "",
+			});
+		} else {
+			onSave({
+				isarp_code: isarp.isarp_code,
+				discipline: isarp.discipline,
+				conformance_status: newStatus,
+			});
+		}
 	};
 
 	const ROMAN = [
@@ -239,6 +267,11 @@ function AuditWorkspace({
 					)}
 				</div>
 				<div className={styles.wsHeaderRight}>
+					{readOnly && (
+						<span className={styles.readOnlyBadge}>
+							👁 View only
+						</span>
+					)}
 					{status && (
 						<span
 							className={styles.statusChip}
@@ -300,6 +333,16 @@ function AuditWorkspace({
 						);
 					})}
 				</div>
+
+				{/* Guidance */}
+				{isarp.guidance && (
+					<div className={styles.guidanceBox}>
+						<div className={styles.guidanceLabel}>Guidance</div>
+						<div className={styles.guidanceText}>
+							{isarp.guidance}
+						</div>
+					</div>
+				)}
 
 				{/* Documentation references — read-only from AuditPrep */}
 				{docRefs && (
@@ -379,7 +422,10 @@ function AuditWorkspace({
 											}
 										: {}
 								}
-								onClick={() => setConformance(opt.value)}
+								onClick={() =>
+									!readOnly && setConformance(opt.value)
+								}
+								disabled={readOnly}
 							>
 								<span
 									className={styles.conformanceBtnDot}
@@ -410,19 +456,28 @@ function AuditWorkspace({
 											? {
 													background: opt.bg,
 													borderColor: opt.border,
-													color: opt.color,
 												}
 											: {}
 									}
-									onClick={() => setConformance(opt.value)}
+									onClick={() =>
+										!readOnly && setConformance(opt.value)
+									}
+									disabled={readOnly}
 								>
 									<span
 										className={styles.conformanceBtnDot}
 										style={{ background: "#fc8181" }}
 									/>
-									{opt.short
-										.replace("Finding (", "")
-										.replace(")", "")}
+									<span
+										className={styles.conformanceBtnMain}
+										style={
+											status === opt.value
+												? { color: opt.color }
+												: {}
+										}
+									>
+										{opt.short}
+									</span>
 								</button>
 							))}
 						</div>
@@ -448,19 +503,28 @@ function AuditWorkspace({
 											? {
 													background: opt.bg,
 													borderColor: opt.border,
-													color: opt.color,
 												}
 											: {}
 									}
-									onClick={() => setConformance(opt.value)}
+									onClick={() =>
+										!readOnly && setConformance(opt.value)
+									}
+									disabled={readOnly}
 								>
 									<span
 										className={styles.conformanceBtnDot}
 										style={{ background: "#f6ad55" }}
 									/>
-									{opt.short
-										.replace("Obs (", "")
-										.replace(")", "")}
+									<span
+										className={styles.conformanceBtnMain}
+										style={
+											status === opt.value
+												? { color: opt.color }
+												: {}
+										}
+									>
+										{opt.short}
+									</span>
 								</button>
 							))}
 						</div>
@@ -482,6 +546,7 @@ function AuditWorkspace({
 								value={nonconfDesc}
 								rows={3}
 								placeholder="Describe the finding / observation..."
+								disabled={readOnly}
 								onChange={(e) => {
 									setNonconfDesc(e.target.value);
 									autoSave({
@@ -535,16 +600,6 @@ function AuditWorkspace({
 								</div>
 							</>
 						)}
-					</div>
-				)}
-
-				{/* Guidance */}
-				{isarp.guidance && (
-					<div className={styles.guidanceBox}>
-						<div className={styles.guidanceLabel}>Guidance</div>
-						<div className={styles.guidanceText}>
-							{isarp.guidance}
-						</div>
 					</div>
 				)}
 			</div>
@@ -629,12 +684,21 @@ export default function IOSAAudit({
 }: {
 	activeCycle: ActiveCycle | null;
 }) {
-	const { token } = useAuth();
+	const { token, user } = useAuth();
 
 	const [discipline, setDiscipline] = useState<string>("");
+
+	// Discipline-level edit permission — raw DB shape: audit.iosa_edit_disciplines is string[]
+	// null/undefined = no restriction (backwards compatible). Empty array = no disciplines allowed.
+	const editDiscs: string[] | null =
+		(user?.app_permissions as any)?.audit?.iosa_edit_disciplines ?? null;
+	const canEditDiscipline = !discipline
+		? true // no discipline selected yet — default allow
+		: editDiscs === null
+			? true // no restriction set — full access (legacy users)
+			: editDiscs.includes(discipline); // must be in the whitelist
 	const [allIsarps, setAllIsarps] = useState<ISARPWithRecord[]>([]);
 	const [loading, setLoading] = useState(false);
-	const [selectedIdx, setSelectedIdx] = useState(0);
 	const [saving, setSaving] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [filterStatus, setFilterStatus] = useState<
@@ -652,7 +716,7 @@ export default function IOSAAudit({
 	useEffect(() => {
 		if (!discipline || !activeCycle?.id || !token) return;
 		setLoading(true);
-		setSelectedIdx(0);
+		setSelectedCode(null);
 		fetch(
 			`/api/audit/iosa/auditprep?cycle_id=${activeCycle.id}&discipline=${discipline}`,
 			{
@@ -664,6 +728,42 @@ export default function IOSAAudit({
 			.catch(console.error)
 			.finally(() => setLoading(false));
 	}, [discipline, activeCycle?.id, token]);
+
+	// Realtime: subscribe to record changes for this cycle+discipline
+	useEffect(() => {
+		if (!activeCycle?.id || !discipline) return;
+
+		const channel = supabaseClient
+			.channel(`audit-records-${activeCycle.id}-${discipline}`)
+			.on(
+				"postgres_changes",
+				{
+					event: "*",
+					schema: "public",
+					table: "audit_iosa_records",
+					filter: `cycle_id=eq.${activeCycle.id}`,
+				},
+				(payload) => {
+					const record = payload.new as AuditRecord;
+					if (!record || record.discipline !== discipline) return;
+					setAllIsarps((prev) =>
+						prev.map((i) =>
+							i.isarp_code === record.isarp_code
+								? { ...i, record }
+								: i,
+						),
+					);
+				},
+			)
+			.subscribe();
+
+		return () => {
+			supabaseClient.removeChannel(channel);
+		};
+	}, [activeCycle?.id, discipline]);
+
+	// Track selected by code so it persists across filter changes
+	const [selectedCode, setSelectedCode] = useState<string | null>(null);
 
 	// Filtered list
 	const filtered = allIsarps.filter((i) => {
@@ -683,7 +783,18 @@ export default function IOSAAudit({
 		return true;
 	});
 
-	const selected = filtered[selectedIdx] ?? null;
+	// Selected is the tracked code — falls back to first filtered item
+	const selected =
+		(selectedCode
+			? allIsarps.find((i) => i.isarp_code === selectedCode)
+			: null) ??
+		filtered[0] ??
+		null;
+
+	// When filter changes, reset selectedCode to first item in new list
+	useEffect(() => {
+		setSelectedCode(filtered[0]?.isarp_code ?? null);
+	}, [filterStatus, discipline]);
 
 	const handleReset = useCallback(
 		async (isarpCode: string, discipline: string) => {
@@ -742,6 +853,10 @@ export default function IOSAAudit({
 								: i,
 						),
 					);
+					// Keep selected ISARP in workspace — tab switches on navigate
+					if (patch.conformance_status !== undefined) {
+						setSelectedCode(record.isarp_code);
+					}
 				}
 			} catch (e) {
 				console.error(e);
@@ -750,6 +865,24 @@ export default function IOSAAudit({
 			}
 		},
 		[token, activeCycle],
+	);
+
+	// Navigate to an ISARP — switches tab to the bucket it now belongs to
+	const navigateTo = useCallback(
+		(code: string) => {
+			const isarp = allIsarps.find((i) => i.isarp_code === code);
+			if (!isarp) return;
+			const cat = conformanceCategory(
+				isarp.record?.conformance_status ?? null,
+			);
+			if (cat === "finding" || cat === "observation")
+				setFilterStatus("nonconformity");
+			else if (cat === "conformity" || cat === "na")
+				setFilterStatus("done");
+			else setFilterStatus("pending");
+			setSelectedCode(code);
+		},
+		[allIsarps],
 	);
 
 	// Stats
@@ -856,7 +989,6 @@ export default function IOSAAudit({
 							value={searchQuery}
 							onChange={(e) => {
 								setSearchQuery(e.target.value);
-								setSelectedIdx(0);
 							}}
 						/>
 						<div className={styles.filterRow}>
@@ -894,7 +1026,6 @@ export default function IOSAAudit({
 										}
 										onClick={() => {
 											setFilterStatus(f.id as any);
-											setSelectedIdx(0);
 										}}
 									>
 										{f.label}
@@ -972,8 +1103,11 @@ export default function IOSAAudit({
 								<AuditListItem
 									key={isarp.isarp_code}
 									isarp={isarp}
-									selected={idx === selectedIdx}
-									onClick={() => setSelectedIdx(idx)}
+									selected={
+										isarp.isarp_code ===
+										selected?.isarp_code
+									}
+									onClick={() => navigateTo(isarp.isarp_code)}
 								/>
 							))
 						)}
@@ -988,15 +1122,49 @@ export default function IOSAAudit({
 						token={token ?? ""}
 						cycleId={activeCycle.id}
 						onSave={handleSave}
-						onNext={() =>
-							setSelectedIdx((i) =>
-								Math.min(i + 1, filtered.length - 1),
-							)
+						onNext={() => {
+							const cur = allIsarps.findIndex(
+								(i) => i.isarp_code === selected?.isarp_code,
+							);
+							// Find next pending ISARP after current position
+							const nextPending = allIsarps
+								.slice(cur + 1)
+								.find((i) => !i.record?.conformance_status);
+							if (nextPending) navigateTo(nextPending.isarp_code);
+							else {
+								// No more pending — just go to next in sequence regardless
+								const next = allIsarps[cur + 1];
+								if (next) navigateTo(next.isarp_code);
+							}
+						}}
+						onPrev={() => {
+							const cur = allIsarps.findIndex(
+								(i) => i.isarp_code === selected?.isarp_code,
+							);
+							// Find previous pending ISARP before current position
+							const prevPending = allIsarps
+								.slice(0, cur)
+								.reverse()
+								.find((i) => !i.record?.conformance_status);
+							if (prevPending) navigateTo(prevPending.isarp_code);
+							else {
+								const prev = allIsarps[cur - 1];
+								if (prev) navigateTo(prev.isarp_code);
+							}
+						}}
+						hasNext={
+							allIsarps.findIndex(
+								(i) => i.isarp_code === selected?.isarp_code,
+							) <
+							allIsarps.length - 1
 						}
-						onPrev={() => setSelectedIdx((i) => Math.max(i - 1, 0))}
-						hasNext={selectedIdx < filtered.length - 1}
-						hasPrev={selectedIdx > 0}
+						hasPrev={
+							allIsarps.findIndex(
+								(i) => i.isarp_code === selected?.isarp_code,
+							) > 0
+						}
 						saving={saving}
+						readOnly={!canEditDiscipline}
 					/>
 				) : (
 					<div className={styles.noSelection}>

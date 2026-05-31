@@ -50,7 +50,12 @@ export default function IOSAPage() {
 	const renderIOSAContent = () => {
 		switch (activeIOSATab) {
 			case "dashboard":
-				return <IOSADashboard onCycleChange={setActiveCycle} />;
+				return (
+					<IOSADashboard
+						onCycleChange={setActiveCycle}
+						onImport={() => setShowImport(true)}
+					/>
+				);
 			case "auditprep":
 				return <IOSAAuditPrep activeCycle={activeCycle} />;
 			case "audit":
@@ -96,15 +101,6 @@ export default function IOSAPage() {
 						{t.label}
 					</button>
 				))}
-				<div className={styles.subtabbarRight}>
-					<button className={styles.exportBtn}>↓ Export</button>
-					<button
-						className={styles.importBtn}
-						onClick={() => setShowImport(true)}
-					>
-						↑ Import ISARPs
-					</button>
-				</div>
 			</div>
 
 			{/* ── Content ── */}

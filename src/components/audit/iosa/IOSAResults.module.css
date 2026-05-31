@@ -1,0 +1,452 @@
+/* src/components/audit/iosa/IOSAResults.module.css */
+
+.results {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	padding: 0.75rem;
+	gap: 0.625rem;
+	min-height: 0;
+}
+
+.empty {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 0.75rem;
+	color: #a0aec0;
+}
+.emptyIcon {
+	font-size: 2rem;
+}
+.loadingWrap {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.spinner {
+	width: 26px;
+	height: 26px;
+	border: 2px solid rgba(74, 158, 255, 0.2);
+	border-top-color: #4a9eff;
+	border-radius: 50%;
+	animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* ── Header ── */
+.header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	flex-shrink: 0;
+}
+.headerLeft {
+	display: flex;
+	flex-direction: column;
+	gap: 0.3rem;
+}
+.cycleName {
+	font-size: 1.125rem;
+	font-weight: 700;
+	color: #e8e9ed;
+}
+.headerMeta {
+	display: flex;
+	gap: 0.375rem;
+	align-items: center;
+}
+.badge {
+	font-size: 0.6875rem;
+	padding: 2px 8px;
+	border-radius: 20px;
+	font-weight: 500;
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	color: #a0aec0;
+}
+.badgeActive {
+	background: rgba(72, 187, 120, 0.1);
+	border-color: rgba(72, 187, 120, 0.3);
+	color: #48bb78;
+}
+
+.exportBtn {
+	padding: 6px 16px;
+	border-radius: 20px;
+	font-size: 0.875rem;
+	font-weight: 600;
+	cursor: pointer;
+	font-family: inherit;
+	white-space: nowrap;
+	flex-shrink: 0;
+	background: rgba(72, 187, 120, 0.1);
+	border: 1px solid rgba(72, 187, 120, 0.35);
+	color: #48bb78;
+	transition: all 0.15s;
+}
+.exportBtn:hover:not(:disabled) {
+	background: rgba(72, 187, 120, 0.2);
+	border-color: rgba(72, 187, 120, 0.6);
+}
+.exportBtn:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+/* ── Summary strip ── */
+.summaryStrip {
+	display: flex;
+	align-items: center;
+	gap: 0;
+	flex-shrink: 0;
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 10px;
+	overflow: hidden;
+	padding: 0;
+}
+.stripBlock {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 0.625rem 0.875rem;
+	gap: 0.15rem;
+	min-width: 0;
+}
+.stripDivider {
+	width: 1px;
+	background: rgba(255, 255, 255, 0.08);
+	align-self: stretch;
+	flex-shrink: 0;
+}
+.stripVal {
+	font-size: 1.375rem;
+	font-weight: 700;
+	color: #e8e9ed;
+	line-height: 1;
+}
+.stripLbl {
+	font-size: 0.5625rem;
+	color: #a0aec0;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	white-space: nowrap;
+}
+.stripProgress {
+	width: 80px;
+	height: 4px;
+	border-radius: 2px;
+	background: rgba(255, 255, 255, 0.08);
+	overflow: hidden;
+}
+.stripProgressFill {
+	height: 100%;
+	border-radius: 2px;
+	background: #4a9eff;
+	transition: width 0.5s ease;
+}
+.stripPct {
+	font-size: 0.6875rem;
+	color: #4a9eff;
+	font-weight: 600;
+}
+
+/* ── Discipline list ── */
+.discList {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+}
+
+/* ── Discipline row ── */
+.discRow {
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid rgba(255, 255, 255, 0.07);
+	border-radius: 10px;
+	overflow: hidden;
+	transition: border-color 0.15s;
+}
+.discRow:hover {
+	border-color: rgba(255, 255, 255, 0.12);
+}
+.discRowNC {
+	border-color: rgba(252, 129, 129, 0.15);
+	background: rgba(252, 129, 129, 0.02);
+}
+.discRowNC:hover {
+	border-color: rgba(252, 129, 129, 0.28);
+}
+
+.discMain {
+	display: grid;
+	grid-template-columns: 48px 1fr auto auto;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.625rem 0.875rem;
+}
+.discCode {
+	font-size: 1rem;
+	font-weight: 800;
+	color: #4a9eff;
+}
+.discTrackWrap {
+	min-width: 0;
+}
+.discTrack {
+	height: 4px;
+	background: rgba(255, 255, 255, 0.08);
+	border-radius: 2px;
+	overflow: hidden;
+}
+.discFill {
+	height: 100%;
+	border-radius: 2px;
+	background: #4a9eff;
+	transition: width 0.5s ease;
+}
+.discPills {
+	display: flex;
+	gap: 0.3rem;
+	flex-shrink: 0;
+}
+.discPct {
+	font-size: 0.8125rem;
+	font-weight: 600;
+	flex-shrink: 0;
+	min-width: 36px;
+	text-align: right;
+}
+
+/* pills */
+.pill {
+	font-size: 0.6875rem;
+	font-weight: 700;
+	padding: 2px 7px;
+	border-radius: 10px;
+	white-space: nowrap;
+}
+.pillG {
+	background: rgba(72, 187, 120, 0.12);
+	border: 1px solid rgba(72, 187, 120, 0.25);
+	color: #48bb78;
+}
+.pillR {
+	background: rgba(252, 129, 129, 0.12);
+	border: 1px solid rgba(252, 129, 129, 0.25);
+	color: #fc8181;
+}
+.pillA {
+	background: rgba(246, 173, 85, 0.12);
+	border: 1px solid rgba(246, 173, 85, 0.25);
+	color: #f6ad55;
+}
+.pillX {
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	color: rgba(160, 174, 192, 0.5);
+}
+
+/* ── Inline NCs ── */
+.discNCs {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	border-top: 1px solid rgba(252, 129, 129, 0.12);
+	background: rgba(255, 255, 255, 0.01);
+	padding: 0.375rem 0.5rem 0.5rem;
+}
+
+.ncRow {
+	border-radius: 7px;
+	overflow: hidden;
+}
+.ncFinding {
+	border-left: 3px solid rgba(252, 129, 129, 0.5);
+	background: rgba(252, 129, 129, 0.04);
+	margin-bottom: 3px;
+}
+.ncObs {
+	border-left: 3px solid rgba(246, 173, 85, 0.5);
+	background: rgba(246, 173, 85, 0.04);
+	margin-bottom: 3px;
+}
+
+.ncRowTop {
+	display: flex;
+	align-items: baseline;
+	gap: 0.5rem;
+	padding: 0.4rem 0.625rem;
+	cursor: pointer;
+	flex-wrap: wrap;
+}
+.ncRowTop:hover {
+	background: rgba(255, 255, 255, 0.03);
+}
+
+.ncIdx {
+	font-size: 0.6875rem;
+	font-weight: 800;
+	color: rgba(160, 174, 192, 0.5);
+	flex-shrink: 0;
+	min-width: 1.5em;
+}
+.ncCode {
+	font-size: 0.9375rem;
+	font-weight: 700;
+	color: #e8e9ed;
+	flex-shrink: 0;
+}
+
+.ncStatusPill {
+	font-size: 0.6875rem;
+	font-weight: 600;
+	padding: 1px 7px;
+	border-radius: 10px;
+	border: 1px solid;
+	flex-shrink: 0;
+	white-space: nowrap;
+}
+.ncStatusPillF {
+	color: #fc8181;
+	border-color: rgba(252, 129, 129, 0.3);
+	background: rgba(252, 129, 129, 0.1);
+}
+.ncStatusPillO {
+	color: #f6ad55;
+	border-color: rgba(246, 173, 85, 0.3);
+	background: rgba(246, 173, 85, 0.1);
+}
+
+.ncPreview {
+	font-size: 0.8125rem;
+	color: #8899a6;
+	flex: 1;
+	min-width: 0;
+	line-height: 1.4;
+}
+.ncChevron {
+	font-size: 0.875rem;
+	color: rgba(160, 174, 192, 0.5);
+	flex-shrink: 0;
+	display: inline-block;
+	transition: transform 0.2s;
+}
+
+.ncBody {
+	padding: 0.25rem 0.625rem 0.625rem 2.25rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+.ncField {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+}
+.ncFL {
+	font-size: 0.625rem;
+	font-weight: 700;
+	color: #a0aec0;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+.ncFV {
+	font-size: 0.875rem;
+	color: #e8e9ed;
+	line-height: 1.6;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+	.stripProgress {
+		width: 60px;
+	}
+}
+
+@media (max-width: 680px) {
+	.results {
+		padding: 0.5rem;
+		gap: 0.5rem;
+	}
+
+	.summaryStrip {
+		flex-wrap: wrap;
+		border-radius: 8px;
+	}
+	.stripBlock {
+		padding: 0.5rem 0.625rem;
+		flex: 1;
+		min-width: 70px;
+	}
+	.stripDivider {
+		display: none;
+	}
+	/* Manually add bottom border between rows */
+	.stripBlock:nth-child(-n + 3) {
+		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+	}
+	.stripProgress {
+		width: 100%;
+	}
+	.stripVal {
+		font-size: 1.125rem;
+	}
+
+	.discMain {
+		grid-template-columns: 40px 1fr auto;
+		gap: 0.5rem;
+		padding: 0.5rem 0.625rem;
+	}
+	.discPct {
+		display: none;
+	}
+	.discPills {
+		gap: 0.2rem;
+	}
+	.pill {
+		font-size: 0.625rem;
+		padding: 2px 5px;
+	}
+
+	.ncRowTop {
+		gap: 0.375rem;
+	}
+	.ncCode {
+		font-size: 0.875rem;
+	}
+	.ncBody {
+		padding-left: 1.75rem;
+	}
+}
+
+@media (max-width: 480px) {
+	.header {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.5rem;
+	}
+	.exportBtn {
+		width: 100%;
+		text-align: center;
+	}
+	.discMain {
+		grid-template-columns: 38px 1fr auto;
+	}
+	.ncStatusPill {
+		display: none;
+	}
+}

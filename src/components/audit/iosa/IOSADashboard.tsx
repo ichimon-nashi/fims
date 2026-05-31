@@ -625,8 +625,10 @@ function CycleSelector({
 // ── Main Dashboard ────────────────────────────────────────────
 export default function IOSADashboard({
 	onCycleChange,
+	onImport,
 }: {
 	onCycleChange?: (cycle: AuditCycle | null) => void;
+	onImport?: () => void;
 }) {
 	const { token, user } = useAuth();
 	const [allCycles, setAllCycles] = useState<AuditCycle[]>([]);
@@ -845,6 +847,14 @@ export default function IOSADashboard({
 
 	return (
 		<div className={styles.dashboard}>
+			{/* ── Action buttons ── */}
+			<div className={styles.dashActions}>
+				<button className={styles.exportBtn}>↓ Export</button>
+				<button className={styles.importBtn} onClick={onImport}>
+					↑ Import ISARPs
+				</button>
+			</div>
+
 			{/* ── Cycle bar ── */}
 			{activeCycle && (
 				<CycleSelector

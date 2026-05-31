@@ -745,6 +745,7 @@ function Workspace({
 	hasNext,
 	hasPrev,
 	saving,
+	readOnly,
 }: {
 	isarp: ISARPWithRecord;
 	record: AuditRecord | null;
@@ -759,6 +760,7 @@ function Workspace({
 	hasNext: boolean;
 	hasPrev: boolean;
 	saving: boolean;
+	readOnly: boolean;
 }) {
 	const [docRefs, setDocRefs] = useState(record?.doc_references ?? "");
 	const [flagged, setFlagged] = useState(record?.prep_flagged ?? false);
@@ -967,6 +969,11 @@ function Workspace({
 				<div className={styles.fieldGroup}>
 					<label className={styles.fieldLabel}>
 						Documentation references
+						{readOnly && (
+							<span className={styles.readOnlyBadge}>
+								👁 View only
+							</span>
+						)}
 					</label>
 					<textarea
 						className={styles.fieldTextarea}
@@ -974,6 +981,7 @@ function Workspace({
 						onChange={(e) => setDocRefs(e.target.value)}
 						placeholder="e.g. CCOM Rev042 Ch.0.5, CCDM -4.4-"
 						rows={3}
+						disabled={readOnly}
 					/>
 				</div>
 
@@ -999,10 +1007,17 @@ function Workspace({
 									>
 										<div
 											className={styles.aaTop}
-											onClick={() => toggleAA(aa.num)}
+											onClick={() =>
+												!readOnly && toggleAA(aa.num)
+											}
+											style={
+												readOnly
+													? { cursor: "default" }
+													: {}
+											}
 										>
 											<div
-												className={`${styles.aaCheckbox} ${resp.completed ? styles.aaCheckboxDone : ""}`}
+												className={`${styles.aaCheckbox} ${resp.completed ? styles.aaCheckboxDone : ""} ${readOnly ? styles.aaCheckboxReadOnly : ""}`}
 											>
 												{resp.completed && "✓"}
 											</div>
@@ -1031,6 +1046,7 @@ function Workspace({
 													onClick={(e) =>
 														e.stopPropagation()
 													}
+													disabled={readOnly}
 												/>
 											</div>
 										)}
@@ -1290,7 +1306,13 @@ export default function IOSAAuditPrep({
 }: {
 	activeCycle: ActiveCycle | null;
 }) {
-	const { token } = useAuth();
+	const { token, user } = useAuth();
+
+	// Discipline-level edit permission — raw DB shape: audit.iosa_edit_disciplines is string[]
+	const editDiscs: string[] | null =
+		(user?.app_permissions as any)?.audit?.iosa_edit_disciplines ?? null;
+	const canEditCurrentDisc = (disc: string) =>
+		!editDiscs || editDiscs.length === 0 || editDiscs.includes(disc);
 
 	// Discipline + section navigation
 	const [activeDiscipline, setActiveDiscipline] = useState<string>("");
@@ -1517,6 +1539,7 @@ export default function IOSAAuditPrep({
 							hasNext={selectedIndex < filteredIsarps.length - 1}
 							hasPrev={selectedIndex > 0}
 							saving={saving}
+							readOnly={!canEditCurrentDisc(activeDiscipline)}
 						/>
 					) : (
 						<div className={styles.noSelection}>

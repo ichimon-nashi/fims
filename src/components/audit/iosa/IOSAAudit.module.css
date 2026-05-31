@@ -407,18 +407,36 @@
 	line-height: 1;
 }
 
-/* Conformance section */
+/* Conformance section — active zone */
 .conformanceSection {
 	display: flex;
 	flex-direction: column;
-	gap: 0.5rem;
+	gap: 0.625rem;
+	background: rgba(74, 158, 255, 0.09);
+	border: 1px solid rgba(74, 158, 255, 0.3);
+	border-top: 3px solid #4a9eff;
+	border-radius: 10px;
+	padding: 0.875rem 1rem;
+	box-shadow: 0 0 0 1px rgba(74, 158, 255, 0.08) inset;
 }
 .conformanceSectionLabel {
-	font-size: 0.8125rem;
-	font-weight: 600;
-	color: #a0aec0;
+	font-size: 0.75rem;
+	font-weight: 700;
+	color: #4a9eff;
 	text-transform: uppercase;
-	letter-spacing: 0.05em;
+	letter-spacing: 0.07em;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+.conformanceSectionLabel::before {
+	content: "";
+	display: inline-block;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: #4a9eff;
+	animation: pulse 2s ease-in-out infinite;
 }
 .conformanceRow1 {
 	display: flex;
@@ -472,15 +490,23 @@
 	font-weight: 600;
 }
 .conformanceBtnSm {
-	padding: 0.45rem 0.625rem;
+	padding: 0.5rem 0.75rem;
 	font-size: 0.8125rem;
 	gap: 0.375rem;
+	align-items: center;
+	white-space: nowrap;
 }
 .conformanceBtnDot {
 	width: 7px;
 	height: 7px;
 	border-radius: 50%;
 	flex-shrink: 0;
+}
+.conformanceBtnMain {
+	font-size: 0.8125rem;
+	font-weight: 600;
+	color: #a0aec0;
+	line-height: 1.3;
 }
 
 /* Finding / Observation fields */
@@ -739,4 +765,234 @@
 .resetBtn:hover {
 	background: rgba(252, 129, 129, 0.15);
 	border-color: rgba(252, 129, 129, 0.45);
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+	.splitPanel {
+		grid-template-columns: 190px 1fr;
+	}
+	.conformanceSubGrid {
+		grid-template-columns: 1fr;
+	}
+}
+
+@media (max-width: 680px) {
+	/* Full-height page stays locked */
+	.auditPage {
+		padding: 0.5rem;
+		gap: 0.375rem;
+	}
+
+	/* Stats strip — single compact row, no wrapping */
+	.statsStrip {
+		padding: 0.375rem 0.625rem;
+		gap: 0;
+		flex-wrap: nowrap;
+		overflow-x: auto;
+	}
+	.statItem {
+		padding: 0 0.5rem;
+		flex-shrink: 0;
+	}
+	.statVal {
+		font-size: 1rem;
+	}
+	.statDivider {
+		flex-shrink: 0;
+	}
+
+	/* Discipline pills — horizontal scroll, no wrap */
+	.discRow {
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		padding-bottom: 2px;
+	}
+	.discPill {
+		flex-shrink: 0;
+		font-size: 0.8125rem;
+		padding: 4px 10px;
+	}
+
+	/* Split: list is a compact horizontal strip at top, workspace fills rest */
+	.splitPanel {
+		grid-template-columns: 1fr;
+		grid-template-rows: 110px 1fr;
+		gap: 0.375rem;
+		overflow: hidden;
+	}
+
+	/* List panel — horizontal scrollable chip strip */
+	.listPanel {
+		height: 110px;
+		min-height: 0;
+		border-radius: 8px;
+		flex-shrink: 0;
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+	}
+
+	/* List header: search + filter tabs in one compact row */
+	.listHeader {
+		padding: 0.3rem 0.5rem;
+		gap: 0.3rem;
+		flex-shrink: 0;
+	}
+	.filterRow {
+		flex-direction: row;
+		gap: 3px;
+	}
+	.filterTabs {
+		flex-direction: row;
+		gap: 3px;
+		flex: 1;
+	}
+	.filterBtn {
+		font-size: 0.5625rem;
+		padding: 2px 5px;
+		white-space: nowrap;
+	}
+	.resetBtn {
+		display: none;
+	} /* hide reset on mobile to save space */
+
+	/* Search hidden on mobile — just use filter tabs */
+	.searchInput {
+		display: none;
+	}
+
+	/* List body — horizontal chip scroll */
+	.listBody {
+		flex: 1;
+		overflow-x: auto;
+		overflow-y: hidden;
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 0.375rem 0.25rem;
+		gap: 4px;
+		min-height: 0;
+		scrollbar-width: thin;
+		scrollbar-color: rgba(74, 158, 255, 0.3) transparent;
+	}
+
+	.listRow {
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 4px;
+		padding: 5px 8px;
+		min-width: 64px;
+		max-width: 64px;
+		height: 46px;
+		border-bottom: none;
+		border-right: none;
+		border-radius: 7px;
+		border: 1px solid rgba(255, 255, 255, 0.07);
+		text-align: center;
+		flex-shrink: 0;
+		background: rgba(255, 255, 255, 0.03);
+	}
+	.listRow:hover {
+		background: rgba(255, 255, 255, 0.07);
+	}
+	.listRowActive {
+		border-left: 1px solid rgba(74, 158, 255, 0.5);
+		border-color: rgba(74, 158, 255, 0.4);
+		background: rgba(74, 158, 255, 0.1);
+		border-bottom: none;
+	}
+	.listRowCode {
+		font-size: 0.625rem;
+		font-weight: 600;
+		line-height: 1.2;
+		word-break: break-all;
+	}
+	.listRowBadges {
+		margin-left: 0;
+		gap: 2px;
+	}
+	.listRPBadge {
+		font-size: 0.5rem;
+		padding: 0 3px;
+	}
+	.listLinkBadge,
+	.listFlagBadge {
+		font-size: 0.55rem;
+	}
+
+	/* Status dot on chips — centered above code */
+	.statusDot {
+		width: 6px;
+		height: 6px;
+		margin: 0 auto;
+	}
+
+	/* Workspace fills all remaining height */
+	.workspace {
+		min-height: 0;
+	}
+	.wsBody {
+		padding: 0.625rem 0.75rem;
+	}
+	.wsCode {
+		font-size: 1rem;
+	}
+	.wsHeader {
+		padding: 0.5rem 0.75rem;
+	}
+	.wsFooter {
+		padding: 0.375rem 0.75rem;
+	}
+
+	/* Conformance — 1 per row on mobile */
+	.conformanceSubGrid {
+		grid-template-columns: 1fr;
+	}
+	.conformanceRow1 {
+		flex-direction: row;
+	} /* keep conformity + N/A side by side */
+}
+
+@media (max-width: 480px) {
+	.splitPanel {
+		grid-template-rows: 100px 1fr;
+	}
+	.listPanel {
+		height: 100px;
+	}
+	.listRow {
+		min-width: 58px;
+		max-width: 58px;
+		height: 42px;
+	}
+	.listRowCode {
+		font-size: 0.5625rem;
+	}
+}
+
+/* Read-only badge */
+.readOnlyBadge {
+	font-size: 0.75rem;
+	font-weight: 600;
+	padding: 3px 10px;
+	border-radius: 20px;
+	border: 1px solid rgba(160, 174, 192, 0.3);
+	background: rgba(160, 174, 192, 0.08);
+	color: #a0aec0;
+}
+
+/* Disabled conformance buttons */
+.conformanceBtn:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+
+/* Disabled textareas */
+.fieldTextarea:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+	background: rgba(255, 255, 255, 0.02);
 }

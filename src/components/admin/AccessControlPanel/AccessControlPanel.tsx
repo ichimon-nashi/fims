@@ -5,6 +5,16 @@ import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
 import {
+	FaCalendarAlt,
+	FaClipboardList,
+	FaUserShield,
+	FaUtensils,
+	FaRunning,
+} from "react-icons/fa";
+import { FaBookSkull } from "react-icons/fa6";
+import { IoBookSharp } from "react-icons/io5";
+import { GiDistraction } from "react-icons/gi";
+import {
 	getAllAuthLevels,
 	getAuthLevelConfig,
 	getAuthLevelGifPath,
@@ -28,10 +38,6 @@ interface MDAfaatPermissions {
 	view_only: boolean; // Can they edit scenarios, or just view?
 }
 
-interface AuditPermissions {
-	view_only: boolean;
-}
-
 interface AppPermissions {
 	roster: boolean;
 	tasks: boolean;
@@ -45,6 +51,8 @@ interface AppPermissions {
 	ads: boolean;
 	ccom_review: boolean;
 	audit: boolean;
+	audit_tabs?: { routine: boolean; first_level: boolean; iosa: boolean; };
+	audit_iosa_disciplines?: { CAB: boolean; FLT: boolean; DSP: boolean; MNT: boolean; SEC: boolean; CGO: boolean; ORG: boolean; GRH: boolean; };
 }
 
 interface User {
@@ -133,10 +141,21 @@ const AccessControlPanel = () => {
 			ads: dbPermissions.ads?.access ?? false,
 			ccom_review: dbPermissions.ccom_review?.access ?? false,
 			audit: dbPermissions.audit?.access ?? false,
-				audit_edit: {
-					view_only: dbPermissions.audit?.view_only ?? true,
-				},
-			audit: dbPermissions.audit?.access ?? false,
+			audit_tabs: {
+				routine:     (dbPermissions.audit?.tabs ?? ["routine","first_level","iosa"]).includes("routine"),
+				first_level: (dbPermissions.audit?.tabs ?? ["routine","first_level","iosa"]).includes("first_level"),
+				iosa:        (dbPermissions.audit?.tabs ?? ["routine","first_level","iosa"]).includes("iosa"),
+			},
+			audit_iosa_disciplines: {
+				CAB: (dbPermissions.audit?.iosa_edit_disciplines ?? ["CAB","FLT","DSP","MNT","SEC","CGO","ORG","GRH"]).includes("CAB"),
+				FLT: (dbPermissions.audit?.iosa_edit_disciplines ?? ["CAB","FLT","DSP","MNT","SEC","CGO","ORG","GRH"]).includes("FLT"),
+				DSP: (dbPermissions.audit?.iosa_edit_disciplines ?? ["CAB","FLT","DSP","MNT","SEC","CGO","ORG","GRH"]).includes("DSP"),
+				MNT: (dbPermissions.audit?.iosa_edit_disciplines ?? ["CAB","FLT","DSP","MNT","SEC","CGO","ORG","GRH"]).includes("MNT"),
+				SEC: (dbPermissions.audit?.iosa_edit_disciplines ?? ["CAB","FLT","DSP","MNT","SEC","CGO","ORG","GRH"]).includes("SEC"),
+				CGO: (dbPermissions.audit?.iosa_edit_disciplines ?? ["CAB","FLT","DSP","MNT","SEC","CGO","ORG","GRH"]).includes("CGO"),
+				ORG: (dbPermissions.audit?.iosa_edit_disciplines ?? ["CAB","FLT","DSP","MNT","SEC","CGO","ORG","GRH"]).includes("ORG"),
+				GRH: (dbPermissions.audit?.iosa_edit_disciplines ?? ["CAB","FLT","DSP","MNT","SEC","CGO","ORG","GRH"]).includes("GRH"),
+			},
 		};
 	};
 
@@ -264,7 +283,8 @@ const AccessControlPanel = () => {
 			ads: true,
 			ccom_review: true,
 			audit: false,
-			audit_edit: { view_only: true },
+			audit_tabs: { routine: true, first_level: true, iosa: true },
+			audit_iosa_disciplines: { CAB:true, FLT:true, DSP:true, MNT:true, SEC:true, CGO:true, ORG:true, GRH:true },
 		};
 	};
 
@@ -387,24 +407,13 @@ const AccessControlPanel = () => {
 			},
 			audit: {
 				access: permissions.audit ?? false,
+				tabs: Object.entries(permissions.audit_tabs ?? { routine: true, first_level: true, iosa: true })
+					.filter(([, v]) => v).map(([k]) => k),
+				iosa_edit_disciplines: Object.entries(permissions.audit_iosa_disciplines ?? { CAB:true,FLT:true,DSP:true,MNT:true,SEC:true,CGO:true,ORG:true,GRH:true })
+					.filter(([, v]) => v).map(([k]) => k),
 			},
 		};
 	};
-	const handleAuditEditToggle = () => {
-		if (!selectedUser) return;
-		const currentEdit = selectedUser.app_permissions?.audit_edit || { view_only: true };
-		setSelectedUser({
-			...selectedUser,
-			app_permissions: {
-				...selectedUser.app_permissions,
-				audit_edit: {
-					view_only: !currentEdit.view_only,
-				},
-			},
-		});
-	};
-
-
 
 	// Handle save permissions
 	const handleSavePermissions = async () => {
@@ -969,7 +978,11 @@ const AccessControlPanel = () => {
 																	styles.appName
 																}
 															>
-																<Image src="/images/roster.png" alt="roster" width={16} height={16} style={{ objectFit: 'contain', verticalAlign: 'middle' }} />{" "}
+																<FaCalendarAlt
+																	style={{
+																		color: "#3b82f6",
+																	}}
+																/>{" "}
 																教師班表
 																(Roster)
 															</span>
@@ -1013,7 +1026,11 @@ const AccessControlPanel = () => {
 																	styles.appName
 																}
 															>
-																<Image src="/images/task.png" alt="tasks" width={16} height={16} style={{ objectFit: 'contain', verticalAlign: 'middle' }} />{" "}
+																<FaClipboardList
+																	style={{
+																		color: "#10b981",
+																	}}
+																/>{" "}
 																任務管理 (Task
 																Manger)
 															</span>
@@ -1057,7 +1074,11 @@ const AccessControlPanel = () => {
 																	styles.appName
 																}
 															>
-																<Image src="/images/sms.png" alt="sms" width={16} height={16} style={{ objectFit: 'contain', verticalAlign: 'middle' }} />{" "}
+																<FaUserShield
+																	style={{
+																		color: "#ef4444",
+																	}}
+																/>{" "}
 																SMS (Safety
 																Management
 																System)
@@ -1147,7 +1168,11 @@ const AccessControlPanel = () => {
 																	styles.appName
 																}
 															>
-																<Image src="/images/oraltest.png" alt="oral test" width={16} height={16} style={{ objectFit: 'contain', verticalAlign: 'middle' }} />{" "}
+																<FaBookSkull
+																	style={{
+																		color: "#f59e0b",
+																	}}
+																/>{" "}
 																翻書口試 (Oral
 																Test)
 															</span>
@@ -1391,7 +1416,11 @@ const AccessControlPanel = () => {
 																	styles.appName
 																}
 															>
-																<Image src="/images/bctraining.png" alt="bc training" width={16} height={16} style={{ objectFit: 'contain', verticalAlign: 'middle' }} />{" "}
+																<FaUtensils
+																	style={{
+																		color: "#8b5cf6",
+																	}}
+																/>{" "}
 																B/C訓練
 																(商務艙服務訓練)
 															</span>
@@ -1435,7 +1464,11 @@ const AccessControlPanel = () => {
 																	styles.appName
 																}
 															>
-																<Image src="/images/mdafaat.png" alt="mdafaat" width={16} height={16} style={{ objectFit: 'contain', verticalAlign: 'middle' }} />{" "}
+																<FaRunning
+																	style={{
+																		color: "#ec4899",
+																	}}
+																/>{" "}
 																情境演練
 																(緊急撤離演練)
 															</span>
@@ -1525,7 +1558,11 @@ const AccessControlPanel = () => {
 																	styles.appName
 																}
 															>
-																<Image src="/images/ads.png" alt="ads" width={16} height={16} style={{ objectFit: 'contain', verticalAlign: 'middle' }} />{" "}
+																<GiDistraction
+																	style={{
+																		color: "#14b8a6",
+																	}}
+																/>{" "}
 																AdS
 																(注意力測試器)
 															</span>
@@ -1569,107 +1606,125 @@ const AccessControlPanel = () => {
 																	styles.appName
 																}
 															>
-																<Image src="/images/ccomreview.png" alt="ccom review" width={16} height={16} style={{ objectFit: 'contain', verticalAlign: 'middle' }} />{" "}
+																<IoBookSharp
+																	style={{
+																		color: "#fb923c",
+																	}}
+																/>{" "}
 																CCOM抽問
 																(目錄抽問)
 															</span>
 														</label>
 													</div>
 												</div>
-												{/* Audit */}
-												<div
-													className={
-														styles.appPermissionCard
-													}
-												>
-													<div
-														className={
-															styles.appPermissionHeader
-														}
-													>
-														<label
-															className={
-																styles.appPermissionLabel
-															}
-														>
-															<input
-																type="checkbox"
-																className={
-																	styles.appCheckbox
-																}
-																checked={
-																	selectedUser
-																		.app_permissions
-																		?.audit ??
-																	false
-																}
-																onChange={() =>
-																	handlePermissionToggle(
-																		"audit",
-																	)
-																}
-															/>
-															<span
-																className={
-																	styles.appName
-																}
-															>
-																<Image src="/images/audit.png" alt="audit" width={16} height={16} style={{ objectFit: 'contain', verticalAlign: 'middle' }} />{" "}
-																查核管理
-																(Audit)
-															</span>
-														</label>
-													</div>
-													{/* Audit Edit Sub-Permission */}
-													<div
-														className={
-															styles.appSubPermissions
-														}
-													>
-														<div
-															className={
-																styles.subPermissionItem
-															}
-														>
-															<label
-																className={
-																	styles.subPermissionLabel
-																}
-															>
-																<input
-																	type="checkbox"
-																	className={
-																		styles.subCheckbox
-																	}
-																	checked={
-																		!(
-																			selectedUser
-																				.app_permissions
-																				?.audit_edit
-																				?.view_only ??
-																			true
-																		)
-																	}
-																	onChange={
-																		handleAuditEditToggle
-																	}
-																	disabled={
-																		!selectedUser
-																			.app_permissions
-																			?.audit
-																	}
-																/>
-																<span>
-																	Can Edit
-																	(可編輯)
-																</span>
-															</label>
-														</div>
-													</div>
-												</div>
-
 											</div>
 										</div>
+
+										{/* Audit */}
+										<div
+											className={styles.appPermissionRow}
+										>
+											<div
+												className={styles.appPermissionCard}
+											>
+												<div
+													className={styles.appPermissionHeader}
+												>
+													<label
+														className={styles.appPermissionLabel}
+													>
+														<input
+															type="checkbox"
+															className={styles.appCheckbox}
+															checked={selectedUser.app_permissions?.audit ?? false}
+															onChange={() => handlePermissionToggle("audit")}
+														/>
+														<span className={styles.appName}>
+															<Image
+																src="/images/audit.png"
+																alt="audit"
+																width={16}
+																height={16}
+																style={{ objectFit: "contain", verticalAlign: "middle" }}
+															/>{" "}
+															查核管理 (Audit)
+														</span>
+													</label>
+												</div>
+
+												{/* Sub-permissions: visible when audit is enabled */}
+												{selectedUser.app_permissions?.audit && (
+													<div className={styles.auditSubPerms}>
+
+														{/* Tab access */}
+														<div className={styles.auditSubGroup}>
+															<div className={styles.auditSubGroupLabel}>Tab Access</div>
+															<div className={styles.auditSubGroupItems}>
+																{(["routine", "first_level", "iosa"] as const).map(tab => (
+																	<label key={tab} className={styles.auditSubLabel}>
+																		<input
+																			type="checkbox"
+																			className={styles.appCheckbox}
+																			checked={selectedUser.app_permissions?.audit_tabs?.[tab] ?? true}
+																			onChange={() => setSelectedUser(prev => {
+																				if (!prev?.app_permissions) return prev;
+																				return {
+																					...prev,
+																					app_permissions: {
+																						...prev.app_permissions,
+																						audit_tabs: {
+																							...(prev.app_permissions.audit_tabs ?? { routine: true, first_level: true, iosa: true }),
+																							[tab]: !(prev.app_permissions.audit_tabs?.[tab] ?? true),
+																						},
+																					},
+																				};
+																			})}
+																		/>
+																		<span className={styles.appName}>
+																			{tab === "routine" ? "例行性 (Routine)" : tab === "first_level" ? "一級查核 (First Level)" : "IOSA"}
+																		</span>
+																	</label>
+																))}
+															</div>
+														</div>
+
+														{/* IOSA discipline edit access — only when IOSA tab is enabled */}
+														{(selectedUser.app_permissions?.audit_tabs?.iosa ?? true) && (
+															<div className={styles.auditSubGroup}>
+																<div className={styles.auditSubGroupLabel}>IOSA Edit Access (disciplines)</div>
+																<div className={styles.disciplineGrid}>
+																	{(["CAB","FLT","DSP","MNT","SEC","CGO","ORG","GRH"] as const).map(disc => (
+																		<label key={disc} className={styles.auditSubLabel}>
+																			<input
+																				type="checkbox"
+																				className={styles.appCheckbox}
+																				checked={selectedUser.app_permissions?.audit_iosa_disciplines?.[disc] ?? true}
+																				onChange={() => setSelectedUser(prev => {
+																					if (!prev?.app_permissions) return prev;
+																					const all = { CAB:true,FLT:true,DSP:true,MNT:true,SEC:true,CGO:true,ORG:true,GRH:true };
+																					return {
+																						...prev,
+																						app_permissions: {
+																							...prev.app_permissions,
+																							audit_iosa_disciplines: {
+																								...(prev.app_permissions.audit_iosa_disciplines ?? all),
+																								[disc]: !(prev.app_permissions.audit_iosa_disciplines?.[disc] ?? true),
+																							},
+																						},
+																					};
+																				})}
+																			/>
+																			<span className={styles.appName}>{disc}</span>
+																		</label>
+																	))}
+																</div>
+															</div>
+														)}
+													</div>
+												)}
+											</div>
+										</div>
+
 
 										{/* Save Button */}
 										<div

@@ -1076,3 +1076,56 @@
 	font-size: 0.875rem;
 	font-weight: 500;
 }
+/* ── Audit sub-permissions ── */
+.auditSubPerms {
+	margin-top: 0.625rem;
+	margin-left: 1.5rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	border-left: 2px solid rgba(74, 158, 255, 0.2);
+	padding-left: 0.875rem;
+}
+
+.auditSubGroup {
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+}
+
+.auditSubGroupLabel {
+	font-size: 0.6875rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: #a0aec0;
+}
+
+.auditSubGroupItems {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.auditSubLabel {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: 0.875rem;
+	color: #e8e9ed;
+	cursor: pointer;
+	padding: 2px 0;
+}
+.auditSubLabel input {
+	cursor: pointer;
+}
+.auditSubLabel:hover {
+	color: #fff;
+}
+
+.disciplineGrid {
+	display: grid;
+	grid-template-columns: repeat(4, auto);
+	gap: 0.25rem 1rem;
+	width: fit-content;
+}
