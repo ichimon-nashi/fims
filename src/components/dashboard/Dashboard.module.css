@@ -4,152 +4,18 @@
   min-height: 100vh;
   background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
   padding: 1rem;
-  overflow: hidden;
+  font-size: 16px;
 }
 
 .container {
-  /* max-width: 1400px; */
   max-width: 95vw;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  height: calc(100vh - 2rem);
+  gap: 1.25rem;
 }
 
-/* Welcome Section */
-.welcomeSection {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 1rem;
-  padding: 2rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.welcomeContent {
-  flex: 1;
-}
-
-.welcomeAvatar {
-  flex-shrink: 0;
-  width: 2rem;
-  height: 2rem;
-  margin-bottom: 4rem;
-  margin-right: 4rem;
-  padding: 0.25rem; /* Add padding to prevent extending past container */
-}
-
-.welcomeAvatar :global(.dashboardAvatar) {
-  width: 65px;
-  height: 65px;
-}
-
-.welcomeTitle {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #4a9eff;
-  margin: 0 0 0.5rem 0;
-  text-shadow: 0 2px 4px rgba(74, 158, 255, 0.3);
-}
-
-.welcomeSubtitle {
-  font-size: 1.1rem;
-  color: #a0aec0;
-  margin: 0;
-  white-space: pre-line;
-  line-height: 1.4;
-}
-
-.welcomeIcon {
-  font-size: 4rem;
-  opacity: 0.8;
-}
-
-/* Stats Grid */
-.statsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
-  flex-shrink: 0;
-}
-
-.statCard {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-  position: relative;
-}
-
-.statCard:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
-  border-color: rgba(74, 158, 255, 0.3);
-}
-
-.statIcon {
-  font-size: 2.5rem;
-  width: 60px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: linear-gradient(135deg, rgba(74, 158, 255, 0.2) 0%, rgba(53, 122, 189, 0.2) 100%);
-}
-
-.statContent {
-  flex: 1;
-}
-
-.statValue {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #e8e9ed;
-  display: flex;
-  align-items: baseline;
-  gap: 0.25rem;
-  min-height: 2.5rem;
-}
-
-.statUnit {
-  font-size: 1rem;
-  font-weight: 500;
-  color: #a0aec0;
-}
-
-.statTitle {
-  font-size: 0.875rem;
-  color: #4a9eff;
-  margin-top: 0.25rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-/* Loading states for stats cards */
-.statLoading {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  background: rgba(26, 31, 53, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: inherit;
-}
-
+/* ── Loading spinner ── */
 .loadingSpinner {
   width: 20px;
   height: 20px;
@@ -160,510 +26,559 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
+  0%   { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
 
-/* Main Grid */
-.mainGrid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 1.5rem;
-  flex: 1;
-  min-height: 0;
-  max-height: 400px;
-}
-
-/* Quick Actions */
-.quickActionsSection {
+/* ── Welcome Section ── */
+.welcomeSection {
   background: rgba(255, 255, 255, 0.05);
   border-radius: 1rem;
-  padding: 1.5rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  padding: 1.25rem 1.75rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
-  flex-direction: column;
-  min-height: 0;
-  max-height: 400px;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
 }
 
-.sectionTitle {
-  font-size: 1.25rem;
-  font-weight: 600;
+.welcomeContent { flex: 1; }
+
+.welcomeTitle {
+  font-size: 1.75rem;
+  font-weight: 700;
   color: #4a9eff;
-  margin: 0 0 1rem 0;
-  flex-shrink: 0;
-}
-
-.quickActionsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 1rem;
-  flex: 1;
-  align-content: start;
-  overflow: hidden; /* Prevent overflow */
-  padding-top: 0.25rem; /* Prevent hover border cutoff on top row */
-}
-
-.quickActionCard {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  border-radius: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  text-decoration: none;
-  color: inherit;
-  transition: all 0.2s;
-  background: rgba(255, 255, 255, 0.03);
-  height: fit-content;
-}
-
-.quickActionCard:hover {
-  border-color: #4a9eff;
-  background: rgba(74, 158, 255, 0.1);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(74, 158, 255, 0.2);
-}
-
-.quickActionIcon {
-  width: 48px;
-  height: 48px;
-  border-radius: 0.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  flex-shrink: 0;
-}
-
-.quickActionIcon svg {
-  width: 1.5rem;
-  height: 1.5rem;
-}
-
-.quickActionContent {
-  flex: 1;
-}
-
-.quickActionTitle {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #e8e9ed;
   margin: 0 0 0.25rem 0;
+  text-shadow: 0 2px 4px rgba(74, 158, 255, 0.3);
 }
 
-.quickActionDescription {
-  font-size: 0.875rem;
+.welcomeSubtitle {
+  font-size: 1rem;
   color: #a0aec0;
   margin: 0;
+  line-height: 1.4;
 }
 
-.quickActionArrow {
-  font-size: 1.25rem;
-  color: #a0aec0;
-  transition: transform 0.2s, color 0.2s;
-}
-
-.quickActionCard:hover .quickActionArrow {
-  transform: translateX(4px);
-  color: #4a9eff;
-}
-
-/* Weather Section */
-.weatherSection {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 1rem;
-  padding: 1.5rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.welcomeRight {
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  min-height: 0;
-  max-height: 400px;
-}
-
-.weatherHeader {
-  display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
+  gap: 1.5rem;
   flex-shrink: 0;
 }
 
-.weatherLoading {
+/* ── Weather inline ── */
+.weatherInline {
+  background: rgba(74, 158, 255, 0.08);
+  border: 1px solid rgba(74, 158, 255, 0.2);
+  border-radius: 0.625rem;
+  padding: 0.5rem 1rem;
   display: flex;
   align-items: center;
+  gap: 0.625rem;
 }
 
-.weatherLoading .loadingSpinner {
-  width: 16px;
-  height: 16px;
-  border-width: 1.5px;
-}
+.weatherInlineIcon { font-size: 1.625rem; line-height: 1; }
 
-.weatherCard {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding: 1rem;
-  background: linear-gradient(135deg, rgba(74, 158, 255, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
-  border-radius: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  flex: 1;
-  justify-content: space-between;
-}
-
-.weatherLocation {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9rem;
-  color: #a0aec0;
-  margin-bottom: 0.25rem;
-}
-
-.locationIcon {
-  font-size: 1rem;
-}
-
-.locationName {
-  font-weight: 500;
+.weatherInlineTemp {
+  font-size: 1.375rem;
+  font-weight: 600;
   color: #e8e9ed;
-}
-
-.weatherMain {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1.5rem;
-  margin: 0.5rem 0;
-}
-
-.weatherIconLarge {
-  font-size: 3.5rem;
   line-height: 1;
 }
 
-.weatherTemp {
+.weatherInlineDetail {
   display: flex;
-  align-items: baseline;
-  gap: 0.25rem;
+  flex-direction: column;
+  gap: 0.125rem;
 }
 
-.temperature {
-  font-size: 3rem;
+.weatherInlineDesc  { font-size: 0.9375rem; color: #a0aec0; }
+.weatherInlineLoc   { font-size: 0.9375rem; color: #4a9eff; }
+
+.weatherInlineLoading {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+}
+
+.weatherInlineLoading .loadingSpinner {
+  width: 14px;
+  height: 14px;
+  border-width: 1.5px;
+}
+
+.welcomeAvatar { flex-shrink: 0; padding: 0.25rem; }
+.welcomeAvatar :global(.dashboardAvatar) { width: 52px; height: 52px; }
+
+/* ── Main 2-column grid ──
+   align-items: stretch so both columns (leftCol and rightPanel)
+   are forced to the same height — the grid row height. ── */
+.mainGrid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+/* Left col: two panels stacked with a gap.
+   We use display:grid here (not flex) so we can give SMS a
+   min-height and oral-test flex:1 to fill remaining space. */
+.leftCol {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 1.25rem;
+  min-height: 0;
+}
+
+/* ── Shared panel base ── */
+.panel {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 0.875rem;
+  padding: 1.375rem 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* SMS panel: fixed minimum so it never collapses too short */
+.smsPanel {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 0.875rem;
+  padding: 1.375rem 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  min-height: 220px;
+}
+
+/* Oral test panel: fills remaining left col space */
+.oralPanel {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 0.875rem;
+  padding: 1.375rem 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Right col: stretches to match full left col height (grid row) */
+.rightPanel {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 0.875rem;
+  padding: 1.375rem 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Panel shared internals ── */
+.panelTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #4a9eff;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 1rem 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.panelBadge {
+  font-size: 0.8125rem;
+  padding: 0.15rem 0.625rem;
+  border-radius: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+}
+
+.badgeBlue  { background: rgba(74, 158, 255, 0.15); color: #4a9eff; }
+.badgeRed   { background: rgba(239, 68, 68, 0.15);  color: #fc8181; }
+.badgeGreen { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; }
+
+.panelFooter {
+  font-size: 0.875rem;
+  color: #4a5568;
+  text-align: center;
+  padding-top: 0.75rem;
+  margin-top: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: color 0.2s;
+  flex-shrink: 0;
+}
+
+.panelFooter:hover { color: #4a9eff; }
+
+/* ── SMS Risk List ── */
+.riskList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.riskItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.riskItemTop {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  width: 100%;
+}
+
+.riskDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 0.35rem;
+}
+
+.dotRed   { background: #ef4444; }
+.dotAmber { background: #f59e0b; }
+.dotGreen { background: #10b981; }
+
+.riskText {
+  flex: 1;
+  font-size: 1rem;
+  color: #e8e9ed;
+  line-height: 1.4;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.riskMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.375rem;
+}
+
+.riskChip {
+  font-size: 0.75rem;
+  color: #a0aec0;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.riskDue {
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  padding-top: 0.125rem;
+  flex-shrink: 0;
+}
+
+/* Chip color variants */
+.chipRR {
+  background: rgba(74, 158, 255, 0.12);
+  border-color: rgba(74, 158, 255, 0.25);
+  color: #7db8ff;
+}
+
+.chipRisk {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.25);
+  color: #fbbf5a;
+}
+
+.chipBarrier {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.25);
+  color: #4dd6a3;
+}
+
+.dueRed   { color: #fc8181; }
+.dueAmber { color: #fcd34d; }
+.dueGreen { color: #6ee7b7; }
+
+.smsFallbackLabel {
+  font-size: 0.875rem;
+  color: #4a5568;
+  padding-bottom: 0.5rem;
+  font-style: italic;
+  flex-shrink: 0;
+}
+
+.noData {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 0;
+  gap: 0.5rem;
+}
+
+.noDataIcon { font-size: 1.5rem; opacity: 0.2; }
+
+.noDataText {
+  font-size: 1rem;
+  color: #4a5568;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.smsLoading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 0;
+}
+
+/* ── Oral Test Panel ── */
+.oralTestWrap {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0.25rem 0;
+  flex: 1;
+}
+
+.donutWrap {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+}
+
+.donutWrap svg { transform: rotate(-90deg); }
+
+.donutCenter {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.donutPct {
+  font-size: 1.125rem;
   font-weight: 700;
   color: #e8e9ed;
   line-height: 1;
 }
 
-.tempUnit {
-  font-size: 1.25rem;
+.donutLabel {
+  font-size: 0.75rem;
   color: #a0aec0;
-  font-weight: 400;
+  margin-top: 0.125rem;
 }
 
-.weatherDescription {
-  text-align: center;
-  font-size: 1rem;
-  color: #e8e9ed;
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-}
-
-.weatherError {
-  color: #fc8181;
-  font-size: 0.875rem;
-  font-weight: normal;
-}
-
-.weatherDetails {
+.oralTestStats {
+  flex: 1;
   display: flex;
-  justify-content: space-around;
-  gap: 1rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.weatherDetail {
+.oralTestRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.oralTestLabel { font-size: 1rem; color: #a0aec0; }
+.oralTestValue { font-size: 1rem; font-weight: 600; }
+
+.colorBlue  { color: #4a9eff; }
+.colorRed   { color: #fc8181; }
+.colorMuted { color: #a0aec0; }
+
+.progressBar {
+  height: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  margin-top: 0.375rem;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 3px;
+  background: #4a9eff;
+  transition: width 0.6s ease;
+}
+
+.oralTestLoading {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
+  justify-content: center;
+}
+
+/* ── Quick Actions grid ──
+   Desktop: 2-col horizontal cards (icon left, label right)
+   Tablet (≤1024px, single col layout): 3-col to avoid dead space
+   Mobile (≤480px): 3-col icon-only ── */
+.quickActionsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.625rem;
+  flex: 1;
+  align-content: start;
+}
+
+.quickActionGridItem {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 1.125rem 1rem;
+  border-radius: 0.625rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.15s;
+  cursor: pointer;
+}
+
+.quickActionGridItem:hover {
+  border-color: rgba(74, 158, 255, 0.4);
+  background: rgba(74, 158, 255, 0.07);
+}
+
+.quickActionGridIcon {
+  width: 64px;
+  height: 64px;
+  border-radius: 0.625rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.quickActionGridLabel {
+  font-size: 1.0625rem;
   color: #e8e9ed;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 0.4rem 0.6rem;
-  border-radius: 0.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  line-height: 1.3;
+  font-weight: 500;
 }
 
-.detailIcon {
-  font-size: 0.9rem;
-  color: #4a9eff;
-}
-
-/* Responsive Design */
+/* ── Responsive ── */
 @media (max-width: 1024px) {
   .mainGrid {
     grid-template-columns: 1fr;
-    max-height: none;
-  }
-  
-  .quickActionsSection,
-  .weatherSection {
-    max-height: none;
-  }
-  
-  .welcomeSection {
-    flex-direction: row;
-    text-align: left;
-    gap: 1rem;
+    align-items: start;
   }
 
-  .welcomeAvatar {
-  margin-bottom: 2.5rem;
-  margin-right: 2.5rem;
-  }
-  
-  .welcomeIcon {
-    display: none;
+  /* Left col reverts to flex stack when single column */
+  .leftCol {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
   }
 
-  .container {
-    height: auto;
-    min-height: calc(100vh - 2rem);
+  .smsPanel, .oralPanel {
+    min-height: unset;
+    flex: unset;
+  }
+
+  .rightPanel { align-self: auto; }
+
+  /* Tablet: 3-col grid fills width without dead space */
+  .quickActionsGrid {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
 @media (max-width: 768px) {
-  .dashboard {
-    padding: 0.5rem;
-  }
-  
-  .container {
-    gap: 1rem;
-    height: auto;
-    min-height: calc(100vh - 1rem);
-  }
-  
-  .welcomeSection {
-    padding: 1rem;
-    flex-direction: row;
-    align-items: center;
-  }
+  .dashboard    { padding: 0.5rem; }
+  .container    { gap: 0.875rem; }
+  .welcomeSection { padding: 0.875rem 1rem; }
+  .welcomeTitle   { font-size: 1.375rem; }
+  .welcomeSubtitle { font-size: 0.9375rem; }
+  .weatherInlineDesc { display: none; }
 
-  .welcomeAvatar {
-    width: 50px;
-    height: 50px;
-    padding: 0.25rem; /* Keep padding on mobile */
-   margin-bottom: 1rem;
-  margin-right: 1rem;
-  }
+  .riskText { font-size: 0.9375rem; }
+  .riskChip { font-size: 0.6875rem; }
 
-  .welcomeAvatar :global(.dashboardAvatar) {
-    width: 50px;
-    height: 50px;
-  }
-  
-  .welcomeTitle {
-    font-size: 1.25rem;
-  }
-  
-  .welcomeSubtitle {
-    font-size: 0.9rem;
-    line-height: 1.3;
-  }
-  
-  .statsGrid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
-  }
-  
-  .statCard {
-    padding: 1rem;
-  }
-  
-  .statIcon {
-    width: 50px;
-    height: 50px;
-    font-size: 2rem;
-  }
-  
-  .statValue {
-    font-size: 1.5rem;
-  }
-  
-  .quickActionsGrid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
-  }
-
-  .quickActionsSection {
-    padding: 1rem;
-  }
-
-  .weatherSection {
-    padding: 1rem;
-  }
-
-  .weatherMain {
-    gap: 1rem;
-  }
-
-  .weatherIconLarge {
-    font-size: 2.5rem;
-  }
-
-  .temperature {
-    font-size: 2.25rem;
-  }
-
-  .tempUnit {
-    font-size: 1.125rem;
-  }
-
-  .weatherDetails {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .weatherDetail {
-    justify-content: center;
-  }
-
-  .weatherCard {
-    padding: 0.75rem;
-    gap: 0.5rem;
-  }
+  .quickActionsGrid { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+  .quickActionGridItem { padding: 0.75rem; gap: 0.625rem; }
+  .quickActionGridIcon { width: 40px; height: 40px; }
+  .quickActionGridLabel { font-size: 0.9375rem; }
 }
 
 @media (max-width: 480px) {
-  .statsGrid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.5rem;
-  }
+  .welcomeSection { flex-wrap: wrap; }
+  .welcomeRight   { width: 100%; justify-content: space-between; }
+  .weatherInline  { flex: 1; }
 
-  .statCard {
-    padding: 0.75rem;
+  /* SMS risk item: stack vertically so chips always visible */
+  .riskItem {
     flex-direction: column;
-    text-align: center;
-    gap: 0.25rem;
-  }
-
-  .statIcon {
-    width: 30px;
-    height: 30px;
-    font-size: 1.25rem;
-    margin-bottom: 0.25rem;
-  }
-
-  .statValue {
-    font-size: 1rem;
-    line-height: 1.2;
-    min-height: auto;
-    justify-content: center;
-  }
-
-  .statTitle {
-    font-size: 0.7rem;
-    margin-top: 0.1rem;
-    text-align: center;
-  }
-
-  .quickActionsSection {
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-  }
-
-  .quickActionsGrid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.5rem;
-    flex: 1;
-    align-content: start;
-    min-height: 0;
-  }
-
-  .quickActionCard {
-    flex-direction: column;
-    text-align: center;
-    padding: 0.75rem;
-    gap: 0.25rem;
-  }
-
-  .quickActionIcon {
-    width: 30px;
-    height: 30px;
-    font-size: 1rem;
-    margin-bottom: 0.25rem;
-  }
-
-  .quickActionTitle {
-    font-size: 0.7rem;
-    margin: 0;
-    line-height: 1.2;
-  }
-
-  .quickActionDescription {
-    font-size: 0.7rem;
-    margin: 0;
-    display: none; /* Hide description on very small screens */
-  }
-
-  .quickActionArrow {
-    display: none;
-  }
-
-  .weatherSection {
-    padding: 0.75rem;
-    height: fit-content;
-    overflow: visible;
-  }
-
-  .weatherCard {
-    padding: 0.5rem;
     gap: 0.3rem;
-    height: fit-content;
-    overflow: visible;
+    padding: 0.625rem 0.625rem;
   }
 
-  .weatherMain {
-    flex-direction: column;
+  /* Top row: dot + text + due date side by side */
+  .riskItemTop {
+    display: flex;
+    align-items: flex-start;
     gap: 0.5rem;
-    margin: 0.25rem 0;
+    width: 100%;
   }
 
-  .weatherIconLarge {
-    font-size: 1.75rem;
-  }
-
-  .temperature {
-    font-size: 1.5rem;
-  }
-
-  .tempUnit {
-    font-size: 0.9rem;
-  }
-
-  .weatherDescription {
-    font-size: 0.8rem;
-    margin-bottom: 0.25rem;
-  }
-
-  .weatherDetails {
-    gap: 0.25rem;
-    padding-top: 0.4rem;
+  .riskDot {
+    margin-top: 0.3rem;
     flex-shrink: 0;
   }
 
-  .weatherDetail {
-    padding: 0.2rem 0.4rem;
-    font-size: 0.7rem;
+  .riskText {
+    font-size: 0.875rem;
     flex: 1;
-    justify-content: center;
   }
+
+  /* Chips row always full width below */
+  .riskMeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0;
+    padding-left: 1.125rem; /* align with text (dot width + gap) */
+  }
+
+  .riskChip { font-size: 0.6875rem; padding: 0.1rem 0.375rem; }
+
+  /* Due date inline with dot+text row */
+  .riskDue {
+    font-size: 0.8125rem;
+    padding-top: 0.125rem;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  /* Mobile: icon-only 3-col */
+  .quickActionsGrid { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+  .quickActionGridItem {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.75rem 0.25rem;
+  }
+  .quickActionGridIcon  { width: 36px; height: 36px; }
+  .quickActionGridLabel { font-size: 0.8125rem; text-align: center; }
 }
