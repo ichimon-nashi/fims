@@ -1,1131 +1,882 @@
-/* src/components/admin/AccessControlPanel/AccessControlPanel.module.css */
+/* ─────────────────────────────────────────────
+   AccessControlPanel.module.css
+   SMS dark theme — #1a1f35 → #2d3651, accent #4a9eff
+   ───────────────────────────────────────────── */
 
+/* ── Page shell ── */
 .container {
-	display: flex;
-	flex-direction: column;
-	gap: 1.5rem;
-	padding: 1.5rem 1rem;
-	height: 100%;
-	width: 100%;
-	box-sizing: border-box;
-	overflow: hidden;
+	padding: 24px;
+	min-height: 100%;
+	color: #e8e9ed;
 }
 
-/* Search Section */
-.searchSection {
-	background: rgba(26, 31, 53, 0.5);
-	border: 1px solid rgba(96, 165, 250, 0.2);
-	border-radius: 0.5rem;
-	padding: 1rem;
-	width: 100%;
-	box-sizing: border-box;
-}
-
-.searchHeader {
+/* ── Page header ── */
+.pageHeader {
 	display: flex;
-	justify-content: space-between;
 	align-items: center;
-	margin-bottom: 0.75rem;
+	justify-content: space-between;
+	margin-bottom: 20px;
+	gap: 12px;
+	flex-wrap: wrap;
 }
 
-.searchTitle {
-	font-size: 1rem;
-	font-weight: 600;
+.pageTitleRow {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.pageTitle {
+	font-size: 1.6rem;
+	font-weight: 700;
 	color: #e8e9ed;
 	margin: 0;
 }
 
 .userCount {
-	font-size: 0.75rem;
-	color: #60a5fa;
-	background: rgba(96, 165, 250, 0.1);
-	padding: 0.25rem 0.75rem;
-	border-radius: 1rem;
-	font-weight: 500;
+	font-size: 0.85rem;
+	color: #a0aec0;
+	background: rgba(74, 158, 255, 0.1);
+	border: 1px solid rgba(74, 158, 255, 0.25);
+	padding: 4px 12px;
+	border-radius: 20px;
+	white-space: nowrap;
+}
+
+.addUserButton {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	padding: 9px 18px;
+	background: #4a9eff;
+	border: none;
+	border-radius: 10px;
+	color: #fff;
+	font-size: 0.9rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background 0.2s;
+	white-space: nowrap;
+}
+
+.addUserButton:hover {
+	background: #3b87e8;
+}
+
+/* ── Search ── */
+.searchSection {
+	margin-bottom: 24px;
 }
 
 .searchInput {
 	width: 100%;
-	padding: 0.75rem 1rem;
-	background: rgba(26, 31, 53, 0.8);
-	border: 1px solid rgba(96, 165, 250, 0.3);
-	border-radius: 0.375rem;
-	font-size: 0.875rem;
+	padding: 10px 16px;
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 10px;
 	color: #e8e9ed;
-	transition: all 0.2s;
-	box-sizing: border-box;
-}
-
-.searchInput:focus {
+	font-size: 0.95rem;
 	outline: none;
-	border-color: #60a5fa;
-	box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
-	background: rgba(26, 31, 53, 1);
-}
-
-.searchInput::placeholder {
-	color: #6b7280;
-}
-
-/* Content Section */
-.contentSection {
-	flex: 1;
-	background: rgba(26, 31, 53, 0.3);
-	border: 1px solid rgba(96, 165, 250, 0.1);
-	border-radius: 0.5rem;
-	padding: 1rem;
-	width: 100%;
+	transition: border-color 0.2s;
 	box-sizing: border-box;
-	overflow: hidden;
-	display: flex;
-	flex-direction: column;
 }
 
-/* Split Layout */
-.splitLayout {
+.searchInput::placeholder { color: #a0aec0; }
+.searchInput:focus         { border-color: #4a9eff; }
+
+/* ── Card grid ── */
+.userCardGrid {
 	display: grid;
-	grid-template-columns: 32% 68%;
-	gap: 2rem;
-	height: 100%;
-	flex: 1;
-	overflow: hidden;
+	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+	gap: 18px;
 }
 
-.userListColumn {
-	display: flex;
-	flex-direction: column;
-	overflow-y: auto;
-	overflow-x: hidden;
-	padding-right: 0.75rem;
-	padding-top: 0.5rem;
-	height: 100%;
-}
-
-.permissionsColumn {
-	display: flex;
-	flex-direction: column;
-	overflow-y: auto;
-	overflow-x: hidden;
-	padding-left: 1rem;
-	padding-right: 2.5rem;
-	padding-top: 0.5rem;
-	border-left: 2px solid rgba(96, 165, 250, 0.2);
-	height: 100%;
-}
-
-/* Responsive adjustments */
-@media (min-width: 1440px) {
-	.splitLayout {
-		grid-template-columns: 30% 70%;
-		gap: 2.5rem;
-	}
-}
-
-@media (max-width: 1400px) {
-	.splitLayout {
-		grid-template-columns: 35% 65%;
-		gap: 1.75rem;
-	}
-}
-
-@media (max-width: 1200px) {
-	.splitLayout {
-		grid-template-columns: 38% 62%;
-		gap: 1.5rem;
-	}
-}
-
-@media (max-width: 1024px) {
-	.container {
-		padding: 1rem 0.5rem;
-	}
-
-	.splitLayout {
-		grid-template-columns: 1fr;
-		gap: 0;
-		min-height: auto;
-	}
-
-	.userListColumn {
-		max-height: 45vh;
-		overflow-y: auto;
-		padding-right: 0;
-		margin-bottom: 1rem;
-		border-bottom: 2px solid rgba(96, 165, 250, 0.2);
-		padding-bottom: 1rem;
-	}
-
-	.permissionsColumn {
-		border-left: none;
-		padding-left: 0;
-		max-height: none;
-	}
-
-	.selectedUserSection {
-		padding: 1rem;
-	}
-
-	.permissionsEditor {
-		gap: 1rem;
-	}
-
-	.authLevelSection,
-	.appPermissionsSection {
-		padding: 0.75rem;
-	}
-}
-
-@media (max-width: 768px) {
-	.container {
-		padding: 0.75rem 0.25rem;
-	}
-
-	.searchSection {
-		padding: 0.75rem;
-	}
-
-	.contentSection {
-		padding: 0.75rem;
-	}
-
-	.userCard {
-		padding: 0.75rem;
-	}
-
-	.userCardBody {
-		font-size: 0.813rem;
-	}
-
-	.selectedUserSection {
-		padding: 0.875rem;
-	}
-
-	.selectedUserHeader {
-		flex-direction: column;
-		align-items: flex-start;
-		gap: 0.75rem;
-	}
-
-	.resetPasswordButton {
-		width: 100%;
-		justify-content: center;
-	}
-
-	.authLevelSection,
-	.appPermissionsSection {
-		padding: 0.625rem;
-	}
-
-	.authLevelSelector {
-		flex-direction: column;
-		align-items: stretch;
-	}
-
-	.authLevelPreview {
-		align-self: center;
-	}
-}
-
-/* Loading State */
-.loadingState {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	padding: 3rem 1rem;
-	color: #9ca3af;
-}
-
-.spinner {
-	width: 40px;
-	height: 40px;
-	border: 3px solid rgba(96, 165, 250, 0.2);
-	border-top-color: #60a5fa;
-	border-radius: 50%;
-	animation: spin 0.8s linear infinite;
-	margin-bottom: 1rem;
-}
-
-@keyframes spin {
-	to {
-		transform: rotate(360deg);
-	}
-}
-
-/* Error State */
-.errorState {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	padding: 3rem 1rem;
-}
-
-.errorIcon {
-	font-size: 3rem;
-	margin-bottom: 1rem;
-	opacity: 0.7;
-}
-
-.errorText {
-	color: #ef4444;
-	font-size: 0.875rem;
-	margin: 0 0 1rem 0;
-}
-
-.retryButton {
-	padding: 0.5rem 1rem;
-	background: #3b82f6;
-	color: white;
-	border: 1px solid #3b82f6;
-	border-radius: 0.375rem;
-	font-size: 0.875rem;
-	font-weight: 500;
-	cursor: pointer;
-	transition: all 0.2s;
-}
-
-.retryButton:hover {
-	background: #2563eb;
-	border-color: #2563eb;
-	box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
-}
-
-/* Empty State */
-.emptyState {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	padding: 3rem 1rem;
-}
-
-.emptyIcon {
-	font-size: 3rem;
-	margin-bottom: 1rem;
-	opacity: 0.5;
-}
-
-.emptyText {
-	color: #9ca3af;
-	font-size: 0.875rem;
-	margin: 0;
-}
-
-/* User List */
-.userList {
-	display: flex;
-	flex-direction: column;
-	gap: 0.75rem;
-	width: 100%;
-}
-
-/* User Card */
+/* ── Individual card ── */
 .userCard {
-	background: rgba(26, 31, 53, 0.6);
-	border: 1px solid rgba(96, 165, 250, 0.2);
-	border-radius: 0.5rem;
-	padding: 1rem;
-	cursor: pointer;
-	transition: all 0.2s;
-	width: 100%;
-	box-sizing: border-box;
-	overflow: visible;
+	background: linear-gradient(135deg, rgba(26, 31, 53, 0.92), rgba(45, 54, 81, 0.92));
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 14px;
+	padding: 18px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	transition: border-color 0.2s, transform 0.15s;
+	/* Equal height cards within each row so buttons align */
+	min-height: 200px;
 }
 
 .userCard:hover {
-	background: rgba(26, 31, 53, 0.9);
-	border-color: #60a5fa;
+	border-color: rgba(74, 158, 255, 0.35);
 	transform: translateY(-2px);
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-.userCardSelected {
-	background: rgba(96, 165, 250, 0.15) !important;
-	border-color: #60a5fa !important;
-	box-shadow: 0 0 20px rgba(96, 165, 250, 0.3);
-}
-
-.userCardHeader {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 0.75rem;
-}
-
-.userBasicInfo {
+.userCardTop {
 	display: flex;
 	align-items: center;
-	gap: 0.75rem;
-	flex: 1;
-	min-width: 0;
+	gap: 12px;
 }
 
 .userAvatarContainer {
-	position: relative;
-	width: 72px;
-	height: 72px;
 	flex-shrink: 0;
+	width: 56px;
+	height: 56px;
+	border-radius: 50%;
+	overflow: hidden;
+	border: 2px solid rgba(74, 158, 255, 0.3);
+	background: rgba(255, 255, 255, 0.05);
 }
 
 .userAvatar {
-	width: 72px;
-	height: 72px;
-	border: 2px solid rgba(96, 165, 250, 0.3);
-	border-radius: 50%;
+	width: 100%;
+	height: 100%;
 	object-fit: cover;
-	background: rgba(26, 31, 53, 0.5);
+	border-radius: 50%;
 }
 
 .avatarFallback {
-	width: 72px;
-	height: 72px;
-	border: 2px solid rgba(96, 165, 250, 0.3);
-	border-radius: 50%;
-	background: linear-gradient(
-		135deg,
-		rgba(96, 165, 250, 0.2),
-		rgba(59, 130, 246, 0.3)
-	);
+	width: 100%;
+	height: 100%;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	font-size: 2rem;
-	font-weight: 600;
-	color: #60a5fa;
-	text-transform: uppercase;
+	font-size: 1.4rem;
+	font-weight: 700;
+	color: #4a9eff;
+	background: rgba(74, 158, 255, 0.12);
 }
 
-.userNameSection {
+.userCardIdentity {
 	display: flex;
 	flex-direction: column;
-	gap: 0.25rem;
-	flex: 1;
+	gap: 2px;
 	min-width: 0;
 }
 
 .userName {
-	font-size: 1rem;
+	font-size: 1.05rem;
 	font-weight: 600;
 	color: #e8e9ed;
-}
-
-.authLevelBadge {
-	position: absolute;
-	bottom: 0;
-	right: 0;
-	width: 36px;
-	height: 36px;
-	background: rgba(26, 31, 53, 0.95);
-	border: 2px solid rgba(96, 165, 250, 0.5);
-	border-radius: 50%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
+	white-space: nowrap;
 	overflow: hidden;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-	z-index: 10;
-}
-
-.authLevelGif {
-	width: 85%;
-	height: 85%;
-	object-fit: contain;
+	text-overflow: ellipsis;
 }
 
 .userEmployeeId {
-	font-size: 0.75rem;
-	color: #9ca3af;
+	font-size: 0.88rem;
+	color: #a0aec0;
 }
 
-.selectIndicator {
-	font-size: 1.25rem;
-	color: #60a5fa;
-	font-weight: 600;
-	transition: all 0.2s;
-}
-
-.userCard:hover .selectIndicator {
-	transform: translateX(4px);
-}
-
-.userCardSelected .selectIndicator {
-	transform: scale(1.2);
-}
-
-.userCardBody {
+/* ── Badges ── */
+.userCardBadges {
 	display: flex;
-	flex-direction: column;
-	gap: 0.5rem;
-	padding-top: 0.75rem;
-	border-top: 1px solid rgba(96, 165, 250, 0.1);
-}
-
-.userDetail {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	font-size: 0.813rem;
-}
-
-.detailLabel {
-	color: #9ca3af;
-	font-weight: 500;
-}
-
-.detailValue {
-	color: #e8e9ed;
-	font-weight: 600;
-}
-
-/* Selected User Section */
-.selectedUserSection {
-	background: rgba(26, 31, 53, 0.5);
-	border: 1px solid rgba(96, 165, 250, 0.3);
-	border-radius: 0.5rem;
-	padding: 1rem;
-	height: 100%;
-	display: flex;
-	flex-direction: column;
-	overflow: hidden;
-	box-sizing: border-box;
-}
-
-.selectedUserHeader {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	gap: 1rem;
-	margin-bottom: 1.25rem;
-	padding-bottom: 0.875rem;
-	border-bottom: 1px solid rgba(96, 165, 250, 0.2);
-	flex-shrink: 0;
+	gap: 6px;
 	flex-wrap: wrap;
 }
 
-.selectedUserTitle {
-	font-size: 1.063rem;
-	font-weight: 600;
-	color: #e8e9ed;
-	margin: 0;
-	flex: 1;
-	min-width: 200px;
+/* rank badge: colour injected inline via style prop */
+.badgeRank {
+	font-size: 0.82rem;
+	font-weight: 700;
+	padding: 3px 10px;
+	border-radius: 6px;
 }
 
-.resetPasswordButton {
-	padding: 0.5rem 1rem;
-	background: rgba(96, 165, 250, 0.15);
-	color: #60a5fa;
-	border: 1px solid rgba(96, 165, 250, 0.3);
-	border-radius: 0.375rem;
-	font-size: 0.875rem;
+.badgeBase {
+	font-size: 0.82rem;
+	font-weight: 600;
+	padding: 3px 10px;
+	border-radius: 6px;
+	background: rgba(255, 255, 255, 0.09);
+	color: #e8e9ed;
+	border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+/* ── Permission chips — colour injected inline ── */
+.permissionChips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 5px;
+	min-height: 24px;
+}
+
+.permissionChip {
+	font-size: 0.78rem;
+	font-weight: 600;
+	padding: 3px 9px;
+	border-radius: 10px;
+}
+
+/* ── Card actions — always pinned to bottom of card ── */
+.cardActions {
+	display: flex;
+	gap: 8px;
+	margin-top: auto;
+	padding-top: 4px;
+}
+
+.editButton {
+	flex: 1;
+	padding: 9px 0;
+	border: none;
+	border-radius: 8px;
+	background: rgba(74, 158, 255, 0.14);
+	color: #4a9eff;
+	font-size: 0.95rem;
 	font-weight: 500;
 	cursor: pointer;
-	transition: all 0.2s;
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	white-space: nowrap;
-	flex-shrink: 0;
+	transition: background 0.2s;
 }
 
-.resetPasswordButton:hover {
-	background: rgba(96, 165, 250, 0.25);
-	border-color: #60a5fa;
-	box-shadow: 0 0 15px rgba(96, 165, 250, 0.3);
-}
+.editButton:hover { background: rgba(74, 158, 255, 0.28); }
 
-/* Permissions Editor */
-.permissionsEditor {
-	display: flex;
-	flex-direction: column;
-	gap: 1.25rem;
+.deleteButton {
 	flex: 1;
-	overflow-y: auto;
-	overflow-x: hidden;
-	padding-right: 0.25rem;
-}
-
-.sectionLabel {
-	display: block;
-	font-size: 0.938rem;
-	font-weight: 600;
-	color: #e8e9ed;
-	margin-bottom: 0.5rem;
-}
-
-.sectionHint {
-	font-size: 0.75rem;
-	color: #9ca3af;
-	margin: 0 0 0.75rem 0;
-	font-style: italic;
-}
-
-/* Authentication Level Section */
-.authLevelSection {
-	background: rgba(26, 31, 53, 0.3);
-	border: 1px solid rgba(96, 165, 250, 0.15);
-	border-radius: 0.5rem;
-	padding: 0.875rem;
-	box-sizing: border-box;
-}
-
-.authLevelSelector {
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
-}
-
-.authLevelDropdown {
-	flex: 1;
-	padding: 0.625rem;
-	background: rgba(26, 31, 53, 0.8);
-	border: 1px solid rgba(96, 165, 250, 0.3);
-	border-radius: 0.375rem;
-	color: #e8e9ed;
-	font-size: 0.813rem;
+	padding: 9px 0;
+	border: none;
+	border-radius: 8px;
+	background: rgba(239, 68, 68, 0.12);
+	color: #f87171;
+	font-size: 0.95rem;
+	font-weight: 500;
 	cursor: pointer;
-	transition: all 0.2s;
-	box-sizing: border-box;
+	transition: background 0.2s;
 }
 
-.authLevelDropdown:focus {
-	outline: none;
-	border-color: #60a5fa;
-	box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
-}
+.deleteButton:hover { background: rgba(239, 68, 68, 0.25); }
 
-.authLevelPreview {
-	width: 44px;
-	height: 44px;
-	background: rgba(26, 31, 53, 0.95);
-	border: 2px solid rgba(96, 165, 250, 0.5);
-	border-radius: 50%;
+/* ─────────────────────────────────────────────
+   MODALS — shared backdrop
+   ───────────────────────────────────────────── */
+.modalBackdrop {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.65);
+	backdrop-filter: blur(4px);
+	z-index: 1000;
+	/* Flex for centering both modals */
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	justify-content: center;
-	overflow: hidden;
-	flex-shrink: 0;
-}
-
-.authLevelPreviewGif {
-	width: 85%;
-	height: 85%;
-	object-fit: contain;
-}
-
-/* App Permissions Section */
-.appPermissionsSection {
-	background: rgba(26, 31, 53, 0.3);
-	border: 1px solid rgba(96, 165, 250, 0.15);
-	border-radius: 0.5rem;
-	padding: 0.875rem;
+	padding: 24px 12px 48px;
 	box-sizing: border-box;
+	/* Backdrop itself does NOT scroll — the modal inner body does */
 }
 
-.appPermissionsList {
+/* ── Edit / Add modal (wide) ── */
+.editModal {
+	background: linear-gradient(160deg, #1e2440, #2d3651);
+	border: 1px solid rgba(74, 158, 255, 0.2);
+	border-radius: 16px;
+	width: 100%;
+	max-width: 860px;
+	flex-shrink: 0;
 	display: flex;
 	flex-direction: column;
-	gap: 0.625rem;
+	box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+	/* Cap height to viewport and let body scroll internally */
+	max-height: calc(100dvh - 48px);
 }
 
-.appPermissionCard {
-	background: rgba(26, 31, 53, 0.5);
-	border: 1px solid rgba(96, 165, 250, 0.2);
-	border-radius: 0.375rem;
-	padding: 0.625rem;
-	transition: all 0.2s;
-	box-sizing: border-box;
-}
-
-.appPermissionCard:hover {
-	background: rgba(26, 31, 53, 0.8);
-	border-color: #60a5fa;
-}
-
-.appPermissionHeader {
+.editModalHeader {
 	display: flex;
+	align-items: center;
 	justify-content: space-between;
-	align-items: center;
+	padding: 18px 24px 14px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+	flex-shrink: 0;
 }
 
-.appPermissionLabel {
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
-	cursor: pointer;
-	flex: 1;
-}
-
-.appCheckbox {
-	width: 18px;
-	height: 18px;
-	cursor: pointer;
-	accent-color: #60a5fa;
-}
-
-.appCheckbox:disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
-}
-
-.appName {
-	font-size: 0.875rem;
-	font-weight: 500;
+.editModalTitle {
+	font-size: 1.1rem;
+	font-weight: 700;
 	color: #e8e9ed;
-}
-
-.appSubPermissions {
-	margin-top: 0.75rem;
-	padding-top: 0.75rem;
-	border-top: 1px solid rgba(96, 165, 250, 0.1);
-}
-
-.subPermissionNote {
-	font-size: 0.75rem;
-	color: #9ca3af;
 	margin: 0;
-	font-style: italic;
 }
 
-/* Permission Actions */
-.permissionActions {
-	display: flex;
-	justify-content: flex-end;
-	padding-top: 1rem;
-	border-top: 1px solid rgba(96, 165, 250, 0.1);
-}
-
-.savePermissionsButton {
-	padding: 0.75rem 1.5rem;
-	background: #3b82f6;
-	color: white;
-	border: 1px solid #3b82f6;
-	border-radius: 0.375rem;
-	font-size: 0.875rem;
-	font-weight: 500;
+.editModalClose {
+	background: none;
+	border: none;
+	color: #a0aec0;
+	font-size: 1.2rem;
 	cursor: pointer;
-	transition: all 0.2s;
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
+	padding: 4px 8px;
+	border-radius: 6px;
+	transition: color 0.2s, background 0.2s;
 }
 
-.savePermissionsButton:hover {
-	background: #2563eb;
-	border-color: #2563eb;
-	box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+.editModalClose:hover {
+	color: #e8e9ed;
+	background: rgba(255, 255, 255, 0.08);
 }
 
-/* No Selection State */
-.noSelectionState {
+/* Modal body: scrolls internally when content exceeds modal height */
+.editModalBody {
+	padding: 20px 24px;
 	display: flex;
 	flex-direction: column;
+	gap: 16px;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+	flex: 1;
+	min-height: 0; /* required for flex children to scroll */
+}
+
+.editModalFooter {
+	display: flex;
 	align-items: center;
-	justify-content: center;
-	height: 100%;
-	min-height: 400px;
-	text-align: center;
-	padding: 2rem;
+	justify-content: flex-end;
+	gap: 12px;
+	padding: 14px 24px;
+	border-top: 1px solid rgba(255, 255, 255, 0.08);
+	flex-wrap: wrap;
+	flex-shrink: 0;
 }
 
-.noSelectionIcon {
-	font-size: 4rem;
-	margin-bottom: 1rem;
-	opacity: 0.5;
+/* ── Sections inside modal body — all equal full width ── */
+.editSection {
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid rgba(255, 255, 255, 0.07);
+	border-radius: 10px;
+	padding: 16px 18px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	box-sizing: border-box;
+	width: 100%;
 }
 
-.noSelectionTitle {
-	font-size: 1.25rem;
-	font-weight: 600;
-	color: #e8e9ed;
-	margin: 0 0 0.5rem 0;
+.editSectionLabel {
+	font-size: 0.75rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.07em;
+	color: #4a9eff;
 }
 
-.noSelectionText {
-	font-size: 0.938rem;
-	color: #9ca3af;
+.editSectionHint {
+	font-size: 0.9rem;
+	color: #a0aec0;
 	margin: 0;
 }
 
-/* Mobile Responsive */
-@media (max-width: 768px) {
-	.container {
-		padding: 1rem;
-		gap: 1rem;
-	}
-
-	.searchSection {
-		padding: 0.75rem;
-	}
-
-	.searchHeader {
-		flex-direction: column;
-		align-items: flex-start;
-		gap: 0.5rem;
-	}
-
-	.userCard {
-		padding: 0.75rem;
-	}
-
-	.userCardHeader {
-		flex-direction: column;
-		align-items: flex-start;
-		gap: 0.5rem;
-	}
-
-	.userBasicInfo {
-		width: 100%;
-	}
-
-	.selectIndicator {
-		align-self: flex-end;
-	}
-
-	.userCardBody {
-		gap: 0.75rem;
-	}
-
-	.userDetail {
-		flex-direction: column;
-		align-items: flex-start;
-		gap: 0.25rem;
-	}
-
-	.selectedUserSection {
-		padding: 1rem;
-	}
+/* ── Form fields ── */
+.formRow {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 12px;
 }
 
 @media (max-width: 480px) {
-	.container {
-		padding: 0.75rem;
-	}
-
-	.searchInput {
-		font-size: 0.813rem;
-		padding: 0.625rem 0.875rem;
-	}
-
-	.userName {
-		font-size: 0.938rem;
-	}
-
-	.userAvatarContainer {
-		width: 60px;
-		height: 60px;
-	}
-
-	.userAvatar,
-	.avatarFallback {
-		width: 60px;
-		height: 60px;
-	}
-
-	.avatarFallback {
-		font-size: 1.5rem;
-	}
-
-	.authLevelBadge {
-		width: 30px;
-		height: 30px;
-		bottom: 0;
-		right: 0;
-	}
-
-	.userName {
-		font-size: 0.938rem;
-	}
+	.formRow { grid-template-columns: 1fr; }
 }
 
-/* Password Reset Modal */
-.modalBackdrop {
-	position: fixed;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	background: rgba(0, 0, 0, 0.7);
+.formGroup {
 	display: flex;
-	align-items: center;
-	justify-content: center;
-	z-index: 2000;
-	padding: 1rem;
+	flex-direction: column;
+	gap: 5px;
 }
 
-.passwordModal {
-	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
-	border: 1px solid rgba(96, 165, 250, 0.3);
-	border-radius: 0.75rem;
-	width: 100%;
-	max-width: 450px;
-	box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-}
-
-.passwordModalHeader {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: 1.5rem;
-	border-bottom: 1px solid rgba(96, 165, 250, 0.2);
-}
-
-.passwordModalTitle {
-	font-size: 1.125rem;
-	font-weight: 600;
-	color: #e8e9ed;
-	margin: 0;
-}
-
-.passwordModalClose {
-	background: none;
-	border: none;
-	font-size: 1.5rem;
-	color: #9ca3af;
-	cursor: pointer;
-	padding: 0.25rem;
-	border-radius: 0.25rem;
-	transition: all 0.2s;
-	width: 2rem;
-	height: 2rem;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
-
-.passwordModalClose:hover {
-	background: rgba(96, 165, 250, 0.1);
-	color: #e8e9ed;
-}
-
-.passwordModalBody {
-	padding: 1.5rem;
-}
-
-.passwordFormGroup {
-	margin-bottom: 1rem;
-}
-
-.passwordFormGroup:last-of-type {
-	margin-bottom: 0;
-}
-
-.passwordLabel {
-	display: block;
-	font-size: 0.875rem;
+.formLabel {
+	font-size: 0.9rem;
+	color: #a0aec0;
 	font-weight: 500;
-	color: #e8e9ed;
-	margin-bottom: 0.5rem;
 }
 
-.passwordInput {
-	width: 100%;
-	padding: 0.75rem;
-	background: rgba(26, 31, 53, 0.5);
-	border: 1px solid rgba(96, 165, 250, 0.2);
-	border-radius: 0.375rem;
-	font-size: 0.875rem;
+.formInput,
+.formSelect {
+	padding: 9px 12px;
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 8px;
 	color: #e8e9ed;
-	transition: all 0.2s;
+	font-size: 1rem;
+	outline: none;
+	transition: border-color 0.2s;
+	width: 100%;
 	box-sizing: border-box;
 }
 
-.passwordInput:focus {
-	outline: none;
-	border-color: #60a5fa;
-	box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
-	background: rgba(26, 31, 53, 0.8);
+.formInput:focus,
+.formSelect:focus { border-color: #4a9eff; }
+
+.formInput::placeholder { color: #a0aec0; }
+
+.formInput:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
 }
 
-.passwordInput::placeholder {
-	color: #6b7280;
+/* ── Rank row (simple select, no toggle needed) ── */
+
+/* ── App permissions grid ── */
+.appPermissionsGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+	gap: 6px;
 }
 
-.passwordError {
-	background: rgba(239, 68, 68, 0.15);
-	border: 1px solid rgba(239, 68, 68, 0.3);
-	color: #ef4444;
-	padding: 0.75rem;
-	border-radius: 0.375rem;
-	margin-top: 1rem;
-	font-size: 0.875rem;
-	font-weight: 500;
+/* Every cell — whether a plain toggle or a block with sub-perms —
+   gets the same card treatment so widths are uniform */
+.permissionToggle,
+.permissionBlock {
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid rgba(255, 255, 255, 0.07);
+	border-radius: 8px;
+	overflow: hidden;
 }
 
-.passwordSuccess {
-	background: rgba(16, 185, 129, 0.15);
-	border: 1px solid rgba(16, 185, 129, 0.3);
-	color: #10b981;
-	padding: 0.75rem;
-	border-radius: 0.375rem;
-	margin-top: 1rem;
-	font-size: 0.875rem;
-	font-weight: 500;
-}
-
-.passwordModalActions {
+.permissionToggle {
 	display: flex;
-	gap: 0.75rem;
-	padding: 1rem 1.5rem 1.5rem 1.5rem;
-	border-top: 1px solid rgba(96, 165, 250, 0.1);
+	align-items: center;
+	gap: 8px;
+	padding: 9px 11px;
+	cursor: pointer;
+	transition: background 0.15s, border-color 0.15s;
+	user-select: none;
 }
 
-.passwordCancelButton {
-	flex: 1;
-	padding: 0.75rem;
-	background: rgba(26, 31, 53, 0.5);
+.permissionToggle:hover {
+	background: rgba(74, 158, 255, 0.09);
+	border-color: rgba(74, 158, 255, 0.2);
+}
+
+/* permissionBlock: top row is the toggle, sub-perms below */
+.permissionBlock {
+	display: flex;
+	flex-direction: column;
+}
+
+/* the label inside a permissionBlock acts as the header row */
+.permissionBlock > .permissionToggle {
+	border-radius: 0;
+	border: none;
+	background: none;
+	margin: 0;
+}
+
+.permissionBlock > .permissionToggle:hover {
+	background: rgba(74, 158, 255, 0.09);
+}
+
+.appCheckbox {
+	width: 15px;
+	height: 15px;
+	accent-color: #4a9eff;
+	cursor: pointer;
+	flex-shrink: 0;
+}
+
+.appName {
+	font-size: 0.95rem;
 	color: #e8e9ed;
-	border: 1px solid rgba(96, 165, 250, 0.2);
-	border-radius: 0.375rem;
-	font-size: 0.875rem;
-	font-weight: 500;
-	cursor: pointer;
-	transition: all 0.2s;
+	display: flex;
+	align-items: center;
+	gap: 6px;
 }
 
-.passwordCancelButton:hover:not(:disabled) {
-	background: rgba(26, 31, 53, 0.8);
-	border-color: #60a5fa;
-}
-
-.passwordCancelButton:disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
-}
-
-.passwordConfirmButton {
-	flex: 1;
-	padding: 0.75rem;
-	background: #3b82f6;
-	color: white;
-	border: 1px solid #3b82f6;
-	border-radius: 0.375rem;
-	font-size: 0.875rem;
-	font-weight: 500;
-	cursor: pointer;
-	transition: all 0.2s;
-}
-
-.passwordConfirmButton:hover:not(:disabled) {
-	background: #2563eb;
-	border-color: #2563eb;
-	box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
-}
-
-.passwordConfirmButton:disabled {
-	opacity: 0.6;
-	cursor: not-allowed;
-}
-
-/* Oral Test Sub-Permissions */
-.subPermissionItem {
-	padding: 0.5rem 0;
-	border-bottom: 1px solid rgba(96, 165, 250, 0.05);
-}
-
-.subPermissionItem:last-child {
-	border-bottom: none;
+.appSubPermissions {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 5px 10px 7px 26px;
+	background: rgba(0, 0, 0, 0.18);
 }
 
 .subPermissionLabel {
 	display: flex;
 	align-items: center;
-	gap: 0.5rem;
+	gap: 7px;
 	cursor: pointer;
-	font-size: 0.813rem;
-	color: #e8e9ed;
-	padding-left: 0.5rem;
-}
-
-.subPermissionLabel span {
-	color: #e8e9ed;
+	user-select: none;
 }
 
 .subCheckbox {
-	width: 16px;
-	height: 16px;
+	width: 13px;
+	height: 13px;
+	accent-color: #4a9eff;
 	cursor: pointer;
-	accent-color: #60a5fa;
+	flex-shrink: 0;
 }
 
-.subCheckbox:disabled {
-	opacity: 0.4;
-	cursor: not-allowed;
-}
-
-/* Success and Error Messages */
-.successMessage {
-	background: rgba(16, 185, 129, 0.15);
-	border: 1px solid rgba(16, 185, 129, 0.3);
-	color: #10b981;
-	padding: 0.75rem;
-	border-radius: 0.375rem;
-	margin-bottom: 1rem;
-	font-size: 0.875rem;
-	font-weight: 500;
-}
-
-.errorMessage {
-	background: rgba(239, 68, 68, 0.15);
-	border: 1px solid rgba(239, 68, 68, 0.3);
-	color: #ef4444;
-	padding: 0.75rem;
-	border-radius: 0.375rem;
-	margin-bottom: 1rem;
-	font-size: 0.875rem;
-	font-weight: 500;
-}
-/* ── Audit sub-permissions ── */
-.auditSubPerms {
-	margin-top: 0.625rem;
-	margin-left: 1.5rem;
-	display: flex;
-	flex-direction: column;
-	gap: 0.75rem;
-	border-left: 2px solid rgba(74, 158, 255, 0.2);
-	padding-left: 0.875rem;
-}
-
-.auditSubGroup {
-	display: flex;
-	flex-direction: column;
-	gap: 0.375rem;
-}
-
-.auditSubGroupLabel {
-	font-size: 0.6875rem;
-	font-weight: 700;
-	text-transform: uppercase;
-	letter-spacing: 0.06em;
+.subPermissionLabel span {
+	font-size: 0.88rem;
 	color: #a0aec0;
 }
 
-.auditSubGroupItems {
+/* ── Audit sub-perms ── */
+.auditSubPerms {
 	display: flex;
 	flex-direction: column;
-	gap: 0.25rem;
+	gap: 8px;
+	padding: 7px 10px 8px 26px;
+	background: rgba(0, 0, 0, 0.18);
 }
+
+.auditSubGroup { display: flex; flex-direction: column; gap: 4px; }
+
+.auditSubGroupLabel {
+	font-size: 0.68rem;
+	font-weight: 700;
+	color: #4a9eff;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	margin-bottom: 2px;
+}
+
+.auditSubGroupItems { display: flex; flex-direction: column; gap: 3px; }
 
 .auditSubLabel {
 	display: flex;
 	align-items: center;
-	gap: 0.5rem;
-	font-size: 0.875rem;
-	color: #e8e9ed;
+	gap: 7px;
 	cursor: pointer;
-	padding: 2px 0;
-}
-.auditSubLabel input {
-	cursor: pointer;
-}
-.auditSubLabel:hover {
-	color: #fff;
+	user-select: none;
 }
 
 .disciplineGrid {
 	display: grid;
-	grid-template-columns: repeat(4, auto);
-	gap: 0.25rem 1rem;
-	width: fit-content;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 4px;
 }
+
+/* ── Password fields ── */
+.passwordError {
+	font-size: 0.8rem;
+	color: #f87171;
+	padding: 6px 10px;
+	background: rgba(248, 113, 113, 0.1);
+	border-radius: 6px;
+	border: 1px solid rgba(248, 113, 113, 0.25);
+}
+
+.passwordSuccess {
+	font-size: 0.8rem;
+	color: #34d399;
+	padding: 6px 10px;
+	background: rgba(52, 211, 153, 0.1);
+	border-radius: 6px;
+	border: 1px solid rgba(52, 211, 153, 0.25);
+}
+
+.resetPasswordButton {
+	padding: 8px 14px;
+	background: rgba(74, 158, 255, 0.12);
+	border: 1px solid rgba(74, 158, 255, 0.3);
+	border-radius: 8px;
+	color: #4a9eff;
+	font-size: 0.83rem;
+	font-weight: 500;
+	cursor: pointer;
+	align-self: flex-start;
+	transition: background 0.2s;
+}
+
+.resetPasswordButton:hover    { background: rgba(74, 158, 255, 0.25); }
+.resetPasswordButton:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Footer buttons ── */
+.cancelButton {
+	padding: 9px 20px;
+	background: rgba(255, 255, 255, 0.07);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 8px;
+	color: #a0aec0;
+	font-size: 0.9rem;
+	cursor: pointer;
+	transition: background 0.2s;
+}
+
+.cancelButton:hover    { background: rgba(255, 255, 255, 0.13); }
+.cancelButton:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.savePermissionsButton {
+	padding: 9px 22px;
+	background: #4a9eff;
+	border: none;
+	border-radius: 8px;
+	color: #fff;
+	font-size: 0.9rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background 0.2s, opacity 0.2s;
+}
+
+.savePermissionsButton:hover    { background: #3b87e8; }
+.savePermissionsButton:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── Feedback messages ── */
+.successMessage {
+	font-size: 0.8rem;
+	color: #34d399;
+	padding: 5px 10px;
+	background: rgba(52, 211, 153, 0.1);
+	border-radius: 6px;
+	border: 1px solid rgba(52, 211, 153, 0.25);
+	margin-right: auto;
+}
+
+.errorMessage {
+	font-size: 0.8rem;
+	color: #f87171;
+	padding: 5px 10px;
+	background: rgba(248, 113, 113, 0.1);
+	border-radius: 6px;
+	border: 1px solid rgba(248, 113, 113, 0.25);
+	margin-right: auto;
+}
+
+/* ─────────────────────────────────────────────
+   Avatar GIF picker
+   ───────────────────────────────────────────── */
+.gifPickerSection {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.genderRow {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.gifPickerLabel {
+	font-size: 0.82rem;
+	color: #a0aec0;
+	font-weight: 500;
+	flex-shrink: 0;
+}
+
+.genderBtns {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.genderBtn {
+	padding: 6px 16px;
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	border-radius: 8px;
+	color: #a0aec0;
+	font-size: 0.86rem;
+	cursor: pointer;
+	transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.genderBtn:hover { background: rgba(255, 255, 255, 0.1); }
+
+.genderBtnActive {
+	background: rgba(74, 158, 255, 0.18);
+	border-color: #4a9eff;
+	color: #4a9eff;
+	font-weight: 600;
+}
+
+.genderClearBtn {
+	padding: 6px 12px;
+	background: none;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 8px;
+	color: #a0aec0;
+	font-size: 0.82rem;
+	cursor: pointer;
+	transition: background 0.15s;
+}
+
+.genderClearBtn:hover { background: rgba(255, 255, 255, 0.07); }
+
+/* Selected gif preview row */
+.gifPreviewRow {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 10px 12px;
+	background: rgba(74, 158, 255, 0.06);
+	border: 1px solid rgba(74, 158, 255, 0.2);
+	border-radius: 10px;
+}
+
+.gifPreviewLarge {
+	width: 52px;
+	height: 52px;
+	object-fit: contain;
+	image-rendering: pixelated;
+}
+
+.gifPreviewInfo {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.gifPreviewName {
+	font-size: 0.9rem;
+	font-weight: 600;
+	color: #e8e9ed;
+	text-transform: capitalize;
+}
+
+.gifClearBtn {
+	padding: 4px 10px;
+	background: rgba(239, 68, 68, 0.12);
+	border: 1px solid rgba(239, 68, 68, 0.3);
+	border-radius: 6px;
+	color: #f87171;
+	font-size: 0.78rem;
+	cursor: pointer;
+	transition: background 0.15s;
+}
+
+.gifClearBtn:hover { background: rgba(239, 68, 68, 0.24); }
+
+/* GIF grid */
+.gifGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+	gap: 6px;
+}
+
+.gifGridItem {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 4px;
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 8px;
+	cursor: pointer;
+	transition: border-color 0.15s, background 0.15s;
+}
+
+.gifGridItem:hover {
+	background: rgba(74, 158, 255, 0.1);
+	border-color: rgba(74, 158, 255, 0.3);
+}
+
+.gifGridItemSelected {
+	background: rgba(74, 158, 255, 0.18);
+	border-color: #4a9eff;
+}
+
+.gifGridImg {
+	width: 40px;
+	height: 40px;
+	object-fit: contain;
+	image-rendering: pixelated;
+}
+
+/* ─────────────────────────────────────────────
+   Delete confirm modal
+   ───────────────────────────────────────────── */
+.deleteModal {
+	background: linear-gradient(160deg, #1e2440, #2d3651);
+	border: 1px solid rgba(239, 68, 68, 0.25);
+	border-radius: 16px;
+	width: 100%;
+	max-width: 420px;
+	padding: 32px 28px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 14px;
+	box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+	text-align: center;
+	/* Center within flex backdrop */
+	margin: auto;
+}
+
+.deleteModalIcon { font-size: 2.6rem; }
+
+.deleteModalTitle {
+	font-size: 1.1rem;
+	font-weight: 700;
+	color: #f87171;
+	margin: 0;
+}
+
+.deleteModalText {
+	font-size: 0.9rem;
+	color: #a0aec0;
+	margin: 0;
+	line-height: 1.6;
+}
+
+.deleteModalText strong { color: #e8e9ed; }
+
+.deleteModalActions {
+	display: flex;
+	gap: 12px;
+	margin-top: 6px;
+	width: 100%;
+	justify-content: center;
+}
+
+.confirmDeleteButton {
+	padding: 9px 22px;
+	background: #ef4444;
+	border: none;
+	border-radius: 8px;
+	color: #fff;
+	font-size: 0.9rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background 0.2s, opacity 0.2s;
+}
+
+.confirmDeleteButton:hover    { background: #dc2626; }
+.confirmDeleteButton:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ─────────────────────────────────────────────
+   Loading / error / empty states
+   ───────────────────────────────────────────── */
+.loadingState,
+.errorState,
+.emptyState {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	padding: 60px 20px;
+	color: #a0aec0;
+}
+
+.spinner {
+	width: 36px;
+	height: 36px;
+	border: 3px solid rgba(74, 158, 255, 0.2);
+	border-top-color: #4a9eff;
+	border-radius: 50%;
+	animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.errorIcon,
+.emptyIcon { font-size: 2rem; }
+
+.errorText,
+.emptyText { font-size: 0.95rem; color: #a0aec0; margin: 0; }
+
+.retryButton {
+	padding: 7px 18px;
+	background: rgba(74, 158, 255, 0.12);
+	border: 1px solid rgba(74, 158, 255, 0.3);
+	border-radius: 8px;
+	color: #4a9eff;
+	font-size: 0.85rem;
+	cursor: pointer;
+	transition: background 0.2s;
+}
+
+.retryButton:hover { background: rgba(74, 158, 255, 0.25); }
+
+/* ── Kept for backward compatibility ── */
+.searchHeader   { display: none; }
+.searchTitle    { display: none; }
+.contentSection { display: contents; }
+.splitLayout    { display: contents; }
+.userListColumn { display: contents; }
+.permissionsColumn { display: none; }
+.noSelectionState  { display: none; }
