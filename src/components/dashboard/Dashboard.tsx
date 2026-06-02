@@ -41,8 +41,10 @@ function formatDueLabel(item: SmsReviewItem): string {
     const days = Math.abs(item.days_until);
     return days <= 1 ? "逾期1天" : `逾期${days}天`;
   }
+  if (item.days_until === 0) return "今天到期";
   const d = new Date(item.next_review);
-  return `${d.getMonth() + 1}/${d.getDate()}到期`;
+  const dateLabel = `${d.getMonth() + 1}/${d.getDate()}`;
+  return `${dateLabel}（剩${item.days_until}天）`;
 }
 
 function getDueClass(item: SmsReviewItem): string {

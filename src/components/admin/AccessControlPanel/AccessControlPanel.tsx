@@ -853,6 +853,13 @@ const AccessControlPanel = () => {
 						const chips = getPermissionChips(user);
 						return (
 							<div key={user.id} className={styles.userCard}>
+								{/* GIF avatar — top right corner */}
+								<img
+									src={getAuthLevelGif(user.authentication_level, user)}
+									alt=""
+									className={styles.cardGifAvatar}
+								/>
+
 								{/* Avatar + identity */}
 								<div className={styles.userCardTop}>
 									<div className={styles.userAvatarContainer}>
