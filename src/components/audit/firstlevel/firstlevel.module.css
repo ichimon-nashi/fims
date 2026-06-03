@@ -1,0 +1,842 @@
+/* src/components/audit/firstlevel/firstlevel.module.css */
+
+/* ── Shell ─────────────────────────────────────────────────────── */
+.shell {
+	height: calc(100vh - 60px);
+	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+	display: flex;
+	flex-direction: column;
+	color: #e8e9ed;
+	font-family: var(--font-sans, system-ui, sans-serif);
+	overflow: hidden;
+}
+
+/* ── Top bar (mirrors IOSAPage) ────────────────────────────────── */
+.topbar {
+	background: #2d3651;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+	padding: 0 1rem;
+	display: flex;
+	align-items: center;
+	height: 52px;
+	gap: 0;
+	flex-shrink: 0;
+}
+
+.auditTabs {
+	display: flex;
+	gap: 2px;
+}
+
+.auditTab {
+	padding: 0 1.25rem;
+	height: 52px;
+	display: flex;
+	align-items: center;
+	font-size: 1.0625rem;
+	color: #a0aec0;
+	cursor: pointer;
+	border: none;
+	background: transparent;
+	border-bottom: 2px solid transparent;
+	white-space: nowrap;
+	transition: color 0.15s;
+	font-family: inherit;
+}
+
+.auditTab:hover {
+	color: #e8e9ed;
+}
+
+.auditTabActive {
+	color: #4a9eff !important;
+	border-bottom-color: #4a9eff;
+}
+
+.topbarRight {
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	gap: 0.625rem;
+}
+
+/* ── Progress bar ──────────────────────────────────────────────── */
+.progressBar {
+	background: #232840;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+	padding: 0 1rem;
+	height: 36px;
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	flex-shrink: 0;
+}
+
+.progressTrack {
+	flex: 1;
+	height: 4px;
+	background: rgba(255, 255, 255, 0.08);
+	border-radius: 3px;
+	overflow: hidden;
+}
+
+.progressFill {
+	height: 100%;
+	background: #4a9eff;
+	border-radius: 3px;
+	transition: width 0.3s ease;
+}
+
+.progressLabel {
+	font-size: 0.8125rem;
+	color: #a0aec0;
+	white-space: nowrap;
+}
+
+/* ── Landing ────────────────────────────────────────────────────── */
+.landingWrap {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 2rem 1rem;
+	gap: 2rem;
+	overflow-y: auto;
+}
+
+.landingHeader {
+	text-align: center;
+}
+
+.landingTitle {
+	font-size: 1.75rem;
+	font-weight: 700;
+	color: #e8e9ed;
+	margin: 0 0 0.375rem;
+}
+
+.landingSubtitle {
+	font-size: 0.9375rem;
+	color: #a0aec0;
+	margin: 0;
+}
+
+.landingCards {
+	display: flex;
+	gap: 1.5rem;
+	flex-wrap: wrap;
+	justify-content: center;
+	width: 100%;
+	max-width: 600px;
+}
+
+.landingCard {
+	flex: 1;
+	min-width: 220px;
+	max-width: 280px;
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 14px;
+	padding: 2rem 1.5rem;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1rem;
+	cursor: pointer;
+	transition:
+		background 0.18s,
+		border-color 0.18s,
+		transform 0.18s;
+	text-align: center;
+}
+
+.landingCard:hover {
+	background: rgba(74, 158, 255, 0.08);
+	border-color: rgba(74, 158, 255, 0.35);
+	transform: translateY(-2px);
+}
+
+.landingCardIcon {
+	font-size: 2.5rem;
+	line-height: 1;
+}
+
+.landingCardTitle {
+	font-size: 1.125rem;
+	font-weight: 600;
+	color: #e8e9ed;
+	margin: 0;
+}
+
+.landingCardDesc {
+	font-size: 0.875rem;
+	color: #a0aec0;
+	margin: 0;
+	line-height: 1.5;
+}
+
+/* ── Form scroll — full width, internal scroll ─────────────────── */
+.formScroll {
+	flex: 1;
+	overflow-y: auto;
+	min-height: 0;
+	width: 100%;
+}
+
+.formInner {
+	width: 100%;
+	max-width: 960px;
+	margin: 0 auto;
+	padding: 1.25rem 1.5rem 3rem;
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
+	box-sizing: border-box;
+}
+
+/* ── Records scroll ────────────────────────────────────────────── */
+.recordsScroll {
+	flex: 1;
+	overflow-y: auto;
+	min-height: 0;
+	width: 100%;
+}
+
+.recordsInner {
+	width: 100%;
+	max-width: 960px;
+	margin: 0 auto;
+	padding: 1.25rem 1.5rem 3rem;
+	box-sizing: border-box;
+}
+
+/* ── Header card ───────────────────────────────────────────────── */
+.headerCard {
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 12px;
+	padding: 1.25rem;
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+	gap: 1rem;
+}
+
+.fieldGroup {
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+}
+
+.fieldLabel {
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: #64748b;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.fieldInput {
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 7px;
+	padding: 0.5rem 0.75rem;
+	color: #e8e9ed;
+	font-size: 0.9375rem;
+	font-family: inherit;
+	transition: border-color 0.15s;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.fieldInput:focus {
+	outline: none;
+	border-color: rgba(74, 158, 255, 0.5);
+}
+
+.fieldSelect {
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 7px;
+	padding: 0.5rem 0.75rem;
+	color: #e8e9ed;
+	font-size: 0.9375rem;
+	font-family: inherit;
+	width: 100%;
+	box-sizing: border-box;
+	cursor: pointer;
+	appearance: none;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a0aec0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 0.75rem center;
+	padding-right: 2rem;
+}
+
+.fieldSelect option {
+	background: #2d3651;
+	color: #e8e9ed;
+}
+
+.fieldSelect:focus {
+	outline: none;
+	border-color: rgba(74, 158, 255, 0.5);
+}
+
+.readonlyVal {
+	font-size: 0.9375rem;
+	color: #e8e9ed;
+	padding: 0.5rem 0;
+}
+
+/* ── Section accordion ─────────────────────────────────────────── */
+.sectionBlock {
+	background: rgba(255, 255, 255, 0.02);
+	border: 1px solid rgba(255, 255, 255, 0.07);
+	border-radius: 12px;
+	overflow: hidden;
+}
+
+.sectionHeader {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.875rem 1.125rem;
+	cursor: pointer;
+	background: rgba(255, 255, 255, 0.03);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+	user-select: none;
+	transition: background 0.15s;
+}
+
+.sectionHeader:hover {
+	background: rgba(255, 255, 255, 0.05);
+}
+
+.sectionNum {
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	background: rgba(74, 158, 255, 0.15);
+	color: #4a9eff;
+	font-size: 0.875rem;
+	font-weight: 700;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.sectionTitle {
+	font-size: 1rem;
+	font-weight: 600;
+	color: #e8e9ed;
+	flex: 1;
+}
+
+.sectionProgress {
+	font-size: 0.8125rem;
+	color: #a0aec0;
+	white-space: nowrap;
+}
+
+.sectionChevron {
+	color: #64748b;
+	transition: transform 0.2s;
+	flex-shrink: 0;
+	font-size: 0.75rem;
+}
+
+.sectionChevronOpen {
+	transform: rotate(180deg);
+}
+
+.sectionItems {
+	display: flex;
+	flex-direction: column;
+}
+
+/* ── Checklist item ────────────────────────────────────────────── */
+.itemRow {
+	border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+	padding: 1rem 1.125rem;
+	transition: background 0.12s;
+}
+
+.itemRow:last-child {
+	border-bottom: none;
+}
+
+.itemRow:hover {
+	background: rgba(255, 255, 255, 0.02);
+}
+
+.itemTop {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.75rem;
+	margin-bottom: 0.875rem;
+}
+
+.itemCode {
+	background: rgba(74, 158, 255, 0.12);
+	color: #4a9eff;
+	font-size: 0.75rem;
+	font-weight: 700;
+	padding: 2px 8px;
+	border-radius: 20px;
+	white-space: nowrap;
+	flex-shrink: 0;
+	margin-top: 2px;
+}
+
+.itemTitles {
+	flex: 1;
+}
+
+.itemZh {
+	font-size: 0.9375rem;
+	font-weight: 600;
+	color: #e8e9ed;
+	line-height: 1.4;
+	margin-bottom: 0.2rem;
+}
+
+.itemEn {
+	font-size: 0.8125rem;
+	color: #a0aec0;
+	line-height: 1.4;
+}
+
+.itemIsarp {
+	font-size: 0.75rem;
+	color: #4a9eff;
+	margin-top: 0.25rem;
+	opacity: 0.7;
+}
+
+.subItems {
+	margin: 0.375rem 0 0.875rem 2.25rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.subItem {
+	font-size: 0.8125rem;
+	color: #94a3b8;
+	display: flex;
+	align-items: flex-start;
+	gap: 0.5rem;
+}
+
+.subItem::before {
+	content: "·";
+	color: #4a9eff;
+	flex-shrink: 0;
+}
+
+/* ── Result radios ─────────────────────────────────────────────── */
+.resultRow {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin-bottom: 0.75rem;
+}
+
+.resultBtn {
+	padding: 5px 14px;
+	border-radius: 20px;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	background: transparent;
+	color: #a0aec0;
+	font-size: 0.8125rem;
+	font-family: inherit;
+	cursor: pointer;
+	transition: all 0.15s;
+	white-space: nowrap;
+}
+
+.resultBtn:hover:not(:disabled) {
+	border-color: rgba(255, 255, 255, 0.25);
+	color: #e8e9ed;
+}
+
+.resultBtn:disabled {
+	cursor: default;
+}
+
+.resultBtnConformity.resultBtnActive {
+	background: rgba(34, 197, 94, 0.15);
+	border-color: #22c55e;
+	color: #22c55e;
+}
+.resultBtnFinding.resultBtnActive {
+	background: rgba(239, 68, 68, 0.15);
+	border-color: #ef4444;
+	color: #ef4444;
+}
+.resultBtnObservation.resultBtnActive {
+	background: rgba(245, 158, 11, 0.15);
+	border-color: #f59e0b;
+	color: #f59e0b;
+}
+.resultBtnNa.resultBtnActive {
+	background: rgba(100, 116, 139, 0.15);
+	border-color: #64748b;
+	color: #94a3b8;
+}
+
+/* ── Finding sub-type ──────────────────────────────────────────── */
+.findingTypeRow {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.375rem;
+	margin-bottom: 0.75rem;
+	padding: 0.625rem 0.875rem;
+	background: rgba(239, 68, 68, 0.06);
+	border: 1px solid rgba(239, 68, 68, 0.15);
+	border-radius: 8px;
+	align-items: center;
+}
+
+.findingTypeLabel {
+	font-size: 0.75rem;
+	color: #ef4444;
+	width: 100%;
+	margin-bottom: 0.25rem;
+	font-weight: 600;
+}
+
+.findingTypeBtn {
+	padding: 4px 10px;
+	border-radius: 5px;
+	border: 1px solid rgba(239, 68, 68, 0.2);
+	background: transparent;
+	color: #94a3b8;
+	font-size: 0.75rem;
+	font-family: inherit;
+	cursor: pointer;
+	transition: all 0.15s;
+}
+
+.findingTypeBtn:hover {
+	border-color: rgba(239, 68, 68, 0.45);
+	color: #e8e9ed;
+}
+
+.findingTypeBtnActive {
+	background: rgba(239, 68, 68, 0.15);
+	border-color: #ef4444;
+	color: #ef4444;
+}
+
+/* ── CAR number ────────────────────────────────────────────────── */
+.carRow {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin-bottom: 0.75rem;
+}
+
+.carLabel {
+	font-size: 0.8125rem;
+	color: #ef4444;
+	font-weight: 600;
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+.carInput {
+	background: rgba(239, 68, 68, 0.06);
+	border: 1px solid rgba(239, 68, 68, 0.25);
+	border-radius: 7px;
+	padding: 5px 10px;
+	color: #e8e9ed;
+	font-size: 0.875rem;
+	font-family: inherit;
+	width: 180px;
+	transition: border-color 0.15s;
+}
+
+.carInput:focus {
+	outline: none;
+	border-color: rgba(239, 68, 68, 0.5);
+}
+
+/* ── Evidence + comments ───────────────────────────────────────── */
+.extraFields {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.textareaWrap {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.textareaLabel {
+	font-size: 0.75rem;
+	color: #64748b;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.textarea {
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 7px;
+	padding: 0.5rem 0.75rem;
+	color: #e8e9ed;
+	font-size: 0.875rem;
+	font-family: inherit;
+	resize: vertical;
+	min-height: 56px;
+	transition: border-color 0.15s;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.textarea:focus {
+	outline: none;
+	border-color: rgba(74, 158, 255, 0.4);
+}
+
+/* ── Footer card ───────────────────────────────────────────────── */
+.footerCard {
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 12px;
+	padding: 1.25rem;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.footerGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	gap: 1rem;
+}
+
+.footerActions {
+	display: flex;
+	gap: 0.75rem;
+	justify-content: flex-end;
+	flex-wrap: wrap;
+}
+
+.btnDraft {
+	padding: 0.625rem 1.25rem;
+	border-radius: 8px;
+	border: 1px solid rgba(255, 255, 255, 0.15);
+	background: transparent;
+	color: #a0aec0;
+	font-size: 0.9375rem;
+	font-family: inherit;
+	cursor: pointer;
+	transition: all 0.15s;
+}
+
+.btnDraft:hover:not(:disabled) {
+	border-color: rgba(255, 255, 255, 0.3);
+	color: #e8e9ed;
+}
+
+.btnSubmit {
+	padding: 0.625rem 1.5rem;
+	border-radius: 8px;
+	border: none;
+	background: #4a9eff;
+	color: #fff;
+	font-size: 0.9375rem;
+	font-weight: 600;
+	font-family: inherit;
+	cursor: pointer;
+	transition:
+		background 0.15s,
+		opacity 0.15s;
+}
+
+.btnSubmit:hover:not(:disabled) {
+	background: #3a8ef0;
+}
+
+.btnSubmit:disabled,
+.btnDraft:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+/* ── Utility ───────────────────────────────────────────────────── */
+.backBtn {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	padding: 5px 10px;
+	background: transparent;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 6px;
+	color: #a0aec0;
+	font-size: 0.875rem;
+	cursor: pointer;
+	font-family: inherit;
+	transition:
+		color 0.15s,
+		border-color 0.15s;
+}
+
+.backBtn:hover {
+	color: #e8e9ed;
+	border-color: rgba(255, 255, 255, 0.25);
+}
+
+.saving {
+	font-size: 0.8125rem;
+	color: #4a9eff;
+}
+
+.readonlyBadge {
+	background: rgba(100, 116, 139, 0.15);
+	color: #94a3b8;
+	font-size: 0.75rem;
+	padding: 2px 8px;
+	border-radius: 20px;
+	font-weight: 500;
+}
+
+/* ── Records table ─────────────────────────────────────────────── */
+.recordsFilters {
+	display: flex;
+	gap: 0.75rem;
+	flex-wrap: wrap;
+	margin-bottom: 1.25rem;
+}
+
+.filterSelect {
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 7px;
+	padding: 0.5rem 2rem 0.5rem 0.75rem;
+	color: #e8e9ed;
+	font-size: 0.875rem;
+	font-family: inherit;
+	cursor: pointer;
+	appearance: none;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a0aec0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 0.75rem center;
+}
+
+.filterSelect option {
+	background: #2d3651;
+}
+
+.filterSelect:focus {
+	outline: none;
+	border-color: rgba(74, 158, 255, 0.5);
+}
+
+.recordsTable {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.recordsTable th {
+	padding: 0.75rem 1rem;
+	text-align: left;
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: #64748b;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+	white-space: nowrap;
+}
+
+.recordsTable td {
+	padding: 0.875rem 1rem;
+	font-size: 0.9rem;
+	color: #e8e9ed;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+	vertical-align: middle;
+}
+
+.recordsTable tr:hover td {
+	background: rgba(255, 255, 255, 0.02);
+}
+
+.statusBadge {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 10px;
+	border-radius: 20px;
+	font-size: 0.75rem;
+	font-weight: 600;
+}
+
+.statusDraft {
+	background: rgba(245, 158, 11, 0.12);
+	color: #f59e0b;
+}
+.statusSubmitted {
+	background: rgba(34, 197, 94, 0.12);
+	color: #22c55e;
+}
+
+.recordActionBtn {
+	padding: 5px 12px;
+	border-radius: 6px;
+	border: 1px solid rgba(74, 158, 255, 0.25);
+	background: rgba(74, 158, 255, 0.08);
+	color: #4a9eff;
+	font-size: 0.8125rem;
+	font-family: inherit;
+	cursor: pointer;
+	transition: all 0.15s;
+}
+
+.recordActionBtn:hover {
+	background: rgba(74, 158, 255, 0.15);
+	border-color: rgba(74, 158, 255, 0.45);
+}
+
+.emptyState {
+	text-align: center;
+	padding: 3rem;
+	color: #475569;
+}
+
+/* ── Responsive ────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+	.headerCard {
+		grid-template-columns: 1fr 1fr;
+	}
+
+	.resultBtn {
+		padding: 5px 10px;
+		font-size: 0.75rem;
+	}
+
+	.recordsTable th:nth-child(4),
+	.recordsTable td:nth-child(4) {
+		display: none;
+	}
+
+	.footerActions {
+		justify-content: stretch;
+	}
+
+	.btnDraft,
+	.btnSubmit {
+		flex: 1;
+		text-align: center;
+	}
+
+	.formInner,
+	.recordsInner {
+		padding: 1rem 0.75rem 3rem;
+	}
+}

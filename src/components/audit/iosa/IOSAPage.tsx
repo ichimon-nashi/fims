@@ -73,11 +73,10 @@ export default function IOSAPage() {
 					{AUDIT_TABS.map((t) => (
 						<button
 							key={t.id}
-							className={`${styles.auditTab} ${activeAuditType === t.id ? styles.auditTabActive : ""} ${t.id !== "iosa" ? styles.auditTabDisabled : ""}`}
+							className={`${styles.auditTab} ${activeAuditType === t.id ? styles.auditTabActive : ""}`}
 							onClick={() =>
 								handleAuditTypeChange(t.id as AuditType)
 							}
-							disabled={t.id !== "iosa"}
 						>
 							{t.label}
 						</button>
