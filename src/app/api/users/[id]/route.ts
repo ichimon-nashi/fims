@@ -1,64 +1,294 @@
-// src/app/api/admin/users/[id]/route.ts
-// NEW FILE — handles DELETE for a single user.
-// Place this at the [id] segment alongside the existing permissions/route.ts.
-
+// src/app/api/users/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { verifyToken, extractTokenFromHeader } from "@/lib/auth";
+import { verifyToken, extractTokenFromHeader, hashPassword } from "@/lib/auth";
 
-export async function DELETE(
+export async function GET(
 	request: NextRequest,
-	context: { params: Promise<{ id: string }> },
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
-		const { id } = await context.params;
+		// Extract and verify JWT token - any authenticated user can view user details
+		const token = extractTokenFromHeader(
+			request.headers.get("authorization"),
+		);
+
+		if (!token) {
+			return NextResponse.json(
+				{ message: "No token provided" },
+				{ status: 401 },
+			);
+		}
+
+		let decoded;
+		try {
+			decoded = verifyToken(token);
+		} catch (tokenError: unknown) {
+			console.error("Token verification failed:", tokenError);
+			return NextResponse.json(
+				{ message: "Invalid token" },
+				{ status: 401 },
+			);
+		}
+
+		const { id } = await params;
+		console.log("Looking up user with ID:", id);
+
 		const supabase = await createClient();
 
-		// Auth check
-		const token = extractTokenFromHeader(request.headers.get("authorization"));
-		if (!token) return NextResponse.json({ message: "未授權" }, { status: 401 });
-
-		let decoded: any;
-		try { decoded = verifyToken(token); }
-		catch { return NextResponse.json({ message: "無效的認證 token" }, { status: 401 }); }
-
-		const { data: authUser, error: authErr } = await supabase
+		// Try by employee_id first
+		let { data: user, error } = await supabase
 			.from("users")
-			.select("employee_id")
+			.select("*")
+			.eq("employee_id", id)
+			.single();
+
+		// If not found, try by UUID
+		if (
+			error &&
+			/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+		) {
+			console.log("User not found by employee_id, trying UUID:", id);
+			const result = await supabase
+				.from("users")
+				.select("*")
+				.eq("id", id)
+				.single();
+			user = result.data;
+			error = result.error;
+		}
+
+		if (error) {
+			console.log("User not found:", error);
+			return NextResponse.json(
+				{ message: "User not found" },
+				{ status: 404 }
+			);
+		}
+
+		console.log("User found:", {
+			id: user.id,
+			employee_id: user.employee_id,
+			email: user.email,
+		});
+
+		// Remove password hash from response
+		const { password_hash, ...userWithoutPassword } = user;
+
+		// Add employeeID for compatibility
+		userWithoutPassword.employeeID = userWithoutPassword.employee_id;
+
+		return NextResponse.json(userWithoutPassword);
+	} catch (error: any) {
+		console.error("Get user error:", error);
+		return NextResponse.json(
+			{
+				message: "Internal server error",
+				error: error.message,
+			},
+			{ status: 500 }
+		);
+	}
+}
+
+export async function PUT(
+	request: NextRequest,
+	{ params }: { params: Promise<{ id: string }> }
+) {
+	try {
+		// Extract and verify JWT token
+		const token = extractTokenFromHeader(
+			request.headers.get("authorization"),
+		);
+
+		if (!token) {
+			return NextResponse.json(
+				{ message: "No token provided" },
+				{ status: 401 },
+			);
+		}
+
+		let decoded;
+		try {
+			decoded = verifyToken(token);
+		} catch (tokenError: unknown) {
+			console.error("Token verification failed:", tokenError);
+			return NextResponse.json(
+				{ message: "Invalid token" },
+				{ status: 401 },
+			);
+		}
+
+		const { id } = await params;
+		const updateData = await request.json();
+
+		const supabase = await createClient();
+		
+		// Get current user's permissions
+		const { data: currentUser, error: userError } = await supabase
+			.from("users")
+			.select("employee_id, authentication_level")
 			.eq("id", decoded.userId)
 			.single();
 
-		if (authErr || !authUser) return NextResponse.json({ message: "找不到使用者" }, { status: 404 });
-
-		if (authUser.employee_id !== "admin" && authUser.employee_id !== "51892") {
-			return NextResponse.json({ message: "權限不足：僅限管理員" }, { status: 403 });
+		if (userError || !currentUser) {
+			console.error("Error fetching current user:", userError);
+			return NextResponse.json(
+				{ message: "User not found" },
+				{ status: 404 },
+			);
 		}
 
-		// Safety: don't allow deleting the admin account itself
-		const { data: targetUser } = await supabase
+		// Check if user is updating themselves or if they have admin privileges
+		const isSelfUpdate = decoded.userId === id;
+		const isAdmin = currentUser.employee_id === "admin" || currentUser.authentication_level >= 5;
+
+		if (!isSelfUpdate && !isAdmin) {
+			return NextResponse.json(
+				{ message: "Insufficient permissions to update other users" },
+				{ status: 403 }
+			);
+		}
+
+		console.log("Updating user:", id, "with data:", Object.keys(updateData));
+
+		// Remove fields that shouldn't be updated directly
+		delete updateData.id;
+		delete updateData.created_at;
+		delete updateData.updated_at;
+		delete updateData.password_hash;
+
+		// Hash password if provided
+		if (updateData.password) {
+			// Only allow password updates for self or admin
+			if (!isSelfUpdate && !isAdmin) {
+				delete updateData.password;
+			} else {
+				updateData.password_hash = await hashPassword(updateData.password);
+				delete updateData.password;
+			}
+		}
+
+		// Only admin can change authentication_level and app_permissions
+		if (!isAdmin) {
+			delete updateData.authentication_level;
+			delete updateData.app_permissions;
+		}
+
+		// Don't allow changing employee_id
+		delete updateData.employee_id;
+
+		const { data: updatedUser, error } = await supabase
 			.from("users")
-			.select("employee_id")
+			.update(updateData)
 			.eq("id", id)
+			.select("*")
 			.single();
 
-		if (targetUser?.employee_id === "admin" || targetUser?.employee_id === "51892") {
-			return NextResponse.json({ message: "無法刪除管理員帳號" }, { status: 403 });
+		if (error) {
+			console.error("Update user error:", error);
+			if (error.code === "PGRST116") {
+				return NextResponse.json(
+					{ message: "User not found" },
+					{ status: 404 }
+				);
+			}
+			return NextResponse.json(
+				{ message: "Failed to update user", error: error.message },
+				{ status: 500 }
+			);
 		}
 
-		const { error: deleteError } = await supabase
-			.from("users")
-			.delete()
-			.eq("id", id);
+		// Remove password hash from response
+		const { password_hash, ...userWithoutPassword } = updatedUser;
 
-		if (deleteError) {
-			return NextResponse.json({ message: "刪除失敗", error: deleteError.message }, { status: 500 });
-		}
-
-		return NextResponse.json({ message: "使用者已刪除" });
-	} catch (error: unknown) {
+		console.log("User updated successfully:", userWithoutPassword.id);
+		return NextResponse.json(userWithoutPassword);
+	} catch (error: any) {
+		console.error("Update user error:", error);
 		return NextResponse.json(
-			{ message: "伺服器錯誤", error: error instanceof Error ? error.message : String(error) },
-			{ status: 500 },
+			{
+				message: "Internal server error",
+				error: error.message,
+			},
+			{ status: 500 }
+		);
+	}
+}
+
+export async function DELETE(
+	request: NextRequest,
+	{ params }: { params: Promise<{ id: string }> }
+) {
+	try {
+		// Extract and verify JWT token
+		const token = extractTokenFromHeader(
+			request.headers.get("authorization"),
+		);
+
+		if (!token) {
+			return NextResponse.json(
+				{ message: "No token provided" },
+				{ status: 401 },
+			);
+		}
+
+		let decoded;
+		try {
+			decoded = verifyToken(token);
+		} catch (tokenError: unknown) {
+			console.error("Token verification failed:", tokenError);
+			return NextResponse.json(
+				{ message: "Invalid token" },
+				{ status: 401 },
+			);
+		}
+
+		const supabase = await createClient();
+		
+		// Get current user's permissions
+		const { data: currentUser, error: userError } = await supabase
+			.from("users")
+			.select("employee_id, authentication_level")
+			.eq("id", decoded.userId)
+			.single();
+
+		if (userError || !currentUser) {
+			console.error("Error fetching current user:", userError);
+			return NextResponse.json(
+				{ message: "User not found" },
+				{ status: 404 },
+			);
+		}
+
+		// Only admin can delete users
+		const isAdmin = currentUser.employee_id === "admin" || currentUser.authentication_level >= 10;
+
+		if (!isAdmin) {
+			return NextResponse.json(
+				{ message: "Insufficient permissions to delete users" },
+				{ status: 403 }
+			);
+		}
+
+		const { id } = await params;
+
+		const { error } = await supabase.from("users").delete().eq("id", id);
+
+		if (error) {
+			console.error("Delete user error:", error);
+			return NextResponse.json(
+				{ message: "Failed to delete user", error: error.message },
+				{ status: 500 }
+			);
+		}
+
+		return NextResponse.json({ message: "User deleted successfully" });
+	} catch (error: any) {
+		console.error("Delete user error:", error);
+		return NextResponse.json(
+			{ message: "Internal server error" },
+			{ status: 500 }
 		);
 	}
 }

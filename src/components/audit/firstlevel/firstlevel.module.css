@@ -186,7 +186,7 @@
 
 .formInner {
 	width: 100%;
-	max-width: 960px;
+	max-width: 1280px;
 	margin: 0 auto;
 	padding: 1.25rem 1.5rem 3rem;
 	display: flex;
@@ -205,7 +205,7 @@
 
 .recordsInner {
 	width: 100%;
-	max-width: 960px;
+	max-width: 1280px;
 	margin: 0 auto;
 	padding: 1.25rem 1.5rem 3rem;
 	box-sizing: border-box;
@@ -675,22 +675,25 @@
 	display: flex;
 	align-items: center;
 	gap: 0.375rem;
-	padding: 5px 10px;
-	background: transparent;
-	border: 1px solid rgba(255, 255, 255, 0.12);
+	padding: 5px 14px;
+	background: rgba(239, 68, 68, 0.1);
+	border: 1px solid rgba(239, 68, 68, 0.3);
 	border-radius: 6px;
-	color: #a0aec0;
+	color: #fca5a5;
 	font-size: 0.875rem;
+	font-weight: 500;
 	cursor: pointer;
 	font-family: inherit;
 	transition:
-		color 0.15s,
-		border-color 0.15s;
+		background 0.15s,
+		border-color 0.15s,
+		color 0.15s;
 }
 
 .backBtn:hover {
-	color: #e8e9ed;
-	border-color: rgba(255, 255, 255, 0.25);
+	background: rgba(239, 68, 68, 0.2);
+	border-color: rgba(239, 68, 68, 0.55);
+	color: #fff;
 }
 
 .saving {
@@ -838,5 +841,478 @@
 	.formInner,
 	.recordsInner {
 		padding: 1rem 0.75rem 3rem;
+	}
+}
+
+/* ── Flag button ───────────────────────────────────────────────── */
+.flagBtn {
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-size: 1rem;
+	opacity: 0.25;
+	padding: 2px 4px;
+	border-radius: 4px;
+	transition: opacity 0.15s;
+	flex-shrink: 0;
+	line-height: 1;
+}
+
+.flagBtn:hover {
+	opacity: 0.7;
+}
+
+.flagBtnActive {
+	opacity: 1 !important;
+}
+
+/* ── Item completion left border (set inline) ──────────────────── */
+.itemRow {
+	border-left: 3px solid transparent;
+	padding-left: calc(1.125rem - 3px);
+}
+
+/* ── Recommendations block ─────────────────────────────────────── */
+.recoBlock {
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 12px;
+	padding: 1.25rem;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.recoTitle {
+	font-size: 0.9375rem;
+	font-weight: 600;
+	color: #e8e9ed;
+	margin: 0;
+}
+
+.recoList {
+	display: flex;
+	flex-direction: column;
+	gap: 0.625rem;
+}
+
+.recoItem {
+	display: flex;
+	gap: 0.5rem;
+	align-items: flex-start;
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid rgba(255, 255, 255, 0.07);
+	border-radius: 8px;
+	padding: 0.625rem 0.75rem;
+}
+
+.recoItemSection {
+	background: rgba(74, 158, 255, 0.12);
+	color: #4a9eff;
+	font-size: 0.75rem;
+	font-weight: 600;
+	padding: 2px 8px;
+	border-radius: 20px;
+	white-space: nowrap;
+	flex-shrink: 0;
+	margin-top: 2px;
+}
+
+.recoItemText {
+	flex: 1;
+	font-size: 0.875rem;
+	color: #e8e9ed;
+	line-height: 1.5;
+}
+
+.recoDeleteBtn {
+	background: none;
+	border: none;
+	color: #475569;
+	cursor: pointer;
+	font-size: 1rem;
+	padding: 0 2px;
+	flex-shrink: 0;
+	transition: color 0.15s;
+}
+
+.recoDeleteBtn:hover {
+	color: #ef4444;
+}
+
+.recoAddRow {
+	display: flex;
+	gap: 0.5rem;
+	align-items: flex-start;
+	flex-wrap: wrap;
+}
+
+.recoSectionSelect {
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 7px;
+	padding: 0.5rem 2rem 0.5rem 0.75rem;
+	color: #e8e9ed;
+	font-size: 0.875rem;
+	font-family: inherit;
+	cursor: pointer;
+	appearance: none;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a0aec0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 0.75rem center;
+	flex-shrink: 0;
+}
+
+.recoSectionSelect option {
+	background: #2d3651;
+}
+
+.recoTextInput {
+	flex: 1;
+	min-width: 180px;
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 7px;
+	padding: 0.5rem 0.75rem;
+	color: #e8e9ed;
+	font-size: 0.875rem;
+	font-family: inherit;
+	resize: none;
+}
+
+.recoTextInput:focus {
+	outline: none;
+	border-color: rgba(74, 158, 255, 0.4);
+}
+
+.recoAddBtn {
+	padding: 0.5rem 1rem;
+	border-radius: 7px;
+	border: 1px solid rgba(74, 158, 255, 0.3);
+	background: rgba(74, 158, 255, 0.08);
+	color: #4a9eff;
+	font-size: 0.875rem;
+	font-family: inherit;
+	cursor: pointer;
+	white-space: nowrap;
+	transition: all 0.15s;
+	flex-shrink: 0;
+}
+
+.recoAddBtn:hover:not(:disabled) {
+	background: rgba(74, 158, 255, 0.15);
+}
+
+.recoAddBtn:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+/* ── Auditor combobox ──────────────────────────────────────────── */
+.auditorWrap {
+	position: relative;
+}
+
+.auditorDropdown {
+	position: absolute;
+	top: calc(100% + 4px);
+	left: 0;
+	right: 0;
+	background: #2d3651;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 8px;
+	z-index: 100;
+	max-height: 200px;
+	overflow-y: auto;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.auditorOption {
+	padding: 0.5rem 0.75rem;
+	font-size: 0.875rem;
+	color: #e8e9ed;
+	cursor: pointer;
+	transition: background 0.12s;
+}
+
+.auditorOption:hover {
+	background: rgba(74, 158, 255, 0.12);
+}
+
+/* ── Auditor chip (locked selection) ──────────────────────────── */
+.auditorChips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin-bottom: 0.5rem;
+}
+
+.auditorChip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	background: rgba(74, 158, 255, 0.1);
+	border: 1px solid rgba(74, 158, 255, 0.3);
+	border-radius: 20px;
+	padding: 3px 8px 3px 4px;
+}
+
+.auditorChipAvatar {
+	width: 24px !important;
+	height: 24px !important;
+	border-radius: 50% !important;
+	object-fit: cover;
+	flex-shrink: 0;
+}
+
+.auditorChipName {
+	font-size: 0.875rem;
+	color: #e8e9ed;
+	font-weight: 500;
+}
+
+.auditorChipClear {
+	background: none;
+	border: none;
+	color: #64748b;
+	cursor: pointer;
+	font-size: 0.75rem;
+	padding: 1px 2px;
+	line-height: 1;
+	transition: color 0.15s;
+	flex-shrink: 0;
+}
+
+.auditorChipClear:hover {
+	color: #ef4444;
+}
+
+/* ── Auditor dropdown options with avatar ──────────────────────── */
+.auditorOption {
+	display: flex;
+	align-items: center;
+	gap: 0.625rem;
+	padding: 0.5rem 0.75rem;
+	cursor: pointer;
+	transition: background 0.12s;
+}
+
+.auditorOption:hover {
+	background: rgba(74, 158, 255, 0.12);
+}
+
+.auditorOptionAvatar {
+	width: 32px !important;
+	height: 32px !important;
+	border-radius: 50% !important;
+	object-fit: cover;
+	flex-shrink: 0;
+}
+
+.auditorOptionInfo {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+}
+
+.auditorOptionName {
+	font-size: 0.9rem;
+	color: #e8e9ed;
+	font-weight: 600;
+}
+
+.auditorOptionMeta {
+	font-size: 0.75rem;
+	color: #64748b;
+}
+
+/* ── Record cards (replaces table) ─────────────────────────────── */
+.recordCards {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	gap: 1rem;
+}
+
+.recordCard {
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 12px;
+	padding: 1.125rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.625rem;
+	transition:
+		border-color 0.15s,
+		background 0.15s;
+}
+
+.recordCard:hover {
+	border-color: rgba(74, 158, 255, 0.25);
+	background: rgba(255, 255, 255, 0.06);
+}
+
+.recordCardTop {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.recordCardSection {
+	margin-left: auto;
+	font-size: 0.8125rem;
+	color: #a0aec0;
+	background: rgba(255, 255, 255, 0.06);
+	padding: 2px 8px;
+	border-radius: 20px;
+}
+
+.recordCardTitle {
+	font-size: 1.0625rem;
+	font-weight: 700;
+	color: #e8e9ed;
+}
+
+.recordCardMeta {
+	display: flex;
+	flex-direction: column;
+	gap: 0.2rem;
+	font-size: 0.8125rem;
+	color: #64748b;
+}
+
+.recordCardActions {
+	display: flex;
+	gap: 0.5rem;
+	margin-top: 0.375rem;
+	flex-wrap: wrap;
+}
+
+.recordExportBtn {
+	padding: 5px 12px;
+	border-radius: 6px;
+	border: 1px solid rgba(34, 197, 94, 0.25);
+	background: rgba(34, 197, 94, 0.08);
+	color: #22c55e;
+	font-size: 0.8125rem;
+	font-family: inherit;
+	cursor: pointer;
+	transition: all 0.15s;
+}
+
+.recordExportBtn:hover {
+	background: rgba(34, 197, 94, 0.15);
+	border-color: rgba(34, 197, 94, 0.45);
+}
+
+.recordDeleteBtn {
+	padding: 5px 12px;
+	border-radius: 6px;
+	border: 1px solid rgba(239, 68, 68, 0.2);
+	background: transparent;
+	color: #ef4444;
+	font-size: 0.8125rem;
+	font-family: inherit;
+	cursor: pointer;
+	transition: all 0.15s;
+}
+
+.recordDeleteBtn:hover {
+	background: rgba(239, 68, 68, 0.08);
+	border-color: rgba(239, 68, 68, 0.4);
+}
+
+/* ── Export button ─────────────────────────────────────────────── */
+.exportBtn {
+	padding: 5px 12px;
+	border-radius: 6px;
+	border: 1px solid rgba(34, 197, 94, 0.3);
+	background: rgba(34, 197, 94, 0.08);
+	color: #22c55e;
+	font-size: 0.875rem;
+	font-family: inherit;
+	cursor: pointer;
+	transition: all 0.15s;
+}
+
+.exportBtn:hover {
+	background: rgba(34, 197, 94, 0.15);
+}
+
+/* ── Print styles ──────────────────────────────────────────────── */
+@media print {
+	.topbar,
+	.progressBar,
+	.footerActions,
+	.exportBtn,
+	.backBtn,
+	.flagBtn,
+	.resultBtn,
+	.findingTypeBtn,
+	.btnDraft,
+	.btnSubmit,
+	.recoAddRow {
+		display: none !important;
+	}
+
+	.shell {
+		height: auto;
+		background: #fff !important;
+		color: #000 !important;
+	}
+
+	.formScroll {
+		overflow: visible;
+	}
+
+	.formInner {
+		max-width: 100%;
+		padding: 0;
+	}
+
+	.sectionBlock,
+	.headerCard,
+	.footerCard,
+	.recoBlock {
+		border: 1px solid #ccc !important;
+		background: #fff !important;
+		break-inside: avoid;
+	}
+
+	.itemRow {
+		break-inside: avoid;
+		border-bottom: 1px solid #eee !important;
+	}
+
+	.itemZh {
+		color: #000 !important;
+	}
+	.itemEn {
+		color: #444 !important;
+	}
+	.itemCode {
+		background: #e8f0ff !important;
+		color: #1a3a7c !important;
+	}
+	.sectionTitle {
+		color: #000 !important;
+	}
+	.fieldLabel {
+		color: #666 !important;
+	}
+	.readonlyVal {
+		color: #000 !important;
+	}
+
+	.resultBtnConformity.resultBtnActive {
+		color: #166534 !important;
+		border-color: #166534 !important;
+	}
+	.resultBtnFinding.resultBtnActive {
+		color: #991b1b !important;
+		border-color: #991b1b !important;
+	}
+	.resultBtnNa.resultBtnActive {
+		color: #475569 !important;
+		border-color: #475569 !important;
 	}
 }

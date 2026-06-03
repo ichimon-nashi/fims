@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
 	let query = supabase
 		.from("audit_first_level")
 		.select(
-			"id, year, half, section, auditor_id, auditor_name, status, created_at, updated_at, submitted_at, period_start, period_end",
+			"id, year, half, section, auditor_id, auditor_name, auditors, audit_date, status, created_at, updated_at, submitted_at",
 		)
 		.order("created_at", { ascending: false });
 
@@ -49,23 +49,26 @@ export async function POST(req: NextRequest) {
 		year,
 		half,
 		section,
-		period_start,
-		period_end,
-		auditor_id,
-		auditor_name,
+		audit_date,
+		auditors,
 		status,
 		responses,
-		additional_remarks,
-		reviewer_name,
-		reviewer_date,
+		recommendations,
 	} = body;
 
-	if (!year || !half || !section || !auditor_id || !auditor_name) {
+	if (!year || !half || !section) {
 		return NextResponse.json(
 			{ error: "Missing required fields" },
 			{ status: 400 },
 		);
 	}
+
+	// Derive display fields from auditors array
+	const auditorArr = auditors || [];
+	const auditorName = auditorArr
+		.map((a: { full_name: string }) => a.full_name)
+		.join(", ");
+	const auditorId = auditorArr[0]?.employee_id || "";
 
 	const supabase = createServiceClient();
 	const now = new Date().toISOString();
@@ -76,15 +79,13 @@ export async function POST(req: NextRequest) {
 			year,
 			half,
 			section,
-			period_start: period_start || null,
-			period_end: period_end || null,
-			auditor_id,
-			auditor_name,
+			audit_date: audit_date || null,
+			auditors: auditorArr,
+			auditor_name: auditorName,
+			auditor_id: auditorId,
 			status: status || "draft",
 			responses: responses || {},
-			additional_remarks: additional_remarks || null,
-			reviewer_name: reviewer_name || null,
-			reviewer_date: reviewer_date || null,
+			recommendations: recommendations || [],
 			submitted_at: status === "submitted" ? now : null,
 			updated_at: now,
 		})

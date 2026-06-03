@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import styles from "./firstlevel.module.css";
@@ -10,12 +11,19 @@ import {
 	CHECKLIST_ITEMS,
 	SECTIONS,
 	SECTIONS_DEPT,
+	RECOMMENDATION_SECTIONS,
 	EMPTY_RESPONSE,
 	ItemResponse,
 	DeptSection,
+	Recommendation,
 } from "./checklistData";
 
 type View = "landing" | "new" | "records" | "detail";
+
+interface AuditorEntry {
+	employee_id: string;
+	full_name: string;
+}
 
 interface AuditRecord {
 	id: string;
@@ -24,16 +32,22 @@ interface AuditRecord {
 	section: DeptSection;
 	auditor_id: string;
 	auditor_name: string;
+	auditors: AuditorEntry[];
+	audit_date: string | null;
 	status: "draft" | "submitted";
 	created_at: string;
 	updated_at: string;
 	submitted_at: string | null;
-	period_start: string | null;
-	period_end: string | null;
 	responses?: Record<string, ItemResponse>;
-	additional_remarks?: string;
-	reviewer_name?: string;
-	reviewer_date?: string;
+	recommendations?: Recommendation[];
+}
+
+const AVATAR_BASE =
+	"https://rhdpkxkmugimtlbdizfp.supabase.co/storage/v1/object/public/avatars";
+const DEFAULT_AVATAR = `${AVATAR_BASE}/avatar-default.png`;
+
+function avatarUrl(employeeId: string) {
+	return employeeId ? `${AVATAR_BASE}/${employeeId}.png` : DEFAULT_AVATAR;
 }
 
 const AUDIT_TABS = [
@@ -42,14 +56,24 @@ const AUDIT_TABS = [
 	{ id: "iosa", label: "IOSA", href: "/audit/iosa" },
 ] as const;
 
-const CURRENT_YEAR = new Date().getFullYear();
-const CURRENT_HALF = new Date().getMonth() < 6 ? 1 : 2;
+// Years: 2026 to current
+const START_YEAR = 2026;
+const CURRENT_YEAR = Math.max(new Date().getFullYear(), START_YEAR);
+const CURRENT_HALF: 1 | 2 = new Date().getMonth() < 6 ? 1 : 2;
+const YEARS = Array.from(
+	{ length: CURRENT_YEAR - START_YEAR + 1 },
+	(_, i) => START_YEAR + i,
+);
+
+interface UserOption {
+	employee_id: string;
+	full_name: string;
+	rank: string;
+}
 
 function buildEmptyResponses(): Record<string, ItemResponse> {
 	const out: Record<string, ItemResponse> = {};
-	for (const item of CHECKLIST_ITEMS) {
-		out[item.code] = { ...EMPTY_RESPONSE };
-	}
+	for (const item of CHECKLIST_ITEMS) out[item.code] = { ...EMPTY_RESPONSE };
 	return out;
 }
 
@@ -58,19 +82,22 @@ export default function FirstLevelPage() {
 	const router = useRouter();
 	const [view, setView] = useState<View>("landing");
 
-	// ── New audit form state ──
+	// ── Form state ──
 	const [year, setYear] = useState(CURRENT_YEAR);
 	const [half, setHalf] = useState<1 | 2>(CURRENT_HALF);
 	const [section, setSection] = useState<DeptSection>("管派組");
-	const [periodStart, setPeriodStart] = useState("");
-	const [periodEnd, setPeriodEnd] = useState("");
-	const [auditorName, setAuditorName] = useState(user?.full_name || "");
+	const [auditDate, setAuditDate] = useState("");
+	const [auditors, setAuditors] = useState<AuditorEntry[]>([]);
+	const [auditorQuery, setAuditorQuery] = useState("");
+	const [showAuditorDrop, setShowAuditorDrop] = useState(false);
 	const [responses, setResponses] = useState<Record<string, ItemResponse>>(
 		buildEmptyResponses(),
 	);
-	const [additionalRemarks, setAdditionalRemarks] = useState("");
-	const [reviewerName, setReviewerName] = useState("");
-	const [reviewerDate, setReviewerDate] = useState("");
+	const [recommendations, setRecommendations] = useState<Recommendation[]>(
+		[],
+	);
+	const [recoSection, setRecoSection] = useState<string>("全科");
+	const [recoText, setRecoText] = useState("");
 	const [collapsedSections, setCollapsedSections] = useState<
 		Record<number, boolean>
 	>({});
@@ -87,19 +114,62 @@ export default function FirstLevelPage() {
 	const [detailRecord, setDetailRecord] = useState<AuditRecord | null>(null);
 
 	const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const auditorWrapRef = useRef<HTMLDivElement>(null);
+	const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const [userOptions, setUserOptions] = useState<UserOption[]>([]);
+
+	// Fetch auditor options — default (FI/SC/MG/OTHER) on mount, search on query change
+	async function fetchUsers(q: string) {
+		try {
+			const params = q ? `?q=${encodeURIComponent(q)}` : "";
+			const res = await fetch(`/api/audit/firstlevel/users${params}`, {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			const data = await res.json();
+			setUserOptions(data.users || []);
+		} catch {
+			/* silent */
+		}
+	}
+
+	useEffect(() => {
+		fetchUsers("");
+	}, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+	// Close auditor dropdown on outside click
+	useEffect(() => {
+		function handleClick(e: MouseEvent) {
+			if (
+				auditorWrapRef.current &&
+				!auditorWrapRef.current.contains(e.target as Node)
+			) {
+				setShowAuditorDrop(false);
+			}
+		}
+		document.addEventListener("mousedown", handleClick);
+		return () => document.removeEventListener("mousedown", handleClick);
+	}, []);
 
 	// ── Computed ──
 	const answered = Object.values(responses).filter(
 		(r) => r.result !== null,
 	).length;
 	const total = CHECKLIST_ITEMS.length;
+	const flaggedCount = Object.values(responses).filter(
+		(r) => r.flagged,
+	).length;
+	const auditorName = auditors.map((a) => a.full_name).join("、");
 
-	function sectionAnswered(sectionNum: number) {
-		const items = CHECKLIST_ITEMS.filter((i) => i.section === sectionNum);
-		return items.filter((i) => responses[i.code]?.result !== null).length;
+	function sectionAnswered(n: number) {
+		return CHECKLIST_ITEMS.filter(
+			(i) => i.section === n && responses[i.code]?.result !== null,
+		).length;
+	}
+	function sectionTotal(n: number) {
+		return CHECKLIST_ITEMS.filter((i) => i.section === n).length;
 	}
 
-	// ── API helpers ──
+	// ── API ──
 	async function apiFetch(path: string, method = "GET", body?: unknown) {
 		const res = await fetch(path, {
 			method,
@@ -113,7 +183,6 @@ export default function FirstLevelPage() {
 		return res.json();
 	}
 
-	// ── Load records ──
 	const loadRecords = useCallback(async () => {
 		setLoadingRecords(true);
 		try {
@@ -139,7 +208,7 @@ export default function FirstLevelPage() {
 		setResponses((prev) => ({ ...prev, [code]: updated }));
 		if (editingId) {
 			if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-			autoSaveTimer.current = setTimeout(() => autoSaveDraft(), 3000);
+			autoSaveTimer.current = setTimeout(autoSaveDraft, 3000);
 		}
 	}
 
@@ -148,9 +217,7 @@ export default function FirstLevelPage() {
 		try {
 			await apiFetch(`/api/audit/firstlevel/${editingId}`, "PATCH", {
 				responses,
-				additional_remarks: additionalRemarks,
-				reviewer_name: reviewerName,
-				reviewer_date: reviewerDate || null,
+				recommendations,
 			});
 			setSaveMsg("自動儲存 ✓");
 			setTimeout(() => setSaveMsg(""), 2000);
@@ -159,35 +226,34 @@ export default function FirstLevelPage() {
 		}
 	}
 
-	// ── Save draft ──
+	// ── Payload builder ──
+	function buildPayload(status: "draft" | "submitted") {
+		return {
+			year,
+			half,
+			section,
+			audit_date: auditDate || null,
+			auditors,
+			status,
+			responses,
+			recommendations,
+		};
+	}
+
 	async function saveDraft() {
 		setSaving(true);
 		try {
-			const payload = {
-				year,
-				half,
-				section,
-				period_start: periodStart || null,
-				period_end: periodEnd || null,
-				auditor_id: user?.employee_id || "",
-				auditor_name: auditorName,
-				status: "draft",
-				responses,
-				additional_remarks: additionalRemarks,
-				reviewer_name: reviewerName,
-				reviewer_date: reviewerDate || null,
-			};
 			if (editingId) {
 				await apiFetch(
 					`/api/audit/firstlevel/${editingId}`,
 					"PATCH",
-					payload,
+					buildPayload("draft"),
 				);
 			} else {
 				const data = await apiFetch(
 					"/api/audit/firstlevel",
 					"POST",
-					payload,
+					buildPayload("draft"),
 				);
 				setEditingId(data.record.id);
 			}
@@ -199,33 +265,22 @@ export default function FirstLevelPage() {
 		setSaving(false);
 	}
 
-	// ── Submit ──
 	async function submitAudit() {
 		if (!confirm("確認提交？提交後無法修改。")) return;
 		setSaving(true);
 		try {
-			const payload = {
-				year,
-				half,
-				section,
-				period_start: periodStart || null,
-				period_end: periodEnd || null,
-				auditor_id: user?.employee_id || "",
-				auditor_name: auditorName,
-				status: "submitted",
-				responses,
-				additional_remarks: additionalRemarks,
-				reviewer_name: reviewerName,
-				reviewer_date: reviewerDate || null,
-			};
 			if (editingId) {
 				await apiFetch(
 					`/api/audit/firstlevel/${editingId}`,
 					"PATCH",
-					payload,
+					buildPayload("submitted"),
 				);
 			} else {
-				await apiFetch("/api/audit/firstlevel", "POST", payload);
+				await apiFetch(
+					"/api/audit/firstlevel",
+					"POST",
+					buildPayload("submitted"),
+				);
 			}
 			alert("查核表已提交！");
 			resetForm();
@@ -241,18 +296,17 @@ export default function FirstLevelPage() {
 		setYear(CURRENT_YEAR);
 		setHalf(CURRENT_HALF);
 		setSection("管派組");
-		setPeriodStart("");
-		setPeriodEnd("");
-		setAuditorName(user?.full_name || "");
+		setAuditDate("");
+		setAuditors([]);
+		setAuditorQuery("");
 		setResponses(buildEmptyResponses());
-		setAdditionalRemarks("");
-		setReviewerName("");
-		setReviewerDate("");
+		setRecommendations([]);
+		setRecoSection("全科");
+		setRecoText("");
 		setCollapsedSections({});
 		setSaveMsg("");
 	}
 
-	// ── Open existing record ──
 	async function openRecord(record: AuditRecord) {
 		try {
 			const data = await apiFetch(`/api/audit/firstlevel/${record.id}`);
@@ -266,23 +320,71 @@ export default function FirstLevelPage() {
 			setYear(r.year);
 			setHalf(r.half);
 			setSection(r.section);
-			setPeriodStart(r.period_start || "");
-			setPeriodEnd(r.period_end || "");
-			setAuditorName(r.auditor_name);
+			setAuditDate(r.audit_date || "");
+			setAuditors(r.auditors || []);
+			setAuditorQuery("");
 			const merged = buildEmptyResponses();
 			if (r.responses) Object.assign(merged, r.responses);
 			setResponses(merged);
-			setAdditionalRemarks(r.additional_remarks || "");
-			setReviewerName(r.reviewer_name || "");
-			setReviewerDate(r.reviewer_date || "");
+			setRecommendations(r.recommendations || []);
 			setView("new");
 		} catch {
 			alert("載入失敗");
 		}
 	}
 
+	const [autoPrint, setAutoPrint] = useState(false);
+
+	useEffect(() => {
+		if (autoPrint && view === "detail") {
+			const t = setTimeout(() => {
+				window.print();
+				setAutoPrint(false);
+			}, 400);
+			return () => clearTimeout(t);
+		}
+	}, [autoPrint, view]);
+
+	async function exportRecord(record: AuditRecord) {
+		try {
+			const data = await apiFetch(`/api/audit/firstlevel/${record.id}`);
+			setDetailRecord(data.record);
+			setView("detail");
+			setAutoPrint(true);
+		} catch {
+			alert("載入失敗");
+		}
+	}
+
+	function addRecommendation() {
+		if (!recoText.trim()) return;
+		setRecommendations((prev) => [
+			...prev,
+			{
+				id: `reco-${Date.now()}`,
+				section: recoSection,
+				text: recoText.trim(),
+			},
+		]);
+		setRecoText("");
+	}
+
+	function removeRecommendation(id: string) {
+		setRecommendations((prev) => prev.filter((r) => r.id !== id));
+	}
+
 	function toggleSection(num: number) {
 		setCollapsedSections((prev) => ({ ...prev, [num]: !prev[num] }));
+	}
+
+	async function deleteRecord(id: string) {
+		if (!confirm("確認刪除此草稿？此操作無法復原。")) return;
+		try {
+			await apiFetch(`/api/audit/firstlevel/${id}`, "DELETE");
+			loadRecords();
+		} catch {
+			alert("刪除失敗");
+		}
 	}
 
 	// ── Shared top tab bar ──
@@ -305,11 +407,7 @@ export default function FirstLevelPage() {
 		</div>
 	);
 
-	// ─────────────────────────────────────────────────────────────────
-	// RENDER
-	// ─────────────────────────────────────────────────────────────────
-
-	// Landing
+	// ─── LANDING ───────────────────────────────────────────────────
 	if (view === "landing") {
 		return (
 			<div className={styles.shell}>
@@ -331,7 +429,13 @@ export default function FirstLevelPage() {
 								setView("new");
 							}}
 						>
-							<div className={styles.landingCardIcon}>📋</div>
+							<Image
+								src="/images/newaudit.png"
+								alt="新增查核"
+								width={80}
+								height={80}
+								style={{ objectFit: "contain" }}
+							/>
 							<h2 className={styles.landingCardTitle}>
 								新增查核
 							</h2>
@@ -343,7 +447,13 @@ export default function FirstLevelPage() {
 							className={styles.landingCard}
 							onClick={() => setView("records")}
 						>
-							<div className={styles.landingCardIcon}>🗂️</div>
+							<Image
+								src="/images/auditrecord.png"
+								alt="查核紀錄"
+								width={80}
+								height={80}
+								style={{ objectFit: "contain" }}
+							/>
 							<h2 className={styles.landingCardTitle}>
 								查核紀錄
 							</h2>
@@ -357,9 +467,8 @@ export default function FirstLevelPage() {
 		);
 	}
 
-	// Records list
+	// ─── RECORDS ───────────────────────────────────────────────────
 	if (view === "records") {
-		const years = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - i);
 		return (
 			<div className={styles.shell}>
 				<TopBar>
@@ -379,7 +488,7 @@ export default function FirstLevelPage() {
 								onChange={(e) => setFilterYear(e.target.value)}
 							>
 								<option value="">所有年度</option>
-								{years.map((y) => (
+								{YEARS.map((y) => (
 									<option key={y} value={y}>
 										{y}
 									</option>
@@ -409,7 +518,6 @@ export default function FirstLevelPage() {
 								))}
 							</select>
 						</div>
-
 						{loadingRecords ? (
 							<div className={styles.emptyState}>載入中...</div>
 						) : records.length === 0 ? (
@@ -417,59 +525,97 @@ export default function FirstLevelPage() {
 								尚無查核紀錄
 							</div>
 						) : (
-							<table className={styles.recordsTable}>
-								<thead>
-									<tr>
-										<th>年度/半年</th>
-										<th>組別</th>
-										<th>查核員</th>
-										<th>日期</th>
-										<th>狀態</th>
-										<th></th>
-									</tr>
-								</thead>
-								<tbody>
-									{records.map((rec) => (
-										<tr key={rec.id}>
-											<td>
-												{rec.year}{" "}
-												{rec.half === 1 ? "上" : "下"}
-												半年
-											</td>
-											<td>{rec.section}</td>
-											<td>{rec.auditor_name}</td>
-											<td>
+							<div className={styles.recordCards}>
+								{records.map((rec) => (
+									<div
+										key={rec.id}
+										className={styles.recordCard}
+									>
+										<div className={styles.recordCardTop}>
+											<span
+												className={`${styles.statusBadge} ${rec.status === "submitted" ? styles.statusSubmitted : styles.statusDraft}`}
+											>
+												{rec.status === "submitted"
+													? "已提交"
+													: "草稿"}
+											</span>
+											<span
+												className={
+													styles.recordCardSection
+												}
+											>
+												{rec.section}
+											</span>
+										</div>
+										<div className={styles.recordCardTitle}>
+											{rec.year}{" "}
+											{rec.half === 1
+												? "上半年"
+												: "下半年"}
+										</div>
+										<div className={styles.recordCardMeta}>
+											<span>
+												查核員：{rec.auditor_name}
+											</span>
+											{rec.audit_date && (
+												<span>
+													日期：
+													{new Date(
+														rec.audit_date +
+															"T00:00:00",
+													).toLocaleDateString(
+														"zh-TW",
+													)}
+												</span>
+											)}
+											<span>
+												建立：
 												{new Date(
 													rec.created_at,
 												).toLocaleDateString("zh-TW")}
-											</td>
-											<td>
-												<span
-													className={`${styles.statusBadge} ${rec.status === "submitted" ? styles.statusSubmitted : styles.statusDraft}`}
-												>
-													{rec.status === "submitted"
-														? "已提交"
-														: "草稿"}
-												</span>
-											</td>
-											<td>
+											</span>
+										</div>
+										<div
+											className={styles.recordCardActions}
+										>
+											<button
+												className={
+													styles.recordActionBtn
+												}
+												onClick={() => openRecord(rec)}
+											>
+												{rec.status === "submitted"
+													? "🔍 檢視"
+													: "✏️ 編輯"}
+											</button>
+											{rec.status === "submitted" && (
 												<button
 													className={
-														styles.recordActionBtn
+														styles.recordExportBtn
 													}
 													onClick={() =>
-														openRecord(rec)
+														exportRecord(rec)
 													}
 												>
-													{rec.status === "submitted"
-														? "檢視"
-														: "繼續編輯"}
+													📄 匯出PDF
 												</button>
-											</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
+											)}
+											{rec.status === "draft" && (
+												<button
+													className={
+														styles.recordDeleteBtn
+													}
+													onClick={() =>
+														deleteRecord(rec.id)
+													}
+												>
+													🗑️ 刪除
+												</button>
+											)}
+										</div>
+									</div>
+								))}
+							</div>
 						)}
 					</div>
 				</div>
@@ -477,7 +623,7 @@ export default function FirstLevelPage() {
 		);
 	}
 
-	// Detail / read-only
+	// ─── DETAIL (read-only) ────────────────────────────────────────
 	if (view === "detail" && detailRecord) {
 		const r = detailRecord;
 		const resp = r.responses || {};
@@ -485,6 +631,12 @@ export default function FirstLevelPage() {
 			<div className={styles.shell}>
 				<TopBar>
 					<span className={styles.readonlyBadge}>已提交 · 唯讀</span>
+					<button
+						className={styles.exportBtn}
+						onClick={() => window.print()}
+					>
+						📄 匯出PDF
+					</button>
 					<button
 						className={styles.backBtn}
 						onClick={() => {
@@ -519,16 +671,14 @@ export default function FirstLevelPage() {
 									{r.auditor_name}
 								</div>
 							</div>
-							{r.period_start && (
-								<div className={styles.fieldGroup}>
-									<span className={styles.fieldLabel}>
-										查核期間
-									</span>
-									<div className={styles.readonlyVal}>
-										{r.period_start} → {r.period_end}
-									</div>
+							<div className={styles.fieldGroup}>
+								<span className={styles.fieldLabel}>
+									查核日期
+								</span>
+								<div className={styles.readonlyVal}>
+									{r.audit_date || "—"}
 								</div>
-							)}
+							</div>
 						</div>
 						{SECTIONS.map((sec) => (
 							<div key={sec.num} className={styles.sectionBlock}>
@@ -569,20 +719,31 @@ export default function FirstLevelPage() {
 								)}
 							</div>
 						))}
-						{r.additional_remarks && (
-							<div className={styles.footerCard}>
-								<div className={styles.fieldGroup}>
-									<span className={styles.fieldLabel}>
-										Additional Remarks
-									</span>
-									<div
-										style={{
-											color: "#e8e9ed",
-											fontSize: "0.9375rem",
-										}}
-									>
-										{r.additional_remarks}
-									</div>
+						{r.recommendations && r.recommendations.length > 0 && (
+							<div className={styles.recoBlock}>
+								<p className={styles.recoTitle}>
+									建議事項 Recommendations
+								</p>
+								<div className={styles.recoList}>
+									{r.recommendations.map((rec) => (
+										<div
+											key={rec.id}
+											className={styles.recoItem}
+										>
+											<span
+												className={
+													styles.recoItemSection
+												}
+											>
+												{rec.section}
+											</span>
+											<span
+												className={styles.recoItemText}
+											>
+												{rec.text}
+											</span>
+										</div>
+									))}
 								</div>
 							</div>
 						)}
@@ -592,11 +753,16 @@ export default function FirstLevelPage() {
 		);
 	}
 
-	// New / edit form
+	// ─── NEW / EDIT FORM ───────────────────────────────────────────
 	return (
 		<div className={styles.shell}>
 			<TopBar>
 				{saveMsg && <span className={styles.saving}>{saveMsg}</span>}
+				{flaggedCount > 0 && (
+					<span style={{ fontSize: "0.8125rem", color: "#f59e0b" }}>
+						🚩 {flaggedCount} 項標記
+					</span>
+				)}
 				<button
 					className={styles.backBtn}
 					onClick={() => {
@@ -636,10 +802,7 @@ export default function FirstLevelPage() {
 									setYear(Number(e.target.value))
 								}
 							>
-								{Array.from(
-									{ length: 5 },
-									(_, i) => CURRENT_YEAR - i,
-								).map((y) => (
+								{YEARS.map((y) => (
 									<option key={y} value={y}>
 										{y}
 									</option>
@@ -681,60 +844,222 @@ export default function FirstLevelPage() {
 						</div>
 						<div className={styles.fieldGroup}>
 							<label className={styles.fieldLabel}>
+								查核日期 Audit Date
+							</label>
+							<input
+								className={styles.fieldInput}
+								type="date"
+								value={auditDate}
+								onChange={(e) => setAuditDate(e.target.value)}
+							/>
+						</div>
+						<div
+							className={styles.fieldGroup}
+							style={{ gridColumn: "1 / -1" }}
+						>
+							<label className={styles.fieldLabel}>
 								查核員 Auditor
 							</label>
-							<input
-								className={styles.fieldInput}
-								value={auditorName}
-								onChange={(e) => setAuditorName(e.target.value)}
-								placeholder="姓名"
-							/>
-						</div>
-						<div className={styles.fieldGroup}>
-							<label className={styles.fieldLabel}>
-								查核期間起 Period Start
-							</label>
-							<input
-								className={styles.fieldInput}
-								type="date"
-								value={periodStart}
-								onChange={(e) => setPeriodStart(e.target.value)}
-							/>
-						</div>
-						<div className={styles.fieldGroup}>
-							<label className={styles.fieldLabel}>
-								查核期間訖 Period End
-							</label>
-							<input
-								className={styles.fieldInput}
-								type="date"
-								value={periodEnd}
-								onChange={(e) => setPeriodEnd(e.target.value)}
-							/>
+							{/* Selected auditors chips */}
+							{auditors.length > 0 && (
+								<div className={styles.auditorChips}>
+									{auditors.map((a) => (
+										<div
+											key={a.employee_id}
+											className={styles.auditorChip}
+										>
+											<Image
+												src={avatarUrl(a.employee_id)}
+												alt={a.full_name}
+												width={24}
+												height={24}
+												className={
+													styles.auditorChipAvatar
+												}
+												onError={(e) => {
+													(
+														e.currentTarget as HTMLImageElement
+													).src = DEFAULT_AVATAR;
+												}}
+											/>
+											<span
+												className={
+													styles.auditorChipName
+												}
+											>
+												{a.full_name}
+											</span>
+											<button
+												className={
+													styles.auditorChipClear
+												}
+												onClick={() =>
+													setAuditors((prev) =>
+														prev.filter(
+															(x) =>
+																x.employee_id !==
+																a.employee_id,
+														),
+													)
+												}
+												title="移除"
+											>
+												✕
+											</button>
+										</div>
+									))}
+								</div>
+							)}
+							{/* Search input */}
+							<div
+								className={styles.auditorWrap}
+								ref={auditorWrapRef}
+							>
+								<input
+									className={styles.fieldInput}
+									value={auditorQuery}
+									onChange={(e) => {
+										const q = e.target.value;
+										setAuditorQuery(q);
+										setShowAuditorDrop(true);
+										if (searchTimer.current)
+											clearTimeout(searchTimer.current);
+										searchTimer.current = setTimeout(
+											() => fetchUsers(q),
+											250,
+										);
+									}}
+									onFocus={() => {
+										fetchUsers(auditorQuery);
+										setShowAuditorDrop(true);
+									}}
+									placeholder={
+										auditors.length === 0
+											? "輸入姓名或工號搜尋"
+											: "新增查核員..."
+									}
+								/>
+								{showAuditorDrop && userOptions.length > 0 && (
+									<div className={styles.auditorDropdown}>
+										{userOptions
+											.filter(
+												(u) =>
+													!auditors.some(
+														(a) =>
+															a.employee_id ===
+															u.employee_id,
+													),
+											)
+											.map((u) => (
+												<div
+													key={u.employee_id}
+													className={
+														styles.auditorOption
+													}
+													onMouseDown={() => {
+														setAuditors((prev) => [
+															...prev,
+															{
+																employee_id:
+																	u.employee_id,
+																full_name:
+																	u.full_name,
+															},
+														]);
+														setAuditorQuery("");
+														setShowAuditorDrop(
+															false,
+														);
+													}}
+												>
+													<Image
+														src={avatarUrl(
+															u.employee_id,
+														)}
+														alt={u.full_name}
+														width={32}
+														height={32}
+														className={
+															styles.auditorOptionAvatar
+														}
+														onError={(e) => {
+															(
+																e.currentTarget as HTMLImageElement
+															).src =
+																DEFAULT_AVATAR;
+														}}
+													/>
+													<div
+														className={
+															styles.auditorOptionInfo
+														}
+													>
+														<span
+															className={
+																styles.auditorOptionName
+															}
+														>
+															{u.full_name}
+														</span>
+														<span
+															className={
+																styles.auditorOptionMeta
+															}
+														>
+															{u.employee_id} ·{" "}
+															{
+																u.rank.split(
+																	" - ",
+																)[0]
+															}
+														</span>
+													</div>
+												</div>
+											))}
+									</div>
+								)}
+							</div>
 						</div>
 					</div>
 
 					{/* Checklist sections */}
 					{SECTIONS.map((sec) => {
 						const isCollapsed = collapsedSections[sec.num];
-						const secAnswered = sectionAnswered(sec.num);
-						const secTotal = CHECKLIST_ITEMS.filter(
-							(i) => i.section === sec.num,
-						).length;
+						const secAns = sectionAnswered(sec.num);
+						const secTot = sectionTotal(sec.num);
+						const secComplete = secAns === secTot;
 						return (
 							<div key={sec.num} className={styles.sectionBlock}>
 								<div
 									className={styles.sectionHeader}
 									onClick={() => toggleSection(sec.num)}
 								>
-									<span className={styles.sectionNum}>
-										{sec.num}
+									<span
+										className={styles.sectionNum}
+										style={
+											secComplete
+												? {
+														background:
+															"rgba(34,197,94,0.2)",
+														color: "#22c55e",
+													}
+												: {}
+										}
+									>
+										{secComplete ? "✓" : sec.num}
 									</span>
 									<span className={styles.sectionTitle}>
 										{sec.zh}
 									</span>
-									<span className={styles.sectionProgress}>
-										{secAnswered}/{secTotal}
+									<span
+										className={styles.sectionProgress}
+										style={
+											secComplete
+												? { color: "#22c55e" }
+												: {}
+										}
+									>
+										{secAns}/{secTot}
 									</span>
 									<span
 										className={`${styles.sectionChevron} ${isCollapsed ? "" : styles.sectionChevronOpen}`}
@@ -764,50 +1089,69 @@ export default function FirstLevelPage() {
 						);
 					})}
 
-					{/* Footer */}
-					<div className={styles.footerCard}>
-						<div className={styles.textareaWrap}>
-							<span className={styles.textareaLabel}>
-								Additional Remarks
-							</span>
+					{/* Recommendations block */}
+					<div className={styles.recoBlock}>
+						<p className={styles.recoTitle}>
+							建議事項 Recommendations
+						</p>
+						{recommendations.length > 0 && (
+							<div className={styles.recoList}>
+								{recommendations.map((rec) => (
+									<div
+										key={rec.id}
+										className={styles.recoItem}
+									>
+										<span
+											className={styles.recoItemSection}
+										>
+											{rec.section}
+										</span>
+										<span className={styles.recoItemText}>
+											{rec.text}
+										</span>
+										<button
+											className={styles.recoDeleteBtn}
+											onClick={() =>
+												removeRecommendation(rec.id)
+											}
+										>
+											✕
+										</button>
+									</div>
+								))}
+							</div>
+						)}
+						<div className={styles.recoAddRow}>
+							<select
+								className={styles.recoSectionSelect}
+								value={recoSection}
+								onChange={(e) => setRecoSection(e.target.value)}
+							>
+								{RECOMMENDATION_SECTIONS.map((s) => (
+									<option key={s} value={s}>
+										{s}
+									</option>
+								))}
+							</select>
 							<textarea
-								className={styles.textarea}
-								rows={3}
-								value={additionalRemarks}
-								onChange={(e) =>
-									setAdditionalRemarks(e.target.value)
-								}
-								placeholder="其他備註..."
+								className={styles.recoTextInput}
+								rows={2}
+								placeholder="輸入建議事項..."
+								value={recoText}
+								onChange={(e) => setRecoText(e.target.value)}
 							/>
+							<button
+								className={styles.recoAddBtn}
+								onClick={addRecommendation}
+								disabled={!recoText.trim()}
+							>
+								新增
+							</button>
 						</div>
-						<div className={styles.footerGrid}>
-							<div className={styles.fieldGroup}>
-								<label className={styles.fieldLabel}>
-									複審 Reviewed By
-								</label>
-								<input
-									className={styles.fieldInput}
-									value={reviewerName}
-									onChange={(e) =>
-										setReviewerName(e.target.value)
-									}
-									placeholder="複審員姓名"
-								/>
-							</div>
-							<div className={styles.fieldGroup}>
-								<label className={styles.fieldLabel}>
-									複審日期 Reviewed Date
-								</label>
-								<input
-									className={styles.fieldInput}
-									type="date"
-									value={reviewerDate}
-									onChange={(e) =>
-										setReviewerDate(e.target.value)
-									}
-								/>
-							</div>
-						</div>
+					</div>
+
+					{/* Footer actions */}
+					<div className={styles.footerCard}>
 						<div className={styles.footerActions}>
 							<button
 								className={styles.btnDraft}

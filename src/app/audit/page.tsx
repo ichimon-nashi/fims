@@ -2,26 +2,26 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import styles from "./iosa/iosa.module.css";
+import Image from "next/image";
 
 const AUDIT_TYPES = [
 	{
-		href: "/audit/iosa",
-		icon: "🌐",
-		title: "IOSA 查核",
-		desc: "International Operational Safety Audit",
+		href: "/audit/routine",
+		icon: "/images/routineicon.png",
+		title: "例行性查核",
+		desc: "每月至少11次",
 	},
 	{
 		href: "/audit/firstlevel",
-		icon: "📋",
+		icon: "/images/firstlevelicon.png",
 		title: "一級查核",
-		desc: "1st Level Self Audit · 每半年一次",
+		desc: "每半年一次",
 	},
 	{
-		href: "/audit/routine",
-		icon: "🗓️",
-		title: "例行性查核",
-		desc: "Routine Audit · 每月至少11次",
+		href: "/audit/iosa",
+		icon: "/images/iosaicon.png",
+		title: "IOSA 查核",
+		desc: "每兩年一次",
 	},
 ];
 
@@ -70,7 +70,7 @@ export default function AuditIndexPage() {
 					flexWrap: "wrap",
 					justifyContent: "center",
 					width: "100%",
-					maxWidth: "800px",
+					maxWidth: "860px",
 				}}
 			>
 				{AUDIT_TYPES.map((a) => (
@@ -80,7 +80,7 @@ export default function AuditIndexPage() {
 						style={{
 							flex: "1",
 							minWidth: "220px",
-							maxWidth: "240px",
+							maxWidth: "260px",
 							background: "rgba(255,255,255,0.04)",
 							border: "1px solid rgba(255,255,255,0.08)",
 							borderRadius: "14px",
@@ -88,38 +88,32 @@ export default function AuditIndexPage() {
 							display: "flex",
 							flexDirection: "column",
 							alignItems: "center",
-							gap: "0.875rem",
+							gap: "1rem",
 							cursor: "pointer",
 							textAlign: "center",
 							transition:
 								"background 0.18s, border-color 0.18s, transform 0.18s",
 						}}
 						onMouseEnter={(e) => {
-							(
-								e.currentTarget as HTMLDivElement
-							).style.background = "rgba(74,158,255,0.08)";
-							(
-								e.currentTarget as HTMLDivElement
-							).style.borderColor = "rgba(74,158,255,0.35)";
-							(
-								e.currentTarget as HTMLDivElement
-							).style.transform = "translateY(-2px)";
+							const el = e.currentTarget as HTMLDivElement;
+							el.style.background = "rgba(74,158,255,0.08)";
+							el.style.borderColor = "rgba(74,158,255,0.35)";
+							el.style.transform = "translateY(-2px)";
 						}}
 						onMouseLeave={(e) => {
-							(
-								e.currentTarget as HTMLDivElement
-							).style.background = "rgba(255,255,255,0.04)";
-							(
-								e.currentTarget as HTMLDivElement
-							).style.borderColor = "rgba(255,255,255,0.08)";
-							(
-								e.currentTarget as HTMLDivElement
-							).style.transform = "translateY(0)";
+							const el = e.currentTarget as HTMLDivElement;
+							el.style.background = "rgba(255,255,255,0.04)";
+							el.style.borderColor = "rgba(255,255,255,0.08)";
+							el.style.transform = "translateY(0)";
 						}}
 					>
-						<div style={{ fontSize: "2.5rem", lineHeight: 1 }}>
-							{a.icon}
-						</div>
+						<Image
+							src={a.icon}
+							alt={a.title}
+							width={80}
+							height={80}
+							style={{ objectFit: "contain" }}
+						/>
 						<h2
 							style={{
 								fontSize: "1.125rem",
@@ -132,10 +126,9 @@ export default function AuditIndexPage() {
 						</h2>
 						<p
 							style={{
-								fontSize: "0.875rem",
+								fontSize: "0.9375rem",
 								color: "#a0aec0",
 								margin: 0,
-								lineHeight: 1.5,
 							}}
 						>
 							{a.desc}

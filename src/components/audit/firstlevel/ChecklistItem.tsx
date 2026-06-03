@@ -34,7 +34,6 @@ export default function ChecklistItem({
 		onChange(item.code, {
 			...response,
 			result,
-			// Clear finding-specific fields when switching away from finding
 			finding_type: result === "finding" ? response.finding_type : null,
 			car_number: result === "finding" ? response.car_number : "",
 		});
@@ -51,10 +50,32 @@ export default function ChecklistItem({
 		onChange(item.code, { ...response, [field]: value });
 	}
 
-	const resultKeys = ["conformity", "finding", "observation", "na"] as const;
+	function toggleFlag() {
+		if (readonly) return;
+		onChange(item.code, { ...response, flagged: !response.flagged });
+	}
+
+	// Result indicator color for item row border
+	const resultColor =
+		response.result === "conformity"
+			? "#22c55e"
+			: response.result === "finding"
+				? "#ef4444"
+				: response.result === "na"
+					? "#475569"
+					: null;
+
+	const resultKeys: ResultType[] = ["conformity", "finding", "na"];
 
 	return (
-		<div className={styles.itemRow}>
+		<div
+			className={styles.itemRow}
+			style={
+				resultColor
+					? { borderLeft: `3px solid ${resultColor}` }
+					: { borderLeft: "3px solid transparent" }
+			}
+		>
 			<div className={styles.itemTop}>
 				<span className={styles.itemCode}>{item.code}</span>
 				<div className={styles.itemTitles}>
@@ -66,6 +87,23 @@ export default function ChecklistItem({
 						</div>
 					)}
 				</div>
+				{!readonly && (
+					<button
+						className={`${styles.flagBtn} ${response.flagged ? styles.flagBtnActive : ""}`}
+						onClick={toggleFlag}
+						title={response.flagged ? "取消標記" : "標記討論"}
+					>
+						🚩
+					</button>
+				)}
+				{readonly && response.flagged && (
+					<span
+						className={styles.flagBtnActive}
+						style={{ fontSize: "1rem" }}
+					>
+						🚩
+					</span>
+				)}
 			</div>
 
 			{item.subItems && item.subItems.length > 0 && (
@@ -78,18 +116,17 @@ export default function ChecklistItem({
 				</div>
 			)}
 
-			{/* Result selector */}
+			{/* Result selector — conformity / finding / N/A only */}
 			<div className={styles.resultRow}>
 				{resultKeys.map((key) => {
+					if (!key) return null;
 					const isActive = response.result === key;
 					const activeClass =
 						key === "conformity"
 							? styles.resultBtnConformity
 							: key === "finding"
 								? styles.resultBtnFinding
-								: key === "observation"
-									? styles.resultBtnObservation
-									: styles.resultBtnNa;
+								: styles.resultBtnNa;
 					return (
 						<button
 							key={key}
@@ -103,7 +140,7 @@ export default function ChecklistItem({
 				})}
 			</div>
 
-			{/* Finding sub-type — only when finding selected */}
+			{/* Finding sub-type */}
 			{response.result === "finding" && !readonly && (
 				<div className={styles.findingTypeRow}>
 					<div className={styles.findingTypeLabel}>
@@ -132,19 +169,16 @@ export default function ChecklistItem({
 				readonly &&
 				response.finding_type && (
 					<div className={styles.findingTypeRow}>
-						<div className={styles.findingTypeLabel}>
-							缺失類型 Finding Type
-						</div>
+						<div className={styles.findingTypeLabel}>缺失類型</div>
 						<span
-							className={styles.findingTypeBtn}
-							style={{ color: "#ef4444" }}
+							style={{ color: "#ef4444", fontSize: "0.8125rem" }}
 						>
 							{FINDING_TYPE_LABELS[response.finding_type]}
 						</span>
 					</div>
 				)}
 
-			{/* CAR number — required for finding */}
+			{/* CAR number */}
 			{response.result === "finding" && (
 				<div className={styles.carRow}>
 					<span className={styles.carLabel}>CAR #</span>
@@ -158,7 +192,7 @@ export default function ChecklistItem({
 				</div>
 			)}
 
-			{/* Evidence + comments — toggled */}
+			{/* Toggle for evidence + comments */}
 			{!readonly && response.result && response.result !== "na" && (
 				<div style={{ marginBottom: "0.5rem" }}>
 					<button
@@ -173,17 +207,18 @@ export default function ChecklistItem({
 						}}
 						onClick={() => setShowExtra((v) => !v)}
 					>
-						{showExtra ? "▲ 收起" : "▼ 展開備註/佐證"}
+						{showExtra ? "▲ 縮小" : "▼ 展開"}
 					</button>
 				</div>
 			)}
 
 			{(showExtra || readonly) &&
-				((response.result && response.result !== "na") || readonly) && (
+				response.result &&
+				response.result !== "na" && (
 					<div className={styles.extraFields}>
 						<div className={styles.textareaWrap}>
 							<span className={styles.textareaLabel}>
-								佐證文件 Evidence
+								文件 Documentation
 							</span>
 							<textarea
 								className={styles.textarea}

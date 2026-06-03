@@ -3,10 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/utils/supabase/service-client";
 import { verifyToken } from "@/lib/auth";
 
-export async function GET(
-	req: NextRequest,
-	{ params }: { params: { id: string } },
-) {
+type RouteContext = { params: Promise<{ id: string }> };
+
+export async function GET(req: NextRequest, context: RouteContext) {
 	const token = req.headers.get("authorization")?.replace("Bearer ", "");
 	if (!token)
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -14,11 +13,12 @@ export async function GET(
 	if (!user)
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+	const { id } = await context.params;
 	const supabase = createServiceClient();
 	const { data, error } = await supabase
 		.from("audit_first_level")
 		.select("*")
-		.eq("id", params.id)
+		.eq("id", id)
 		.single();
 
 	if (error)
@@ -28,10 +28,7 @@ export async function GET(
 	return NextResponse.json({ record: data });
 }
 
-export async function PATCH(
-	req: NextRequest,
-	{ params }: { params: { id: string } },
-) {
+export async function PATCH(req: NextRequest, context: RouteContext) {
 	const token = req.headers.get("authorization")?.replace("Bearer ", "");
 	if (!token)
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -39,13 +36,13 @@ export async function PATCH(
 	if (!user)
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+	const { id } = await context.params;
 	const supabase = createServiceClient();
 
-	// Verify record exists and is not already submitted
 	const { data: existing } = await supabase
 		.from("audit_first_level")
-		.select("status, auditor_id")
-		.eq("id", params.id)
+		.select("status")
+		.eq("id", id)
 		.single();
 
 	if (!existing)
@@ -59,34 +56,35 @@ export async function PATCH(
 
 	const body = await req.json();
 	const now = new Date().toISOString();
+	const updatePayload: Record<string, unknown> = { updated_at: now };
 
-	const updatePayload: Record<string, unknown> = {
-		updated_at: now,
-	};
-
-	// Only allow updating these fields
 	const allowed = [
 		"responses",
-		"additional_remarks",
-		"reviewer_name",
-		"reviewer_date",
-		"period_start",
-		"period_end",
-		"auditor_name",
+		"recommendations",
+		"audit_date",
 		"status",
+		"auditors",
 	];
 	for (const key of allowed) {
 		if (key in body) updatePayload[key] = body[key];
 	}
 
-	if (body.status === "submitted") {
-		updatePayload.submitted_at = now;
+	// Keep auditor_name + auditor_id in sync
+	if (body.auditors) {
+		const arr = body.auditors as {
+			employee_id: string;
+			full_name: string;
+		}[];
+		updatePayload.auditor_name = arr.map((a) => a.full_name).join(", ");
+		updatePayload.auditor_id = arr[0]?.employee_id || "";
 	}
+
+	if (body.status === "submitted") updatePayload.submitted_at = now;
 
 	const { data, error } = await supabase
 		.from("audit_first_level")
 		.update(updatePayload)
-		.eq("id", params.id)
+		.eq("id", id)
 		.select()
 		.single();
 
@@ -95,10 +93,7 @@ export async function PATCH(
 	return NextResponse.json({ record: data });
 }
 
-export async function DELETE(
-	req: NextRequest,
-	{ params }: { params: { id: string } },
-) {
+export async function DELETE(req: NextRequest, context: RouteContext) {
 	const token = req.headers.get("authorization")?.replace("Bearer ", "");
 	if (!token)
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -106,12 +101,13 @@ export async function DELETE(
 	if (!user)
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+	const { id } = await context.params;
 	const supabase = createServiceClient();
 
 	const { data: existing } = await supabase
 		.from("audit_first_level")
 		.select("status")
-		.eq("id", params.id)
+		.eq("id", id)
 		.single();
 
 	if (!existing)
@@ -126,7 +122,7 @@ export async function DELETE(
 	const { error } = await supabase
 		.from("audit_first_level")
 		.delete()
-		.eq("id", params.id);
+		.eq("id", id);
 
 	if (error)
 		return NextResponse.json({ error: error.message }, { status: 500 });

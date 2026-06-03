@@ -6,8 +6,8 @@ export interface SubItem {
 }
 
 export interface ChecklistItem {
-	code: string; // e.g. "EF1.1"
-	section: number; // 1 | 2 | 3
+	code: string;
+	section: number;
 	zhTitle: string;
 	enTitle: string;
 	isarp: string;
@@ -23,7 +23,6 @@ export const SECTIONS = [
 ];
 
 export const CHECKLIST_ITEMS: ChecklistItem[] = [
-	// ── Section 1 ──────────────────────────────────────────────────────
 	{
 		code: "EF1.1",
 		section: 1,
@@ -188,8 +187,6 @@ export const CHECKLIST_ITEMS: ChecklistItem[] = [
 		isarp: "N/A",
 		omDm: "",
 	},
-
-	// ── Section 2 ──────────────────────────────────────────────────────
 	{
 		code: "EF2.1",
 		section: 2,
@@ -239,8 +236,6 @@ export const CHECKLIST_ITEMS: ChecklistItem[] = [
 		isarp: "",
 		omDm: "",
 	},
-
-	// ── Section 3 ──────────────────────────────────────────────────────
 	{
 		code: "EF3.1",
 		section: 3,
@@ -344,14 +339,10 @@ export const CHECKLIST_ITEMS: ChecklistItem[] = [
 			"Complete the revision of relevant manuals for complying with the applicable regulations and standards receiving within a year.",
 		isarp: "ORG 2.1.1; 2.5.1; 2.5.2",
 		omDm: "SAM 1.1",
-		auditorActions: [
-			"Identified/Assessed system(s) for management/control of operational documentation/date.",
-			"Examined manuals of department are updated to comply with the applicable regulations and standards receiving within a year.",
-		],
 	},
 ];
 
-export type ResultType = "conformity" | "finding" | "observation" | "na" | null;
+export type ResultType = "conformity" | "finding" | "na" | null;
 export type FindingType =
 	| "doc_not_impl"
 	| "impl_not_doc"
@@ -364,6 +355,7 @@ export interface ItemResponse {
 	car_number: string;
 	comment: string;
 	evidence: string;
+	flagged: boolean;
 }
 
 export const EMPTY_RESPONSE: ItemResponse = {
@@ -372,6 +364,7 @@ export const EMPTY_RESPONSE: ItemResponse = {
 	car_number: "",
 	comment: "",
 	evidence: "",
+	flagged: false,
 };
 
 export const RESULT_LABELS: Record<
@@ -380,7 +373,6 @@ export const RESULT_LABELS: Record<
 > = {
 	conformity: { zh: "符合", en: "Conformity", color: "#22c55e" },
 	finding: { zh: "缺失", en: "Finding", color: "#ef4444" },
-	observation: { zh: "建議", en: "Observation", color: "#f59e0b" },
 	na: { zh: "不適用", en: "N/A", color: "#64748b" },
 };
 
@@ -390,5 +382,17 @@ export const FINDING_TYPE_LABELS: Record<string, string> = {
 	not_doc_not_impl: "Not Documented, Not Implemented",
 };
 
+export interface Recommendation {
+	id: string;
+	section: string;
+	text: string;
+}
+
 export const SECTIONS_DEPT = ["管派組", "標訓組", "空品組"] as const;
+export const RECOMMENDATION_SECTIONS = [
+	"全科",
+	"管派組",
+	"標訓組",
+	"空品組",
+] as const;
 export type DeptSection = (typeof SECTIONS_DEPT)[number];
