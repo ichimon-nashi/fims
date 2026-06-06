@@ -45,6 +45,7 @@ interface ISARPWithRecord {
 	linked_isarps: string[];
 	auditor_actions: { num: string; text: string }[];
 	guidance: string;
+	guidance_paras?: { text: string; style: string; numFmt?: string }[];
 	conformance_table?: { cells: string[] }[] | null;
 	heading_h2: string;
 	heading_h3: string;
@@ -90,15 +91,39 @@ function useDebounce<T>(value: T, delay: number): T {
 // ── Guidance text with clickable refs ────────────────────────
 function GuidanceText({
 	text,
+	paras,
 	onRefClick,
 	onIRMClick,
 	irmDefs,
 }: {
 	text: string;
+	paras?: { text: string; style: string; numFmt?: string }[];
 	onRefClick: (code: string) => void;
 	onIRMClick?: (term: string) => void;
 	irmDefs?: Record<string, string>;
 }) {
+	const ROMAN = [
+		"i",
+		"ii",
+		"iii",
+		"iv",
+		"v",
+		"vi",
+		"vii",
+		"viii",
+		"ix",
+		"x",
+		"xi",
+		"xii",
+		"xiii",
+		"xiv",
+		"xv",
+		"xvi",
+		"xvii",
+		"xviii",
+		"xix",
+		"xx",
+	];
 	// Matches ISARP codes (e.g. ORG 2.5.1) AND table refs (e.g. Table 1.1)
 	const REF_RE =
 		/\b([A-Z]{2,3}\s\d+\.\d+(?:\.\d+)?[A-Z]?)\b|(Table\s+\d+\.\d+)/g;
@@ -116,8 +141,6 @@ function GuidanceText({
 			text: string;
 			type: "isarp" | "table" | "irm";
 		}[] = [];
-
-		// ISARP + table refs
 		REF_RE.lastIndex = 0;
 		let m: RegExpExecArray | null;
 		while ((m = REF_RE.exec(line)) !== null) {
@@ -128,8 +151,6 @@ function GuidanceText({
 				type: /^Table\s+\d/.test(m[0]) ? "table" : "isarp",
 			});
 		}
-
-		// IRM terms — only when "IRM" appears in this line
 		if (hasIRM && onIRMClick && irmTerms.length) {
 			for (const term of irmTerms) {
 				const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -141,20 +162,17 @@ function GuidanceText({
 							tm!.index < x.end &&
 							tm!.index + term.length > x.start,
 					);
-					if (!overlaps) {
+					if (!overlaps)
 						allMatches.push({
 							start: tm.index,
 							end: tm.index + term.length,
 							text: term,
 							type: "irm",
 						});
-					}
 				}
 			}
 		}
-
 		allMatches.sort((a, b) => a.start - b.start);
-
 		const parts: React.ReactNode[] = [];
 		let last = 0;
 		for (const match of allMatches) {
@@ -194,6 +212,52 @@ function GuidanceText({
 		return parts;
 	};
 
+	// Render with full bullet formatting when guidance_paras available
+	if (paras && paras.length > 0) {
+		const counters: Record<string, number> = {};
+		let lastStyle = "Normal";
+		return (
+			<div className={styles.guidanceText}>
+				{paras.map((p, idx) => {
+					const isListItem = p.style === "iatalistitem";
+					if (isListItem && lastStyle !== "iatalistitem")
+						counters[p.numFmt ?? "def"] = 0;
+					lastStyle = p.style;
+					let prefix = "";
+					if (isListItem) {
+						const fmt = p.numFmt ?? "lowerRoman";
+						const n = counters[fmt] ?? 0;
+						counters[fmt] = n + 1;
+						prefix =
+							fmt === "bullet"
+								? "•"
+								: fmt === "decimal"
+									? `${n + 1}.`
+									: fmt === "lowerLetter"
+										? `${String.fromCharCode(97 + n)}.`
+										: `${ROMAN[n] ?? n + 1}.`;
+					}
+					return (
+						<span
+							key={idx}
+							className={`${styles.stdLine} ${isListItem ? styles.stdSubItem : ""}`}
+						>
+							{isListItem && (
+								<span
+									className={`${styles.listPrefix} ${p.numFmt === "bullet" ? styles.listBullet : ""}`}
+								>
+									{prefix}
+								</span>
+							)}
+							{renderLine(p.text, idx)}
+						</span>
+					);
+				})}
+			</div>
+		);
+	}
+
+	// Fallback: plain text split on newlines
 	const lines = text.split(/\r\n|\n/);
 	return (
 		<div className={styles.guidanceText}>
@@ -457,12 +521,14 @@ function RichCellContent({ cell }: { cell: any }) {
 		<div className={styles.richCell}>
 			{paras.map((p, idx) => {
 				const isListItem = p.style === "iatalistitem";
+				// Default to "bullet" for table cells — most ISM table lists are bullet style
+				// numFmt is stored correctly after reimport; this fallback handles old data
+				const fmt = p.numFmt ?? "bullet";
 				if (isListItem && lastStyle !== "iatalistitem")
-					counters[p.numFmt ?? "def"] = 0;
+					counters[fmt] = 0;
 				lastStyle = p.style;
 				let prefix = "";
 				if (isListItem) {
-					const fmt = p.numFmt ?? "lowerRoman";
 					const n = counters[fmt] ?? 0;
 					counters[fmt] = n + 1;
 					prefix =
@@ -481,7 +547,7 @@ function RichCellContent({ cell }: { cell: any }) {
 					>
 						{isListItem && (
 							<span
-								className={`${styles.listPrefix} ${p.numFmt === "bullet" ? styles.listBullet : ""}`}
+								className={`${styles.listPrefix} ${fmt === "bullet" ? styles.listBullet : ""}`}
 							>
 								{prefix}
 							</span>
@@ -673,6 +739,7 @@ function RefPopup({
 									</div>
 									<GuidanceText
 										text={isarp.guidance}
+										paras={isarp.guidance_paras}
 										onRefClick={onClose}
 										onIRMClick={onIRMClick}
 										irmDefs={irmDefs}
@@ -809,6 +876,7 @@ function Workspace({
 	readOnly: boolean;
 }) {
 	const [docRefs, setDocRefs] = useState(record?.doc_references ?? "");
+	const docRefsRef = useRef<HTMLTextAreaElement>(null);
 	const [flagged, setFlagged] = useState(record?.prep_flagged ?? false);
 	const [flagReason, setFlagReason] = useState(
 		record?.prep_flag_reason ?? "",
@@ -840,6 +908,14 @@ function Workspace({
 
 	const debouncedDocRefs = useDebounce(docRefs, 800);
 	const prevDocRefs = useRef(record?.doc_references ?? "");
+	// Auto-size doc refs textarea on mount and content change
+	useEffect(() => {
+		const el = docRefsRef.current;
+		if (!el) return;
+		el.style.height = "auto";
+		el.style.height = el.scrollHeight + "px";
+	}, [docRefs]);
+
 	useEffect(() => {
 		if (debouncedDocRefs === prevDocRefs.current) return;
 		prevDocRefs.current = debouncedDocRefs;
@@ -1002,6 +1078,7 @@ function Workspace({
 						<div className={styles.guidanceLabel}>Guidance</div>
 						<GuidanceText
 							text={isarp.guidance}
+							paras={isarp.guidance_paras}
 							onRefClick={setRefPopup}
 							onIRMClick={(term) =>
 								setIrmPopup({ term, def: irmDefs[term] ?? "" })
@@ -1022,11 +1099,12 @@ function Workspace({
 						)}
 					</label>
 					<textarea
-						className={styles.fieldTextarea}
+						ref={docRefsRef}
+						className={`${styles.fieldTextarea} ${styles.fieldTextareaAuto}`}
 						value={docRefs}
 						onChange={(e) => setDocRefs(e.target.value)}
 						placeholder="e.g. CCOM Rev042 Ch.0.5, CCDM -4.4-"
-						rows={3}
+						rows={1}
 						disabled={readOnly}
 					/>
 				</div>

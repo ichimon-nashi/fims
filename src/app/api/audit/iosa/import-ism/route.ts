@@ -255,11 +255,17 @@ async function parseDocx(buffer: Buffer) {
     }
 
     let guidance = "";
+    let guidance_paras: { text: string; style: string; numFmt?: string }[] = [];
     if (rows.length >= 6) {
       const cell5 = firstCell(rows[5]);
       if (cell5) {
-        const g = cellParas(cell5).map(p => p.text).join("\n").trim();
-        if (g.startsWith("Guidance")) guidance = g.replace(/^Guidance\s*\n?/, "").trim();
+        const allParas = cellParas(cell5, numFmts);
+        // Strip leading "Guidance" header para
+        const bodyParas = allParas[0]?.text?.trim() === "Guidance"
+          ? allParas.slice(1)
+          : allParas;
+        guidance = bodyParas.map(p => p.text).join("\n").trim();
+        guidance_paras = bodyParas;
       }
     }
 
@@ -268,7 +274,7 @@ async function parseDocx(buffer: Buffer) {
       standard_text: stdText, standard_paras: stdParas,
       isarp_type: isRp ? "Recommended Practice" : "Standard",
       has_gm: hasGm, has_sms: hasSms, linked_isarps: refs,
-      auditor_actions: aaItems, guidance,
+      auditor_actions: aaItems, guidance, guidance_paras,
       conformance_table: conformanceTable,
       heading_h2: curH2, heading_h3: curH3, heading_h4: curH4,
       row_order: rowOrder++,
@@ -313,7 +319,8 @@ export async function POST(req: NextRequest) {
       for (const t of tables) {
         allTables.push({
           cycle_id: cycleId, table_ref: t.tableRef, title: t.tableTitle,
-          discipline: disc, content_json: t.contentRows, ism_edition: ismEdition,
+          discipline: disc, content_json: t.contentRows, col_count: t.colCount,
+          ism_edition: ismEdition,
         });
       }
     }
