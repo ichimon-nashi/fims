@@ -132,13 +132,24 @@ const Dashboard = () => {
 
   // ── Greeting ─────────────────────────────────────────────────────────────
   const currentHour = new Date().getHours();
-  const greeting = currentHour < 12 ? "早安" : currentHour < 18 ? "午安" : "晚安";
+  const isGerman = user?.employee_id === "51892";
   const now = new Date();
-  const datePart = now.toLocaleDateString("zh-TW", {
-    year: "numeric", month: "long", day: "numeric",
-  });
-  const weekday = now.toLocaleDateString("zh-TW", { weekday: "long" });
-  const dateString = `${datePart}（${weekday}）`;
+
+  const greeting = isGerman
+    ? currentHour < 12 ? "Guten Morgen" : currentHour < 18 ? "Guten Tag" : "Guten Abend"
+    : currentHour < 12 ? "早安" : currentHour < 18 ? "午安" : "晚安";
+
+  const dateString = isGerman
+    ? now.toLocaleDateString("de-DE", {
+        weekday: "long", day: "numeric", month: "long", year: "numeric",
+      }).replace(/(\w+), (\d+)\. (\w+) (\d+)/, "Heute ist $1, der $2. $3 $4")
+    : (() => {
+        const datePart = now.toLocaleDateString("zh-TW", {
+          year: "numeric", month: "long", day: "numeric",
+        });
+        const weekday = now.toLocaleDateString("zh-TW", { weekday: "long" });
+        return `${datePart}（${weekday}）`;
+      })();
 
   // ── Quick actions ─────────────────────────────────────────────────────────
   const allQuickActions = [
@@ -204,7 +215,7 @@ const Dashboard = () => {
                 {greeting}，{user?.full_name || user?.employee_id || "使用者"}！
               </h1>
               <p className={styles.welcomeSubtitle}>
-                今天是 {dateString}
+                {isGerman ? dateString : `今天是 ${dateString}`}
               </p>
             </div>
 
