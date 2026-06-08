@@ -53,6 +53,7 @@ export interface AppPermissions {
   ads: SimpleAppPermissions;
   ccom_review: SimpleAppPermissions;
   audit: AuditPermissions; // ── NEW ──
+  roulette: SimpleAppPermissions;
 }
 
 export type OralTestPage = 'dashboard' | 'results' | 'test' | 'questions' | 'users';
@@ -66,7 +67,8 @@ export type AppName =
   | 'mdafaat'
   | 'ads'
   | 'ccom_review'
-  | 'audit'; // ── NEW ──
+  | 'audit' // ── NEW ──
+  | 'roulette';
 
 export interface AppMetadata {
   id: AppName;

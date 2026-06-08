@@ -162,6 +162,7 @@ const Dashboard = () => {
     { id: "ads",         title: "AdS",      icon: "/images/ads.png",        href: "/ads",                 color: "#14b8a6" },
     { id: "ccom_review", title: "手冊抽問", icon: "/images/ccomreview.png", href: "/ccom-review",         color: "#fb923c" },
     { id: "audit",       title: "查核",     icon: "/images/audit.png",      href: "/audit",               color: "#a78bfa" },
+    { id: "roulette",    title: "天選之人", icon: "/images/roulette.png",   href: "/roulette",            color: "#fbbf24" },
   ];
 
   const quickActions = useMemo(

@@ -78,17 +78,22 @@ export const hasAppAccess = (user: User | null, appName: AppName): PermissionChe
     return { granted: false, reason: 'No permissions configured for user' };
   }
   
+  const isSpecialAdmin =
+    user.employee_id === 'admin' || user.employee_id === '51892';
+
   const appPermission = user.app_permissions[appName];
-  
+
   if (!appPermission) {
+    // Special admins always get access even if the key isn't in the DB yet
+    if (isSpecialAdmin) return { granted: true };
     return { granted: false, reason: `Permission object not found for app: ${appName}` };
   }
-  
+
   // Check access property
   if ('access' in appPermission && appPermission.access === true) {
     return { granted: true };
   }
-  
+
   return { granted: false, reason: `Access denied to app: ${appName}` };
 };
 

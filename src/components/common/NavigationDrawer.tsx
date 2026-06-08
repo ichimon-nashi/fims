@@ -227,6 +227,23 @@ const navigationItems: NavigationItem[] = [
 		description: "查核管理",
 		iconColor: "audit",
 	},
+	{
+		id: "roulette",
+		title: "天選之人",
+		icon: (
+			<Image
+				src="/images/roulette.png"
+				alt="Roulette"
+				width={NAV_ICON_SIZE}
+				height={NAV_ICON_SIZE}
+				style={{ objectFit: "contain" }}
+				onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+			/>
+		),
+		path: "/roulette",
+		description: "隨機抽選人員",
+		iconColor: "roulette",
+	},
 ];
 
 const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
@@ -288,6 +305,9 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 					break;
 				case "ccom-review":
 					appKey = "ccom_review";
+					break;
+				case "roulette":
+					appKey = "roulette" as AppName;
 					break;
 				default:
 					appKey = item.id as AppName;

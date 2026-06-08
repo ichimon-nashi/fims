@@ -87,6 +87,7 @@ const APP_CHIP_COLORS: Record<string, { bg: string; border: string; color: strin
 	"AdS":   { bg: "rgba(20,184,166,0.18)",  border: "rgba(20,184,166,0.4)",  color: "#2dd4bf" },
 	"CCOM":  { bg: "rgba(251,146,60,0.18)",  border: "rgba(251,146,60,0.4)",  color: "#fb923c" },
 	"查核":  { bg: "rgba(168,85,247,0.18)",  border: "rgba(168,85,247,0.4)",  color: "#c084fc" },
+	"抽籤":  { bg: "rgba(251,191,36,0.18)",  border: "rgba(251,191,36,0.4)",  color: "#fbbf24" },
 };
 
 interface OralTestPermissions {
@@ -120,6 +121,7 @@ interface AppPermissions {
 	audit: boolean;
 	audit_tabs?: { routine: boolean; first_level: boolean; iosa: boolean };
 	audit_iosa_disciplines?: { CAB: boolean; FLT: boolean; DSP: boolean; MNT: boolean; SEC: boolean; CGO: boolean; ORG: boolean; GRH: boolean };
+	roulette: boolean;
 }
 
 interface User {
@@ -160,6 +162,7 @@ const getDefaultPermissions = (): AppPermissions => ({
 	audit: false,
 	audit_tabs: { routine: true, first_level: true, iosa: true },
 	audit_iosa_disciplines: { CAB: true, FLT: true, DSP: true, MNT: true, SEC: true, CGO: true, ORG: true, GRH: true },
+	roulette: false,
 });
 
 const blankNewUserForm = (): NewUserForm => ({
@@ -254,6 +257,7 @@ const AccessControlPanel = () => {
 				ORG: (dbPermissions.audit?.iosa_edit_disciplines ?? ["CAB","FLT","DSP","MNT","SEC","CGO","ORG","GRH"]).includes("ORG"),
 				GRH: (dbPermissions.audit?.iosa_edit_disciplines ?? ["CAB","FLT","DSP","MNT","SEC","CGO","ORG","GRH"]).includes("GRH"),
 			},
+			roulette: dbPermissions.roulette?.access ?? false,
 		};
 	};
 
@@ -279,6 +283,7 @@ const AccessControlPanel = () => {
 				tabs: Object.entries(permissions.audit_tabs ?? { routine: true, first_level: true, iosa: true }).filter(([, v]) => v).map(([k]) => k),
 				iosa_edit_disciplines: Object.entries(permissions.audit_iosa_disciplines ?? { CAB:true,FLT:true,DSP:true,MNT:true,SEC:true,CGO:true,ORG:true,GRH:true }).filter(([, v]) => v).map(([k]) => k),
 			},
+			roulette: { access: permissions.roulette ?? false },
 		};
 	};
 
@@ -347,7 +352,7 @@ const AccessControlPanel = () => {
 		const map: Record<string, string> = {
 			roster: "班表", tasks: "任務", sms: "SMS",
 			oral_test: "口試", bc_training: "B/C", mdafaat: "情境",
-			ads: "AdS", ccom_review: "CCOM", audit: "查核",
+			ads: "AdS", ccom_review: "CCOM", audit: "查核", roulette: "抽籤",
 		};
 		return Object.entries(map)
 			.filter(([key]) => user.app_permissions![key as keyof AppPermissions])
@@ -702,6 +707,12 @@ const AccessControlPanel = () => {
 					</div>
 				)}
 			</div>
+		{/* Roulette */}
+		<label className={styles.permissionToggle}>
+			<input type="checkbox" className={styles.appCheckbox} checked={perms.roulette ?? false} onChange={() => toggle("roulette")} />
+			<span className={styles.appName}>🎲 天選之人 (Roulette)</span>
+		</label>
+
 		</div>
 	);
 
