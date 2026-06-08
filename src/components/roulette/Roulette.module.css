@@ -412,24 +412,17 @@
 	border-radius: 50%;
 	overflow: hidden;
 	flex-shrink: 0;
-	border: 1px solid rgba(74, 158, 255, 0.35);
-	position: relative;
-	display: flex;
-	align-items: center;
-	justify-content: center;
+	border: 2px solid rgba(74, 158, 255, 0.35);
+	background: rgba(255, 255, 255, 0.08);
 }
 
-/* Force whatever Avatar renders to fill the container perfectly */
-.cardAvatar > *,
-.cardAvatar img {
-	position: absolute !important;
-	top: 0 !important;
-	left: 0 !important;
-	width: 100% !important;
-	height: 100% !important;
-	object-fit: cover !important;
-	border-radius: 50% !important;
-	margin: 0 !important;
+.cardAvatarImg {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	object-position: center top;
+	display: block;
+	border-radius: 50%;
 }
 
 .cardBody {

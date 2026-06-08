@@ -5,7 +5,6 @@ import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/common/Navbar";
-import Avatar from "@/components/ui/Avatar/Avatar";
 import styles from "./Roulette.module.css";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -383,10 +382,11 @@ const RoulettePage = () => {
 											<div key={emp.employee_id} className={styles.resultCard}>
 												<div className={styles.cardIndex}>{i + 1}</div>
 												<div className={styles.cardAvatar}>
-													<Avatar
-														employeeId={emp.employee_id}
-														fullName={emp.full_name}
-														size="large"
+													<img
+														src={`https://rhdpkxkmugimtlbdizfp.supabase.co/storage/v1/object/public/avatars/${emp.employee_id}.png`}
+														alt={emp.full_name}
+														className={styles.cardAvatarImg}
+														onError={(e) => { (e.target as HTMLImageElement).src = "https://rhdpkxkmugimtlbdizfp.supabase.co/storage/v1/object/public/avatars/avatar-default.png"; }}
 													/>
 												</div>
 												<div className={styles.cardBody}>
@@ -408,6 +408,14 @@ const RoulettePage = () => {
 							)}
 						</div>
 					)}
+
+					{results === null && !fetching && (
+						<div className={styles.emptyState}>
+							<span style={{ fontSize: "2rem", opacity: 0.15 }}>🎲</span>
+							<p className={styles.emptyMsg}>Configure filters and press Generate</p>
+						</div>
+					)}
+
 				</div>
 			</div>
 		</>
