@@ -408,14 +408,6 @@ const RoulettePage = () => {
 							)}
 						</div>
 					)}
-
-					{results === null && !fetching && (
-						<div className={styles.emptyState}>
-							<span style={{ fontSize: "2rem", opacity: 0.15 }}>🎲</span>
-							<p className={styles.emptyMsg}>Configure filters and press Generate</p>
-						</div>
-					)}
-
 				</div>
 			</div>
 		</>
