@@ -83,7 +83,7 @@ export default function ChecklistItem({
 					<div className={styles.itemEn}>{item.enTitle}</div>
 					{item.isarp && item.isarp !== "N/A" && (
 						<div className={styles.itemIsarp}>
-							ISARP: {item.isarp}
+							依據: {item.isarp}
 						</div>
 					)}
 				</div>
@@ -184,7 +184,7 @@ export default function ChecklistItem({
 					<span className={styles.carLabel}>CAR #</span>
 					<input
 						className={styles.carInput}
-						placeholder="CAR-XXXX"
+						placeholder="2026TZ-01-01"
 						value={response.car_number}
 						onChange={(e) => setField("car_number", e.target.value)}
 						disabled={readonly}

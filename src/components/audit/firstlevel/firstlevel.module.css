@@ -186,7 +186,7 @@
 
 .formInner {
 	width: 100%;
-	max-width: 1280px;
+	/* max-width: 1280px; */
 	margin: 0 auto;
 	padding: 1.25rem 1.5rem 3rem;
 	display: flex;
@@ -943,7 +943,7 @@
 .recoAddRow {
 	display: flex;
 	gap: 0.5rem;
-	align-items: flex-start;
+	align-items: center;
 	flex-wrap: wrap;
 }
 

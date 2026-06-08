@@ -17,7 +17,7 @@ export interface ChecklistItem {
 }
 
 export const SECTIONS = [
-	{ num: 1, zh: "1. 科室整體管理", en: "Department-Wide Management" },
+	{ num: 1, zh: "1. 空服科單位", en: "Department-Wide Management" },
 	{ num: 2, zh: "2. 管派組", en: "Performance & Scheduling Section" },
 	{ num: 3, zh: "3. 標訓組", en: "Standard & Training Section" },
 ];

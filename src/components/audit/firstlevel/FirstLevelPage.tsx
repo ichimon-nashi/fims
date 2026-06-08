@@ -935,7 +935,7 @@ export default function FirstLevelPage() {
 									}}
 									placeholder={
 										auditors.length === 0
-											? "輸入姓名或工號搜尋"
+											? "輸入姓名或員編搜尋"
 											: "新增查核員..."
 									}
 								/>
