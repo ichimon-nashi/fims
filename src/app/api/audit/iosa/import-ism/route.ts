@@ -67,22 +67,15 @@ function directRows(tbl: Element): Element[] { return kids(tbl, "tr"); }
 function firstCell(tr: Element): Element | null { return kids(tr, "tc")[0] ?? null; }
 function allCells(tr: Element): Element[] { return kids(tr, "tc"); }
 
-/** Expand a row's physical cells into N logical columns, repeating content across spans */
+/** Build row cells preserving span — NO filler cells, renderer uses gridColumn: span N */
 function expandRow(
   tr: Element,
   numFmts?: Record<string, string>
 ): { paras: { text: string; style: string; numFmt?: string }[]; span: number }[] {
-  const expanded: { paras: { text: string; style: string; numFmt?: string }[]; span: number }[] = [];
-  for (const tc of allCells(tr)) {
-    const span = cellGridSpan(tc);
-    const paras = cellParas(tc, numFmts);
-    expanded.push({ paras, span });
-    // Fill spanned columns with empty cells so grid alignment is preserved
-    for (let s = 1; s < span; s++) {
-      expanded.push({ paras: [], span: 1 });
-    }
-  }
-  return expanded;
+  return allCells(tr).map(tc => ({
+    paras: cellParas(tc, numFmts),
+    span:  cellGridSpan(tc),
+  }));
 }
 
 function cellParas(tc: Element, numFmts?: Record<string, string>): { text: string; style: string; numFmt?: string }[] {
@@ -171,22 +164,44 @@ async function parseDocx(buffer: Buffer) {
       const seenKeys = new Set<string>();
       let colCount = 0;
 
-      // First pass: compute max column count across all rows
+      // First pass: compute true column count by summing spans in multi-cell rows
       for (let ri = 0; ri < rows.length; ri++) {
-        const expanded = expandRow(rows[ri], numFmts);
-        colCount = Math.max(colCount, expanded.length);
+        const cells = allCells(rows[ri]);
+        if (cells.length > 1) {
+          const totalCols = cells.reduce((sum, tc) => sum + cellGridSpan(tc), 0);
+          colCount = Math.max(colCount, totalCols);
+        }
       }
+      if (colCount === 0) colCount = 1;
 
-      // Second pass: store expanded rows, skip title row (already in tableTitle) and empty rows
+      // Second pass: build content rows
       for (let ri = 0; ri < rows.length; ri++) {
-        const expanded = expandRow(rows[ri], numFmts);
-        const key = expanded.map(c => c.paras.map(p => p.text).join("|")).join("|||");
+        const physicalCells = allCells(rows[ri]);
+        const isFullSpan = physicalCells.length === 1; // title, note, or intro row
+
+        let cells: TableCell[];
+        if (isFullSpan) {
+          // Store as single full-width cell — don't expand
+          const paras = cellParas(physicalCells[0], numFmts);
+          if (!paras.length) continue; // empty row — skip
+          const rowText = paras.map(p => p.text).join("").trim();
+          // Skip if it's the title row (already stored in tableTitle)
+          if (rowText === tableTitle.replace(/\s+/g, " ").trim()) continue;
+          cells = [{ paras, span: colCount }]; // span entire width
+        } else {
+          cells = expandRow(rows[ri], numFmts);
+        }
+
+        const key = cells.map(c => c.paras.map(p => p.text).join("|")).join("|||");
         if (seenKeys.has(key)) continue;
-        // Skip the title row (same text as tableTitle)
-        const rowText = expanded.map(c => c.paras.map(p => p.text).join("")).join("").trim();
-        if (!rowText || rowText === tableTitle.replace(/\s+/g, " ").trim()) continue;
         seenKeys.add(key);
-        contentRows.push({ cells: expanded, is_header: ri <= 3 });
+
+        // is_header: rows where all cells are short labels (no iatalistitem, short text)
+        const isHeader = !isFullSpan && cells.every(c =>
+          c.paras.length <= 2 && c.paras.every(p => p.style !== "iatalistitem" && p.text.length < 60)
+        ) && ri < 6; // only first few rows can be headers
+
+        contentRows.push({ cells, is_header: isHeader });
       }
 
       tables.push({ tableRef, tableTitle, colCount, contentRows });

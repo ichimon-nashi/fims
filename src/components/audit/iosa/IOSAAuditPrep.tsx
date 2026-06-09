@@ -797,46 +797,96 @@ function RefPopup({
 							);
 
 							return (
-								<div className={styles.tableScrollWrap}>
-									<div className={styles.tableDisplay}>
-										<div className={styles.tableTitle}>
-											{tableData.title}
-										</div>
-										{rows.map((row: any, i: number) => (
-											<div
-												key={i}
-												className={`${styles.tableRow} ${row.is_header ? styles.tableRowHeader : ""}`}
-												style={{
-													gridTemplateColumns:
-														gridCols,
-												}}
-											>
-												{(row.cells ?? []).map(
-													(cell: any, j: number) => {
-														const label =
-															headerLabels[j] ??
-															"";
-														return (
-															<div
-																key={j}
-																className={
-																	styles.tableCell
-																}
-																data-label={
-																	label
-																}
-															>
-																<RichCellContent
-																	cell={cell}
-																/>
-															</div>
-														);
-													},
-												)}
-											</div>
-										))}
+								<>
+									<div className={styles.tableMobileNotice}>
+										<span>📊</span>
+										This table is best viewed on a larger
+										screen.
 									</div>
-								</div>
+									<div className={styles.tableScrollWrap}>
+										<div
+											className={styles.tableDisplay}
+											style={{
+												gridTemplateColumns: gridCols,
+											}}
+										>
+											<div
+												className={styles.tableTitle}
+												style={{ gridColumn: `1 / -1` }}
+											>
+												{tableData.title}
+											</div>
+											{rows.map((row: any, i: number) => {
+												const cells: any[] =
+													row.cells ?? [];
+												const isFullSpan =
+													cells.length === 1 &&
+													(cells[0]?.span ?? 1) > 1;
+												if (isFullSpan) {
+													return (
+														<div
+															key={i}
+															className={`${styles.tableRowFullSpan} ${row.is_header ? styles.tableRowHeader : ""}`}
+															style={{
+																gridColumn: `1 / -1`,
+															}}
+														>
+															<RichCellContent
+																cell={cells[0]}
+															/>
+														</div>
+													);
+												}
+												// display:contents wrapper — cells participate directly in parent grid
+												return (
+													<div
+														key={i}
+														className={`${styles.tableRowWrapper} ${row.is_header ? styles.tableRowHeader : ""}`}
+													>
+														{cells.map(
+															(
+																cell: any,
+																j: number,
+															) => {
+																const cellSpan: number =
+																	cell?.span ??
+																	1;
+																return (
+																	<div
+																		key={j}
+																		className={
+																			styles.tableCell
+																		}
+																		data-label={
+																			headerLabels[
+																				j
+																			] ??
+																			""
+																		}
+																		style={
+																			cellSpan >
+																			1
+																				? {
+																						gridColumn: `span ${cellSpan}`,
+																					}
+																				: undefined
+																		}
+																	>
+																		<RichCellContent
+																			cell={
+																				cell
+																			}
+																		/>
+																	</div>
+																);
+															},
+														)}
+													</div>
+												);
+											})}
+										</div>
+									</div>
+								</>
 							);
 						})()}
 				</div>

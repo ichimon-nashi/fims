@@ -748,8 +748,9 @@
 .refPopupBody {
 	padding: 1.125rem 1.25rem;
 	overflow-y: auto;
+	overflow-x: hidden; /* body never scrolls h; tableScrollWrap handles it */
 	flex: 1;
-	min-height: 0; /* critical: allows flex child to shrink and scroll */
+	min-height: 0;
 	display: flex;
 	flex-direction: column;
 	gap: 0.75rem;
@@ -898,9 +899,8 @@
 
 /* Table display in ref popup */
 .tableDisplay {
-	display: flex;
-	flex-direction: column;
-	gap: 0;
+	display: grid;
+	/* gridTemplateColumns set inline — shared across all rows */
 	border: 1px solid rgba(255, 255, 255, 0.1);
 	border-radius: 6px;
 	overflow: hidden;
@@ -919,11 +919,27 @@
 	border-radius: 6px 6px 0 0; /* clip top corners since tableDisplay no longer clips */
 }
 
-.tableRow {
-	display: grid;
-	/* grid-template-columns set inline via style prop */
+/* Row wrapper — display:contents makes its children participate directly in parent grid */
+.tableRowWrapper {
+	display: contents;
+}
+
+/* Apply row-level header background via cell targeting */
+.tableRowHeader .tableCell,
+.tableRowHeader.tableRowFullSpan {
+	background: rgba(255, 255, 255, 0.05);
+	color: #e8e9ed;
+	font-weight: 600;
+	font-size: 0.8125rem;
+}
+
+/* Full-width row (title, intro text, footnote) — spans all columns via gridColumn: 1/-1 */
+.tableRowFullSpan {
+	padding: 0.625rem 0.875rem;
 	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-	width: 100%;
+	color: #c8cfd9;
+	font-size: 0.875rem;
+	line-height: 1.6;
 }
 
 .tableRow:last-child {
@@ -939,6 +955,7 @@
 	padding: 0.5rem 0.875rem;
 	color: #a0aec0;
 	border-right: 1px solid rgba(255, 255, 255, 0.06);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 	font-size: 0.875rem;
 	line-height: 1.6;
 	overflow-wrap: break-word;
@@ -1185,39 +1202,71 @@
    The modal itself only scrolls vertically. The table scrolls horizontally
    inside its own wrapper so there is never a double-scroll situation. */
 .tableScrollWrap {
-	overflow-x: hidden; /* desktop: no horizontal scroll */
+	overflow-x: auto; /* allow horizontal scroll on desktop for wide tables */
 	width: 100%;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: thin;
+	scrollbar-color: rgba(74, 158, 255, 0.25) transparent;
+}
+.tableScrollWrap::-webkit-scrollbar {
+	height: 4px;
+}
+.tableScrollWrap::-webkit-scrollbar-thumb {
+	background: rgba(74, 158, 255, 0.25);
+	border-radius: 2px;
 }
 
+/* Last grid cells — remove bottom border */
+.tableDisplay > .tableCell:last-child,
+.tableDisplay > .tableRowFullSpan:last-child {
+	border-bottom: none;
+}
+
+/* Mobile: horizontal scroll for multi-column tables */
 @media (max-width: 600px) {
-	/* On mobile: allow horizontal scroll within the table wrapper only */
 	.tableScrollWrap {
 		overflow-x: auto;
 		-webkit-overflow-scrolling: touch;
 		scrollbar-width: thin;
-		scrollbar-color: rgba(74, 158, 255, 0.3) transparent;
 	}
-	.tableScrollWrap::-webkit-scrollbar {
-		height: 4px;
-	}
-	.tableScrollWrap::-webkit-scrollbar-thumb {
-		background: rgba(74, 158, 255, 0.3);
-		border-radius: 2px;
-	}
-
 	.tableDisplay {
 		width: max-content;
 		min-width: 100%;
 	}
-	.tableRow {
-		width: max-content;
-		min-width: 100%;
-	}
 	.tableCell {
-		min-width: 110px;
+		min-width: 100px;
 	}
-	.tableCell:first-child {
-		min-width: 48px;
-		max-width: 64px;
+}
+
+/* ── Table mobile ── */
+.tableMobileNotice {
+	display: none;
+	padding: 1.5rem 1rem;
+	text-align: center;
+	color: #a0aec0;
+	font-size: 0.9375rem;
+	line-height: 1.6;
+}
+.tableMobileNotice span {
+	font-size: 1.75rem;
+	display: block;
+	margin-bottom: 0.5rem;
+}
+
+@media (max-width: 600px) {
+	/* Hide table, show message */
+	.tableScrollWrap {
+		display: none;
+	}
+	.tableMobileNotice {
+		display: block;
+	}
+
+	/* Popup narrower on mobile */
+	.refPopupBackdrop {
+		padding: 0.5rem;
+	}
+	.refPopup {
+		width: calc(100vw - 1rem);
 	}
 }
