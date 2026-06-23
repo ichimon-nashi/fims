@@ -45,6 +45,53 @@ function paraStyle(p: Element): string {
   return pStyle.getAttributeNS(W, "val") || pStyle.getAttribute("w:val") || "Normal";
 }
 
+/** Find a w14:checkbox content control nested anywhere inside this paragraph.
+ *  Returns null if the paragraph has no checkbox (i.e. it's a plain remarks line). */
+function paraCheckbox(p: Element): { checked: boolean } | null {
+  const sdts = p.getElementsByTagNameNS(W, "sdt");
+  for (const sdt of Array.from(sdts) as Element[]) {
+    const sdtPr = kids(sdt, "sdtPr")[0];
+    if (!sdtPr) continue;
+    const cb = kids(sdtPr, "checkbox")[0]; // w14:checkbox shares localName "checkbox"
+    if (!cb) continue;
+    const checkedEl = kids(cb, "checked")[0];
+    const val = checkedEl?.getAttributeNS(W, "val") ?? checkedEl?.getAttribute("w14:val") ?? "0";
+    return { checked: val === "1" };
+  }
+  return null;
+}
+
+/** Like paraText, but renders w:br elements as newlines instead of collapsing them —
+ *  needed for "Auditor Comments" cells which use <w:br/> between numbered lines
+ *  inside a single paragraph rather than separate paragraphs. */
+function paraTextWithBreaks(p: Element): string {
+  const parts: string[] = [];
+  for (const r of kids(p, "r")) {
+    for (const child of Array.from(r.childNodes) as Element[]) {
+      if (child.localName === "t") parts.push(child.textContent ?? "");
+      else if (child.localName === "br") parts.push("\n");
+    }
+  }
+  return parts.join("")
+    .replace(/[\u2610\u2611\u2612\u25A1\u25A0☐☑◄]/g, "")
+    .trim();
+}
+
+/** Find paragraphs inside a table cell, including those nested one level inside
+ *  a content-control wrapper (w:sdt > w:sdtContent > w:p), as used by free-text
+ *  fields like "Auditor Comments". Does NOT descend into nested w:tbl. */
+function cellAllParas(tc: Element): Element[] {
+  const result: Element[] = [];
+  for (const node of Array.from(tc.childNodes) as Element[]) {
+    if (node.localName === "p") result.push(node);
+    else if (node.localName === "sdt") {
+      const content = kids(node, "sdtContent")[0];
+      if (content) result.push(...kids(content, "p"));
+    }
+  }
+  return result;
+}
+
 function paraNumId(p: Element): string | null {
   const pPr = kids(p, "pPr")[0];
   if (!pPr) return null;
@@ -260,13 +307,65 @@ async function parseDocx(buffer: Buffer) {
       }
     }
 
+    // Extract the 5-way conformity checkbox group from row 2.
+    // Labels map to the values your audit_iosa_records.conformance_status column expects.
+    const CONFORMITY_LABEL_MAP: Record<string, string> = {
+      "documented and implemented (conformity)":    "conformity",
+      "documented not implemented (finding)":       "doc_not_impl",
+      "implemented not documented (finding)":       "impl_not_doc",
+      "not documented not implemented (finding)":   "not_doc_not_impl",
+      "n/a":                                          "na",
+    };
+    let conformanceStatus: string | null = null;
+    if (rows.length >= 3) {
+      const cell2 = firstCell(rows[2]);
+      if (cell2) {
+        for (const p of kids(cell2, "p")) {
+          const cb = paraCheckbox(p);
+          if (!cb || !cb.checked) continue;
+          const label = paraText(p).trim().toLowerCase();
+          const mapped = CONFORMITY_LABEL_MAP[label];
+          if (mapped) { conformanceStatus = mapped; break; }
+        }
+      }
+    }
+
+    // Extract "Auditor Comments" free text from row 3 → doc_references.
+    // This field is wrapped in a content control (w:sdt > w:sdtContent > w:p),
+    // so we use cellAllParas (not the plain kids(cell,"p")) to find it, and
+    // paraTextWithBreaks to preserve the <w:br/> line breaks between i./ii./iii. lines.
+    let docReferences = "";
+    if (rows.length >= 4) {
+      const cell3 = firstCell(rows[3]);
+      if (cell3) {
+        const texts = cellAllParas(cell3)
+          .map(p => paraTextWithBreaks(p))
+          .filter(t => t && t !== "Auditor Comments" && t !== "Click or tap here to enter text.");
+        docReferences = texts.join("\n").trim();
+      }
+    }
+
     const cell4   = firstCell(rows[4]);
-    const aaItems: { num: string; text: string }[] = [];
-    let aaNum = 1;
-    for (const p of cell4 ? cellParas(cell4) : []) {
-      const t = p.text.trim();
-      if (!t || t === "Auditor Actions" || t.toLowerCase().startsWith("other actions")) continue;
-      aaItems.push({ num: `AA${aaNum++}`, text: t });
+    const aaItems: { num: string; text: string; checked: boolean; remarks: string }[] = [];
+    if (cell4) {
+      const aaParas = kids(cell4, "p");
+      let current: { num: string; text: string; checked: boolean; remarks: string } | null = null;
+      let aaNum = 1;
+      for (const p of aaParas) {
+        const t = paraText(p);
+        if (!t || t === "Auditor Actions") continue;
+
+        const cb = paraCheckbox(p);
+        if (cb) {
+          // A checkbox paragraph is a new AA item — "Other Actions" still counts as one.
+          current = { num: `AA${aaNum++}`, text: t, checked: cb.checked, remarks: "" };
+          aaItems.push(current);
+        } else if (current) {
+          // No checkbox on this paragraph → it's a remarks line for the item above.
+          current.remarks = current.remarks ? `${current.remarks}\n${t}` : t;
+        }
+        // A non-checkbox paragraph with no preceding AA item (shouldn't normally happen) is dropped.
+      }
     }
 
     let guidance = "";
@@ -291,6 +390,7 @@ async function parseDocx(buffer: Buffer) {
       has_gm: hasGm, has_sms: hasSms, linked_isarps: refs,
       auditor_actions: aaItems, guidance, guidance_paras,
       conformance_table: conformanceTable,
+      conformance_status: conformanceStatus, doc_references: docReferences,
       heading_h2: curH2, heading_h3: curH3, heading_h4: curH4,
       row_order: rowOrder++,
     });
@@ -317,6 +417,7 @@ export async function POST(req: NextRequest) {
 
     const allIsarps: any[] = [];
     const allTables: any[] = [];
+    const allRecords: any[] = [];
     const disciplines: string[] = [];
     let globalOrder = 0;
 
@@ -329,7 +430,28 @@ export async function POST(req: NextRequest) {
       disciplines.push(disc);
 
       for (const i of isarps) {
-        allIsarps.push({ ...i, cycle_id: cycleId, ism_edition: ismEdition, row_order: globalOrder++ });
+        // audit_iosa_isarps keeps its existing shape exactly — strip ONLY the new
+        // conformance fields that don't belong in that table. auditor_actions stays —
+        // it's an original field of audit_iosa_isarps, not something new.
+        const { conformance_status, doc_references, ...isarpFields } = i;
+        const auditor_actions = i.auditor_actions;
+        allIsarps.push({ ...isarpFields, cycle_id: cycleId, ism_edition: ismEdition, row_order: globalOrder++ });
+
+        // audit_iosa_records gets the conformance data extracted from this same docx.
+        // aa_responses shape matches what AuditPrep already reads/writes:
+        // { AA1: { completed: bool, remarks: string }, ... }
+        const aaResponses: Record<string, { completed: boolean; remarks: string }> = {};
+        for (const aa of auditor_actions as { num: string; checked: boolean; remarks: string }[]) {
+          aaResponses[aa.num] = { completed: aa.checked, remarks: aa.remarks };
+        }
+        allRecords.push({
+          cycle_id: cycleId,
+          isarp_code: i.isarp_code,
+          discipline: disc,
+          doc_references: doc_references || "",
+          conformance_status: conformance_status,
+          aa_responses: aaResponses,
+        });
       }
       for (const t of tables) {
         allTables.push({
@@ -362,10 +484,65 @@ export async function POST(req: NextRequest) {
       if (error) throw new Error(`Table upsert failed: ${error.message}`);
     }
 
+    // Upsert conformance data extracted from the same docx into audit_iosa_records.
+    // This does NOT delete existing records first (unlike isarps/tables above) —
+    // a record may already hold prep_flagged/assigned_auditor_id/etc. set via the
+    // FIMS UI that this import has no knowledge of and must not wipe out.
+    //
+    // It also must not blindly overwrite aa_responses/doc_references/conformance_status
+    // wholesale: if an auditor has already ticked a box or typed a remark in AuditPrep
+    // since the last import, re-uploading the same (or an updated) docx must not erase
+    // that. Rule: per AA key, keep the EXISTING value if it's already non-empty
+    // (completed=true OR remarks non-blank); only fill in from the docx when the
+    // existing slot is still at its untouched default. Same idea for doc_references
+    // and conformance_status — only fill if the existing value is empty/null.
+    if (allRecords.length) {
+      const codes = allRecords.map(r => r.isarp_code);
+      const { data: existingRecords, error: fetchErr } = await supabase
+        .from("audit_iosa_records")
+        .select("isarp_code, aa_responses, doc_references, conformance_status")
+        .eq("cycle_id", cycleId)
+        .in("isarp_code", codes);
+      if (fetchErr) throw new Error(`Failed to fetch existing records: ${fetchErr.message}`);
+
+      const existingByCode = new Map((existingRecords ?? []).map(r => [r.isarp_code, r]));
+
+      for (const rec of allRecords) {
+        const existing = existingByCode.get(rec.isarp_code);
+        if (!existing) continue; // no existing row — the freshly parsed docx values stand as-is
+
+        // Per-key AA merge: keep existing if it's already been touched.
+        const existingAA = (existing.aa_responses ?? {}) as Record<string, { completed: boolean; remarks: string }>;
+        const mergedAA: Record<string, { completed: boolean; remarks: string }> = { ...rec.aa_responses };
+        for (const num of Object.keys(existingAA)) {
+          const ex = existingAA[num];
+          const exTouched = ex && (ex.completed || (ex.remarks && ex.remarks.trim()));
+          if (exTouched) mergedAA[num] = ex; // an auditor already acted on this AA — don't overwrite
+        }
+        rec.aa_responses = mergedAA;
+
+        // doc_references: keep existing if it already has content.
+        if (existing.doc_references && existing.doc_references.trim()) {
+          rec.doc_references = existing.doc_references;
+        }
+        // conformance_status: keep existing if it's already set.
+        if (existing.conformance_status) {
+          rec.conformance_status = existing.conformance_status;
+        }
+      }
+    }
+
+    for (let i = 0; i < allRecords.length; i += 50) {
+      const { error } = await supabase.from("audit_iosa_records")
+        .upsert(allRecords.slice(i, i + 50), { onConflict: "cycle_id,isarp_code" });
+      if (error) throw new Error(`Records upsert failed: ${error.message}`);
+    }
+
     return NextResponse.json({
       success: true,
       isarps_imported: allIsarps.length,
       tables_imported: allTables.length,
+      records_imported: allRecords.length,
       disciplines,
     });
 

@@ -112,11 +112,25 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
 
 	if (!existing)
 		return NextResponse.json({ error: "Not found" }, { status: 404 });
+
 	if (existing.status === "submitted") {
-		return NextResponse.json(
-			{ error: "Submitted audits cannot be deleted" },
-			{ status: 403 },
-		);
+		// JWT only has userId — look up employee_id to check admin access
+		const { data: userRecord } = await supabase
+			.from("users")
+			.select("employee_id")
+			.eq("id", user.userId)
+			.single();
+
+		const isAdmin =
+			userRecord?.employee_id === "51892" ||
+			userRecord?.employee_id === "admin";
+
+		if (!isAdmin) {
+			return NextResponse.json(
+				{ error: "Submitted audits cannot be deleted" },
+				{ status: 403 },
+			);
+		}
 	}
 
 	const { error } = await supabase

@@ -1238,81 +1238,369 @@
 	background: rgba(34, 197, 94, 0.15);
 }
 
-/* ── Print styles ──────────────────────────────────────────────── */
+/* ── noPrint: hidden at print time ── */
+.noPrint { }
+
+/* ── printDoc: hidden on screen, the only thing that prints ── */
+.printDoc {
+	display: none;
+}
+
+/* ────────────────────────────────────────────────────
+   PRINT STYLES
+   printDoc becomes the entire visible page.
+   Everything else is hidden.
+──────────────────────────────────────────────────── */
 @media print {
-	.topbar,
-	.progressBar,
-	.footerActions,
-	.exportBtn,
-	.backBtn,
-	.flagBtn,
-	.resultBtn,
-	.findingTypeBtn,
-	.btnDraft,
-	.btnSubmit,
-	.recoAddRow {
-		display: none !important;
+	:global(*),
+	:global(*::before),
+	:global(*::after) {
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+		box-sizing: border-box;
 	}
 
-	.shell {
-		height: auto;
-		background: #fff !important;
-		color: #000 !important;
+	:global(html),
+	:global(body) {
+		font-size: 9pt;
+		font-family: "Helvetica Neue", Arial, "PingFang TC", "Microsoft JhengHei", sans-serif;
+		color: #1a1a1a;
+		background: #fff;
 	}
 
-	.formScroll {
-		overflow: visible;
+	/* Hide all screen UI */
+	.noPrint { display: none !important; }
+	.shell   { background: #fff !important; display: block !important; height: auto !important; overflow: visible !important; }
+
+	/* Show only printDoc */
+	.printDoc {
+		display: block !important;
+		font-family: "Helvetica Neue", Arial, "PingFang TC", "Microsoft JhengHei", sans-serif;
+		font-size: 9pt;
+		color: #1a1a1a;
+		background: #fff;
+		line-height: 1.4;
 	}
 
-	.formInner {
-		max-width: 100%;
+	/* ── Header table ── */
+	.printDocHeader {
+		width: 100%;
+		border-collapse: collapse;
+		border: 1.5px solid #1a1a1a;
+		margin-bottom: 0;
+	}
+
+	.printDocTitleRow td {
+		text-align: center;
+		padding: 4mm 4mm 3mm;
+		border-bottom: 1.5px solid #1a1a1a;
+	}
+
+	.printDocTitle {
+		font-size: 13pt;
+		font-weight: 700;
+		color: #1a1a1a;
+		display: block;
+		margin-bottom: 1mm;
+	}
+
+	.printDocTitleEn {
+		font-size: 8.5pt;
+		font-weight: 400;
+		color: #333;
+		display: block;
+	}
+
+	.printDocMetaRow td {
+		padding: 2mm 3mm;
+		border-right: 1px solid #1a1a1a;
+		vertical-align: middle;
+		font-size: 8pt;
+	}
+
+	.printDocMetaRow td:last-child { border-right: none; }
+
+	.printMetaKey {
+		font-weight: 700;
+		color: #1a1a1a;
+		display: block;
+		font-size: 7pt;
+		line-height: 1.3;
+	}
+
+	.printMetaVal {
+		color: #1a1a1a;
+		display: block;
+		font-size: 8.5pt;
+		font-weight: 400;
+		margin-top: 1.5mm;
+		min-height: 6mm;
+		border-bottom: 0.5px solid #888;
+	}
+
+	/* ── Section ── */
+	.printSection {
+		margin-top: 4mm;
+		break-inside: avoid;
+	}
+
+	.printSectionHeader {
+		display: flex;
+		align-items: center;
+		gap: 3mm;
+		background: #003087;
+		color: #fff;
+		padding: 2.5mm 3mm;
+	}
+
+	.printSectionNum {
+		background: rgba(255,255,255,0.2);
+		border-radius: 50%;
+		width: 17px;
+		height: 17px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 8pt;
+		font-weight: 700;
+		flex-shrink: 0;
+	}
+
+	.printSectionZh {
+		font-size: 10pt;
+		font-weight: 700;
+	}
+
+	.printSectionEn {
+		font-size: 7.5pt;
+		opacity: 0.8;
+		margin-left: 1mm;
+	}
+
+	/* ── Checklist table ── */
+	.printTable {
+		width: 100%;
+		border-collapse: collapse;
+		border: 1px solid #c8d4e8;
+		border-top: none;
+		font-size: 7.5pt;
+		table-layout: fixed;
+	}
+
+	.printTableHead th {
+		background: #e8f0ff;
+		color: #003087;
+		font-weight: 700;
+		font-size: 7pt;
+		padding: 2mm 2.5mm;
+		border: 1px solid #c8d4e8;
+		text-align: left;
+	}
+
+	.printTable td {
+		border: 1px solid #dde4f0;
+		padding: 2mm 2.5mm;
+		vertical-align: top;
+	}
+
+	/* Row states */
+	.printRowConformity { background: #f0fdf4; }
+	.printRowFinding    { background: #fff5f5; }
+	.printRowNa         { background: #f8fafc; }
+	.printRowEmpty      { background: #fff; }
+
+	/* Coloured left border per result */
+	.printRowConformity td:first-child { border-left: 3.5px solid #16a34a; }
+	.printRowFinding    td:first-child { border-left: 3.5px solid #dc2626; }
+	.printRowNa         td:first-child { border-left: 3.5px solid #94a3b8; }
+	.printRowEmpty      td:first-child { border-left: 3.5px solid transparent; }
+
+	.printCellCode { text-align: center; }
+
+	.printCode {
+		display: inline-block;
+		font-size: 6.5pt;
+		font-weight: 700;
+		background: #e8f0ff;
+		color: #003087;
+		padding: 1px 4px;
+		border-radius: 2px;
+		white-space: nowrap;
+	}
+
+	.printItemZh {
+		font-weight: 600;
+		font-size: 8pt;
+		color: #1a1a1a;
+		margin-bottom: 0.5mm;
+	}
+
+	.printItemEn {
+		font-size: 7pt;
+		color: #475569;
+		line-height: 1.35;
+	}
+
+	.printItemIsarp {
+		font-size: 6pt;
+		color: #003087;
+		margin-top: 0.75mm;
+		opacity: 0.75;
+	}
+
+	.printSubItems {
+		margin: 1mm 0 0 3.5mm;
 		padding: 0;
+		font-size: 7pt;
+		color: #475569;
+		list-style: disc;
 	}
 
-	.sectionBlock,
-	.headerCard,
-	.footerCard,
-	.recoBlock {
-		border: 1px solid #ccc !important;
-		background: #fff !important;
+	.printSubItems li { margin-bottom: 0.25mm; }
+
+	/* Result stamp */
+	.printCellResult { text-align: center; vertical-align: middle; }
+
+	.stampConformity, .stampFinding, .stampNa, .stampEmpty {
+		display: inline-block;
+		font-size: 7pt;
+		font-weight: 700;
+		padding: 1px 5px;
+		border-radius: 2px;
+		text-align: center;
+		line-height: 1.4;
+	}
+
+	.stampConformity {
+		background: #dcfce7;
+		color: #166534;
+		border: 1.5px solid #16a34a;
+	}
+
+	.stampFinding {
+		background: #fee2e2;
+		color: #991b1b;
+		border: 1.5px solid #dc2626;
+	}
+
+	.stampNa {
+		background: #f1f5f9;
+		color: #475569;
+		border: 1.5px solid #94a3b8;
+	}
+
+	.stampEmpty { color: #cbd5e1; font-size: 10pt; }
+
+	/* Finding / CAR */
+	.printFindingType {
+		font-size: 7pt;
+		color: #991b1b;
+		font-style: italic;
+		line-height: 1.3;
+		margin-bottom: 1mm;
+	}
+
+	.printCar {
+		font-size: 7.5pt;
+		font-weight: 700;
+		color: #991b1b;
+	}
+
+	/* Notes */
+	.printNoteLabel {
+		font-weight: 700;
+		color: #003087;
+	}
+
+	.printEvidence, .printComment {
+		font-size: 7pt;
+		line-height: 1.35;
+		color: #334155;
+		margin-bottom: 0.5mm;
+	}
+
+	/* ── Recommendations ── */
+	.printRecoBlock { margin-top: 4mm; }
+
+	.printRecoTitle {
+		font-size: 9.5pt;
+		font-weight: 700;
+		color: #003087;
+		border-bottom: 1.5px solid #003087;
+		padding-bottom: 1.5mm;
+		margin-bottom: 2mm;
+	}
+
+	.printRecoTable {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 8pt;
+		border: 1px solid #c8d4e8;
+	}
+
+	.printRecoTable th {
+		background: #e8f0ff;
+		color: #003087;
+		font-weight: 700;
+		font-size: 7pt;
+		padding: 2mm 2.5mm;
+		border: 1px solid #c8d4e8;
+		text-align: left;
+	}
+
+	.printRecoTable td {
+		border: 1px solid #dde4f0;
+		padding: 2mm 2.5mm;
+		vertical-align: top;
+	}
+
+	.printRecoSection {
+		font-weight: 600;
+		color: #003087;
+		white-space: nowrap;
+	}
+
+	.printRecoText { color: #1a1a1a; line-height: 1.4; }
+
+	/* ── Signature block ── */
+	.printSignBlock {
+		margin-top: 8mm;
+		border-top: 1px solid #e2e8f0;
+		padding-top: 4mm;
 		break-inside: avoid;
 	}
 
-	.itemRow {
-		break-inside: avoid;
-		border-bottom: 1px solid #eee !important;
+	.printSignRow {
+		display: flex;
+		gap: 12mm;
 	}
 
-	.itemZh {
-		color: #000 !important;
-	}
-	.itemEn {
-		color: #444 !important;
-	}
-	.itemCode {
-		background: #e8f0ff !important;
-		color: #1a3a7c !important;
-	}
-	.sectionTitle {
-		color: #000 !important;
-	}
-	.fieldLabel {
-		color: #666 !important;
-	}
-	.readonlyVal {
-		color: #000 !important;
+	.printSignField {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 1.5mm;
 	}
 
-	.resultBtnConformity.resultBtnActive {
-		color: #166534 !important;
-		border-color: #166534 !important;
+	.printSignLine {
+		height: 1px;
+		background: #1a1a1a;
+		margin-bottom: 1mm;
 	}
-	.resultBtnFinding.resultBtnActive {
-		color: #991b1b !important;
-		border-color: #991b1b !important;
+
+	.printSignLabel {
+		font-size: 7pt;
+		color: #555;
+		text-align: center;
 	}
-	.resultBtnNa.resultBtnActive {
-		color: #475569 !important;
-		border-color: #475569 !important;
+
+	/* ── Footer ── */
+	.printFooter {
+		margin-top: 5mm;
+		padding-top: 2mm;
+		border-top: 1px solid #e2e8f0;
+		font-size: 6.5pt;
+		color: #94a3b8;
+		text-align: center;
 	}
 }

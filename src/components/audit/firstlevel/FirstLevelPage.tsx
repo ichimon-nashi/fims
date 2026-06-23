@@ -600,18 +600,21 @@ export default function FirstLevelPage() {
 													📄 匯出PDF
 												</button>
 											)}
-											{rec.status === "draft" && (
-												<button
-													className={
-														styles.recordDeleteBtn
-													}
-													onClick={() =>
-														deleteRecord(rec.id)
-													}
-												>
-													🗑️ 刪除
-												</button>
-											)}
+										{(rec.status === "draft" ||
+													((user?.employee_id === "51892" ||
+														(user?.authentication_level as string) === "admin") &&
+														rec.status === "submitted")) && (
+													<button
+														className={
+															styles.recordDeleteBtn
+														}
+														onClick={() =>
+															deleteRecord(rec.id)
+														}
+													>
+														🗑️ 刪除
+													</button>
+												)}
 										</div>
 									</div>
 								))}
@@ -627,90 +630,260 @@ export default function FirstLevelPage() {
 	if (view === "detail" && detailRecord) {
 		const r = detailRecord;
 		const resp = r.responses || {};
+		const isAdmin =
+			user?.employee_id === "51892" ||
+			(user?.authentication_level as string) === "admin";
+
 		return (
 			<div className={styles.shell}>
-				<TopBar>
-					<span className={styles.readonlyBadge}>已提交 · 唯讀</span>
-					<button
-						className={styles.exportBtn}
-						onClick={() => window.print()}
-					>
-						📄 匯出PDF
-					</button>
-					<button
-						className={styles.backBtn}
-						onClick={() => {
-							setDetailRecord(null);
-							setView("records");
-						}}
-					>
-						← 返回
-					</button>
-				</TopBar>
-				<div className={styles.formScroll}>
+				{/* ── Screen-only toolbar ── */}
+				<div className={styles.topbar + " " + styles.noPrint}>
+					<div className={styles.auditTabs}>
+						{AUDIT_TABS.map((t) => (
+							<button
+								key={t.id}
+								className={`${styles.auditTab} ${t.id === "firstlevel" ? styles.auditTabActive : ""}`}
+								onClick={() => { if (t.id !== "firstlevel") router.push(t.href); }}
+							>
+								{t.label}
+							</button>
+						))}
+					</div>
+					<div className={styles.topbarRight}>
+						<span className={styles.readonlyBadge}>已提交 · 唯讀</span>
+						<button className={styles.exportBtn} onClick={() => window.print()}>
+							📄 匯出PDF
+						</button>
+						{isAdmin && (
+							<button
+								className={styles.recordDeleteBtn}
+								style={{ marginLeft: "0.5rem" }}
+								onClick={() => { deleteRecord(r.id); setView("records"); }}
+							>
+								🗑️ 刪除
+							</button>
+						)}
+						<button
+							className={styles.backBtn}
+							onClick={() => { setDetailRecord(null); setView("records"); }}
+						>
+							← 返回
+						</button>
+					</div>
+				</div>
+
+				{/* ── Print document — this is ALL that prints ── */}
+				<div className={styles.printDoc}>
+
+					{/* Document header — matches original FMEF-06-19 Rev07 table format */}
+					<table className={styles.printDocHeader}>
+						<tbody>
+							{/* Row 0: full-width title (matches original merged cell) */}
+							<tr className={styles.printDocTitleRow}>
+								<td colSpan={6}>
+									<span className={styles.printDocTitle}>一級自我督察檢查表－辦公室查核</span>
+									<span className={styles.printDocTitleEn}>1st Level Self Audit Checklist - Office Observation</span>
+								</td>
+							</tr>
+							{/* Row 1: metadata fields (matches original 6-col layout) */}
+							<tr className={styles.printDocMetaRow}>
+								<td style={{ width: "10%" }}>
+									<span className={styles.printMetaKey}>年度 Year</span>
+									<span className={styles.printMetaVal}>{r.year}</span>
+								</td>
+								<td style={{ width: "18%" }}>
+									<span className={styles.printMetaKey}>上半年 1st Half / 下半年 2nd Half</span>
+									<span className={styles.printMetaVal}>{r.half === 1 ? "☑ 上半年  ☐ 下半年" : "☐ 上半年  ☑ 下半年"}</span>
+								</td>
+								<td style={{ width: "12%" }}>
+									<span className={styles.printMetaKey}>查核日期 Audit Date</span>
+									<span className={styles.printMetaVal}>{r.audit_date ? new Date(r.audit_date + "T00:00:00").toLocaleDateString("zh-TW") : ""}</span>
+								</td>
+								<td style={{ width: "10%" }}>
+									<span className={styles.printMetaKey}>查核組別 Section</span>
+									<span className={styles.printMetaVal}>{r.section}</span>
+								</td>
+								<td style={{ width: "8%" }}>
+									<span className={styles.printMetaKey}>檢查員 Auditor</span>
+								</td>
+								<td style={{ width: "42%" }}>
+									<span className={styles.printMetaVal}>{r.auditors?.map(a => a.full_name).join("、") || r.auditor_name}</span>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+
+					{/* Checklist sections — flow directly after header, no cover page */}
+					{SECTIONS.map((sec) => (
+						<div key={sec.num} className={styles.printSection}>
+							<div className={styles.printSectionHeader}>
+								<span className={styles.printSectionNum}>{sec.num}</span>
+								<span className={styles.printSectionZh}>{sec.zh}</span>
+								<span className={styles.printSectionEn}>{sec.en}</span>
+							</div>
+							<table className={styles.printTable} style={{ marginTop: 0 }}>
+								<colgroup>
+									<col style={{ width: "7%" }} />
+									<col style={{ width: "36%" }} />
+									<col style={{ width: "13%" }} />
+									<col style={{ width: "14%" }} />
+									<col style={{ width: "30%" }} />
+								</colgroup>
+								<thead>
+									<tr className={styles.printTableHead}>
+										<th>項目</th>
+										<th>查核項目 / 描述</th>
+										<th>結果</th>
+										<th>缺失類型 / CAR</th>
+										<th>文件 / 備註</th>
+									</tr>
+								</thead>
+								<tbody>
+									{CHECKLIST_ITEMS.filter(i => i.section === sec.num).map((item) => {
+										const res = resp[item.code] || { ...EMPTY_RESPONSE };
+										const hasFinding = res.result === "finding";
+										const rowClass = res.result === "conformity"
+											? styles.printRowConformity
+											: hasFinding
+												? styles.printRowFinding
+												: res.result === "na"
+													? styles.printRowNa
+													: styles.printRowEmpty;
+										return (
+											<tr key={item.code} className={rowClass}>
+												<td className={styles.printCellCode}>
+													<span className={styles.printCode}>{item.code}</span>
+												</td>
+												<td className={styles.printCellDesc}>
+													<div className={styles.printItemZh}>{item.zhTitle}</div>
+													<div className={styles.printItemEn}>{item.enTitle}</div>
+													{item.isarp && item.isarp !== "N/A" && (
+														<div className={styles.printItemIsarp}>依據: {item.isarp}</div>
+													)}
+													{item.subItems && item.subItems.length > 0 && (
+														<ul className={styles.printSubItems}>
+															{item.subItems.map((s, si) => (
+																<li key={si}>{s.label}</li>
+															))}
+														</ul>
+													)}
+												</td>
+												<td className={styles.printCellResult}>
+													{res.result === "conformity" && <span className={styles.stampConformity}>符合<br/>Conformity</span>}
+													{res.result === "finding"   && <span className={styles.stampFinding}>缺失<br/>Finding</span>}
+													{res.result === "na"        && <span className={styles.stampNa}>不適用<br/>N/A</span>}
+													{!res.result               && <span className={styles.stampEmpty}>—</span>}
+												</td>
+												<td className={styles.printCellFinding}>
+													{hasFinding && (
+														<>
+															{res.finding_type && (
+																<div className={styles.printFindingType}>
+																	{res.finding_type === "doc_not_impl" && "Documented, Not Implemented"}
+																	{res.finding_type === "impl_not_doc" && "Implemented, Not Documented"}
+																	{res.finding_type === "not_doc_not_impl" && "Not Documented, Not Implemented"}
+																</div>
+															)}
+															{res.car_number && (
+																<div className={styles.printCar}>CAR# {res.car_number}</div>
+															)}
+														</>
+													)}
+												</td>
+												<td className={styles.printCellNotes}>
+													{res.evidence && <div className={styles.printEvidence}><span className={styles.printNoteLabel}>文件：</span>{res.evidence}</div>}
+													{res.comment  && <div className={styles.printComment}><span className={styles.printNoteLabel}>備註：</span>{res.comment}</div>}
+												</td>
+											</tr>
+										);
+									})}
+								</tbody>
+							</table>
+						</div>
+					))}
+
+					{/* Recommendations */}
+					{r.recommendations && r.recommendations.length > 0 && (
+						<div className={styles.printRecoBlock}>
+							<div className={styles.printRecoTitle}>建議事項 Recommendations</div>
+							<table className={styles.printRecoTable}>
+								<thead>
+									<tr>
+										<th style={{ width: "15%" }}>組別</th>
+										<th>建議內容</th>
+									</tr>
+								</thead>
+								<tbody>
+									{r.recommendations.map((rec, ri) => (
+										<tr key={rec.id}>
+											<td className={styles.printRecoSection}>{rec.section}</td>
+											<td className={styles.printRecoText}>{rec.text}</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					)}
+
+					{/* Signature block */}
+					<div className={styles.printSignBlock}>
+						<div className={styles.printSignRow}>
+							<div className={styles.printSignField}>
+								<div className={styles.printSignLine}></div>
+								<div className={styles.printSignLabel}>查核員簽名 Auditor Signature</div>
+							</div>
+							<div className={styles.printSignField}>
+								<div className={styles.printSignLine}></div>
+								<div className={styles.printSignLabel}>單位主管簽名 Supervisor Signature</div>
+							</div>
+							<div className={styles.printSignField}>
+								<div className={styles.printSignLine}></div>
+								<div className={styles.printSignLabel}>日期 Date</div>
+							</div>
+						</div>
+					</div>
+
+					{/* Footer */}
+					<div className={styles.printFooter}>
+						FMEF-06-19 Rev07 · 華信航空 Mandarin Airlines · 一級自我督察查核表 · {r.year} {r.half === 1 ? "上半年" : "下半年"}
+					</div>
+				</div>
+
+				{/* ── Screen-only: scrollable read-only checklist below the toolbar ── */}
+				<div className={`${styles.formScroll} ${styles.noPrint}`}>
 					<div className={styles.formInner}>
 						<div className={styles.headerCard}>
 							<div className={styles.fieldGroup}>
 								<span className={styles.fieldLabel}>年度</span>
-								<div className={styles.readonlyVal}>
-									{r.year}{" "}
-									{r.half === 1 ? "上半年" : "下半年"}
-								</div>
+								<div className={styles.readonlyVal}>{r.year} {r.half === 1 ? "上半年" : "下半年"}</div>
 							</div>
 							<div className={styles.fieldGroup}>
 								<span className={styles.fieldLabel}>組別</span>
-								<div className={styles.readonlyVal}>
-									{r.section}
-								</div>
+								<div className={styles.readonlyVal}>{r.section}</div>
 							</div>
 							<div className={styles.fieldGroup}>
-								<span className={styles.fieldLabel}>
-									查核員
-								</span>
-								<div className={styles.readonlyVal}>
-									{r.auditor_name}
-								</div>
+								<span className={styles.fieldLabel}>查核員</span>
+								<div className={styles.readonlyVal}>{r.auditors?.map(a => a.full_name).join("、") || r.auditor_name}</div>
 							</div>
 							<div className={styles.fieldGroup}>
-								<span className={styles.fieldLabel}>
-									查核日期
-								</span>
-								<div className={styles.readonlyVal}>
-									{r.audit_date || "—"}
-								</div>
+								<span className={styles.fieldLabel}>查核日期</span>
+								<div className={styles.readonlyVal}>{r.audit_date || "—"}</div>
 							</div>
 						</div>
 						{SECTIONS.map((sec) => (
 							<div key={sec.num} className={styles.sectionBlock}>
-								<div
-									className={styles.sectionHeader}
-									onClick={() => toggleSection(sec.num)}
-								>
-									<span className={styles.sectionNum}>
-										{sec.num}
-									</span>
-									<span className={styles.sectionTitle}>
-										{sec.zh}
-									</span>
-									<span
-										className={`${styles.sectionChevron} ${collapsedSections[sec.num] ? "" : styles.sectionChevronOpen}`}
-									>
-										▼
-									</span>
+								<div className={styles.sectionHeader} onClick={() => toggleSection(sec.num)}>
+									<span className={styles.sectionNum}>{sec.num}</span>
+									<span className={styles.sectionTitle}>{sec.zh}</span>
+									<span className={`${styles.sectionChevron} ${collapsedSections[sec.num] ? "" : styles.sectionChevronOpen}`}>▼</span>
 								</div>
 								{!collapsedSections[sec.num] && (
 									<div className={styles.sectionItems}>
-										{CHECKLIST_ITEMS.filter(
-											(i) => i.section === sec.num,
-										).map((item) => (
+										{CHECKLIST_ITEMS.filter(i => i.section === sec.num).map((item) => (
 											<ChecklistItemComponent
 												key={item.code}
 												item={item}
-												response={
-													resp[item.code] || {
-														...EMPTY_RESPONSE,
-													}
-												}
+												response={resp[item.code] || { ...EMPTY_RESPONSE }}
 												onChange={() => {}}
 												readonly
 											/>
@@ -721,27 +894,12 @@ export default function FirstLevelPage() {
 						))}
 						{r.recommendations && r.recommendations.length > 0 && (
 							<div className={styles.recoBlock}>
-								<p className={styles.recoTitle}>
-									建議事項 Recommendations
-								</p>
+								<p className={styles.recoTitle}>建議事項 Recommendations</p>
 								<div className={styles.recoList}>
 									{r.recommendations.map((rec) => (
-										<div
-											key={rec.id}
-											className={styles.recoItem}
-										>
-											<span
-												className={
-													styles.recoItemSection
-												}
-											>
-												{rec.section}
-											</span>
-											<span
-												className={styles.recoItemText}
-											>
-												{rec.text}
-											</span>
+										<div key={rec.id} className={styles.recoItem}>
+											<span className={styles.recoItemSection}>{rec.section}</span>
+											<span className={styles.recoItemText}>{rec.text}</span>
 										</div>
 									))}
 								</div>
@@ -752,6 +910,7 @@ export default function FirstLevelPage() {
 			</div>
 		);
 	}
+
 
 	// ─── NEW / EDIT FORM ───────────────────────────────────────────
 	return (
