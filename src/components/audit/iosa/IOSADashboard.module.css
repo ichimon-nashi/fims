@@ -915,9 +915,13 @@
 		border-color 0.15s;
 	font-weight: 500;
 }
-.exportBtn:hover {
+.exportBtn:hover:not(:disabled) {
 	background: rgba(72, 187, 120, 0.22);
 	border-color: rgba(72, 187, 120, 0.7);
+}
+.exportBtn:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
 }
 
 .importBtn {

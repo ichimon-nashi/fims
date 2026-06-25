@@ -643,6 +643,40 @@ export default function IOSADashboard({
 	const [showCreateModal, setShowCreateModal] = useState(false);
 	const [activeDiscipline, setActiveDiscipline] = useState("CAB");
 	const [activeFlag, setActiveFlag] = useState<"prep" | "finding">("prep");
+	const [exporting, setExporting] = useState(false);
+	const [exportError, setExportError] = useState("");
+
+	const handleExportCR = async () => {
+		if (!token || !activeCycle) return;
+		setExporting(true);
+		setExportError("");
+		try {
+			const params = new URLSearchParams({
+				cycle_id: activeCycle.id,
+				ism_edition: activeCycle.ism_edition,
+			});
+			const res = await fetch(`/api/audit/iosa/export-cr?${params}`, {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			if (!res.ok) {
+				const d = await res.json();
+				throw new Error(d.error || "Export failed");
+			}
+			const blob = await res.blob();
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = `Conformance Report - ${activeCycle.name}.xlsx`;
+			document.body.appendChild(a);
+			a.click();
+			a.remove();
+			URL.revokeObjectURL(url);
+		} catch (e: any) {
+			setExportError(e.message);
+		} finally {
+			setExporting(false);
+		}
+	};
 
 	// Only 51892 (owner) and admin master account can delete cycles
 	const isPrivileged =
@@ -849,11 +883,20 @@ export default function IOSADashboard({
 		<div className={styles.dashboard}>
 			{/* ── Action buttons ── */}
 			<div className={styles.dashActions}>
-				<button className={styles.exportBtn}>↓ Export</button>
+				<button
+					className={styles.exportBtn}
+					onClick={handleExportCR}
+					disabled={!activeCycle || exporting}
+				>
+					{exporting ? "Exporting…" : "↓ Export CR"}
+				</button>
 				<button className={styles.importBtn} onClick={onImport}>
 					↑ Import ISARPs
 				</button>
 			</div>
+			{exportError && (
+				<div className={styles.errorMsg}>{exportError}</div>
+			)}
 
 			{/* ── Cycle bar ── */}
 			{activeCycle && (
