@@ -199,7 +199,8 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 					.select(
 						"id, employee_id, full_name, rank, base, aircraft_type_ratings",
 					)
-					.neq("rank", "admin"); // Exclude admin users only
+					.neq("rank", "admin") // Exclude admin users only
+					.eq("is_inactive", false); // Exclude retired/quit crew from selection pool
 
 				if (error) throw error;
 

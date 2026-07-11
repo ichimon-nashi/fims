@@ -31,6 +31,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 		title: string;
 		description: string;
 		priority: "low" | "medium" | "high";
+		category: string;
 		task_type: "main" | "subtask";
 		parent_id: string;
 		assignees: string[];
@@ -40,6 +41,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 		title: "",
 		description: "",
 		priority: "medium",
+		category: "",
 		task_type: "main",
 		parent_id: "",
 		assignees: [],
@@ -52,6 +54,11 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 		return allTasks.filter((t) => t.task_type === "main");
 	};
 
+	// Only active crew are selectable for new assignments — existing assignee
+	// name/avatar lookups above still use the full availableUsers list, so
+	// tasks already assigned to someone now-inactive still display correctly.
+	const selectableUsers = availableUsers.filter((u: any) => !u.is_inactive);
+
 	// Handle add task
 	const handleAddTask = async () => {
 		if (!newTask.title.trim()) return;
@@ -63,6 +70,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 				title: newTask.title,
 				description: newTask.description || "",
 				priority: newTask.priority,
+				category: newTask.category || null,
 				status: selectedColumn,
 				task_type: newTask.task_type,
 				parent_id: newTask.parent_id || null,
@@ -133,6 +141,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 				title: "",
 				description: "",
 				priority: "medium",
+				category: "",
 				task_type: "main",
 				parent_id: "",
 				assignees: [],
@@ -244,6 +253,22 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 						</div>
 					</div>
 
+					{/* Category - free text so it isn't locked to a predefined list */}
+					<div className={styles.formGroup}>
+						<label>Category</label>
+						<input
+							type="text"
+							value={newTask.category}
+							onChange={(e) =>
+								setNewTask({
+									...newTask,
+									category: e.target.value,
+								})
+							}
+							placeholder="e.g. Design, Backend, Documentation..."
+						/>
+					</div>
+
 					{/* Parent Task Selection (only for subtasks) - UPDATED: Show all main tasks */}
 					{newTask.task_type === "subtask" && (
 						<div className={styles.formGroup}>
@@ -325,7 +350,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 							>
 								Loading users...
 							</div>
-						) : availableUsers.length === 0 ? (
+						) : selectableUsers.length === 0 ? (
 							<div
 								style={{
 									padding: "1rem",
@@ -337,7 +362,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 							</div>
 						) : (
 							<div className={styles.assigneeList}>
-								{availableUsers.map((user) => (
+								{selectableUsers.map((user) => (
 									<label
 										key={user.id}
 										className={styles.assigneeOption}

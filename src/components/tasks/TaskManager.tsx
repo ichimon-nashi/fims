@@ -31,7 +31,7 @@ const TaskManager = () => {
   
   // Constants
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 3 }, (_, i) => currentYear + i);
+  const years = [currentYear - 1, currentYear, currentYear + 1];
 
   // Auth redirect
   useEffect(() => {
@@ -150,7 +150,7 @@ const TaskManager = () => {
                   }}>
                     Loading team...
                   </div>
-                ) : availableUsers.length === 0 ? (
+                ) : availableUsers.filter((u: any) => !u.is_inactive).length === 0 ? (
                   <div style={{ 
                     fontSize: '0.875rem', 
                     color: '#94a3b8',
@@ -159,7 +159,7 @@ const TaskManager = () => {
                     No team members available
                   </div>
                 ) : (
-                  availableUsers.map(teamMember => {
+                  availableUsers.filter((u: any) => !u.is_inactive).map(teamMember => {
                     const employeeId = getEmployeeIdentifier(teamMember);
                     return (
                       <div 

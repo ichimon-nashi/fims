@@ -1,7 +1,8 @@
 // src/app/api/admin/users/[id]/permissions/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { verifyToken } from "@/lib/auth";
+import { verifyToken, hashPassword } from "@/lib/auth";
+import crypto from "crypto";
 
 export async function PATCH(
 	request: NextRequest,
@@ -89,7 +90,7 @@ export async function PATCH(
 			JSON.stringify(body, null, 2),
 		);
 
-		const { authentication_level, app_permissions } = body;
+		const { authentication_level, app_permissions, base, rank, is_inactive } = body;
 
 		// Validate input
 		if (authentication_level === undefined || !app_permissions) {
@@ -107,14 +108,30 @@ export async function PATCH(
 			JSON.stringify(app_permissions, null, 2),
 		);
 
+		// If marking user inactive, randomize their password hash server-side
+		// so they can no longer log in (existing 8h JWT sessions still expire naturally).
+		// Reuses the same hashPassword() call the manual reset-password flow already uses.
+		const updatePayload: Record<string, unknown> = {
+			authentication_level,
+			app_permissions,
+			updated_at: new Date().toISOString(),
+		};
+
+		if (base !== undefined) updatePayload.base = base;
+		if (rank !== undefined) updatePayload.rank = rank;
+
+		if (is_inactive !== undefined) {
+			updatePayload.is_inactive = is_inactive;
+			if (is_inactive === true) {
+				const randomPassword = crypto.randomBytes(16).toString("hex");
+				updatePayload.password_hash = await hashPassword(randomPassword);
+			}
+		}
+
 		// Update user permissions - using the awaited id variable
 		const { data, error } = await supabase
 			.from("users")
-			.update({
-				authentication_level,
-				app_permissions,
-				updated_at: new Date().toISOString(),
-			})
+			.update(updatePayload)
 			.eq("id", id)
 			.select()
 			.single();

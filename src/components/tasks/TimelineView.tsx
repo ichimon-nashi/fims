@@ -1,16 +1,23 @@
 // src/components/tasks/TimelineView.tsx - UPDATED: Filter for in-progress, auto-scroll, fixed z-index, removed navigation
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import Avatar from "@/components/ui/Avatar/Avatar";
 import { Task, ZoomLevel } from "@/lib/task.types";
-import { getSubtasks } from "@/utils/taskHelpers";
+import { calculateParentProgress } from "@/utils/taskHelpers";
 import { useTimeline } from "@/hooks/useTimeline";
 import { createServiceClient } from "@/utils/supabase/service-client";
+import styles from "./TimelineView.module.css";
 
 interface TimelineViewProps {
 	tasks: Task[];
 	onTaskClick: (task: Task) => void;
 	refreshTasks?: () => void;
 }
+
+// Card layout constants for the staggered floating-card gantt
+const CARD_HEIGHT = 104;
+const LANE_VERTICAL_GAP = 28;
+const CARD_HORIZONTAL_GAP = 28;
+const MIN_CARD_WIDTH = 220;
 
 // Color palette for tasks
 const TASK_COLOR_PALETTE = [
@@ -41,18 +48,36 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 		viewStartDate,
 		setViewStartDate,
 		dateRange,
+		extendRangeForward,
 	} = useTimeline(tasks);
 
 	// Refs for scroll synchronization
 	const timelineScrollRef = useRef<HTMLDivElement>(null);
+	// NEW (#8): throttle guard so rapid scroll events don't fire multiple
+	// extension requests before the DOM catches up with the new range
+	const lastExtendRef = useRef(0);
+
+	// NEW (#2/#3): measure exact remaining viewport height instead of
+	// guessing with a calc(100vh - Npx) constant, which drifts whenever
+	// surrounding chrome (navbar/header/controls) changes height and
+	// causes page-level vertical scroll.
+	const timelineBodyRef = useRef<HTMLDivElement>(null);
+	const [bodyHeight, setBodyHeight] = useState<number | null>(null);
+
+	useEffect(() => {
+		const measure = () => {
+			if (!timelineBodyRef.current) return;
+			const top = timelineBodyRef.current.getBoundingClientRect().top;
+			const available = window.innerHeight - top - 24; // 24px bottom breathing room
+			setBodyHeight(Math.max(360, available));
+		};
+		measure();
+		window.addEventListener('resize', measure);
+		return () => window.removeEventListener('resize', measure);
+	}, []);
 
 	// NEW: Filter to show only "in-progress" tasks by default
 	const [statusFilter, setStatusFilter] = useState<string>("in-progress");
-
-	// Drag and drop state for subtask reordering
-	const [draggedSubtask, setDraggedSubtask] = useState<Task | null>(null);
-	const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-	const [dragOverParentId, setDragOverParentId] = useState<string | null>(null);
 
 	// Hover tooltip state
 	const [hoveredTask, setHoveredTask] = useState<{
@@ -61,9 +86,14 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 		y: number;
 	} | null>(null);
 
-	// NEW: Auto-scroll to today's date on mount
+	// Auto-scroll to today's date on mount - except quarters, which is meant
+	// as a whole-project overview and should start at the left (project start)
 	useEffect(() => {
 		if (timelineScrollRef.current && dateRange.length > 0) {
+			if (zoomLevel === 'quarters') {
+				timelineScrollRef.current.scrollLeft = 0;
+				return;
+			}
 			const todayIndex = getTodayColumnIndex();
 			if (todayIndex !== -1) {
 				const columnWidth = getColumnWidth();
@@ -71,7 +101,19 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 				timelineScrollRef.current.scrollLeft = Math.max(0, scrollPosition);
 			}
 		}
-	}, [dateRange]); // Run when dateRange is loaded
+	}, [dateRange, zoomLevel]); // Run when dateRange is loaded or zoom changes
+
+	// NEW (#5): if the task-driven date range doesn't even fill the visible
+	// width, the user never scrolls far enough to trigger the scroll-based
+	// extension (#8), so the range just stops mid-viewport. Check fill on
+	// mount/resize/zoom-change and extend forward until it's wide enough.
+	useEffect(() => {
+		const el = timelineScrollRef.current;
+		if (!el) return;
+		if (el.scrollWidth <= el.clientWidth && el.clientWidth > 0) {
+			extendRangeForward();
+		}
+	}, [dateRange, zoomLevel]);
 
 	// UPDATED: Filter tasks by status
 	const filteredTasks = tasks.filter((task) => {
@@ -188,27 +230,62 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 			case "days": return 60;
 			case "weeks": return 120;
 			case "months": return 180;
-			case "quarters": return 240;
+			case "quarters": return 130;
 			default: return 60;
 		}
 	};
 
-	const getTaskColor = (taskId: string) => {
-		const hash = taskId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+	const UNCATEGORIZED_COLOR = "#64748b";
+
+	const hexToRgba = (hex: string, alpha: number) => {
+		const clean = hex.replace('#', '');
+		const r = parseInt(clean.slice(0, 2), 16);
+		const g = parseInt(clean.slice(2, 4), 16);
+		const b = parseInt(clean.slice(4, 6), 16);
+		return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+	};
+
+	const getCategoryColor = (category?: string) => {
+		if (!category || !category.trim()) return UNCATEGORIZED_COLOR;
+		const hash = category.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
 		return TASK_COLOR_PALETTE[hash % TASK_COLOR_PALETTE.length];
 	};
 
-	const getDarkerColor = (color: string) => {
-		const hex = color.replace('#', '');
-		const r = Math.max(0, parseInt(hex.slice(0, 2), 16) - 40);
-		const g = Math.max(0, parseInt(hex.slice(2, 4), 16) - 40);
-		const b = Math.max(0, parseInt(hex.slice(4, 6), 16) - 40);
-		return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-	};
+	// Staggered floating-card layout: greedy lane packing by rendered pixel
+	// position (not raw dates), so cards never overlap visually regardless
+	// of zoom level or MIN_CARD_WIDTH clamping.
+	const { cardLayout, laneCount } = useMemo(() => {
+		const withPosition = parentTasks
+			.filter((task) => task.start_date && task.due_date)
+			.map((task) => {
+				const pos = getFixedTaskPosition(task.start_date!, task.due_date!);
+				const left = parseFloat(pos.left);
+				const rawWidth = parseFloat(pos.width);
+				const width = Math.max(rawWidth, MIN_CARD_WIDTH);
+				return { task, left, width, right: left + width };
+			})
+			.sort((a, b) => a.left - b.left);
+
+		const laneEnds: number[] = [];
+		const layout = new Map<string, { left: number; width: number; lane: number }>();
+
+		withPosition.forEach(({ task, left, width, right }) => {
+			let lane = laneEnds.findIndex((end) => end + CARD_HORIZONTAL_GAP <= left);
+			if (lane === -1) {
+				laneEnds.push(right);
+				lane = laneEnds.length - 1;
+			} else {
+				laneEnds[lane] = right;
+			}
+			layout.set(task.id, { left, width, lane });
+		});
+
+		return { cardLayout: layout, laneCount: Math.max(laneEnds.length, 1) };
+	}, [parentTasks, dateRange, zoomLevel]);
 
 	const getMonthBackgroundColor = (date: Date) => {
 		const month = date.getMonth();
-		return month % 2 === 0 ? "rgba(241, 245, 249, 0.5)" : "rgba(248, 250, 252, 0.5)";
+		return month % 2 === 0 ? "rgba(51, 65, 85, 0.12)" : "transparent";
 	};
 
 	const getTodayColumnIndex = () => {
@@ -317,90 +394,42 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 		setViewStartDate(new Date());
 	};
 
+	// NEW (#8): when the user scrolls near the right edge of the timeline,
+	// extend the date range forward instead of letting it just cut off.
+	const handleTimelineScroll = () => {
+		const el = timelineScrollRef.current;
+		if (!el) return;
+
+		const EDGE_THRESHOLD_PX = 400;
+		const MIN_MS_BETWEEN_EXTENSIONS = 400;
+
+		const nearRightEdge = el.scrollLeft + el.clientWidth >= el.scrollWidth - EDGE_THRESHOLD_PX;
+		const now = Date.now();
+
+		if (nearRightEdge && now - lastExtendRef.current > MIN_MS_BETWEEN_EXTENSIONS) {
+			lastExtendRef.current = now;
+			extendRangeForward();
+		}
+	};
+
 	return (
-		<div style={{ 
-			background: 'rgba(15, 23, 42, 0.6)', 
-			borderRadius: '1rem', 
-			overflow: 'hidden',
-			border: '1px solid rgba(148, 163, 184, 0.1)',
-			backdropFilter: 'blur(10px)'
-		}}>
-			{/* Timeline Controls with Status Filter - SIMPLIFIED: Removed navigation buttons */}
-			<div style={{
-				display: 'flex',
-				justifyContent: 'space-between',
-				alignItems: 'center',
-				padding: '1rem',
-				borderBottom: '1px solid rgba(148, 163, 184, 0.2)',
-				background: 'rgba(15, 23, 42, 0.8)',
-				flexWrap: 'wrap',
-				gap: '1rem'
-			}}>
+		<div className={styles.timelineContainer}>
+			{/* Timeline Controls with Status Filter */}
+			<div className={styles.timelineControls}>
 				{/* Left Side: Zoom and Today */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-					{/* Today Button */}
-					<button
-						onClick={handleGoToToday}
-						style={{
-							background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-							color: "white",
-							border: "none",
-							borderRadius: "0.5rem",
-							padding: "0.5rem 0.75rem",
-							cursor: "pointer",
-							fontSize: "0.875rem",
-							fontWeight: "600",
-							transition: "all 0.2s",
-							boxShadow: "0 2px 8px rgba(59, 130, 246, 0.3)",
-						}}
-						onMouseEnter={(e) => {
-							e.currentTarget.style.transform = "translateY(-1px)";
-							e.currentTarget.style.boxShadow = "0 4px 12px rgba(59, 130, 246, 0.4)";
-						}}
-						onMouseLeave={(e) => {
-							e.currentTarget.style.transform = "translateY(0)";
-							e.currentTarget.style.boxShadow = "0 2px 8px rgba(59, 130, 246, 0.3)";
-						}}
-					>
+				<div className={styles.timelineControlsGroup}>
+					<button className={styles.timelineTodayButton} onClick={handleGoToToday}>
 						Go to Today
 					</button>
 
-					{/* Zoom Level Selector */}
-					<div
-						style={{
-							display: "flex",
-							background: "rgba(51, 65, 85, 0.5)",
-							borderRadius: "0.5rem",
-							padding: "0.25rem",
-							border: "1px solid rgba(148, 163, 184, 0.2)",
-						}}
-					>
+					<div className={styles.timelineZoomGroup}>
 						{(
 							["days", "weeks", "months", "quarters"] as ZoomLevel[]
 						).map((level) => (
 							<button
 								key={level}
 								onClick={() => setZoomLevel(level)}
-								style={{
-									padding: "0.5rem 1rem",
-									borderRadius: "0.375rem",
-									fontSize: "0.875rem",
-									fontWeight: "600",
-									border: "none",
-									cursor: "pointer",
-									transition: "all 0.2s",
-									background:
-										zoomLevel === level
-											? "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)"
-											: "transparent",
-									color:
-										zoomLevel === level ? "white" : "#94a3b8",
-									boxShadow:
-										zoomLevel === level
-											? "0 2px 8px rgba(59, 130, 246, 0.3)"
-											: "none",
-									textTransform: "capitalize",
-								}}
+								className={`${styles.timelineZoomButton} ${zoomLevel === level ? styles.timelineZoomButtonActive : ''}`}
 							>
 								{level}
 							</button>
@@ -409,25 +438,13 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 				</div>
 
 				{/* Right Side: Status Filter and Info */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-					{/* Status Filter */}
-					<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-						<label style={{ fontSize: '0.875rem', color: '#cbd5e1', fontWeight: '600' }}>
-							Status:
-						</label>
+				<div className={styles.timelineControlsGroup}>
+					<div className={styles.timelineStatusGroup}>
+						<label className={styles.timelineStatusLabel}>Status:</label>
 						<select
 							value={statusFilter}
 							onChange={(e) => setStatusFilter(e.target.value)}
-							style={{
-								padding: '0.5rem 1rem',
-								borderRadius: '0.5rem',
-								border: '1px solid rgba(148, 163, 184, 0.2)',
-								background: 'rgba(30, 41, 59, 0.8)',
-								color: '#e2e8f0',
-								fontSize: '0.875rem',
-								fontWeight: '600',
-								cursor: 'pointer'
-							}}
+							className={styles.timelineStatusSelect}
 						>
 							<option value="all">All Tasks</option>
 							<option value="backlog">代辦 Open</option>
@@ -437,178 +454,36 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 						</select>
 					</div>
 
-					{/* Info Display */}
-					<div style={{ fontSize: '0.875rem', color: '#94a3b8', fontWeight: '600' }}>
+					<div className={styles.timelineInfo}>
 						{parentTasks.length} tasks • {zoomLevel}
 					</div>
 				</div>
 			</div>
 
-			<div style={{ display: 'flex', height: 'calc(100vh - 300px)', minHeight: '500px' }}>
-				{/* Task Names Column - FIXED: Higher z-index for sticky positioning */}
-				<div style={{ 
-					width: '300px', 
-					borderRight: '1px solid rgba(148, 163, 184, 0.2)', 
-					background: 'rgba(15, 23, 42, 0.9)',
-					display: 'flex',
-					flexDirection: 'column',
-					position: 'sticky',
-					left: 0,
-					zIndex: 30  // FIXED: Ensure names stay on top when scrolling
-				}}>
-					{/* Month Header - FIXED: Higher z-index */}
-					<div style={{ 
-						height: '60px', 
-						borderBottom: '1px solid rgba(148, 163, 184, 0.2)', 
-						background: 'rgba(15, 23, 42, 1)',
-						display: 'flex', 
-						alignItems: 'center',
-						position: 'sticky',
-						top: 0,
-						zIndex: 32  // FIXED: Above everything when scrolling
-					}} />
-					
-					{/* Date Header - FIXED: Higher z-index */}
-					<div style={{ 
-						height: '50px', 
-						borderBottom: '1px solid rgba(148, 163, 184, 0.2)', 
-						background: 'rgba(15, 23, 42, 1)',
-						display: 'flex', 
-						alignItems: 'center', 
-						padding: '0 1rem',
-						fontWeight: '700',
-						fontSize: '0.875rem',
-						color: '#e2e8f0',
-						position: 'sticky',
-						top: '60px',
-						zIndex: 31  // FIXED: Above task rows when scrolling
-					}}>
-						Tasks ({parentTasks.length})
-					</div>
-					
-					{/* Task List */}
-					<div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
-						{parentTasks.map((task, taskIndex) => {
-							// FIXED: Get subtasks from ALL tasks, not just filteredTasks
-							const subtasks = getSubtasks(tasks, task.id);
-							const taskColor = getTaskColor(task.id);
-							
-							return (
-								<div key={task.id}>
-									{/* Parent Task Row */}
-									<div style={{ 
-										minHeight: '60px', 
-										borderBottom: '1px solid rgba(148, 163, 184, 0.2)',
-										display: 'flex',
-										alignItems: 'center',
-										padding: '0.75rem 1rem',
-										backgroundColor: taskIndex % 2 === 0 ? 'rgba(30, 41, 59, 0.5)' : 'rgba(15, 23, 42, 0.5)',
-										cursor: 'pointer',
-										transition: 'all 0.2s'
-									}}
-									onClick={() => onTaskClick(task)}
-									onMouseEnter={(e) => {
-										e.currentTarget.style.backgroundColor = 'rgba(51, 65, 85, 0.7)';
-									}}
-									onMouseLeave={(e) => {
-										e.currentTarget.style.backgroundColor = taskIndex % 2 === 0 ? 'rgba(30, 41, 59, 0.5)' : 'rgba(15, 23, 42, 0.5)';
-									}}
-									>
-										<div style={{ 
-											width: '4px', 
-											height: '100%', 
-											background: taskColor, 
-											marginRight: '0.75rem',
-											borderRadius: '2px',
-											minHeight: '30px'
-										}} />
-										<div style={{ flex: 1 }}>
-											<div style={{ fontWeight: '600', fontSize: '0.875rem', color: '#e2e8f0', marginBottom: '0.25rem' }}>
-												{task.title}
-											</div>
-											<div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-												{task.assigneeNames?.slice(0, 2).join(', ')}
-												{task.assigneeNames && task.assigneeNames.length > 2 && ` +${task.assigneeNames.length - 2}`}
-											</div>
-										</div>
-									</div>
-									
-									{/* Subtask Rows - FIXED: Sort by start_date */}
-									{subtasks
-										.sort((a, b) => {
-											// Sort by start_date: oldest first, newest at bottom
-											if (!a.start_date && !b.start_date) return 0;
-											if (!a.start_date) return 1;
-											if (!b.start_date) return -1;
-											return new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
-										})
-										.map((subtask) => (
-										<div key={subtask.id} style={{ 
-											minHeight: '60px', 
-											borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
-											display: 'flex',
-											alignItems: 'center',
-											padding: '0.75rem 1rem 0.75rem 2rem',
-											backgroundColor: 'rgba(51, 65, 85, 0.3)',
-											cursor: 'pointer',
-											transition: 'all 0.2s'
-										}}
-										onClick={() => onTaskClick(subtask)}
-										onMouseEnter={(e) => {
-											e.currentTarget.style.backgroundColor = 'rgba(71, 85, 105, 0.5)';
-										}}
-										onMouseLeave={(e) => {
-											e.currentTarget.style.backgroundColor = 'rgba(51, 65, 85, 0.3)';
-										}}
-										>
-											<div style={{ 
-												width: '3px', 
-												height: '100%', 
-												background: getTaskColor(subtask.id), 
-												marginRight: '0.75rem',
-												borderRadius: '2px',
-												minHeight: '24px',
-												opacity: 0.7
-											}} />
-											<div style={{ flex: 1 }}>
-												<div style={{ fontWeight: '500', fontSize: '0.8125rem', color: '#cbd5e1' }}>
-													↳ {subtask.title}
-												</div>
-												<div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.125rem' }}>
-													{subtask.progress || 0}% complete
-												</div>
-											</div>
-										</div>
-									))}
-								</div>
-							);
-						})}
-					</div>
-				</div>
-
-				{/* Timeline Grid - FIXED: Lower z-index than names column */}
-				<div style={{ flex: 1, overflow: 'auto', position: 'relative' }} ref={timelineScrollRef}>
-					<div style={{ display: 'inline-block', minWidth: '100%' }}>
-						<div style={{ position: 'relative', minWidth: `${dateRange.length * getColumnWidth()}px` }}>
-							{/* Month Row - FIXED: Sticky positioning with proper z-index */}
-							<div style={{ 
-								height: '60px', 
-								display: 'flex', 
-								borderBottom: '1px solid rgba(148, 163, 184, 0.2)',
-								background: 'rgba(15, 23, 42, 1)',
-								position: 'sticky',
-								top: 0,
-								zIndex: 20  // FIXED: Below names column but above timeline bars
-							}}>
+			<div
+				className={styles.timelineBody}
+				ref={timelineBodyRef}
+				style={bodyHeight ? { height: `${bodyHeight}px` } : undefined}
+			>
+				{/* Floating-card timeline canvas (staggered layout, no fixed name column) */}
+				<div className={styles.timelineScrollArea} ref={timelineScrollRef} onScroll={handleTimelineScroll}>
+					<div className={styles.timelineInnerWidth}>
+						<div className={styles.timelineGridWidth} style={{ minWidth: `${dateRange.length * getColumnWidth()}px` }}>
+							{/* Month Row */}
+							<div className={styles.timelineMonthRow}>
 								{dateRange.map((date, index) => {
 									const isFirstOfMonth = date.getDate() === 1 || index === 0;
+
+									// FIX: in days zoom, every other day in the month already
+									// gets covered by the wide first-of-month cell below - a
+									// separate cell here for those days double-counts width
+									// and drifts the month row out of sync with the date row.
+									if (zoomLevel === "days" && !isFirstOfMonth) return null;
+
 									const monthLabel = getMonthLabel(date);
-									const monthStart = index === 0 || date.getDate() === 1;
-									const monthEnd = index === dateRange.length - 1 || 
-										(index < dateRange.length - 1 && dateRange[index + 1].getDate() === 1);
-									
+
 									let monthWidth = 1;
-									if (zoomLevel === "days" && monthStart) {
+									if (zoomLevel === "days") {
 										const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
 										const remainingDays = Math.min(
 											daysInMonth - date.getDate() + 1,
@@ -618,274 +493,162 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 									}
 
 									return (
-										<div key={index} style={{ 
-											width: `${getColumnWidth() * (zoomLevel === "days" && isFirstOfMonth ? monthWidth : 1)}px`,
-											borderRight: '1px solid rgba(148, 163, 184, 0.2)',
-											display: 'flex',
-											alignItems: 'center',
-											justifyContent: 'center',
-											fontWeight: '700',
-											fontSize: '0.875rem',
-											color: '#e2e8f0',
-											background: getMonthBackgroundColor(date),
-											opacity: 0.95
-										}}>
-											{(zoomLevel !== "days" || isFirstOfMonth) && monthLabel}
+										<div
+											key={index}
+											className={styles.timelineMonthCell}
+											style={{
+												width: `${getColumnWidth() * (zoomLevel === "days" ? monthWidth : 1)}px`,
+												background: getMonthBackgroundColor(date)
+											}}
+										>
+											{monthLabel}
 										</div>
 									);
 								})}
 							</div>
 
-							{/* Date Row - FIXED: Sticky positioning with proper z-index */}
-							<div style={{ 
-								height: '50px', 
-								display: 'flex', 
-								borderBottom: '2px solid rgba(148, 163, 184, 0.3)',
-								background: 'rgba(15, 23, 42, 0.95)',
-								position: 'sticky',
-								top: '60px',
-								zIndex: 19  // FIXED: Below month row, above timeline bars
-							}}>
+							{/* Date Row */}
+							<div className={styles.timelineDateRow}>
 								{dateRange.map((date, index) => {
 									const isToday = getTodayColumnIndex() === index;
 									const isWeekend = zoomLevel === "days" && (date.getDay() === 0 || date.getDay() === 6);
-									
+
 									return (
-										<div key={index} style={{ 
-											width: `${getColumnWidth()}px`,
-											borderRight: '1px solid rgba(148, 163, 184, 0.2)',
-											display: 'flex',
-											alignItems: 'center',
-											justifyContent: 'center',
-											fontWeight: isToday ? '700' : '500',
-											fontSize: '0.8125rem',
-											color: isToday ? '#3b82f6' : '#cbd5e1',
-											background: isWeekend ? 'rgba(51, 65, 85, 0.3)' : 'transparent',
-											position: 'relative'
-										}}>
-											{isToday && (
-												<div style={{
-													position: 'absolute',
-													bottom: 0,
-													left: 0,
-													right: 0,
-													height: '3px',
-													background: '#3b82f6'
-												}} />
-											)}
+										<div
+											key={index}
+											className={`${styles.timelineDateCell} ${isToday ? styles.timelineDateCellToday : ''}`}
+											style={{
+												width: `${getColumnWidth()}px`,
+												background: isWeekend ? 'rgba(51, 65, 85, 0.3)' : 'transparent'
+											}}
+										>
+											{isToday && <div className={styles.timelineTodayIndicatorBar} />}
 											{getHeaderLabel(date)}
 										</div>
 									);
 								})}
 							</div>
 
-							{/* Task Timeline Body - z-index: 1 (lowest) */}
-							<div style={{ position: 'relative', zIndex: 1 }}>
-								<div style={{ position: 'relative' }}>
-									{parentTasks.map((task, taskIndex) => {
-										// FIXED: Get subtasks from ALL tasks, not just filteredTasks
-										const subtasks = getSubtasks(tasks, task.id);
-										const taskColor = getTaskColor(task.id);
-										
+							{/* Floating-card canvas body - fills remaining visible height, or grows taller if lane content needs more room */}
+							<div
+								className={styles.timelineCanvasBody}
+								style={{
+									height: `${Math.max(
+										laneCount * (CARD_HEIGHT + LANE_VERTICAL_GAP) + LANE_VERTICAL_GAP,
+										bodyHeight ? bodyHeight - 110 : 0
+									)}px`
+								}}
+							>
+								{/* Month background stripes (drawn once behind all cards) */}
+								{dateRange.map((date, dateIndex) => {
+									const monthBgColor = getMonthBackgroundColor(date);
+									const isWeekend = zoomLevel === "days" && (date.getDay() === 0 || date.getDay() === 6);
+
+									return (
+										<div
+											key={dateIndex}
+											className={styles.timelineMonthStripe}
+											style={{
+												left: `${dateIndex * getColumnWidth()}px`,
+												width: `${getColumnWidth()}px`,
+												background: isWeekend ? 'rgba(51, 65, 85, 0.2)' : monthBgColor
+											}}
+										/>
+									);
+								})}
+
+								{/* Floating task cards, positioned by lane-packed layout */}
+								{parentTasks
+									.filter((task) => cardLayout.has(task.id))
+									.map((task) => {
+										const layout = cardLayout.get(task.id)!;
+										const taskColor = getCategoryColor(task.category);
+										const calculatedProgress = calculateParentProgress(tasks, task.id);
+
 										return (
-											<div key={task.id}>
-												{/* Parent Task Timeline Bar */}
-												<div style={{ 
-													minHeight: '60px', 
-													borderBottom: '1px solid rgba(148, 163, 184, 0.2)',
-													backgroundColor: taskIndex % 2 === 0 ? 'rgba(30, 41, 59, 0.3)' : 'rgba(15, 23, 42, 0.3)',
-													position: 'relative',
-													display: 'flex',
-													alignItems: 'center'
-												}}>
-													{/* Month background stripes */}
-													{dateRange.map((date, dateIndex) => {
-														const monthBgColor = getMonthBackgroundColor(date);
-														const isWeekend = zoomLevel === "days" && (date.getDay() === 0 || date.getDay() === 6);
-														
-														return (
-															<div key={dateIndex} style={{
-																position: 'absolute',
-																left: `${dateIndex * getColumnWidth()}px`,
-																width: `${getColumnWidth()}px`,
-																top: 0,
-																bottom: 0,
-																background: isWeekend ? 'rgba(51, 65, 85, 0.2)' : monthBgColor,
-																opacity: 0.3,
-																pointerEvents: 'none',
-																zIndex: 1
-															}} />
-														);
-													})}
-													
-													{task.start_date && task.due_date && (
-														<div 
-															style={{
-																position: 'absolute', 
-																top: '50%', 
-																transform: 'translateY(-50%)',
-																height: '1.75rem', 
-																background: taskColor, 
-																borderRadius: '0.25rem',
-																display: 'flex', 
-																alignItems: 'center', 
-																paddingLeft: '0.5rem',
-																paddingRight: '0.5rem',
-																color: 'white', 
-																fontSize: '0.75rem', 
-																fontWeight: '500',
-																cursor: 'pointer', 
-																minWidth: '100px',
-																zIndex: 10,
-																boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-																transition: 'all 0.2s ease',
-																...getFixedTaskPosition(task.start_date, task.due_date)
-															}} 
-															onClick={() => onTaskClick(task)}
-															onMouseEnter={(e) => handleTaskMouseEnter(e, task)}
-															onMouseMove={(e) => handleTaskMouseMove(e, task)}
-															onMouseLeave={handleTaskMouseLeave}
-														>
-															<div style={{ 
-																position: 'absolute', 
-																left: 0, 
-																top: 0, 
-																bottom: 0,
-																width: `${task.progress || 0}%`,
-																background: getDarkerColor(taskColor),
-																borderRadius: '0.25rem', 
-																transition: 'width 0.3s ease',
-																pointerEvents: 'none',
-																zIndex: -1
-															}} />
-															
-															<span style={{ 
-																position: 'relative', 
-																zIndex: 1,
-																overflow: 'hidden',
-																textOverflow: 'ellipsis',
-																whiteSpace: 'nowrap',
-																flex: 1,
-																pointerEvents: 'none'
-															}}>
-																{task.title}
-															</span>
+											<div
+												key={task.id}
+												className={styles.timelineCard}
+												style={{
+													left: `${layout.left}px`,
+													top: `${layout.lane * (CARD_HEIGHT + LANE_VERTICAL_GAP) + LANE_VERTICAL_GAP}px`,
+													width: `${layout.width}px`,
+													minHeight: `${CARD_HEIGHT}px`,
+													borderLeft: `8px solid ${taskColor}`
+												}}
+												onClick={() => onTaskClick(task)}
+												onMouseEnter={(e) => handleTaskMouseEnter(e, task)}
+												onMouseMove={(e) => handleTaskMouseMove(e, task)}
+												onMouseLeave={handleTaskMouseLeave}
+											>
+												{/* Row 1: date range (left) + avatar stack (right) - matches reference layout */}
+												<div className={styles.timelineCardHeaderRow}>
+													<span className={styles.timelineCardDateRange}>
+														{task.start_date && formatTooltipDate(task.start_date)}
+														{task.start_date && task.due_date && ' \u2013 '}
+														{task.due_date && formatTooltipDate(task.due_date)}
+													</span>
+
+													{task.assigneeAvatars && task.assigneeAvatars.length > 0 && (
+														<div className={styles.timelineCardAvatars}>
+															{task.assigneeAvatars.slice(0, 3).map((employeeId, index) => (
+																<span key={index} className={styles.timelineCardAvatar}>
+																	<Avatar
+																		employeeId={employeeId}
+																		fullName={task.assigneeNames?.[index] || 'Unknown'}
+																		size="small"
+																	/>
+																</span>
+															))}
+															{task.assigneeAvatars.length > 3 && (
+																<span className={styles.timelineCardMoreAvatars}>
+																	+{task.assigneeAvatars.length - 3}
+																</span>
+															)}
 														</div>
 													)}
 												</div>
-												
-											{/* Subtask Timeline Bars - FIXED: Sort by start_date */}
-											{subtasks
-												.sort((a, b) => {
-													// Sort by start_date: oldest first, newest at bottom
-													if (!a.start_date && !b.start_date) return 0;
-													if (!a.start_date) return 1;
-													if (!b.start_date) return -1;
-													return new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
-												})
-												.map((subtask) => {
-													const subtaskColor = getTaskColor(subtask.id);
-													
-													return (
-														<div key={subtask.id} style={{ 
-															minHeight: '60px', 
-															borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
-															backgroundColor: 'rgba(51, 65, 85, 0.2)', 
-															position: 'relative',
-															display: 'flex', 
-															alignItems: 'center'
-														}}>
-															{/* Month background stripes */}
-															{dateRange.map((date, dateIndex) => {
-																const monthBgColor = getMonthBackgroundColor(date);
-																const isWeekend = zoomLevel === "days" && (date.getDay() === 0 || date.getDay() === 6);
-																
-																return (
-																	<div key={dateIndex} style={{
-																		position: 'absolute',
-																		left: `${dateIndex * getColumnWidth()}px`,
-																		width: `${getColumnWidth()}px`,
-																		top: 0,
-																		bottom: 0,
-																		background: isWeekend ? 'rgba(51, 65, 85, 0.2)' : monthBgColor,
-																		opacity: 0.2,
-																		pointerEvents: 'none',
-																		zIndex: 1
-																	}} />
-																);
-															})}
-															
-															{subtask.start_date && subtask.due_date && (
-																<div 
-																	style={{
-																		position: 'absolute', 
-																		top: '50%', 
-																		transform: 'translateY(-50%)',
-																		height: '1.5rem', 
-																		background: subtaskColor, 
-																		borderRadius: '0.25rem',
-																		display: 'flex', 
-																		alignItems: 'center', 
-																		paddingLeft: '0.5rem',
-																		paddingRight: '0.5rem',
-																		color: 'white', 
-																		fontSize: '0.75rem', 
-																		fontWeight: '400',
-																		cursor: 'pointer', 
-																		opacity: 0.9, 
-																		minWidth: '80px',
-																		zIndex: 10,
-																		boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-																		transition: 'all 0.2s ease',
-																		...getFixedTaskPosition(subtask.start_date, subtask.due_date)
-																	}} 
-																	onClick={() => onTaskClick(subtask)}
-																	onMouseEnter={(e) => handleTaskMouseEnter(e, subtask)}
-																	onMouseMove={(e) => handleTaskMouseMove(e, subtask)}
-																	onMouseLeave={handleTaskMouseLeave}
-																>
-																	<div style={{ 
-																		position: 'absolute', 
-																		left: 0, 
-																		top: 0, 
-																		bottom: 0,
-																		width: `${subtask.progress || 0}%`,
-																		background: getDarkerColor(subtaskColor),
-																		borderRadius: '0.25rem', 
-																		transition: 'width 0.3s ease',
-																		pointerEvents: 'none',
-																		zIndex: -1
-																	}} />
-																	
-																	<span style={{ 
-																		position: 'relative', 
-																		zIndex: 1,
-																		overflow: 'hidden',
-																		textOverflow: 'ellipsis',
-																		whiteSpace: 'nowrap',
-																		flex: 1,
-																		pointerEvents: 'none'
-																	}}>
-																		{subtask.title}
-																	</span>
-																</div>
-															)}
+
+												{/* Row 2: title */}
+												<div className={styles.timelineCardTitle}>{task.title}</div>
+
+												{/* Row 3: progress bar + percentage (short, fixed width), tag pushed right */}
+												<div className={styles.timelineCardFooterRow}>
+													<div className={styles.timelineCardProgressGroup}>
+														<div className={styles.timelineCardProgressTrack}>
+															<div
+																className={styles.timelineCardProgressFill}
+																style={{ width: `${calculatedProgress}%` }}
+															/>
 														</div>
-													);
-												})}
+														<span className={styles.timelineCardProgressLabel}>
+															{calculatedProgress}%
+														</span>
+													</div>
+													{task.category && (
+														<span
+															className={styles.timelineCardTag}
+															style={{
+																background: hexToRgba(taskColor, 0.18),
+																border: `1px solid ${hexToRgba(taskColor, 0.45)}`,
+																color: taskColor
+															}}
+														>
+															{task.category}
+														</span>
+													)}
+												</div>
 											</div>
 										);
 									})}
-									
-									{/* Today line */}
-									{getTodayColumnIndex() !== -1 && (
-										<div style={{
-											position: 'absolute', top: 0, bottom: 0,
-											left: `${getTodayLinePosition()}px`,
-											width: '2px', background: '#ef4444', zIndex: 5, pointerEvents: 'none'
-										}} />
-									)}
-								</div>
+
+								{/* Today line */}
+								{getTodayColumnIndex() !== -1 && (
+									<div
+										className={styles.timelineTodayLine}
+										style={{ left: `${getTodayLinePosition()}px` }}
+									/>
+								)}
 							</div>
 						</div>
 					</div>
@@ -894,36 +657,22 @@ const TimelineView: React.FC<TimelineViewProps> = ({ tasks, onTaskClick, refresh
 
 			{/* Hover Tooltip */}
 			{hoveredTask && (
-				<div style={{
-					position: 'fixed',
-					left: `${hoveredTask.x}px`,
-					top: `${hoveredTask.y}px`,
-					transform: 'translateX(-50%) translateY(-100%)',
-					background: 'rgba(0, 0, 0, 0.9)',
-					color: 'white',
-					padding: '0.75rem',
-					borderRadius: '0.5rem',
-					fontSize: '0.875rem',
-					zIndex: 1000,
-					pointerEvents: 'none',
-					boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
-					maxWidth: '300px',
-					minWidth: '200px'
-				}}>
-					<div style={{ fontWeight: '600', marginBottom: '0.5rem' }}>
-						{hoveredTask.task.title}
-					</div>
+				<div
+					className={styles.timelineTooltip}
+					style={{ left: `${hoveredTask.x}px`, top: `${hoveredTask.y}px` }}
+				>
+					<div className={styles.timelineTooltipTitle}>{hoveredTask.task.title}</div>
 					{hoveredTask.task.start_date && (
-						<div style={{ fontSize: '0.75rem', color: '#e5e7eb', marginBottom: '0.25rem' }}>
+						<div className={styles.timelineTooltipRow}>
 							<strong>Start:</strong> {formatTooltipDate(hoveredTask.task.start_date)}
 						</div>
 					)}
 					{hoveredTask.task.due_date && (
-						<div style={{ fontSize: '0.75rem', color: '#e5e7eb', marginBottom: '0.25rem' }}>
+						<div className={styles.timelineTooltipRow}>
 							<strong>End:</strong> {formatTooltipDate(hoveredTask.task.due_date)}
 						</div>
 					)}
-					<div style={{ fontSize: '0.75rem', color: '#e5e7eb' }}>
+					<div className={styles.timelineTooltipRow}>
 						<strong>Progress:</strong> {hoveredTask.task.progress || 0}%
 					</div>
 				</div>

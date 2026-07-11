@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { verifyToken, extractTokenFromHeader, hashPassword } from "@/lib/auth";
+import crypto from "crypto";
 
 export async function GET(
 	request: NextRequest,
@@ -169,10 +170,20 @@ export async function PUT(
 			}
 		}
 
-		// Only admin can change authentication_level and app_permissions
+		// Only admin can change authentication_level, app_permissions, and is_inactive
+		// (is_inactive gates account lockout — a non-admin self-update must never be able to flip this)
 		if (!isAdmin) {
 			delete updateData.authentication_level;
 			delete updateData.app_permissions;
+			delete updateData.is_inactive;
+		}
+
+		// If an admin is marking this user inactive, randomize their password hash
+		// server-side so they can no longer log in (existing 8h JWT sessions still
+		// expire naturally). Reuses the same hashPassword() call used above.
+		if (isAdmin && updateData.is_inactive === true) {
+			const randomPassword = crypto.randomBytes(16).toString("hex");
+			updateData.password_hash = await hashPassword(randomPassword);
 		}
 
 		// Don't allow changing employee_id

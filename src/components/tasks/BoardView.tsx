@@ -24,7 +24,7 @@ const BoardView: React.FC<BoardViewProps> = ({
 	const handleDragStart = (
 		e: React.DragEvent,
 		task: Task,
-		columnId: string
+		columnId: string,
 	) => {
 		draggedTask.current = task;
 		draggedFromColumn.current = columnId;
@@ -36,13 +36,12 @@ const BoardView: React.FC<BoardViewProps> = ({
 		e.dataTransfer.dropEffect = "move";
 	};
 
-	const handleDrop = async (e: React.DragEvent, targetColumnId: string) => {
-		e.preventDefault();
-		if (!draggedTask.current || !draggedFromColumn.current) return;
-		if (draggedFromColumn.current === targetColumnId) return;
-
-		const task = draggedTask.current;
-		const sourceColumnId = draggedFromColumn.current;
+	const moveTaskToColumn = async (
+		task: Task,
+		sourceColumnId: string,
+		targetColumnId: string,
+	) => {
+		if (sourceColumnId === targetColumnId) return;
 
 		try {
 			const supabase = createServiceClient();
@@ -56,7 +55,7 @@ const BoardView: React.FC<BoardViewProps> = ({
 				return prevColumns.map((column) => {
 					if (column.id === sourceColumnId) {
 						const newTasks = column.tasks.filter(
-							(t) => t.id !== task.id
+							(t) => t.id !== task.id,
 						);
 						return {
 							...column,
@@ -81,8 +80,19 @@ const BoardView: React.FC<BoardViewProps> = ({
 				});
 			});
 		} catch (error) {
-			console.error("Error in drag and drop:", error);
+			console.error("Error moving task:", error);
 		}
+	};
+
+	const handleDrop = async (e: React.DragEvent, targetColumnId: string) => {
+		e.preventDefault();
+		if (!draggedTask.current || !draggedFromColumn.current) return;
+
+		await moveTaskToColumn(
+			draggedTask.current,
+			draggedFromColumn.current,
+			targetColumnId,
+		);
 
 		draggedTask.current = null;
 		draggedFromColumn.current = null;
@@ -128,12 +138,12 @@ const BoardView: React.FC<BoardViewProps> = ({
 							{boardTasks.map((task) => {
 								const subtasks = getSubtasks(
 									getAllTasks(),
-									task.id
+									task.id,
 								);
 								const calculatedProgress =
 									calculateParentProgress(
 										getAllTasks(),
-										task.id
+										task.id,
 									);
 
 								return (
@@ -142,10 +152,18 @@ const BoardView: React.FC<BoardViewProps> = ({
 										task={task}
 										columnColor={column.color}
 										columnId={column.id}
+										columns={columns}
 										subtaskCount={subtasks.length}
 										calculatedProgress={calculatedProgress}
 										onTaskClick={onTaskClick}
 										onDragStart={handleDragStart}
+										onMoveTask={(t, targetColumnId) =>
+											moveTaskToColumn(
+												t,
+												column.id,
+												targetColumnId,
+											)
+										}
 									/>
 								);
 							})}

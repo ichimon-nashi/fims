@@ -8,8 +8,22 @@ interface Task {
 }
 
 export const useTimeline = (tasks: Task[] = []) => {
-  const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('days');
-  
+  const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('quarters');
+
+  // NEW: how many extra "pages" the user has scrolled forward into,
+  // beyond the task-driven default range. Reset whenever zoom changes
+  // so each zoom level starts fresh from its own task-driven default.
+  const [rangeExtension, setRangeExtension] = useState(0);
+
+  const setZoomLevelAndResetExtension = (level: ZoomLevel) => {
+    setRangeExtension(0);
+    setZoomLevel(level);
+  };
+
+  const extendRangeForward = () => {
+    setRangeExtension((prev) => prev + 1);
+  };
+
   // FIXED: Calculate initial view start based on tasks
   const [viewStartDate, setViewStartDate] = useState(() => {
     if (!tasks || tasks.length === 0) {
@@ -96,16 +110,39 @@ export const useTimeline = (tasks: Task[] = []) => {
         case 'quarters': latestDate.setMonth(latestDate.getMonth() + 6); break;
       }
 
-      return latestDate;
+      // NEW: guarantee a minimum forward runway from today regardless of
+      // task due_dates - if due_date data is sparse/incomplete, the range
+      // shouldn't silently cut off earlier than the project actually needs.
+      const minimumRunwayEnd = new Date();
+      switch (zoomLevel) {
+        case 'days': minimumRunwayEnd.setMonth(minimumRunwayEnd.getMonth() + 18); break;
+        case 'weeks': minimumRunwayEnd.setMonth(minimumRunwayEnd.getMonth() + 24); break;
+        case 'months': minimumRunwayEnd.setFullYear(minimumRunwayEnd.getFullYear() + 3); break;
+        case 'quarters': minimumRunwayEnd.setFullYear(minimumRunwayEnd.getFullYear() + 4); break;
+      }
+
+      return latestDate > minimumRunwayEnd ? latestDate : minimumRunwayEnd;
     };
 
     const endDate = calculateEndDate();
+
+    // NEW (#8): each rangeExtension step pushes endDate further out by a
+    // zoom-appropriate chunk, so scrolling forward genuinely extends the
+    // range instead of hitting the task-driven default's edge.
+    if (rangeExtension > 0) {
+      switch (zoomLevel) {
+        case 'days': endDate.setDate(endDate.getDate() + rangeExtension * 90); break;
+        case 'weeks': endDate.setDate(endDate.getDate() + rangeExtension * (12 * 7)); break;
+        case 'months': endDate.setMonth(endDate.getMonth() + rangeExtension * 6); break;
+        case 'quarters': endDate.setMonth(endDate.getMonth() + rangeExtension * 12); break;
+      }
+    }
 
     switch (zoomLevel) {
       case 'days':
         unit = 'day';
         const daysDiff = Math.ceil((endDate.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-        columns = Math.max(30, Math.min(365, daysDiff)); // Min 30 days, max 1 year
+        columns = Math.max(30, Math.min(1500 + rangeExtension * 90, daysDiff)); // Min 30 days, generous ceiling so it doesn't clash with the minimum-runway floor
         
         for (let i = 0; i < columns; i++) {
           const date = new Date(start);
@@ -117,7 +154,7 @@ export const useTimeline = (tasks: Task[] = []) => {
       case 'weeks':
         unit = 'week';
         const weeksDiff = Math.ceil((endDate.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 7));
-        columns = Math.max(12, Math.min(104, weeksDiff)); // Min 12 weeks, max 2 years
+        columns = Math.max(12, Math.min(220 + rangeExtension * 12, weeksDiff)); // Min 12 weeks, generous ceiling
         
         for (let i = 0; i < columns; i++) {
           const date = new Date(start);
@@ -129,7 +166,7 @@ export const useTimeline = (tasks: Task[] = []) => {
       case 'months':
         unit = 'month';
         const monthsDiff = (endDate.getFullYear() - start.getFullYear()) * 12 + (endDate.getMonth() - start.getMonth());
-        columns = Math.max(6, Math.min(36, Math.max(1, monthsDiff))); // Min 6 months, max 3 years
+        columns = Math.max(6, Math.min(60 + rangeExtension * 6, Math.max(1, monthsDiff))); // Min 6 months, generous ceiling
         
         // FIXED: Proper month generation to avoid duplicates
         const currentDate = new Date(start.getFullYear(), start.getMonth(), 1); // Start at beginning of month
@@ -143,7 +180,7 @@ export const useTimeline = (tasks: Task[] = []) => {
         unit = 'quarter';
         const totalMonths = (endDate.getFullYear() - start.getFullYear()) * 12 + (endDate.getMonth() - start.getMonth());
         const quartersDiff = Math.ceil(totalMonths / 3);
-        columns = Math.max(4, Math.min(20, Math.max(1, quartersDiff))); // Min 4 quarters, max 5 years
+        columns = Math.max(4, Math.min(24 + rangeExtension * 4, Math.max(1, quartersDiff))); // Min 4 quarters, generous ceiling
         
         // FIXED: Proper quarter generation
         const quarterStart = new Date(start.getFullYear(), Math.floor(start.getMonth() / 3) * 3, 1);
@@ -155,7 +192,7 @@ export const useTimeline = (tasks: Task[] = []) => {
     }
 
     return { dateRange: range, dateUnit: unit, gridColumns: columns };
-  }, [zoomLevel, viewStartDate, tasks]);
+  }, [zoomLevel, viewStartDate, tasks, rangeExtension]);
 
   // FIXED: Accurate task position calculations without extending end dates
   const getTaskPosition = (startDate: string, endDate: string) => {
@@ -307,11 +344,12 @@ export const useTimeline = (tasks: Task[] = []) => {
 
   return {
     zoomLevel,
-    setZoomLevel,
+    setZoomLevel: setZoomLevelAndResetExtension,
     viewStartDate,
     setViewStartDate,
     dateRange,
     getTaskPosition,
-    getTodayPosition
+    getTodayPosition,
+    extendRangeForward
   };
 };

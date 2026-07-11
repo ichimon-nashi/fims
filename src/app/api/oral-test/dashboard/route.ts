@@ -30,7 +30,8 @@ export async function GET(request: NextRequest) {
 		const { data: users, error: usersError } = await supabase
 			.from("users")
 			.select("id, employee_id")
-			.neq("employee_id", "admin");
+			.neq("employee_id", "admin")
+			.eq("is_inactive", false);
 
 		if (usersError) {
 			console.error("Error fetching users:", usersError);

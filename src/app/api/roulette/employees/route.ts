@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
 			.from("users")
 			.select("id, employee_id, full_name, rank, base, gender, aircraft_type_ratings, filter")
 			.neq("employee_id", "admin")
+			.eq("is_inactive", false)
 			.order("employee_id", { ascending: true });
 
 		if (error) {

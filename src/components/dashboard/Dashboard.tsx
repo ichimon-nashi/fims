@@ -163,11 +163,18 @@ const Dashboard = () => {
     { id: "ccom_review", title: "手冊抽問", icon: "/images/ccomreview.png", href: "/ccom-review",         color: "#fb923c" },
     { id: "audit",       title: "查核",     icon: "/images/audit.png",      href: "/audit",               color: "#a78bfa" },
     { id: "roulette",    title: "天選之人", icon: "/images/roulette.png",   href: "/roulette",            color: "#fbbf24" },
+    { id: "user-management", title: "使用者管理", icon: "/images/users.png", href: "/admin/users",       color: "#38bdf8" },
   ];
 
   const quickActions = useMemo(
-    () => allQuickActions.filter((a) => permissions.hasAppAccess(a.id as any)),
-    [permissions]
+    () =>
+      allQuickActions.filter((a) => {
+        if (a.id === "user-management") {
+          return user?.employee_id === "admin" || user?.employee_id === "51892";
+        }
+        return permissions.hasAppAccess(a.id as any);
+      }),
+    [permissions, user]
   );
 
   // ── SMS badge ─────────────────────────────────────────────────────────────

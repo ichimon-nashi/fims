@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Avatar from '@/components/ui/Avatar/Avatar';
-import { Task } from '@/lib/task.types';
+import { Task, Column } from '@/lib/task.types';
 import { getDueDateStatus, getPriorityColor, getPriorityLabel } from '@/utils/taskHelpers';
 import styles from './TaskManager.module.css';
 
@@ -8,25 +8,30 @@ interface TaskCardProps {
   task: Task;
   columnColor: string;
   columnId: string;
+  columns: Column[];
   subtaskCount: number;
   calculatedProgress: number;
   onTaskClick: (task: Task) => void;
   onDragStart: (e: React.DragEvent, task: Task, columnId: string) => void;
+  onMoveTask: (task: Task, targetColumnId: string) => void;
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({
   task,
   columnColor,
   columnId,
+  columns,
   subtaskCount,
   calculatedProgress,
   onTaskClick,
-  onDragStart
+  onDragStart,
+  onMoveTask
 }) => {
+  const [moveMenuOpen, setMoveMenuOpen] = useState(false);
   return (
     <div 
       className={`${styles.taskCard} ${styles[`taskCard${columnId.charAt(0).toUpperCase() + columnId.slice(1).replace('-', '')}`]}`}
-      style={{ borderLeftColor: columnColor, borderLeftWidth: '4px' }}
+      style={{ borderLeftColor: columnColor, borderLeftWidth: '3px' }}
       draggable 
       onDragStart={(e) => onDragStart(e, task, columnId)} 
       onClick={() => onTaskClick(task)}
@@ -62,18 +67,14 @@ const TaskCard: React.FC<TaskCardProps> = ({
         </div>
         
         {calculatedProgress > 0 && (
-          <div style={{ 
-            marginTop: '0.5rem', 
-            background: '#e5e7eb', 
-            borderRadius: '0.75rem', 
-            height: '0.25rem' 
-          }}>
-            <div style={{ 
-              background: '#10b981', 
-              height: '0.25rem', 
-              borderRadius: '0.75rem', 
-              width: `${calculatedProgress}%` 
-            }} />
+          <div className={styles.progressRow}>
+            <div className={styles.progressTrack}>
+              <div
+                className={styles.progressFill}
+                style={{ width: `${calculatedProgress}%` }}
+              />
+            </div>
+            <span className={styles.progressLabel}>{calculatedProgress}%</span>
           </div>
         )}
       </div>
@@ -93,6 +94,53 @@ const TaskCard: React.FC<TaskCardProps> = ({
             <span className={styles.moreAssignees}>
               +{task.assigneeAvatars.length - 3}
             </span>
+          )}
+        </div>
+
+        <div className={styles.moveMenuWrapper}>
+          <button
+            type="button"
+            className={styles.moveMenuButton}
+            aria-label="Move task to another column"
+            onClick={(e) => {
+              e.stopPropagation();
+              setMoveMenuOpen((open) => !open);
+            }}
+          >
+            ⋯
+          </button>
+
+          {moveMenuOpen && (
+            <>
+              <div
+                className={styles.moveMenuBackdrop}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMoveMenuOpen(false);
+                }}
+              />
+              <div
+                className={styles.moveMenu}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className={styles.moveMenuLabel}>Move to</div>
+                {columns
+                  .filter((c) => c.id !== columnId)
+                  .map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      className={styles.moveMenuItem}
+                      onClick={() => {
+                        onMoveTask(task, c.id);
+                        setMoveMenuOpen(false);
+                      }}
+                    >
+                      {c.title}
+                    </button>
+                  ))}
+              </div>
+            </>
           )}
         </div>
       </div>

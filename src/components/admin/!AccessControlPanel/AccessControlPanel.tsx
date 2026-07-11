@@ -133,6 +133,7 @@ interface User {
 	authentication_level: number;
 	app_permissions?: AppPermissions;
 	gender?: string;
+	is_inactive?: boolean;
 }
 
 // ── New-user form shape ───────────────────────────────────────────────────────
@@ -413,7 +414,13 @@ const AccessControlPanel = () => {
 			const response = await fetch(`/api/admin/users/${selectedUser.id}/permissions`, {
 				method: "PATCH",
 				headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-				body: JSON.stringify({ authentication_level: selectedUser.authentication_level, app_permissions: dbPermissions }),
+				body: JSON.stringify({
+					authentication_level: selectedUser.authentication_level,
+					app_permissions: dbPermissions,
+					base: selectedUser.base,
+					rank: selectedUser.rank,
+					is_inactive: !!selectedUser.is_inactive,
+				}),
 			});
 			if (response.ok) {
 				const data = await response.json();
@@ -902,6 +909,9 @@ const AccessControlPanel = () => {
 										{getRankShort(user.rank)}
 									</span>
 									<span className={styles.badgeBase}>{user.base}</span>
+									{user.is_inactive && (
+										<span className={styles.badgeInactive}>停用</span>
+									)}
 								</div>
 
 								{/* Permission chips */}
@@ -998,6 +1008,17 @@ const AccessControlPanel = () => {
 										{RANK_PRESETS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
 									</select>
 								</div>
+
+								{/* Inactive toggle */}
+								<label className={styles.subPermissionLabel} style={{ marginTop: "4px" }}>
+									<input
+										type="checkbox"
+										className={styles.subCheckbox}
+										checked={!!selectedUser.is_inactive}
+										onChange={(e) => setSelectedUser({ ...selectedUser, is_inactive: e.target.checked })}
+									/>
+									<span>停用此使用者（將自動重設密碼，使其無法登入）</span>
+								</label>
 							</div>
 
 							{/* ── App permissions ── */}

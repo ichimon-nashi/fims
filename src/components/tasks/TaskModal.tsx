@@ -118,6 +118,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
 				title: editTask.title,
 				description: editTask.description,
 				priority: editTask.priority,
+				category: editTask.category || null,
 				task_type: editTask.task_type,
 				parent_id: editTask.parent_id || null,
 				start_date: editTask.start_date || null,
@@ -296,6 +297,13 @@ const TaskModal: React.FC<TaskModalProps> = ({
 			}),
 		});
 	};
+
+	// Active crew, plus anyone already assigned to this task even if now inactive —
+	// keeps existing inactive assignments visible/removable in the picker instead of
+	// silently hiding them (which would make them impossible to uncheck).
+	const selectableUsers = availableUsers.filter(
+		(u: any) => !u.is_inactive || (editTask?.assignees || []).includes(u.id)
+	);
 
 	return (
 		<div className={styles.modal} onClick={onClose}>
@@ -524,6 +532,53 @@ const TaskModal: React.FC<TaskModalProps> = ({
 							)}
 						</div>
 
+						{/* Category */}
+						<div className={styles.taskDetailRow}>
+							<span className={styles.label}>Category:</span>
+							{isEditing ? (
+								<input
+									type="text"
+									value={editTask?.category || ""}
+									onChange={(e) =>
+										setEditTask((prev) =>
+											prev
+												? { ...prev, category: e.target.value }
+												: prev
+										)
+									}
+									placeholder="e.g. Design, Backend, Documentation..."
+									style={{
+										padding: '0.5rem',
+										borderRadius: '0.375rem',
+										border: '1px solid rgba(148, 163, 184, 0.2)',
+										background: 'rgba(15, 23, 42, 0.6)',
+										color: '#e2e8f0',
+										fontSize: '0.875rem',
+										width: '100%'
+									}}
+								/>
+							) : selectedTask.category ? (
+								<span
+									style={{
+										padding: '0.5rem 1rem',
+										borderRadius: '0.375rem',
+										background: 'rgba(59, 130, 246, 0.2)',
+										border: '1px solid rgba(59, 130, 246, 0.4)',
+										color: '#93c5fd',
+										fontSize: '0.875rem',
+										fontWeight: '600',
+										display: 'inline-block'
+									}}
+								>
+									{selectedTask.category}
+								</span>
+							) : (
+								<span style={{ color: '#64748b', fontStyle: 'italic', fontSize: '0.875rem' }}>
+									No category set
+								</span>
+							)}
+						</div>
+
 						{/* Progress */}
 						<div className={styles.taskDetailRow}>
 							<span className={styles.label}>Progress:</span>
@@ -693,11 +748,11 @@ const TaskModal: React.FC<TaskModalProps> = ({
 							{isEditing ? (
 								loadingUsers ? (
 									<div style={{ color: '#94a3b8' }}>Loading users...</div>
-								) : availableUsers.length === 0 ? (
+								) : selectableUsers.length === 0 ? (
 									<div style={{ color: '#94a3b8' }}>No users available</div>
 								) : (
 									<div className={styles.assigneeList}>
-										{availableUsers.map((user) => (
+										{selectableUsers.map((user) => (
 											<label
 												key={user.id}
 												className={styles.assigneeOption}

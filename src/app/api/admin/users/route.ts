@@ -11,7 +11,6 @@ import { hashPassword } from "@/lib/auth";
 const SPECIAL_EMPLOYEE_IDS = [
 	"22119",
 	"39462",
-	"60549",
 	"admin",
 ];
 
@@ -56,7 +55,7 @@ export async function GET(request: NextRequest) {
 		const specialIdList = SPECIAL_EMPLOYEE_IDS.map((id) => `"${id}"`).join(",");
 		const { data: users, error: fetchError } = await supabase
 			.from("users")
-			.select("id, employee_id, full_name, rank, base, authentication_level, app_permissions, gender")
+			.select("id, employee_id, full_name, rank, base, authentication_level, app_permissions, gender, is_inactive")
 			.or(
 				`rank.in.("FI","FI - Flight Attendant Instructor","SC","SC - Section Chief","MG","MG - Manager","OTHER"),employee_id.in.(${specialIdList})`,
 			)
@@ -125,7 +124,7 @@ export async function POST(request: NextRequest) {
 		const { data: newUser, error: insertError } = await supabase
 			.from("users")
 			.insert(insertPayload)
-			.select("id, employee_id, full_name, rank, base, authentication_level, app_permissions, gender")
+			.select("id, employee_id, full_name, rank, base, authentication_level, app_permissions, gender, is_inactive")
 			.single();
 
 		if (insertError) {

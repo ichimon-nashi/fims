@@ -42,11 +42,11 @@
 	position: relative;
 }
 
-.drawerHeader.default { background: linear-gradient(135deg, #4a9eff, #357abd); }
-.drawerHeader.admin   { background: linear-gradient(135deg, #ef4444, #b91c1c); }
-.drawerHeader.khh     { background: linear-gradient(135deg, #06b6d4, #0e7490); }
-.drawerHeader.tsa     { background: linear-gradient(135deg, #10b981, #065f46); }
-.drawerHeader.rmq     { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+.drawerHeader.default { background: linear-gradient(135deg, #6fa8dc, #3d6fb0); }
+.drawerHeader.admin   { background: linear-gradient(135deg, #e2938c, #a6524a); }
+.drawerHeader.khh     { background: linear-gradient(135deg, #7b93d9, #4c5fa8); }
+.drawerHeader.tsa     { background: linear-gradient(135deg, #5fb99b, #35876b); }
+.drawerHeader.rmq     { background: linear-gradient(135deg, #9c8fe0, #6657a3); }
 
 .userProfile {
 	display: flex;
@@ -237,6 +237,8 @@
 .navigationIcon.audit        { background: rgba(167, 139, 250, 0.15); color: #a78bfa; }
 /* ── NEW: roulette icon ── */
 .navigationIcon.roulette     { background: rgba(251, 191, 36, 0.15);  color: #fbbf24; }
+/* ── NEW: user management icon ── */
+.navigationIcon.userManagement { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
 
 .navigationItem:hover .navigationIcon {
 	background: rgba(74, 158, 255, 0.2);

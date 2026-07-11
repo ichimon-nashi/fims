@@ -3,6 +3,7 @@ export interface Task {
   title: string;
   description: string;
   priority: 'low' | 'medium' | 'high';
+  category?: string;
   status: 'backlog' | 'in-progress' | 'review' | 'complete';
   task_type?: 'main' | 'subtask';
   parent_id?: string;

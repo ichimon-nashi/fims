@@ -205,6 +205,16 @@
 	border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
+.badgeInactive {
+	font-size: 0.82rem;
+	font-weight: 700;
+	padding: 3px 10px;
+	border-radius: 6px;
+	background: rgba(248, 113, 113, 0.14);
+	color: #f87171;
+	border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
 /* ── Permission chips — colour injected inline ── */
 .permissionChips {
 	display: flex;
@@ -412,6 +422,11 @@
 
 .formInput:focus,
 .formSelect:focus { border-color: #4a9eff; }
+
+.formSelect option {
+	background: #1a1f35;
+	color: #e8e9ed;
+}
 
 .formInput::placeholder { color: #a0aec0; }
 

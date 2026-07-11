@@ -526,7 +526,7 @@ input.form-input::placeholder,
 .alert-error {
 	background: rgba(254, 202, 202, 0.15);
 	border-left-color: #ef4444;
-	color: #fca5a5;
+	color: #ffffff;
 }
 
 .loading-spinner {

@@ -23,7 +23,7 @@ const MANUAL_ORDER = [
 	"39426",
 	"39462",
 	"51892",
-	"22119",
+	// "22119",
 	// Add more employee IDs here in your desired sequence
 	// Any employees not listed here will appear at the end, sorted by employee ID
 ];
@@ -347,13 +347,14 @@ const RosterComponent: React.FC = () => {
 
 				const filteredInstructors = users.filter(
 					(user: User) =>
-						user.rank === "FI" ||
+						!user.is_inactive &&
+						(user.rank === "FI" ||
 						user.rank === "FI - Flight Attendant Instructor" ||
 						user.rank === "SC" ||
 						user.rank === "SC - Section Chief" ||
 						getEmployeeIdentifier(user) === "21701" ||
-						getEmployeeIdentifier(user) === "22119" ||
-						getEmployeeIdentifier(user) === "39462"
+						// getEmployeeIdentifier(user) === "22119" ||
+						getEmployeeIdentifier(user) === "39462")
 
 				);
 

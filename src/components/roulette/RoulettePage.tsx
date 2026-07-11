@@ -51,12 +51,12 @@ const GENDERS: { val: string; label: string }[] = [
 const AC_TYPES = ["ATR", "B738"];
 
 const RANK_COLORS: Record<string, string> = {
-	FA: "#64748b", FI: "#16a34a", FS: "#7c3aed",
-	LF: "#0891b2", MG: "#9333ea", PR: "#d97706", SC: "#dc2626",
+	FA: "#f3722c", FI: "#bc77ec", FS: "#f9c74f",
+	LF: "#f86594", MG: "#997b66", PR: "#7b8f4b", SC: "#d5d5d5",
 };
 
 const BASE_COLORS: Record<string, string> = {
-	TSA: "#10b981", KHH: "#06b6d4", RMQ: "#8b5cf6", TPE: "#3b82f6",
+	TSA: "#ee5a52", KHH: "#3498db", RMQ: "#44a08d", TPE: "#a83bf6",
 };
 
 const DEFAULT_GROUP = (): FilterGroup => ({ inc: [], exc: [], logic: "AND" });

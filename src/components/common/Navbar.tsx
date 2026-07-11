@@ -21,7 +21,7 @@ const Navbar = () => {
   // Get base display info for color scheme (same logic as NavigationDrawer)
   const getBaseInfo = () => {
     if (!user) {
-      return { name: "Unknown", icon: "✈️", colorScheme: "default" };
+      return { name: "Unknown", icon: "", colorScheme: "default" };
     }
     
     if (user.employee_id === "admin") {
@@ -33,15 +33,15 @@ const Navbar = () => {
     switch (base) {
       case "KHH":
       case "高雄":
-        return { name: "KHH", icon: "✈️", colorScheme: "khh" };
+        return { name: "KHH", icon: "", colorScheme: "khh" };
       case "TSA":
       case "松山":
-        return { name: "TSA", icon: "✈️", colorScheme: "tsa" };
+        return { name: "TSA", icon: "", colorScheme: "tsa" };
       case "RMQ":
       case "台中":
-        return { name: "RMQ", icon: "✈️", colorScheme: "rmq" };
+        return { name: "RMQ", icon: "", colorScheme: "rmq" };
       default:
-        return { name: user.base || "Unknown", icon: "✈️", colorScheme: "default" };
+        return { name: user.base || "Unknown", icon: "", colorScheme: "default" };
     }
   };
 

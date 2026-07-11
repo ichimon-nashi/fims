@@ -270,20 +270,24 @@ const TestInterface: React.FC = () => {
 			if (response.ok) {
 				const userData: User = await response.json();
 				console.log("Examinee data received:", userData);
+				if ((userData as any).is_inactive) {
+					setError("此人員已停用，無法進行測驗");
+					return;
+				}
 				setExaminee(userData);
 				await initializeTestSession(userData);
 			} else if (response.status === 404) {
 				setError(
-					"Examinee not found. Please check the ID and try again."
+					"找不到此人員，請檢查員編是否正確"
 				);
 			} else {
 				const errorData = await response.json();
 				console.error("Examinee API error:", errorData);
-				setError(errorData.message || "Failed to load examinee data");
+				setError(errorData.message || "載入資料失敗");
 			}
 		} catch (err) {
 			console.error("Examinee fetch error:", err);
-			setError("Failed to load examinee data");
+			setError("載入資料失敗");
 		} finally {
 			setIsLoading(false);
 		}
@@ -533,7 +537,7 @@ const TestInterface: React.FC = () => {
 						</div>
 
 						{error && (
-							<div className="alert alert-error">{error}</div>
+							<div className={`${styles.alert} ${styles["alert-error"]}`}>{error}</div>
 						)}
 
 						<button

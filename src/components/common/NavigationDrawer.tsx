@@ -37,7 +37,11 @@ const getAuthLevelGif = (
 	employeeId: string,
 	level: number,
 	gender?: string,
+	avatarGif?: string,
 ): string => {
+	if (avatarGif) {
+		return `/images/authentication_level_gif/${avatarGif}.gif`;
+	}
 	if (CUSTOM_GIF_OVERRIDES[employeeId]) {
 		return `/images/authentication_level_gif/${CUSTOM_GIF_OVERRIDES[employeeId]}.gif`;
 	}
@@ -244,6 +248,23 @@ const navigationItems: NavigationItem[] = [
 		description: "隨機抽選人員",
 		iconColor: "roulette",
 	},
+	{
+		id: "user-management",
+		title: "使用者管理",
+		icon: (
+			<Image
+				src="/images/users.png"
+				alt="使用者管理"
+				width={NAV_ICON_SIZE}
+				height={NAV_ICON_SIZE}
+				style={{ objectFit: "contain" }}
+				onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+			/>
+		),
+		path: "/admin/users",
+		description: "人員資料與權限管理",
+		iconColor: "userManagement",
+	},
 ];
 
 const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
@@ -295,6 +316,9 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 	const accessibleItems = useMemo(() => {
 		return navigationItems.filter((item) => {
 			if (item.id === "dashboard") return true;
+			if (item.id === "user-management") {
+				return user?.employee_id === "admin" || user?.employee_id === "51892";
+			}
 			let appKey: AppName;
 			switch (item.id) {
 				case "oral-test":
@@ -314,28 +338,28 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 			}
 			return permissions.hasAppAccess(appKey);
 		});
-	}, [permissions]);
+	}, [permissions, user]);
 
 	const baseInfo = useMemo(() => {
 		if (!user)
-			return { name: "Unknown", icon: "✈️", colorScheme: "default" };
+			return { name: "Unknown", icon: "", colorScheme: "default" };
 		if (user.employee_id === "admin")
 			return { name: "ADMIN", icon: "🔑", colorScheme: "admin" };
 		const base = user.base?.toUpperCase();
 		switch (base) {
 			case "KHH":
 			case "KAOHSIUNG":
-				return { name: "KHH", icon: "✈️", colorScheme: "khh" };
+				return { name: "KHH", icon: "", colorScheme: "khh" };
 			case "TSA":
 			case "SONGSHAN":
-				return { name: "TSA", icon: "✈️", colorScheme: "tsa" };
+				return { name: "TSA", icon: "", colorScheme: "tsa" };
 			case "RMQ":
 			case "TAICHUNG":
-				return { name: "RMQ", icon: "✈️", colorScheme: "rmq" };
+				return { name: "RMQ", icon: "", colorScheme: "rmq" };
 			default:
 				return {
 					name: user.base || "Unknown",
-					icon: "✈️",
+					icon: "",
 					colorScheme: "default",
 				};
 		}
@@ -357,6 +381,7 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 			user.employee_id,
 			user.authentication_level,
 			user.gender,
+			(user as any).avatar_gif,
 		);
 	}, [user]);
 

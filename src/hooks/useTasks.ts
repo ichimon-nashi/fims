@@ -42,7 +42,7 @@ export const useTasks = (selectedYear: number) => {
         // Fetch all users with their app permissions
         const { data: allUsers, error } = await supabase
           .from('users')
-          .select('id, employee_id, full_name, rank, base, email, authentication_level, app_permissions')
+          .select('id, employee_id, full_name, rank, base, email, authentication_level, app_permissions, is_inactive')
           .order('full_name', { ascending: true });
 
         if (error) {
