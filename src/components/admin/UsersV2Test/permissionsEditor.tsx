@@ -23,7 +23,6 @@ export interface OralTestPermissions {
 	results: boolean;
 	test: boolean;
 	questions: boolean;
-	users: boolean;
 }
 
 interface SMSPermissionsUI {
@@ -58,7 +57,7 @@ export const getDefaultPermissions = (): AppPermissions => ({
 	sms: false,
 	sms_edit: { view_only: true },
 	oral_test: false,
-	oral_test_pages: { dashboard: true, results: true, test: true, questions: true, users: true },
+	oral_test_pages: { dashboard: true, results: true, test: true, questions: true },
 	bc_training: false,
 	mdafaat: false,
 	mdafaat_edit: { view_only: true },
@@ -80,9 +79,8 @@ export const transformPermissionsFromDatabase = (dbPermissions: any): AppPermiss
 			results:   dbPermissions.oral_test.pages.includes("results"),
 			test:      dbPermissions.oral_test.pages.includes("test"),
 			questions: dbPermissions.oral_test.pages.includes("questions"),
-			users:     dbPermissions.oral_test.pages.includes("users"),
 		}
-		: { dashboard: true, results: true, test: true, questions: true, users: true };
+		: { dashboard: true, results: true, test: true, questions: true };
 
 	return {
 		roster:     dbPermissions.roster?.access     ?? false,
@@ -190,7 +188,7 @@ export const renderPermissionsEditor = (
 				<span className={styles.appName}><FaBookSkull style={{ color: "#f59e0b" }} /> 翻書口試 (Oral Test)</span>
 			</label>
 			<div className={styles.appSubPermissions}>
-				{(["dashboard","users","questions","test","results"] as const).map((page) => (
+				{(["dashboard","questions","test","results"] as const).map((page) => (
 					<label key={page} className={styles.subPermissionLabel}>
 						<input type="checkbox" className={styles.subCheckbox}
 							checked={perms.oral_test_pages?.[page] ?? true}
@@ -199,7 +197,6 @@ export const renderPermissionsEditor = (
 						/>
 						<span>
 							{page === "dashboard" ? "Dashboard (儀表板)" :
-							 page === "users" ? "Users (人員管理)" :
 							 page === "questions" ? "Questions (題庫管理)" :
 							 page === "test" ? "Test (測試)" : "Results (測試結果)"}
 						</span>

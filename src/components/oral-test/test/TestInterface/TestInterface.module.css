@@ -1,7 +1,7 @@
-/* src/components/test/TestInterface/TestInterface.module.css - BUTTONS BELOW TIMER */
+/* src/components/test/TestInterface/TestInterface.module.css - STACKED CARD + PROGRESS DECK */
 
 .testInterface {
-	width: 100vw;
+	width: 100%;
 	margin: 0;
 	padding: 0;
 	height: 100vh;
@@ -96,11 +96,9 @@ input.form-input::placeholder,
 	overflow: hidden;
 }
 
-/* HEADER */
+/* HEADER — examinee info only; progress now lives in the deck below */
 .sessionHeader {
-	display: grid;
-	grid-template-columns: 1fr auto;
-	gap: 0.75rem;
+	display: flex;
 	background: rgba(255, 255, 255, 0.05);
 	border-radius: 10px;
 	padding: 0.65rem 0.85rem;
@@ -109,33 +107,65 @@ input.form-input::placeholder,
 	flex-shrink: 0;
 }
 
-.progressInfo {
+/* PROGRESS DECK — 5 slots, own full-width row below session header */
+.deckWrapper {
 	display: flex;
 	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	gap: 0.25rem;
-	padding: 0.65rem 1rem;
-	background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
-	border-radius: 10px;
-	color: white;
-	min-width: 120px;
-	box-shadow: 0 4px 12px rgba(74, 158, 255, 0.4);
+	gap: 0.35rem;
+	flex-shrink: 0;
 }
 
-.questionLabel {
-	font-size: 2.5rem;
-	font-weight: bold;
-	text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+.deck {
+	display: flex;
+	gap: 8px;
+}
+
+.slot {
+	flex: 1;
+	height: 36px;
+	border-radius: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 0.75rem;
+	font-weight: 600;
+	transition: all 0.3s ease;
+}
+
+.slotPending {
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.slotActive {
+	background: rgba(74, 158, 255, 0.1);
+	border: 1.5px solid #4a9eff;
+	color: #4a9eff;
+}
+
+.slotCorrect {
+	background: rgba(16, 185, 129, 0.2);
+	border: 1px solid rgba(16, 185, 129, 0.5);
+	color: #34d399;
+}
+
+.slotIncorrect {
+	background: rgba(239, 68, 68, 0.2);
+	border: 1px solid rgba(239, 68, 68, 0.5);
+	color: #f87171;
+}
+
+.slotIcon {
+	font-size: 1rem;
 	line-height: 1;
 }
 
-.scoreInfo {
+.deckCaption {
+	text-align: right;
 	font-size: 0.7rem;
-	font-weight: 600;
-	opacity: 0.95;
-	text-align: center;
-	line-height: 1.2;
+	color: #6b7280;
+	margin: 0;
+	padding-right: 2px;
 }
 
 /* 3-ROW LAYOUT */
@@ -148,11 +178,17 @@ input.form-input::placeholder,
 	overflow: hidden;
 }
 
-/* ROW 1: QUESTION NUMBER (LEFT) + TITLE */
+/* QUESTION CARD — badge row on top, title below, details grid below that.
+   Wrapper holds a faint offset "stack shadow" behind the active card. */
+.questionCardWrapper {
+	position: relative;
+}
+
 .questionCard {
+	position: relative;
+	z-index: 1;
 	display: flex;
-	align-items: center;
-	gap: 1rem;
+	flex-direction: column;
 	background: rgba(255, 255, 255, 0.05);
 	border-radius: 10px;
 	padding: 1.25rem 1.5rem;
@@ -160,36 +196,47 @@ input.form-input::placeholder,
 	border: 1px solid rgba(255, 255, 255, 0.1);
 	border-left: 6px solid #4a9eff;
 	overflow: hidden;
+	animation: cardEnter 200ms ease;
 }
 
-.questionHeader {
-	display: contents;
+@keyframes cardEnter {
+	from {
+		opacity: 0;
+		transform: translateY(10px) scale(0.98);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+.questionBadgeRow {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	margin-bottom: 0.85rem;
 }
 
 .questionNumber {
 	background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
 	color: white;
-	padding: 0.75rem 1.25rem;
-	border-radius: 10px;
-	font-size: 0.95rem;
+	padding: 0.6rem 1.1rem;
+	border-radius: 8px;
+	font-size: 0.9rem;
 	font-weight: 600;
 	white-space: nowrap;
 	box-shadow: 0 3px 10px rgba(74, 158, 255, 0.4);
-	flex-shrink: 0;
-	order: -1;
 }
 
 .questionTitle {
-	flex: 1;
-	font-size: 3.5rem;
+	font-size: 2.75rem;
 	font-weight: 700;
 	color: #e8e9ed;
-	line-height: 1.1;
+	line-height: 1.2;
 	text-align: center;
-	margin: 0;
+	margin: 0 0 1.25rem 0;
 }
 
-/* ROW 2: DETAILS */
 .questionDetails {
 	display: grid;
 	gap: 0.5rem;
@@ -197,26 +244,22 @@ input.form-input::placeholder,
 }
 
 .detailItem {
-	padding: 0.85rem 1rem;
-	background: rgba(255, 255, 255, 0.05);
-	border-radius: 10px;
-	border: 1px solid rgba(255, 255, 255, 0.1);
-	font-size: 1rem;
+	padding: 0.6rem 0.75rem;
+	background: rgba(255, 255, 255, 0.04);
+	border-radius: 8px;
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	font-size: 0.85rem;
 	text-align: center;
 	color: #e8e9ed;
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
-	gap: 0.35rem;
 }
 
 .detailItem strong {
 	color: #4a9eff;
 	display: block;
-	font-size: 0.75rem;
+	font-size: 0.72rem;
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
-	line-height: 1;
+	margin-bottom: 2px;
 }
 
 /* ROW 3: TIMER + BUTTONS (DESKTOP: VERTICAL STACK) */
@@ -403,29 +446,28 @@ input.form-input::placeholder,
 	}
 	
 	.sessionHeader {
-		grid-template-columns: 1fr;
+		flex-direction: column;
 	}
-	
-	.progressInfo {
-		width: 100%;
+
+	.deckCaption {
+		text-align: center;
 	}
-	
-	.questionLabel {
-		font-size: 2.25rem;
+
+	.slot {
+		height: 32px;
+		font-size: 0.7rem;
 	}
-	
+
 	.questionArea {
 		grid-template-rows: auto auto auto;
 	}
-	
+
 	.questionCard {
-		flex-direction: column;
 		padding: 1rem;
-		text-align: center;
 	}
-	
-	.questionNumber {
-		order: 0;
+
+	.questionBadgeRow {
+		justify-content: center;
 	}
 	
 	.questionTitle {
@@ -559,6 +601,10 @@ input.form-input::placeholder,
 	}
 
 	.questionArea {
+		overflow: visible;
+	}
+
+	.questionCardWrapper {
 		overflow: visible;
 	}
 

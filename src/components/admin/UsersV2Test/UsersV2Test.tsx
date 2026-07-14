@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
+import * as XLSX from "xlsx";
 import styles from "./UsersV2Test.module.css";
 import { useAuth } from "@/context/AuthContext";
 import { USER_FILTER_CATEGORIES } from "@/lib/constants";
@@ -64,6 +65,11 @@ const RANK_OPTIONS = [
 ];
 
 const BASE_OPTIONS = ["TSA", "KHH", "RMQ"];
+
+// Matches RoulettePage.tsx exactly, for visual consistency across the app
+const BASE_COLORS: Record<string, string> = {
+	TSA: "#ee5a52", KHH: "#3498db", RMQ: "#44a08d", TPE: "#a83bf6",
+};
 
 // Rank display order — MG > SC > FI > PR > LF > FA/FS, unknown ranks sort last.
 // Ranks are stored like "SC - Section Chief"; we match on the code before " - ".
@@ -428,6 +434,33 @@ const UsersV2Test = () => {
 		}
 	};
 
+	const handleExportExcel = () => {
+		try {
+			const exportData = users.map((u) => ({
+				"員工編號": u.employee_id,
+				"姓名": u.full_name,
+				"職稱": u.rank,
+				"基地": u.base,
+				"口試排除類別": Array.isArray(u.filter) ? u.filter.join(", ") : "",
+			}));
+
+			const ws = XLSX.utils.json_to_sheet(exportData);
+			const wb = XLSX.utils.book_new();
+			XLSX.utils.book_append_sheet(wb, ws, "Users");
+
+			const maxWidth = 50;
+			const colWidths = Object.keys(exportData[0] || {}).map((key) => ({
+				wch: Math.min(Math.max(key.length, 10), maxWidth),
+			}));
+			ws["!cols"] = colWidths;
+
+			const today = new Date().toISOString().split("T")[0];
+			XLSX.writeFile(wb, `users_export_${today}.xlsx`);
+		} catch {
+			setError("匯出失敗");
+		}
+	};
+
 	const searching = searchTerm.trim().length > 0;
 
 	const filteredFlat = useMemo(() => {
@@ -488,7 +521,16 @@ const UsersV2Test = () => {
 				</div>
 			</div>
 			<div className={styles.userCardBadges}>
-				<span className={styles.badgeBase}>{u.base}</span>
+				<span
+					className={styles.badgeBase}
+					style={{
+						background: `${BASE_COLORS[u.base?.toUpperCase() || ""] || "#4a9eff"}22`,
+						border: `1px solid ${BASE_COLORS[u.base?.toUpperCase() || ""] || "#4a9eff"}55`,
+						color: BASE_COLORS[u.base?.toUpperCase() || ""] || "#4a9eff",
+					}}
+				>
+					{u.base}
+				</span>
 				{u.is_inactive && <span className={styles.badgeInactive}>停用</span>}
 			</div>
 			<div className={styles.cardActions}>
@@ -545,6 +587,11 @@ const UsersV2Test = () => {
 					{(currentUser?.employee_id === "admin" || currentUser?.employee_id === "51892") && (
 						<button type="button" className={styles.addUserButton} onClick={openAddUser}>
 							+ 新增使用者
+						</button>
+					)}
+					{(currentUser?.employee_id === "admin" || currentUser?.employee_id === "51892") && (
+						<button type="button" className={styles.exportButton} onClick={handleExportExcel}>
+							匯出 Excel
 						</button>
 					)}
 				</div>

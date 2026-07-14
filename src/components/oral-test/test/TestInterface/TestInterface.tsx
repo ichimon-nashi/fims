@@ -35,6 +35,56 @@ interface QuestionResult {
 	result: boolean | null;
 }
 
+// Local sub-component — kept in this file, not split out.
+// Renders the 5-slot progress deck above the question card:
+// green = correct, red = incorrect, outlined = current/unanswered, gray = not yet reached.
+const ProgressDeck: React.FC<{
+	attemptResults: boolean[];
+	currentIndex: number;
+	passedCount: number;
+	getLabel: (index: number) => string;
+}> = ({ attemptResults, currentIndex, passedCount, getLabel }) => {
+	const remaining = Math.max(0, 3 - passedCount);
+
+	return (
+		<div className={styles.deckWrapper}>
+			<div className={styles.deck}>
+				{Array.from({ length: 5 }, (_, i) => {
+					const result = attemptResults[i];
+					const isCurrent = result === undefined && i === currentIndex;
+
+					let slotClass = styles.slotPending;
+					let content: React.ReactNode = null;
+
+					if (result === true) {
+						slotClass = styles.slotCorrect;
+						content = <span className={styles.slotIcon}>✓</span>;
+					} else if (result === false) {
+						slotClass = styles.slotIncorrect;
+						content = <span className={styles.slotIcon}>✗</span>;
+					} else if (isCurrent) {
+						slotClass = styles.slotActive;
+						content = getLabel(i);
+					}
+
+					return (
+						<div key={i} className={`${styles.slot} ${slotClass}`}>
+							{content}
+						</div>
+					);
+				})}
+			</div>
+			<p className={styles.deckCaption}>
+				{remaining > 0
+					? `${passedCount} correct, need ${remaining} more`
+					: `Passed with ${passedCount} correct`}
+				{" · "}
+				slot {Math.min(currentIndex + 1, 5)} of 5
+			</p>
+		</div>
+	);
+};
+
 const TestInterface: React.FC = () => {
 	const { user: examiner } = useAuth();
 	const [examineeId, setExamineeId] = useState("");
@@ -556,52 +606,54 @@ const TestInterface: React.FC = () => {
 							examinee={testSession.examinee}
 							hidePrivateInfo
 						/>
-						<div className={styles.progressInfo}>
-							<span className={styles.questionLabel}>
-								{getQuestionLabel(
-									testSession.currentQuestionIndex
-								)}
-							</span>
-							<span className={styles.scoreInfo}>
-								Passed: {testSession.passedCount}/3
-							</span>
-							<span className={styles.scoreInfo}>
-								Attempts: {testSession.attempts.length}/5
-							</span>
-						</div>
 					</div>
+
+					<ProgressDeck
+						attemptResults={testSession.attempts.map((a) => a.result)}
+						currentIndex={testSession.currentQuestionIndex}
+						passedCount={testSession.passedCount}
+						getLabel={getQuestionLabel}
+					/>
 
 					{currentQuestion && (
 						<div className={styles.questionArea}>
-							<div className={styles.questionCard}>
-								<div className={styles.questionHeader}>
+							<div className={styles.questionCardWrapper}>
+								<div
+									key={currentQuestion.id}
+									className={styles.questionCard}
+								>
+									<div className={styles.questionBadgeRow}>
+										{currentQuestion.question_number && (
+											<div className={styles.questionNumber}>
+												Question #
+												{currentQuestion.question_number}
+											</div>
+										)}
+										{/* Future: audio play/pause button renders here, e.g.
+										    {currentQuestion.audio_url && <PlayButton url={currentQuestion.audio_url} />} */}
+									</div>
+
 									<h3 className={styles.questionTitle}>
 										{currentQuestion.question_title}
 									</h3>
-									{currentQuestion.question_number && (
-										<div className={styles.questionNumber}>
-											Question #
-											{currentQuestion.question_number}
-										</div>
-									)}
-								</div>
 
-								<div className={styles.questionDetails}>
-									<div className={styles.detailItem}>
-										<strong>Category:</strong>{" "}
-										{currentQuestion.question_category}
-									</div>
-									<div className={styles.detailItem}>
-										<strong>Chapter:</strong>{" "}
-										{currentQuestion.question_chapter}
-									</div>
-									<div className={styles.detailItem}>
-										<strong>Page:</strong>{" "}
-										{currentQuestion.question_page}
-									</div>
-									<div className={styles.detailItem}>
-										<strong>Line:</strong>{" "}
-										{currentQuestion.question_line}
+									<div className={styles.questionDetails}>
+										<div className={styles.detailItem}>
+											<strong>Category:</strong>{" "}
+											{currentQuestion.question_category}
+										</div>
+										<div className={styles.detailItem}>
+											<strong>Chapter:</strong>{" "}
+											{currentQuestion.question_chapter}
+										</div>
+										<div className={styles.detailItem}>
+											<strong>Page:</strong>{" "}
+											{currentQuestion.question_page}
+										</div>
+										<div className={styles.detailItem}>
+											<strong>Line:</strong>{" "}
+											{currentQuestion.question_line}
+										</div>
 									</div>
 								</div>
 							</div>

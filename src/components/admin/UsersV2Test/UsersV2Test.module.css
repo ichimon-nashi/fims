@@ -46,6 +46,7 @@
 
 .searchRow {
 	display: flex;
+	flex-wrap: wrap;
 	gap: 10px;
 	align-items: stretch;
 }
@@ -69,6 +70,25 @@
 .addUserButton:hover {
 	transform: translateY(-1px);
 	box-shadow: 0 4px 8px rgba(74, 158, 255, 0.4);
+}
+
+.exportButton {
+	padding: 10px 18px;
+	background: linear-gradient(135deg, #10b981, #059669);
+	border: none;
+	border-radius: 10px;
+	color: white;
+	font-weight: 600;
+	font-size: 0.9rem;
+	cursor: pointer;
+	white-space: nowrap;
+	transition: transform 0.15s, box-shadow 0.15s;
+	box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+}
+
+.exportButton:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 4px 8px rgba(16, 185, 129, 0.4);
 }
 
 /* ── Group headers (new, matching editSectionLabel convention) ── */
@@ -204,12 +224,9 @@
 
 .badgeBase {
 	font-size: 0.82rem;
-	font-weight: 600;
+	font-weight: 700;
 	padding: 3px 10px;
-	border-radius: 6px;
-	background: rgba(255, 255, 255, 0.09);
-	color: #e8e9ed;
-	border: 1px solid rgba(255, 255, 255, 0.14);
+	border-radius: 20px;
 }
 
 .badgeInactive {

@@ -21,12 +21,6 @@ const OralTestNavigation = ({ currentPath }: OralTestNavigationProps) => {
       page: 'dashboard',
     },
     {
-      path: '/oral-test/users',
-      label: '人員管理',
-      icon: '👥',
-      page: 'users',
-    },
-    {
       path: '/oral-test/questions',
       label: '題庫管理',
       icon: '📚',
