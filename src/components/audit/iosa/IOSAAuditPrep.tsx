@@ -1216,7 +1216,7 @@ function Workspace({
 														)
 													}
 													placeholder={`Remarks for ${aa.num}…`}
-													rows={2}
+													rows={Math.max(2, (resp.remarks.match(/\n/g)?.length ?? 0) + 1)}
 													onClick={(e) =>
 														e.stopPropagation()
 													}

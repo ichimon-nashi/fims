@@ -29,6 +29,24 @@ function runText(r: Element): string {
     .join("");
 }
 
+/** Like paraText but descends into nested <w:sdt><w:sdtContent> content controls
+ *  and preserves <w:br/> as newlines — required for the AA cell where the user's
+ *  labeled remarks (AA1: ..., AA2: ...) may live inside a nested sdt sibling of
+ *  the checkbox run within the same paragraph, separated by <w:br/>. */
+function paraFullText(p: Element): string {
+  const parts: string[] = [];
+  function walk(el: Element) {
+    for (const child of Array.from(el.childNodes) as Element[]) {
+      const ln = child.localName;
+      if (ln === "t") parts.push(child.textContent ?? "");
+      else if (ln === "br") parts.push("\n");
+      else if (ln === "r" || ln === "sdtContent" || ln === "sdt") walk(child);
+    }
+  }
+  walk(p);
+  return parts.join("").replace(/[\u2610\u2611\u2612\u25A1\u25A0☐☑◄]/g, "").trim();
+}
+
 function paraText(p: Element): string {
   return kids(p, "r")
     .map(runText)
@@ -308,12 +326,19 @@ async function parseDocx(buffer: Buffer) {
     }
 
     // Extract the 5-way conformity checkbox group from row 2.
-    // Labels map to the values your audit_iosa_records.conformance_status column expects.
+    // The docx itself disambiguates Finding vs Observation per-ISARP at the label
+    // level (e.g. CAB 3.1.4C's checkboxes say "...(Observation)" while CAB 3.1.4B's
+    // say "...(Finding)" for the identical 3 documented/implemented combinations) —
+    // so both label variants are mapped directly to the final, already-correct
+    // audit_iosa_records.conformance_status value. No isarp_type inference needed.
     const CONFORMITY_LABEL_MAP: Record<string, string> = {
-      "documented and implemented (conformity)":    "conformity",
-      "documented not implemented (finding)":       "doc_not_impl",
-      "implemented not documented (finding)":       "impl_not_doc",
-      "not documented not implemented (finding)":   "not_doc_not_impl",
+      "documented and implemented (conformity)":     "conformity",
+      "documented not implemented (finding)":        "finding_doc_not_impl",
+      "implemented not documented (finding)":        "finding_impl_not_doc",
+      "not documented not implemented (finding)":    "finding_not_doc_not_impl",
+      "documented not implemented (observation)":    "obs_doc_not_impl",
+      "implemented not documented (observation)":    "obs_impl_not_doc",
+      "not documented not implemented (observation)": "obs_not_doc_not_impl",
       "n/a":                                          "na",
     };
     let conformanceStatus: string | null = null;
@@ -352,19 +377,62 @@ async function parseDocx(buffer: Buffer) {
       let current: { num: string; text: string; checked: boolean; remarks: string } | null = null;
       let aaNum = 1;
       for (const p of aaParas) {
-        const t = paraText(p);
+        // Use paraFullText (not paraText) so we descend into nested sdt content
+        // controls — the user's labeled remarks (AA1: ..., AA2: ...) may live inside
+        // a <w:sdt><w:sdtContent> nested within the "Other Actions" paragraph itself,
+        // separated from the checkbox run by a <w:br/>.
+        const t = paraFullText(p);
         if (!t || t === "Auditor Actions") continue;
 
         const cb = paraCheckbox(p);
         if (cb) {
-          // A checkbox paragraph is a new AA item — "Other Actions" still counts as one.
-          current = { num: `AA${aaNum++}`, text: t, checked: cb.checked, remarks: "" };
+          // Split on the first line that looks like an AA label — everything before
+          // is the checkbox label text; everything from that line onward is the
+          // labeled remarks block the user typed into the nested content control.
+          const lines = t.split("\n").map(s => s.trim()).filter(Boolean);
+          const labelBlockStart = lines.findIndex(
+            l => /^AA\d+\s*:/i.test(l) || /^AA_other\s*:/i.test(l)
+          );
+          const checkboxText = (labelBlockStart > 0 ? lines.slice(0, labelBlockStart) : lines)
+            .join(" ")
+            .replace(/[\u2610\u2611\u2612\u25A1\u25A0☐☑◄]/g, "")
+            .trim();
+
+          const isOther = checkboxText.toLowerCase().startsWith("other action");
+          current = {
+            num: isOther ? "AA_other" : `AA${aaNum++}`,
+            text: checkboxText || t,
+            checked: cb.checked,
+            remarks: "",
+          };
           aaItems.push(current);
-        } else if (current) {
-          // No checkbox on this paragraph → it's a remarks line for the item above.
-          current.remarks = current.remarks ? `${current.remarks}\n${t}` : t;
+
+          // If a labeled block was embedded in this paragraph, dispatch each segment.
+          if (labelBlockStart >= 0) {
+            const block = lines.slice(labelBlockStart).join("\n");
+            const segments = block.split(/(?=AA\d+\s*:|AA_other\s*:)/i).filter(Boolean);
+            for (const seg of segments) {
+              const m = seg.match(/^(AA(\d+)|AA_other)\s*:\s*([\s\S]+)$/i);
+              if (!m) continue;
+              const key = m[2] ? `AA${m[2]}` : "AA_other";
+              const remark = m[3].trim();
+              const target = aaItems.find(a => a.num === key);
+              if (target) target.remarks = target.remarks ? `${target.remarks}\n${remark}` : remark;
+            }
+          }
+        } else {
+          // No checkbox — either a separate-paragraph labeled block (AA1: ..., AA2: ...)
+          // or an interleaved remark sitting directly beneath its checkbox paragraph.
+          const labelMatch = t.match(/^(AA(\d+)|AA_other)\s*:\s*([\s\S]+)$/i);
+          if (labelMatch) {
+            const labelKey = labelMatch[2] ? `AA${labelMatch[2]}` : "AA_other";
+            const remark = labelMatch[3].trim();
+            const target = aaItems.find(a => a.num === labelKey);
+            if (target) target.remarks = target.remarks ? `${target.remarks}\n${remark}` : remark;
+          } else if (current) {
+            current.remarks = current.remarks ? `${current.remarks}\n${t}` : t;
+          }
         }
-        // A non-checkbox paragraph with no preceding AA item (shouldn't normally happen) is dropped.
       }
     }
 
@@ -511,24 +579,24 @@ export async function POST(req: NextRequest) {
         const existing = existingByCode.get(rec.isarp_code);
         if (!existing) continue; // no existing row — the freshly parsed docx values stand as-is
 
-        // Per-key AA merge: keep existing if it's already been touched.
+        // Per-key AA merge: the docx is the source of truth. Only keep the existing
+        // DB value if it has a non-empty remark — that's the only reliable signal a
+        // human has typed something in AuditPrep that the docx doesn't also contain.
+        // completed:true alone is NOT sufficient: a previous import sets completed:true
+        // with empty remarks, and we must not let that stale value block fresh docx
+        // data (including real remarks) from landing on re-import.
         const existingAA = (existing.aa_responses ?? {}) as Record<string, { completed: boolean; remarks: string }>;
         const mergedAA: Record<string, { completed: boolean; remarks: string }> = { ...rec.aa_responses };
         for (const num of Object.keys(existingAA)) {
           const ex = existingAA[num];
-          const exTouched = ex && (ex.completed || (ex.remarks && ex.remarks.trim()));
-          if (exTouched) mergedAA[num] = ex; // an auditor already acted on this AA — don't overwrite
+          const humanRemark = ex && ex.remarks && ex.remarks.trim();
+          if (humanRemark) mergedAA[num] = ex; // non-empty remark = human typed something, preserve it
         }
         rec.aa_responses = mergedAA;
 
-        // doc_references: keep existing if it already has content.
-        if (existing.doc_references && existing.doc_references.trim()) {
-          rec.doc_references = existing.doc_references;
-        }
-        // conformance_status: keep existing if it's already set.
-        if (existing.conformance_status) {
-          rec.conformance_status = existing.conformance_status;
-        }
+        // doc_references and conformance_status always take the fresh docx value —
+        // these fields are filled in Word, not typed by users in AuditPrep, so the
+        // docx is unconditionally authoritative. No merge protection needed here.
       }
     }
 
