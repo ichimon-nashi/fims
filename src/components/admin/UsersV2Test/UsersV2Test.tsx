@@ -11,15 +11,19 @@ import { USER_FILTER_CATEGORIES } from "@/lib/constants";
 // Not symmetric between genders (some job names only exist for one gender), so each gender
 // has its own list rather than a shared job-name set.
 const FEMALE_AVATAR_JOBS = [
-	"archer","blackmage","calculator","chemist","dancer","darkknight","dragon","dragoner",
-	"geomancer","hellknight","holyknight","knight","lancer","mediator","mimic","monk","ninja",
-	"onionknight","oracle","samurai","squire","summoner","templeknight","thief","timemage","whitemage",
+	"ahriman","archer","blackmage","bomb","calculator","chemist","chocobo","dancer","darkknight",
+	"dark_behemoth","dragon","dragoner","geomancer","ghoul","goblin","hellknight","holyknight",
+	"juravis","knight","lancer","mediator","mimic","monk","monster","morbol","ninja","onionknight",
+	"oracle","red_panther","samurai","skeleton","squire","summoner","templeknight","thief","tiamat",
+	"timemage","whitemage","wildbow","woodman",
 ];
 const MALE_AVATAR_JOBS = [
-	"archer","bard","blackmage","calculator","chemist","darkknight","engineer","geomancer",
-	"hellknight","holyknight","hunter","knight","lancer","mediator","mimic","monk","monster","ninja",
-	"onionknight","oracle","pirate","ramza1","ramza2","ramza3","robot","samurai","soldier","squire",
-	"summoner","templeknight","thief","timemage","whitemage",
+	"ahriman","archer","bard","blackmage","bomb","calculator","chemist","chocobo","darkknight",
+	"dark_behemoth","engineer","geomancer","ghoul","goblin","hellknight","holyknight","hunter",
+	"juravis","knight","lancer","mediator","mimic","monk","monster","morbol","ninja","onionknight",
+	"oracle","pirate","pisco_demon","ramza1","ramza2","ramza3","red_panther","robot","samurai",
+	"skeleton","soldier","squire","summoner","templeknight","thief","tiamat","timemage","whitemage",
+	"wildbow","woodman",
 ];
 import {
 	AppPermissions,
