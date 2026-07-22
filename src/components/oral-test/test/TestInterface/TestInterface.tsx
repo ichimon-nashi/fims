@@ -1,9 +1,9 @@
 // src/components/test/TestInterface/TestInterface.tsx
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { User, Question, TestSession, QuestionAttempt } from "@/lib/types";
+import { User, Question, TestSession, QuestionAttempt, TrainingType } from "@/lib/types";
 import Timer from "@/components/ui/Timer/Timer";
 import ExamineeInfo from "../ExamineeInfo/ExamineeInfo";
 import styles from "./TestInterface.module.css";
@@ -15,6 +15,7 @@ interface TestResultSubmission {
 	full_name: string;
 	rank: string;
 	base: string;
+	training_type: string;
 	q1_id: string | null;
 	q1_result: boolean | null;
 	q2_id: string | null;
@@ -34,6 +35,15 @@ interface QuestionResult {
 	id: string | null;
 	result: boolean | null;
 }
+
+// Question audio lives in the "oral-test-audio" public Supabase storage bucket,
+// named by zero-padded 3-digit question number, e.g. 001.mp3, 245.mp3.
+const SUPABASE_AUDIO_BASE_URL =
+	"https://rhdpkxkmugimtlbdizfp.supabase.co/storage/v1/object/public/oral-test-audio";
+
+const getAudioFileName = (questionNumber: string | number): string => {
+	return `${String(questionNumber).padStart(3, "0")}.mp3`;
+};
 
 // Local sub-component — kept in this file, not split out.
 // Renders the 5-slot progress deck above the question card:
@@ -85,6 +95,96 @@ const ProgressDeck: React.FC<{
 	);
 };
 
+// Local sub-component — kept in this file, not split out.
+// Plays a question's audio file if one exists at
+// {oral-test-audio bucket}/{zero-padded question_number}.mp3.
+// Renders nothing if the file 404s or the browser refuses playback,
+// so questions without an uploaded file don't show a dead button.
+const AudioPlayButton: React.FC<{
+	questionNumber: string | number;
+	volume: number;
+	onVolumeChange: (volume: number) => void;
+}> = ({ questionNumber, volume, onVolumeChange }) => {
+	const audioRef = useRef<HTMLAudioElement>(null);
+	const [isPlaying, setIsPlaying] = useState(false);
+	const [isAvailable, setIsAvailable] = useState(true);
+
+	const src = `${SUPABASE_AUDIO_BASE_URL}/${getAudioFileName(questionNumber)}`;
+
+	// Keep the element's volume in sync with the session-level control,
+	// including on mount, so a mid-playback slider drag takes effect immediately.
+	useEffect(() => {
+		if (audioRef.current) {
+			audioRef.current.volume = volume;
+		}
+	}, [volume]);
+
+	const togglePlay = (): void => {
+		const audio = audioRef.current;
+		if (!audio) return;
+
+		if (isPlaying) {
+			audio.pause();
+		} else {
+			audio.play().catch(() => setIsAvailable(false));
+		}
+	};
+
+	// No audio file for this question — hide both the play button and the
+	// volume slider together, rather than leaving an orphaned slider with
+	// nothing next to it to control.
+	if (!isAvailable) return null;
+
+	const isMuted = volume === 0;
+	const toggleMute = (): void => {
+		onVolumeChange(isMuted ? 0.8 : 0);
+	};
+
+	return (
+		<>
+			<button
+				type="button"
+				className={styles.audioButton}
+				onClick={togglePlay}
+				aria-label={isPlaying ? "Pause audio" : "Play audio"}
+				title={isPlaying ? "Pause audio" : "Play question audio"}
+			>
+				{isPlaying ? "⏸" : "▶"}
+			</button>
+			<audio
+				ref={audioRef}
+				src={src}
+				preload="metadata"
+				onPlay={() => setIsPlaying(true)}
+				onPause={() => setIsPlaying(false)}
+				onEnded={() => setIsPlaying(false)}
+				onError={() => setIsAvailable(false)}
+			/>
+			<div className={styles.volumeControl}>
+				<button
+					type="button"
+					className={styles.volumeMuteButton}
+					onClick={toggleMute}
+					aria-label={isMuted ? "Unmute" : "Mute"}
+					title={isMuted ? "Unmute" : "Mute"}
+				>
+					{isMuted ? "🔇" : "🔊"}
+				</button>
+				<input
+					type="range"
+					min={0}
+					max={1}
+					step={0.05}
+					value={volume}
+					onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
+					className={styles.volumeSlider}
+					aria-label="Audio volume"
+				/>
+			</div>
+		</>
+	);
+};
+
 const TestInterface: React.FC = () => {
 	const { user: examiner } = useAuth();
 	const [examineeId, setExamineeId] = useState("");
@@ -99,6 +199,25 @@ const TestInterface: React.FC = () => {
 	const [testComplete, setTestComplete] = useState(false);
 	// Add timerKey to force timer reset when question changes
 	const [timerKey, setTimerKey] = useState(0);
+	// Session-level audio volume (0-1), persisted across tests on this device
+	const [volume, setVolume] = useState(0.8);
+	// Training type for this test session — defaults to FAAT, resets per
+	// examinee in resetTest(). Not persisted like volume: a new examinee
+	// should never inherit the previous person's non-default selection.
+	const [trainingType, setTrainingType] = useState<TrainingType>("FAAT");
+
+	useEffect(() => {
+		const stored = localStorage.getItem("oralTestVolume");
+		if (stored !== null) {
+			const parsed = parseFloat(stored);
+			if (!Number.isNaN(parsed)) setVolume(parsed);
+		}
+	}, []);
+
+	const handleVolumeChange = (newVolume: number): void => {
+		setVolume(newVolume);
+		localStorage.setItem("oralTestVolume", String(newVolume));
+	};
 
 	// Apply handicap-based difficulty filtering
 	const applyHandicapFiltering = (questions: Question[], handicapLevel: number): Question[] => {
@@ -246,6 +365,7 @@ const TestInterface: React.FC = () => {
 					full_name: finalSession.examinee.full_name || "",
 					rank: finalSession.examinee.rank || "",
 					base: finalSession.examinee.base || "",
+					training_type: trainingType,
 					q1_id: q1.id,
 					q1_result: q1.result,
 					q2_id: q2.id,
@@ -293,7 +413,7 @@ const TestInterface: React.FC = () => {
 				);
 			}
 		},
-		[examiner, examineeId]
+		[examiner, examineeId, trainingType]
 	);
 
 	// Load examinee data
@@ -521,6 +641,7 @@ const TestInterface: React.FC = () => {
 		setTestComplete(false);
 		setError("");
 		setTimerKey(0); // Reset timer key
+		setTrainingType("FAAT"); // New examinee always starts from the default
 	};
 
 	// Get question label (Q1, Q2, Q3, R1, R2)
@@ -605,6 +726,8 @@ const TestInterface: React.FC = () => {
 						<ExamineeInfo
 							examinee={testSession.examinee}
 							hidePrivateInfo
+							trainingType={trainingType}
+							onTrainingTypeChange={setTrainingType}
 						/>
 					</div>
 
@@ -629,8 +752,15 @@ const TestInterface: React.FC = () => {
 												{currentQuestion.question_number}
 											</div>
 										)}
-										{/* Future: audio play/pause button renders here, e.g.
-										    {currentQuestion.audio_url && <PlayButton url={currentQuestion.audio_url} />} */}
+										{currentQuestion.question_number && (
+											<AudioPlayButton
+												questionNumber={
+													currentQuestion.question_number
+												}
+												volume={volume}
+												onVolumeChange={handleVolumeChange}
+											/>
+										)}
 									</div>
 
 									<h3 className={styles.questionTitle}>

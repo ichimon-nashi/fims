@@ -107,6 +107,41 @@ input.form-input::placeholder,
 	flex-shrink: 0;
 }
 
+.volumeControl {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	flex-shrink: 0;
+}
+
+.volumeMuteButton {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 44px;
+	min-width: 44px;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.15);
+	color: #a0aec0;
+	font-size: 1.1rem;
+	cursor: pointer;
+	transition: all 0.3s ease;
+}
+
+.volumeMuteButton:hover {
+	background: rgba(255, 255, 255, 0.1);
+	color: #e8e9ed;
+}
+
+.volumeSlider {
+	width: 100px;
+	height: 6px;
+	cursor: pointer;
+	accent-color: #4a9eff;
+}
+
 /* PROGRESS DECK — 5 slots, own full-width row below session header */
 .deckWrapper {
 	display: flex;
@@ -214,6 +249,7 @@ input.form-input::placeholder,
 	display: flex;
 	align-items: center;
 	gap: 0.75rem;
+	flex-wrap: wrap;
 	margin-bottom: 0.85rem;
 }
 
@@ -226,6 +262,32 @@ input.form-input::placeholder,
 	font-weight: 600;
 	white-space: nowrap;
 	box-shadow: 0 3px 10px rgba(74, 158, 255, 0.4);
+}
+
+.audioButton {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 44px;
+	min-width: 44px;
+	border-radius: 50%;
+	background: rgba(139, 92, 246, 0.15);
+	border: 1px solid rgba(139, 92, 246, 0.5);
+	color: #a78bfa;
+	font-size: 1.1rem;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	flex-shrink: 0;
+}
+
+.audioButton:hover {
+	background: rgba(139, 92, 246, 0.25);
+	transform: scale(1.05);
+}
+
+.audioButton:active {
+	transform: scale(0.95);
 }
 
 .questionTitle {
@@ -447,6 +509,14 @@ input.form-input::placeholder,
 	
 	.sessionHeader {
 		flex-direction: column;
+	}
+
+	.volumeControl {
+		gap: 0.4rem;
+	}
+
+	.volumeSlider {
+		width: 80px;
 	}
 
 	.deckCaption {

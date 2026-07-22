@@ -2,18 +2,25 @@
 "use client";
 
 import React from "react";
-import { User } from "@/lib/types";
+import { User, TRAINING_TYPES, TrainingType } from "@/lib/types";
 import Avatar from "@/components/ui/Avatar/Avatar";
 import styles from "./ExamineeInfo.module.css";
 
 interface ExamineeInfoProps {
 	examinee: User;
 	hidePrivateInfo?: boolean;
+	// Both optional — the training type selector only renders when
+	// onTrainingTypeChange is provided, so read-only usages of this
+	// component elsewhere are unaffected.
+	trainingType?: TrainingType;
+	onTrainingTypeChange?: (trainingType: TrainingType) => void;
 }
 
 const ExamineeInfo: React.FC<ExamineeInfoProps> = ({
 	examinee,
 	hidePrivateInfo = false,
+	trainingType,
+	onTrainingTypeChange,
 }) => {
 	// Use the correct property name from User type
 	const employeeId = examinee.employee_id;
@@ -59,6 +66,28 @@ const ExamineeInfo: React.FC<ExamineeInfoProps> = ({
 						<span className={styles.label}>Base:</span>
 						<span className={styles.value}>{examinee.base || "N/A"}</span>
 					</div>
+
+					{onTrainingTypeChange && (
+						<div className={styles.infoItem}>
+							<span className={styles.label}>Training Type:</span>
+							<select
+								className={styles.trainingTypeSelect}
+								value={trainingType || "FAAT"}
+								onChange={(e) =>
+									onTrainingTypeChange(
+										e.target.value as TrainingType
+									)
+								}
+								aria-label="Training type for this test session"
+							>
+								{TRAINING_TYPES.map((type) => (
+									<option key={type} value={type}>
+										{type}
+									</option>
+								))}
+							</select>
+						</div>
+					)}
 
 					{!hidePrivateInfo && (
 						<>

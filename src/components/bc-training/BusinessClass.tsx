@@ -45,7 +45,7 @@ const BusinessClass: React.FC<BusinessClassProps> = () => {
 	const ITEM_MEASUREMENTS = {
 		TABLE_TRAY_WIDTH_CM: 35,
 		TABLE_TRAY_HEIGHT_CM: 30, //27.5,
-		MAIN_PLATE: { width: 19.5, height: 15.5 },
+		MAIN_PLATE: { width: 22, height: 18 },
 		SALAD_BOWL: { diameter: 12.5 },
 		BREAD_PLATE: { diameter: 19.8 },
 		DESSERT_BOWL: { diameter: 16 },

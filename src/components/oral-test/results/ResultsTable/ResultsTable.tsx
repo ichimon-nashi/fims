@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { TestResult } from "@/lib/types";
+import { TestResult, TrainingType } from "@/lib/types";
 import DataTable from "../../management/DataTable/DataTable";
 import ResultsFilters from "../ResultsFilters/ResultsFilters";
 import styles from "./ResultsTable.module.css";
@@ -61,14 +61,25 @@ const ResultsTable = () => {
 	const [allResults, setAllResults] = useState<EnhancedTestResult[]>([]);
 	const [availableYears, setAvailableYears] = useState<number[]>([]);
 	const [availableMonths, setAvailableMonths] = useState<number[]>([]);
+	// Training types actually present in the data, computed once per fetch —
+	// mirrors availableYears below, not scoped by selected year/month since
+	// type filtering is meant to be independent of the date filters.
+	const [availableTrainingTypes, setAvailableTrainingTypes] = useState<
+		TrainingType[]
+	>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
 	const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 	const [selectedMonth, setSelectedMonth] = useState(0); // 0 = All months
+	const [selectedTrainingType, setSelectedTrainingType] = useState<
+		TrainingType | "ALL"
+	>("FAAT");
 
-	const fetchAllResults = useCallback(async () => {
+	const fetchAllResults = useCallback(async (showLoading: boolean = true) => {
 		try {
-			setLoading(true);
+			if (showLoading) {
+				setLoading(true);
+			}
 			console.log("Fetching test results...");
 
 			// FIXED: Use correct token key
@@ -115,6 +126,20 @@ const ResultsTable = () => {
 				].sort((a, b) => b - a); // Sort descending (newest first)
 
 				setAvailableYears(years);
+
+				// Extract unique training types present in the data. Rows written
+				// before Phase 1's migration, or via any path that skips the
+				// default, fall back to "FAAT" so they still show up somewhere
+				// rather than silently vanishing from every type-filtered view.
+				const types = Array.from(
+					new Set(
+						resultsArray.map(
+							(result: EnhancedTestResult) =>
+								(result.training_type || "FAAT") as TrainingType
+						)
+					)
+				);
+				setAvailableTrainingTypes(types);
 
 				// Set initial year to the most recent year with data
 				if (years.length > 0) {
@@ -197,7 +222,10 @@ const ResultsTable = () => {
 		}
 	}, [allResults, selectedYear, selectedMonth]);
 
-	const filterResultsByYearAndMonth = useCallback(() => {
+	// Filters by year, month, and training type. Renamed from
+	// filterResultsByYearAndMonth since it now does more than that —
+	// local to this file, no external callers to worry about.
+	const filterResults = useCallback(() => {
 		let filteredResults = allResults.filter(
 			(result: EnhancedTestResult) =>
 				new Date(result.test_date).getFullYear() === selectedYear
@@ -211,14 +239,24 @@ const ResultsTable = () => {
 			);
 		}
 
+		// Apply training type filter unless "ALL" is selected. Rows with no
+		// training_type (pre-migration edge case) are treated as FAAT, same
+		// fallback used when computing availableTrainingTypes above.
+		if (selectedTrainingType !== "ALL") {
+			filteredResults = filteredResults.filter(
+				(result: EnhancedTestResult) =>
+					(result.training_type || "FAAT") === selectedTrainingType
+			);
+		}
+
 		console.log(
 			`Filtered results for ${selectedYear}${
 				selectedMonth !== 0 ? ` month ${selectedMonth}` : ""
-			}:`,
+			}, type ${selectedTrainingType}:`,
 			filteredResults.length
 		);
 		setResults(filteredResults);
-	}, [allResults, selectedYear, selectedMonth]);
+	}, [allResults, selectedYear, selectedMonth, selectedTrainingType]);
 
 	useEffect(() => {
 		fetchAllResults();
@@ -228,8 +266,8 @@ const ResultsTable = () => {
 	useEffect(() => {
 		const handleVisibilityChange = () => {
 			if (!document.hidden) {
-				console.log("Page became visible, refreshing results...");
-				fetchAllResults();
+				console.log("Page became visible, refreshing results (silent)...");
+				fetchAllResults(false);
 			}
 		};
 
@@ -237,8 +275,8 @@ const ResultsTable = () => {
 
 		// Also refresh when focus returns to window
 		const handleFocus = () => {
-			console.log("Window focused, refreshing results...");
-			fetchAllResults();
+			console.log("Window focused, refreshing results (silent)...");
+			fetchAllResults(false);
 		};
 
 		window.addEventListener("focus", handleFocus);
@@ -258,14 +296,15 @@ const ResultsTable = () => {
 				"Main effect triggered - updating months and filtering"
 			);
 			updateAvailableMonths();
-			filterResultsByYearAndMonth();
+			filterResults();
 		}
 	}, [
 		allResults,
 		selectedYear,
 		selectedMonth,
+		selectedTrainingType,
 		updateAvailableMonths,
-		filterResultsByYearAndMonth,
+		filterResults,
 	]);
 
 	// Force update when component mounts or data changes
@@ -340,7 +379,7 @@ const ResultsTable = () => {
 			header.innerHTML = `
 			<h1 style="font-size: 2rem; color: #2d3748; margin: 0 0 0.5rem 0;">Test Results Report</h1>
 			<p style="color: #4a5568; margin: 0; font-size: 1rem;">
-				Period: ${periodText} | Total Tests: ${results.length} | 
+				Period: ${periodText} | Training Type: ${selectedTrainingType} | Total Tests: ${results.length} | 
 				Generated: ${new Date().toLocaleDateString()}
 			</p>
 		`;
@@ -396,6 +435,7 @@ const ResultsTable = () => {
 				"Full Name",
 				"Rank",
 				"Base",
+				"Type",
 				"Q1",
 				"Q2",
 				"Q3",
@@ -448,6 +488,7 @@ const ResultsTable = () => {
 					result.full_name,
 					result.rank,
 					result.base,
+					result.training_type || "FAAT",
 					formatQuestionResult("q1"),
 					formatQuestionResult("q2"),
 					formatQuestionResult("q3"),
@@ -523,6 +564,7 @@ const ResultsTable = () => {
 				"Full Name",
 				"Rank",
 				"Base",
+				"Training Type",
 				"Q1 Number",
 				"Q1 Result",
 				"Q2 Number",
@@ -548,6 +590,7 @@ const ResultsTable = () => {
 					result.full_name,
 					result.rank,
 					result.base,
+					result.training_type || "FAAT",
 					result.questions?.q1?.number || "N/A",
 					result.q1_result === null || result.q1_result === undefined
 						? "N/A"
@@ -690,6 +733,17 @@ const ResultsTable = () => {
 			filterable: true,
 		},
 		{
+			key: "training_type",
+			label: "Type",
+			sortable: true,
+			filterable: true,
+			render: (value: string) => (
+				<span className={styles.trainingTypeBadge}>
+					{value || "FAAT"}
+				</span>
+			),
+		},
+		{
 			key: "q1_result",
 			label: "Q1",
 			sortable: false,
@@ -801,6 +855,9 @@ const ResultsTable = () => {
 				totalResults={results.length}
 				availableYears={availableYears}
 				availableMonths={availableMonths}
+				selectedTrainingType={selectedTrainingType}
+				onTrainingTypeChange={setSelectedTrainingType}
+				availableTrainingTypes={availableTrainingTypes}
 			/>
 
 			{error && <div className="alert alert-error">{error}</div>}

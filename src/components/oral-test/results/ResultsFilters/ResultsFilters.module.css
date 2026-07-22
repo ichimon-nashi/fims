@@ -85,10 +85,14 @@
 		padding: 1rem;
 	}
 
+	/* Grid instead of flex-wrap: Year + Month sit side by side (2-up),
+	   Training Type spans the full width below them. Deterministic
+	   layout instead of relying on flex-wrap breakpoints, which is what
+	   forced every filter onto its own row before. */
 	.filterSection {
-		justify-content: center;
-		flex-direction: row;
-		gap: 1rem;
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 0.75rem;
 	}
 
 	.filterLabel {
@@ -97,9 +101,16 @@
 		gap: 0.5rem;
 	}
 
+	/* Third filter (Training Type) spans both columns. Selector is
+	   structural, not a new class — safe even when only 2 filters are
+	   rendered (selector simply won't match a nonexistent 3rd child). */
+	.filterLabel:nth-child(3) {
+		grid-column: 1 / -1;
+	}
+
 	.filterSelect {
 		width: 100%;
-		min-width: 200px;
+		min-width: 0;
 	}
 
 	.resultsSummary {

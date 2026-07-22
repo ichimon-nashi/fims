@@ -2,6 +2,7 @@
 "use client";
 
 import React from "react";
+import { TrainingType } from "@/lib/types";
 import styles from "./ResultsFilters.module.css";
 
 interface ResultsFiltersProps {
@@ -12,6 +13,11 @@ interface ResultsFiltersProps {
 	totalResults: number;
 	availableYears?: number[];
 	availableMonths?: number[]; // Available months for the selected year
+	// Training type filter — optional so this component still works if a
+	// caller doesn't pass these (backward compatible with any other usage).
+	selectedTrainingType?: TrainingType | "ALL";
+	onTrainingTypeChange?: (trainingType: TrainingType | "ALL") => void;
+	availableTrainingTypes?: TrainingType[];
 }
 
 const ResultsFilters = ({
@@ -22,6 +28,9 @@ const ResultsFilters = ({
 	totalResults,
 	availableYears = [],
 	availableMonths = [],
+	selectedTrainingType = "FAAT",
+	onTrainingTypeChange,
+	availableTrainingTypes = [],
 }: ResultsFiltersProps) => {
 	
 	const monthNames = [
@@ -31,17 +40,30 @@ const ResultsFilters = ({
 	];
 
 	const getFilterDescription = () => {
-		if (selectedMonth === 0) {
-			return `All of ${selectedYear}`;
-		}
-		return `${monthNames[selectedMonth]} ${selectedYear}`;
+		const period =
+			selectedMonth === 0
+				? `All of ${selectedYear}`
+				: `${monthNames[selectedMonth]} ${selectedYear}`;
+		return selectedTrainingType === "ALL"
+			? period
+			: `${period} · ${selectedTrainingType}`;
 	};
+
+	// FAAT is always offered as an option since it's the default and is
+	// guaranteed to exist (backfilled for every historical row). Other
+	// types only appear once they actually have data, so the dropdown
+	// doesn't list all 7 possible types up front.
+	const otherTypes = availableTrainingTypes.filter(
+		(type) => type !== "FAAT"
+	);
 
 	// Debug logging
 	console.log('ResultsFilters render:', {
 		selectedYear,
 		selectedMonth,
 		availableMonths,
+		selectedTrainingType,
+		availableTrainingTypes,
 		totalResults
 	});
 
@@ -84,6 +106,29 @@ const ResultsFilters = ({
 						))}
 					</select>
 				</label>
+
+				{onTrainingTypeChange && (
+					<label className={styles.filterLabel}>
+						Training Type:
+						<select
+							value={selectedTrainingType}
+							onChange={(e) =>
+								onTrainingTypeChange(
+									e.target.value as TrainingType | "ALL"
+								)
+							}
+							className={styles.filterSelect}
+						>
+							<option value="FAAT">FAAT</option>
+							{otherTypes.map((type) => (
+								<option key={type} value={type}>
+									{type}
+								</option>
+							))}
+							<option value="ALL">ALL</option>
+						</select>
+					</label>
+				)}
 			</div>
 
 			<div className={styles.resultsSummary}>

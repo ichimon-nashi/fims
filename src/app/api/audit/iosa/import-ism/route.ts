@@ -490,7 +490,7 @@ export async function POST(req: NextRequest) {
     let globalOrder = 0;
 
     for (const file of files) {
-      if (!file.name.endsWith(".docx")) continue;
+      if (!file.name.endsWith(".docx") || !file.name.endsWith(".doc")) continue;
       const { isarps, tables } = await parseDocx(Buffer.from(await file.arrayBuffer()));
       if (!isarps.length) continue;
 

@@ -86,6 +86,35 @@
 	line-height: 1.2;
 }
 
+.trainingTypeSelect {
+	font-size: 1rem;
+	font-weight: 600;
+	color: #e8e9ed;
+	background: rgba(255, 255, 255, 0.05);
+	border: 2px solid rgba(74, 158, 255, 0.4);
+	border-radius: 8px;
+	padding: 0.35rem 0.6rem;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	max-width: 140px;
+}
+
+.trainingTypeSelect:hover {
+	border-color: #4a9eff;
+	background: rgba(255, 255, 255, 0.08);
+}
+
+.trainingTypeSelect:focus {
+	outline: none;
+	border-color: #4a9eff;
+	box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2);
+}
+
+.trainingTypeSelect option {
+	background: #2d3651;
+	color: #e8e9ed;
+}
+
 .filterTags {
 	display: flex;
 	gap: 0.45rem;
@@ -182,4 +211,10 @@
 	
 	.infoItem { text-align: center; }
 	.value { font-size: 0.85rem; }
+
+	.trainingTypeSelect {
+		max-width: none;
+		width: 100%;
+		min-height: 44px;
+	}
 }

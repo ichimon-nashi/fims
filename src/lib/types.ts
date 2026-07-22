@@ -150,6 +150,23 @@ export interface JWTPayload {
 }
 
 // Oral Test System Types
+
+// Valid training types for oral tests. FAAT is recurrent (annual, calendar-year
+// tracked), FABT is initial qualification (one-time, no calendar cycle), the
+// rest cover requalification/other scenarios. Kept in sync with the DB CHECK
+// constraint on test_results.training_type — update both together.
+export const TRAINING_TYPES = [
+	"FAAT",
+	"FABT",
+	"FALT",
+	"FAPT",
+	"FATT",
+	"FAQT",
+	"FAOT",
+] as const;
+
+export type TrainingType = (typeof TRAINING_TYPES)[number];
+
 export interface Question {
 	id: string;
 	question_number?: number;
@@ -171,6 +188,7 @@ export interface TestResult {
 	full_name: string;
 	rank: string;
 	base: string;
+	training_type: TrainingType;
 	q1_id?: string;
 	q1_result?: boolean;
 	q2_id?: string;
@@ -216,6 +234,13 @@ export interface DashboardData {
 		totalUsers?: number;
 		currentYearTested?: number;
 		currentYearRemaining?: number;
+		remainingUsersList?: Array<{
+			employee_id: string;
+			full_name: string;
+			rank: string;
+			base: string;
+			lastFaatTestDate: string | null;
+		}>;
 	};
 	examinerStats: Array<{
 		examiner: string;

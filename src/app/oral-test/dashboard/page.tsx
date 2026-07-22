@@ -7,6 +7,14 @@ import { useEffect, useState } from 'react';
 import PermissionGuard from '@/components/common/PermissionGuard';
 import OralTestNavigation from '@/components/oral-test/OralTestNavigation/OralTestNavigation';
 
+interface RemainingUser {
+  employee_id: string;
+  full_name: string;
+  rank: string;
+  base: string;
+  lastFaatTestDate: string | null;
+}
+
 interface DashboardData {
   topIncorrectQuestions: Array<{
     question: string;
@@ -22,6 +30,7 @@ interface DashboardData {
     totalUsers?: number;
     currentYearTested?: number;
     currentYearRemaining?: number;
+    remainingUsersList?: RemainingUser[];
   };
   examinerStats: Array<{
     examiner: string;
@@ -40,6 +49,7 @@ function OralTestDashboardContent() {
   const router = useRouter();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
+  const [showRemainingModal, setShowRemainingModal] = useState(false);
 
   // Permission check now handled by PermissionGuard wrapper
 
@@ -78,7 +88,8 @@ function OralTestDashboardContent() {
             total: 0,
             totalUsers: 0,
             currentYearTested: 0,
-            currentYearRemaining: 0
+            currentYearRemaining: 0,
+            remainingUsersList: []
           },
           examinerStats: [],
           questionsByCategory: [],
@@ -97,7 +108,8 @@ function OralTestDashboardContent() {
           total: 0,
           totalUsers: 0,
           currentYearTested: 0,
-          currentYearRemaining: 0
+          currentYearRemaining: 0,
+          remainingUsersList: []
         },
         examinerStats: [],
         questionsByCategory: [],
@@ -106,6 +118,11 @@ function OralTestDashboardContent() {
     } finally {
       setDataLoading(false);
     }
+  };
+
+  const formatLastTested = (dateStr: string | null): string => {
+    if (!dateStr) return 'Never tested';
+    return new Date(dateStr).toLocaleDateString();
   };
 
   // Show loading if no user
@@ -231,7 +248,136 @@ function OralTestDashboardContent() {
             grid-template-columns: 1fr !important;
           }
         }
+
+        /* Remaining-users drill-down modal */
+        .remaining-icon-button {
+          background: rgba(255, 255, 255, 0.2);
+          border: none;
+          border-radius: 8px;
+          width: 32px;
+          height: 32px;
+          min-width: 44px;
+          min-height: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          font-size: 1rem;
+          color: white;
+          transition: all 0.2s ease;
+        }
+
+        .remaining-icon-button:hover {
+          background: rgba(255, 255, 255, 0.35);
+          transform: scale(1.05);
+        }
+
+        .remaining-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(26, 31, 53, 0.9);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 2000;
+          padding: 1.5rem;
+        }
+
+        .remaining-modal-content {
+          background: rgba(45, 54, 81, 0.98);
+          border-radius: 16px;
+          padding: 2rem;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+          max-width: 600px;
+          width: 100%;
+          max-height: 80vh;
+          overflow-y: auto;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .remaining-modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1.5rem;
+          padding-bottom: 1rem;
+          border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .remaining-modal-title {
+          color: #4a9eff;
+          font-size: 1.4rem;
+          font-weight: 700;
+          margin: 0;
+        }
+
+        .remaining-modal-close {
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 50%;
+          width: 2.25rem;
+          height: 2.25rem;
+          font-size: 1.1rem;
+          color: #e8e9ed;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .remaining-modal-close:hover {
+          background: rgba(239, 68, 68, 0.8);
+          border-color: #ef4444;
+        }
+
+        .remaining-user-row {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          align-items: center;
+          gap: 1rem;
+          padding: 0.85rem 1rem;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 8px;
+          margin-bottom: 0.6rem;
+        }
+
+        .remaining-user-name {
+          font-weight: 600;
+          color: #e8e9ed;
+        }
+
+        .remaining-user-meta {
+          font-size: 0.8rem;
+          color: #a0aec0;
+        }
+
+        .remaining-user-last-tested {
+          font-size: 0.85rem;
+          color: #f87171;
+          text-align: right;
+          white-space: nowrap;
+        }
+
+        .remaining-empty-state {
+          text-align: center;
+          color: #a0aec0;
+          padding: 2rem;
+        }
+
+        @media (max-width: 600px) {
+          .remaining-user-row {
+            grid-template-columns: 1fr;
+            gap: 0.4rem;
+          }
+
+          .remaining-user-last-tested {
+            text-align: left;
+          }
+        }
       `}</style>
+
       <div className="test-page-container">
         <div className="test-page-content fade-in">
           {/* Page Header */}
@@ -283,7 +429,7 @@ function OralTestDashboardContent() {
                     boxShadow: '0 10px 25px rgba(74, 158, 255, 0.3)'
                   }}>
                     <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.25rem', fontWeight: '600' }}>
-                      📊 Test Progress ({dashboardData.currentYear || new Date().getFullYear()})
+                      📊 FAAT Progress ({dashboardData.currentYear || new Date().getFullYear()})
                     </h3>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
                       <div>
@@ -292,11 +438,23 @@ function OralTestDashboardContent() {
                         </div>
                         <div style={{ opacity: 0.9, fontSize: '0.9rem' }}>Users Tested</div>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-                          {dashboardData.examineeTesting.remaining}
+                      <div style={{ textAlign: 'right', display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
+                        <div>
+                          <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
+                            {dashboardData.examineeTesting.remaining}
+                          </div>
+                          <div style={{ opacity: 0.9, fontSize: '0.9rem' }}>Remaining</div>
                         </div>
-                        <div style={{ opacity: 0.9, fontSize: '0.9rem' }}>Remaining</div>
+                        {dashboardData.examineeTesting.remaining > 0 && (
+                          <button
+                            className="remaining-icon-button"
+                            onClick={() => setShowRemainingModal(true)}
+                            title="See which crew still need FAAT this year"
+                            aria-label="See which crew still need FAAT this year"
+                          >
+                            👁️
+                          </button>
+                        )}
                       </div>
                     </div>
                     <div style={{
@@ -522,6 +680,52 @@ function OralTestDashboardContent() {
           </div>
         </div>
       </div>
+
+      {showRemainingModal && (
+        <div
+          className="remaining-modal-overlay"
+          onClick={() => setShowRemainingModal(false)}
+        >
+          <div
+            className="remaining-modal-content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="remaining-modal-header">
+              <h2 className="remaining-modal-title">
+                尚未測驗(FAAT) ({dashboardData?.currentYear || new Date().getFullYear()})
+              </h2>
+              <button
+                className="remaining-modal-close"
+                onClick={() => setShowRemainingModal(false)}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {dashboardData?.examineeTesting.remainingUsersList &&
+            dashboardData.examineeTesting.remainingUsersList.length > 0 ? (
+              dashboardData.examineeTesting.remainingUsersList.map((u) => (
+                <div className="remaining-user-row" key={u.employee_id}>
+                  <div>
+                    <div className="remaining-user-name">{u.full_name}</div>
+                    <div className="remaining-user-meta">
+                      {u.employee_id} · {u.rank} · {u.base}
+                    </div>
+                  </div>
+                  <div className="remaining-user-last-tested">
+                    {formatLastTested(u.lastFaatTestDate)}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="remaining-empty-state">
+                No remaining-users data available.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -125,6 +125,20 @@
 	background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
 }
 
+/* Training type badge — neutral accent color, distinct from the
+   pass/fail score badge's semantic green/amber/red */
+.trainingTypeBadge {
+	display: inline-block;
+	padding: 0.25rem 0.6rem;
+	border-radius: 10px;
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: #4a9eff;
+	background: rgba(74, 158, 255, 0.1);
+	border: 1px solid rgba(74, 158, 255, 0.3);
+	font-family: 'Courier New', monospace;
+}
+
 /* CENTERED QUESTION RESULTS */
 .questionResult {
 	display: flex;
@@ -204,7 +218,7 @@
 	}
 
 	.statsCards {
-		grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+		grid-template-columns: repeat(2, 1fr);
 		gap: 1rem;
 	}
 

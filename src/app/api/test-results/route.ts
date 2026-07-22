@@ -185,6 +185,7 @@ export async function POST(request: NextRequest) {
 			employee_id: resultData.employee_id,
 			test_date: resultData.test_date,
 			examiner: resultData.examiner_name,
+			training_type: resultData.training_type,
 		});
 
 		// Validate required fields
@@ -212,6 +213,24 @@ export async function POST(request: NextRequest) {
 			}
 		}
 
+		// training_type is not in the required list above — it's optional at
+		// the API boundary and defaults to FAAT here (matching the DB column
+		// default), so older client code that doesn't send it yet keeps working.
+		const VALID_TRAINING_TYPES = [
+			"FAAT",
+			"FABT",
+			"FALT",
+			"FAPT",
+			"FATT",
+			"FAQT",
+			"FAOT",
+		];
+		const trainingType =
+			typeof resultData.training_type === "string" &&
+			VALID_TRAINING_TYPES.includes(resultData.training_type)
+				? resultData.training_type
+				: "FAAT";
+
 		// Create Supabase client
 		const supabase = await createClient();
 
@@ -222,6 +241,7 @@ export async function POST(request: NextRequest) {
 			full_name: resultData.full_name.trim(),
 			rank: resultData.rank.trim(),
 			base: resultData.base.trim(),
+			training_type: trainingType,
 			q1_id: resultData.q1_id,
 			q1_result: resultData.q1_result,
 			q2_id: resultData.q2_id,
