@@ -544,7 +544,7 @@ const ResultsTable = () => {
 					: `${selectedYear}-${selectedMonth
 							.toString()
 							.padStart(2, "0")}`;
-			link.download = `test-results-report-${periodSuffix}-${
+			link.download = `口試成績-${periodSuffix}-${
 				new Date().toISOString().split("T")[0]
 			}.png`;
 			link.href = canvas.toDataURL("image/png");
@@ -555,36 +555,55 @@ const ResultsTable = () => {
 		}
 	};
 
-	const handleExportExcel = () => {
+	// Exports a true .xlsx file via ExcelJS instead of a CSV blob. CSVs with
+	// non-ASCII text (Chinese headers/names here) rely on Excel correctly
+	// guessing UTF-8 encoding, which Windows Excel often gets wrong without
+	// a BOM — garbling every Chinese character. A binary .xlsx sidesteps
+	// that guessing entirely. Also drops the "成績" column per request —
+	// "成績百分比" (percentage) is kept, only the redundant "X out of 3"
+	// fraction column is removed.
+	const handleExportExcel = async () => {
 		try {
-			// Convert results to CSV format with question numbers
+			const ExcelJS = (await import("exceljs")).default;
+			const workbook = new ExcelJS.Workbook();
+			const worksheet = workbook.addWorksheet("測驗結果");
+
 			const headers = [
-				"Test Date",
-				"Employee ID",
-				"Full Name",
-				"Rank",
-				"Base",
-				"Training Type",
-				"Q1 Number",
-				"Q1 Result",
-				"Q2 Number",
-				"Q2 Result",
-				"Q3 Number",
-				"Q3 Result",
-				"R1 Number",
-				"R1 Result",
-				"R2 Number",
-				"R2 Result",
-				"Score Percentage",
-				"Score Fraction",
-				"Examiner",
+				"日期",
+				"員編",
+				"姓名",
+				"職位",
+				"基地",
+				"訓練類別",
+				"Q1 題目",
+				"Q1 結果",
+				"Q2 題目",
+				"Q2 結果",
+				"Q3 題目",
+				"Q3 結果",
+				"R1 題目",
+				"R1 結果",
+				"R2 題目",
+				"R2 結果",
+				"成績百分比",
+				"考官",
 			];
 
-			const csvData = results.map((result: EnhancedTestResult) => {
+			const headerRow = worksheet.addRow(headers);
+			headerRow.font = { bold: true };
+			headerRow.eachCell((cell) => {
+				cell.fill = {
+					type: "pattern",
+					pattern: "solid",
+					fgColor: { argb: "FFE8F0FE" },
+				};
+			});
+
+			results.forEach((result: EnhancedTestResult) => {
 				const score = calculateScore(result);
 				const scorePercentage = Math.round((score / 3) * 100);
 
-				return [
+				worksheet.addRow([
 					result.test_date,
 					result.employee_id,
 					result.full_name,
@@ -622,18 +641,21 @@ const ResultsTable = () => {
 						? "V"
 						: "X",
 					`${scorePercentage}%`,
-					`${score} out of 3`,
 					result.examiner_name,
-				];
+				]);
 			});
 
-			const csvContent = [headers, ...csvData]
-				.map((row) => row.map((cell) => `"${cell || ""}"`).join(","))
-				.join("\n");
-
-			const blob = new Blob([csvContent], {
-				type: "text/csv;charset=utf-8;",
+			// Reasonable default column widths so Chinese text and long
+			// values aren't truncated on open.
+			worksheet.columns.forEach((col) => {
+				col.width = 14;
 			});
+
+			const buffer = await workbook.xlsx.writeBuffer();
+			const blob = new Blob([buffer], {
+				type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+			});
+
 			const link = document.createElement("a");
 			link.href = URL.createObjectURL(blob);
 			const periodSuffix =
@@ -642,11 +664,13 @@ const ResultsTable = () => {
 					: `${selectedYear}-${selectedMonth
 							.toString()
 							.padStart(2, "0")}`;
-			link.download = `test-results-${periodSuffix}-${
+			link.download = `口試成績-${periodSuffix}-${
 				new Date().toISOString().split("T")[0]
-			}.csv`;
+			}.xlsx`;
 			link.click();
+			URL.revokeObjectURL(link.href);
 		} catch (err) {
+			console.error("Excel export error:", err);
 			setError("Failed to export Excel file");
 		}
 	};
@@ -840,7 +864,7 @@ const ResultsTable = () => {
 					<button
 						className="btn btn-primary"
 						onClick={handleExportExcel}
-						title="Export current results to CSV"
+						title="Export current results to Excel (.xlsx)"
 					>
 						📊 Export Excel
 					</button>
