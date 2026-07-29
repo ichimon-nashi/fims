@@ -220,9 +220,8 @@ export default function CrewReportTab({
 								key={id}
 								className={styles.tag}
 								style={{
-									background: `${cat.color_hex}26`,
-									color: cat.color_hex,
-									borderColor: `${cat.color_hex}4d`,
+									background: `${cat.color_hex}33`,
+									borderColor: `${cat.color_hex}80`,
 								}}
 							>
 								{cat.name}
@@ -570,7 +569,7 @@ export default function CrewReportTab({
 					    other modals in this component. */}
 					<div className={styles.pieModal}>
 						<div className={styles.modalHeader}>
-							<h2>分類分布圖</h2>
+							<h2>分類圖</h2>
 							<button
 								className={styles.closeButton}
 								onClick={() => setShowPieModal(false)}
@@ -582,45 +581,11 @@ export default function CrewReportTab({
 							{populatedCategories.length === 0 ? (
 								<p className={styles.emptyState}>尚無資料可顯示</p>
 							) : (
-								<div className={styles.pieContent}>
-									<div
-										className={styles.pieCircle}
-										style={{
-											background: buildConicGradient(
-												populatedCategories,
-												categoryCounts,
-												totalTagCount
-											),
-										}}
-									/>
-									<div className={styles.pieLegend}>
-										{populatedCategories.map((cat) => {
-											const count = categoryCounts[cat.id] || 0;
-											const pct = totalTagCount
-												? Math.round(
-														(count / totalTagCount) * 100
-												  )
-												: 0;
-											return (
-												<div
-													key={cat.id}
-													className={styles.pieLegendItem}
-												>
-													<span
-														className={styles.dot}
-														style={{
-															background: cat.color_hex,
-														}}
-													/>
-													{cat.name}
-													<span className={styles.pieLegendStat}>
-														{count} ({pct}%)
-													</span>
-												</div>
-											);
-										})}
-									</div>
-								</div>
+								<CategoryDonutChart
+									categories={populatedCategories}
+									counts={categoryCounts}
+									total={totalTagCount}
+								/>
 							)}
 						</div>
 						<div className={styles.modalFooter}>
@@ -638,20 +603,136 @@ export default function CrewReportTab({
 	);
 }
 
-function buildConicGradient(
-	cats: CrewReportCategory[],
-	counts: Record<string, number>,
-	total: number
-): string {
-	if (total === 0) return "transparent";
+// Polar -> cartesian helper, angle 0 = 12 o'clock, clockwise.
+function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
+	const rad = ((angleDeg - 90) * Math.PI) / 180;
+	return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+
+// A single donut-ring wedge: outer arc, straight line in, inner arc back,
+// close. Standard SVG donut-segment path.
+function describeDonutSlice(
+	cx: number,
+	cy: number,
+	outerR: number,
+	innerR: number,
+	startAngle: number,
+	endAngle: number
+) {
+	const outerStart = polarToCartesian(cx, cy, outerR, startAngle);
+	const outerEnd = polarToCartesian(cx, cy, outerR, endAngle);
+	const innerEnd = polarToCartesian(cx, cy, innerR, endAngle);
+	const innerStart = polarToCartesian(cx, cy, innerR, startAngle);
+	const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+	return [
+		"M", outerStart.x, outerStart.y,
+		"A", outerR, outerR, 0, largeArc, 1, outerEnd.x, outerEnd.y,
+		"L", innerEnd.x, innerEnd.y,
+		"A", innerR, innerR, 0, largeArc, 0, innerStart.x, innerStart.y,
+		"Z",
+	].join(" ");
+}
+
+// Donut chart with every label placed OUTSIDE the ring via a short leader
+// line — never on top of a color fill, which sidesteps the contrast problem
+// entirely (no need to pick per-slice text color). A center total count
+// replaces the need for a separate legend. viewBox has generous margin so
+// labels never clip regardless of how narrow the modal renders.
+function CategoryDonutChart({
+	categories,
+	counts,
+	total,
+}: {
+	categories: CrewReportCategory[];
+	counts: Record<string, number>;
+	total: number;
+}) {
+	const cx = 180;
+	const cy = 180;
+	const outerR = 95;
+	const innerR = 52;
+
 	let cursor = 0;
-	const stops = cats.map((cat) => {
+	const slices = categories.map((cat) => {
 		const count = counts[cat.id] || 0;
-		const degrees = (count / total) * 360;
+		const angle = total ? (count / total) * 360 : 0;
 		const start = cursor;
-		const end = cursor + degrees;
+		const end = cursor + angle;
 		cursor = end;
-		return `${cat.color_hex} ${start}deg ${end}deg`;
+		const mid = (start + end) / 2;
+		const pct = total ? Math.round((count / total) * 100) : 0;
+		return { cat, count, pct, start, end, mid, angle };
 	});
-	return `conic-gradient(${stops.join(", ")})`;
+
+	return (
+		<svg
+			viewBox="0 0 360 360"
+			width="100%"
+			style={{ maxWidth: "440px", display: "block", margin: "0 auto" }}
+		>
+			{slices.map((s) => (
+				<path
+					key={s.cat.id}
+					d={describeDonutSlice(cx, cy, outerR, innerR, s.start, s.end)}
+					fill={s.cat.color_hex}
+					stroke="#1a1f35"
+					strokeWidth={2}
+				/>
+			))}
+
+			{/* Center total — replaces the need for a legend to see the whole-count. */}
+			<text
+				x={cx}
+				y={cy - 6}
+				textAnchor="middle"
+				dominantBaseline="middle"
+				fontSize="26"
+				fontWeight="700"
+				fill="#e8e9ed"
+			>
+				{total}
+			</text>
+			<text
+				x={cx}
+				y={cy + 16}
+				textAnchor="middle"
+				dominantBaseline="middle"
+				fontSize="12"
+				fill="#a0aec0"
+			>
+				總筆數
+			</text>
+
+			{slices.map((s) => {
+				const lineStart = polarToCartesian(cx, cy, outerR + 2, s.mid);
+				const lineBend = polarToCartesian(cx, cy, outerR + 14, s.mid);
+				const labelPos = polarToCartesian(cx, cy, outerR + 18, s.mid);
+				const sinMid = Math.sin(((s.mid - 90) * Math.PI) / 180);
+				const anchor = sinMid > 0.15 ? "start" : sinMid < -0.15 ? "end" : "middle";
+				return (
+					<g key={`${s.cat.id}-label`}>
+						<line
+							x1={lineStart.x}
+							y1={lineStart.y}
+							x2={lineBend.x}
+							y2={lineBend.y}
+							stroke={s.cat.color_hex}
+							strokeWidth={1.5}
+						/>
+						<text
+							x={labelPos.x}
+							y={labelPos.y}
+							textAnchor={anchor as any}
+							dominantBaseline="middle"
+							fontSize="12"
+							fontWeight="600"
+							fill="#e8e9ed"
+						>
+							{s.cat.name} {s.pct}%
+						</text>
+					</g>
+				);
+			})}
+		</svg>
+	);
 }

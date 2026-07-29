@@ -278,7 +278,7 @@
 .catHeader h3 {
 	margin: 0;
 	color: #4a9eff;
-	font-size: 1.15rem;
+	font-size: 1.2rem;
 	font-weight: 600;
 }
 
@@ -339,7 +339,7 @@
 	font-weight: 600;
 	color: #4a9eff;
 	border-bottom: 2px solid rgba(74, 158, 255, 0.3);
-	font-size: 0.78rem;
+	font-size: 0.85rem;
 	text-transform: uppercase;
 	letter-spacing: 0.5px;
 	white-space: nowrap;
@@ -348,7 +348,7 @@
 .table td {
 	padding: 0.75rem;
 	color: #e8e9ed;
-	font-size: 0.85rem;
+	font-size: 0.9rem;
 	text-align: center;
 	border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 	vertical-align: top;
@@ -395,10 +395,11 @@
 .tag {
 	display: inline-flex;
 	align-items: center;
-	padding: 0.25rem 0.55rem;
+	padding: 0.3rem 0.65rem;
 	border-radius: 6px;
-	font-size: 0.72rem;
+	font-size: 0.8rem;
 	font-weight: 600;
+	color: #e8e9ed;
 	border: 1px solid;
 }
 
@@ -446,7 +447,7 @@
 	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
 	border-radius: 16px;
 	width: 100%;
-	max-width: 560px;
+	max-width: 540px;
 	border: 1px solid rgba(255, 255, 255, 0.1);
 	box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
@@ -492,41 +493,6 @@
 
 .pieModalBody {
 	padding: 1.5rem;
-}
-
-.pieContent {
-	display: flex;
-	gap: 2rem;
-	align-items: center;
-	flex-wrap: wrap;
-	justify-content: center;
-}
-
-.pieCircle {
-	width: 180px;
-	height: 180px;
-	border-radius: 50%;
-	flex-shrink: 0;
-	box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
-}
-
-.pieLegend {
-	display: flex;
-	flex-direction: column;
-	gap: 0.6rem;
-}
-
-.pieLegendItem {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	font-size: 0.9rem;
-	color: #e8e9ed;
-}
-
-.pieLegendStat {
-	color: #6b7280;
-	font-size: 0.8rem;
 }
 
 .modalFooter {
@@ -592,9 +558,5 @@
 	.iconBtnSm {
 		min-width: 44px;
 		min-height: 44px;
-	}
-
-	.pieContent {
-		flex-direction: column;
 	}
 }

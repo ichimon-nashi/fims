@@ -22,6 +22,18 @@ function parseHazCode(code: string | null | undefined) {
 	return { digits1: match[1], digits2: match[2] };
 }
 
+// Half of the 10 reserved category colors (lime, cyan, pink, tan, stone) are
+// light enough that white text on a solid fill of them is hard to read — a
+// fixed "always white" text color can't work for a palette this varied.
+// Compute perceived luminance and pick dark or light text accordingly.
+function getContrastTextColor(hex: string): string {
+	const r = parseInt(hex.slice(1, 3), 16);
+	const g = parseInt(hex.slice(3, 5), 16);
+	const b = parseInt(hex.slice(5, 7), 16);
+	const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+	return luminance > 0.6 ? "#1a1f35" : "#e8e9ed";
+}
+
 export default function CrewReportModal({
 	entry,
 	categories,
@@ -39,7 +51,6 @@ export default function CrewReportModal({
 	const [description, setDescription] = useState("");
 	const [actionTaken, setActionTaken] = useState("");
 	const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
-	const [pickerOpen, setPickerOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
 
 	useEffect(() => {
@@ -96,10 +107,7 @@ export default function CrewReportModal({
 			return;
 		}
 
-		if (selectedCategoryIds.length === 0) {
-			alert("請至少選擇一個分類");
-			return;
-		}
+		// 分類 is optional — no validation on selectedCategoryIds.
 
 		const [yearStr, monthStr] = yearMonth.split("-");
 		if (!yearStr || !monthStr) {
@@ -259,79 +267,48 @@ export default function CrewReportModal({
 						</div>
 
 						<div className={styles.formGroup}>
-							<label>
-								分類 <span className={styles.required}>*</span>
-							</label>
-							<div className={styles.tagPickerBox}>
-								{selectedCategoryIds.length === 0 && (
+							<label>分類</label>
+							<div className={styles.pillGrid}>
+								{pickableCategories.length === 0 && (
 									<span className={styles.placeholder}>
-										尚未選擇分類
+										尚無可選分類
 									</span>
 								)}
-								{selectedCategoryIds.map((id) => {
-									const cat = categories.find((c) => c.id === id);
-									if (!cat) return null;
-									return (
-										<span
-											key={id}
-											className={styles.tag}
-											style={{
-												background: `${cat.color_hex}26`,
-												color: cat.color_hex,
-												borderColor: `${cat.color_hex}4d`,
-											}}
-										>
-											{cat.name}
-											<button
-												type="button"
-												onClick={() => toggleCategory(id)}
-												className={styles.removeTag}
-											>
-												×
-											</button>
-										</span>
+								{pickableCategories.map((cat) => {
+									const selected = selectedCategoryIds.includes(
+										cat.id
 									);
-								})}
-							</div>
-							<button
-								type="button"
-								onClick={() => setPickerOpen(!pickerOpen)}
-								className={styles.pickerToggle}
-							>
-								{pickerOpen ? "關閉分類選單" : "+ 新增分類"}
-							</button>
-							{pickerOpen && (
-								<div className={styles.pickerList}>
-									{pickableCategories.map((cat) => (
-										<label
+									return (
+										<button
 											key={cat.id}
-											className={styles.pickerItem}
+											type="button"
+											onClick={() => toggleCategory(cat.id)}
+											className={styles.pill}
+											style={
+												selected
+													? {
+															background: cat.color_hex,
+															borderColor: cat.color_hex,
+															color: getContrastTextColor(cat.color_hex),
+													  }
+													: {
+															background: `${cat.color_hex}1f`,
+															borderColor: `${cat.color_hex}66`,
+													  }
+											}
 										>
-											<input
-												type="checkbox"
-												checked={selectedCategoryIds.includes(
-													cat.id
-												)}
-												onChange={() => toggleCategory(cat.id)}
-											/>
-											<span
-												className={styles.dot}
-												style={{
-													background: cat.color_hex,
-												}}
-											/>
 											{cat.name}
 											{!cat.active && (
 												<span
-													className={styles.inactiveTag}
+													className={styles.pillInactiveTag}
 												>
-													已停用
+													（已停用）
 												</span>
 											)}
-										</label>
-									))}
-								</div>
-							)}
+										</button>
+									);
+								})}
+							</div>
 						</div>
 
 						<div className={styles.formGroup}>

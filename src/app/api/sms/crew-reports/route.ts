@@ -59,14 +59,9 @@ export async function POST(request: NextRequest) {
 		const body = await request.json();
 
 		// Validate required fields. report_code is intentionally NOT required —
-		// "其他來源" reports have no code.
-		if (
-			!body.report_year ||
-			!body.report_month ||
-			!body.description ||
-			!Array.isArray(body.category_ids) ||
-			body.category_ids.length === 0
-		) {
+		// "其他來源" reports have no code. category_ids is also NOT required —
+		// 分類 is optional.
+		if (!body.report_year || !body.report_month || !body.description) {
 			return NextResponse.json(
 				{ error: "Missing required fields" },
 				{ status: 400 }
@@ -81,7 +76,7 @@ export async function POST(request: NextRequest) {
 			report_month: body.report_month,
 			description: body.description,
 			action_taken: body.action_taken || null,
-			category_ids: body.category_ids,
+			category_ids: Array.isArray(body.category_ids) ? body.category_ids : [],
 			created_by: permissions.userId!,
 		});
 
