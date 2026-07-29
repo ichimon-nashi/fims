@@ -1,0 +1,295 @@
+/* src/components/sms/CrewReportCategoryModal.module.css */
+
+.modalOverlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.7);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+	padding: 1rem;
+	backdrop-filter: blur(4px);
+	/* Deliberately no onClick={onClose} here — clicking outside must not
+	   close this modal while an admin is mid-edit. */
+}
+
+.modal {
+	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+	border-radius: 16px;
+	width: 100%;
+	max-width: 560px;
+	max-height: 90vh;
+	overflow-y: auto;
+	box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modalHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1.5rem;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	background: rgba(255, 255, 255, 0.03);
+	position: sticky;
+	top: 0;
+	z-index: 10;
+}
+
+.modalHeader h2 {
+	margin: 0;
+	color: #4a9eff;
+	font-size: 1.3rem;
+	font-weight: 600;
+}
+
+.closeButton {
+	background: rgba(255, 255, 255, 0.1);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	color: white;
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 1.5rem;
+	line-height: 1;
+	padding: 0;
+	transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+	background: rgba(239, 68, 68, 0.3);
+	border-color: #ef4444;
+	transform: rotate(90deg);
+}
+
+.form {
+	padding: 1.5rem;
+}
+
+.formGroup {
+	margin-bottom: 1rem;
+}
+
+.formGroup label {
+	display: block;
+	margin-bottom: 0.5rem;
+	color: #a0aec0;
+	font-weight: 500;
+	font-size: 0.9rem;
+}
+
+.input {
+	width: 100%;
+	padding: 0.75rem;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-radius: 8px;
+	color: #e8e9ed;
+	font-size: 0.95rem;
+}
+
+.input:focus {
+	outline: none;
+	background: rgba(255, 255, 255, 0.08);
+	border-color: #4a9eff;
+}
+
+.colorSwatchRow {
+	display: flex;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+	margin-top: 0.5rem;
+}
+
+.colorSwatch {
+	width: 26px;
+	height: 26px;
+	border-radius: 50%;
+	cursor: pointer;
+	border: 2px solid transparent;
+	transition: transform 0.15s ease;
+}
+
+.colorSwatch:hover {
+	transform: scale(1.1);
+}
+
+.colorSwatch.selected {
+	border-color: #e8e9ed;
+	box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.5);
+}
+
+.addButton {
+	margin-top: 0.75rem;
+	width: 100%;
+	padding: 0.75rem;
+	background: linear-gradient(135deg, #4a9eff, #357abd);
+	color: white;
+	border: none;
+	border-radius: 8px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.addButton:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 8px rgba(74, 158, 255, 0.4);
+}
+
+.addButton:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.categoryList {
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	overflow: hidden;
+	margin-top: 1rem;
+}
+
+.categoryRow {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.65rem 0.75rem;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.categoryRow:last-child {
+	border-bottom: none;
+}
+
+.categoryRow.inactive .name {
+	color: #6b7280;
+	text-decoration: line-through;
+}
+
+.dot {
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+
+.name {
+	flex: 1;
+	color: #e8e9ed;
+	font-size: 0.9rem;
+}
+
+.count {
+	color: #6b7280;
+	font-size: 0.75rem;
+	white-space: nowrap;
+}
+
+.iconBtn {
+	padding: 0.35rem 0.6rem;
+	border: 1px solid rgba(255, 255, 255, 0.15);
+	background: rgba(255, 255, 255, 0.05);
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 0.78rem;
+	color: #e8e9ed;
+	white-space: nowrap;
+}
+
+.iconBtn:hover {
+	background: rgba(74, 158, 255, 0.15);
+	border-color: #4a9eff;
+}
+
+.deleteBtn {
+	color: #fca5a5;
+	border-color: rgba(239, 68, 68, 0.25);
+}
+
+.deleteBtn:hover {
+	background: rgba(239, 68, 68, 0.15) !important;
+	border-color: #ef4444 !important;
+	color: #fca5a5;
+}
+
+.editRow {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	width: 100%;
+}
+
+.editActions {
+	display: flex;
+	gap: 0.5rem;
+	justify-content: flex-end;
+}
+
+.emptyState {
+	padding: 1.5rem;
+	text-align: center;
+	color: #6b7280;
+	font-style: italic;
+}
+
+.inlineNote {
+	margin-top: 0.75rem;
+	color: #6b7280;
+	font-size: 0.75rem;
+}
+
+.modalFooter {
+	padding: 1rem 1.5rem;
+	border-top: 1px solid rgba(255, 255, 255, 0.1);
+	display: flex;
+	justify-content: flex-end;
+	background: rgba(255, 255, 255, 0.02);
+	position: sticky;
+	bottom: 0;
+}
+
+.doneButton {
+	padding: 0.75rem 2rem;
+	background: linear-gradient(135deg, #4a9eff, #357abd);
+	color: white;
+	border: none;
+	border-radius: 8px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s;
+}
+
+.doneButton:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 8px rgba(74, 158, 255, 0.4);
+}
+
+/* Mobile Responsive */
+@media (max-width: 600px) {
+	.modal {
+		max-width: 98vw;
+		max-height: 95vh;
+	}
+
+	.modalHeader,
+	.form,
+	.modalFooter {
+		padding: 1rem;
+	}
+
+	.categoryRow {
+		flex-wrap: wrap;
+	}
+
+	.iconBtn {
+		min-height: 44px; /* touch target */
+	}
+}

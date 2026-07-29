@@ -11,6 +11,9 @@ import {
 	SRMTableFilters,
 	StatisticsFilters,
 	MonthlyStatistics,
+	CrewReportCategory,
+	CrewReport,
+	CrewReportFilters,
 } from "./sms.types";
 
 // ============================================================================
@@ -502,5 +505,253 @@ export const getSRMTableEntryById = async (
 	} catch (error) {
 		console.error("Error getting SRM table entry by ID:", error);
 		throw new Error("Failed to fetch SRM table entry");
+	}
+};
+
+// ============================================================================
+// CREW REPORT CATEGORIES (組員報告分類)
+// ============================================================================
+
+export const getCrewReportCategories = async (
+	includeInactive: boolean = true
+): Promise<CrewReportCategory[]> => {
+	try {
+		console.log("Getting crew report categories, includeInactive:", includeInactive);
+
+		const supabase = createServiceClient();
+
+		let query = supabase
+			.from("crew_report_categories")
+			.select("*")
+			.order("created_at", { ascending: true });
+
+		if (!includeInactive) {
+			query = query.eq("active", true);
+		}
+
+		const { data, error } = await query;
+
+		if (error) {
+			console.error("Error getting crew report categories:", error);
+			throw error;
+		}
+
+		console.log("Found crew report categories:", data?.length || 0);
+		return data || [];
+	} catch (error) {
+		console.error("Error getting crew report categories:", error);
+		throw new Error("Failed to fetch crew report categories");
+	}
+};
+
+export const createCrewReportCategory = async (categoryData: {
+	name: string;
+	color_hex: string;
+	created_by: string;
+}): Promise<CrewReportCategory> => {
+	try {
+		console.log("Creating crew report category:", categoryData.name);
+
+		const supabase = createServiceClient();
+
+		const { data, error } = await supabase
+			.from("crew_report_categories")
+			.insert([categoryData])
+			.select()
+			.single();
+
+		if (error) {
+			console.error("Error creating crew report category:", error);
+			if (error.code === "23505") {
+				throw new Error("A category with this name already exists");
+			}
+			throw error;
+		}
+
+		console.log("Crew report category created successfully:", data.id);
+		return data;
+	} catch (error) {
+		console.error("Error creating crew report category:", error);
+		throw error;
+	}
+};
+
+export const updateCrewReportCategory = async (
+	id: string,
+	updates: Partial<{
+		name: string;
+		color_hex: string;
+		active: boolean;
+	}>
+): Promise<CrewReportCategory> => {
+	try {
+		console.log("Updating crew report category:", id);
+
+		const supabase = createServiceClient();
+
+		const { data, error } = await supabase
+			.from("crew_report_categories")
+			.update(updates)
+			.eq("id", id)
+			.select()
+			.single();
+
+		if (error) {
+			console.error("Error updating crew report category:", error);
+			if (error.code === "23505") {
+				throw new Error("A category with this name already exists");
+			}
+			throw error;
+		}
+
+		console.log("Crew report category updated successfully");
+		return data;
+	} catch (error) {
+		console.error("Error updating crew report category:", error);
+		throw error;
+	}
+};
+
+// Note: no hard-delete function — categories are only ever soft-deleted via
+// updateCrewReportCategory(id, { active: false }), so a category's name and
+// color remain resolvable for any report that already references it.
+
+// ============================================================================
+// CREW REPORTS (組員報告)
+
+// ============================================================================
+
+export const getCrewReports = async (
+	filters: CrewReportFilters = {}
+): Promise<CrewReport[]> => {
+	try {
+		console.log("Getting crew reports with filters:", filters);
+
+		const supabase = createServiceClient();
+
+		let query = supabase
+			.from("crew_reports")
+			.select("*")
+			.order("report_year", { ascending: false })
+			.order("report_month", { ascending: false })
+			.order("created_at", { ascending: false });
+
+		if (filters.year) {
+			query = query.eq("report_year", filters.year);
+		}
+
+		if (filters.month) {
+			query = query.eq("report_month", filters.month);
+		}
+
+		if (filters.category_id) {
+			query = query.contains("category_ids", [filters.category_id]);
+		}
+
+		if (filters.search) {
+			query = query.or(
+				`description.ilike.%${filters.search}%,report_code.ilike.%${filters.search}%,action_taken.ilike.%${filters.search}%`
+			);
+		}
+
+		const { data, error } = await query;
+
+		if (error) {
+			console.error("Error getting crew reports:", error);
+			throw error;
+		}
+
+		console.log("Found crew reports:", data?.length || 0);
+		return data || [];
+	} catch (error) {
+		console.error("Error getting crew reports:", error);
+		throw new Error("Failed to fetch crew reports");
+	}
+};
+
+export const createCrewReport = async (reportData: {
+	report_code?: string | null;
+	report_year: number;
+	report_month: number;
+	description: string;
+	action_taken?: string | null;
+	category_ids: string[];
+	created_by: string;
+}): Promise<CrewReport> => {
+	try {
+		console.log("Creating crew report:", reportData.report_code || "NIL");
+
+		const supabase = createServiceClient();
+
+		const { data, error } = await supabase
+			.from("crew_reports")
+			.insert([reportData])
+			.select()
+			.single();
+
+		if (error) {
+			console.error("Error creating crew report:", error);
+			throw error;
+		}
+
+		console.log("Crew report created successfully:", data.id);
+		return data;
+	} catch (error) {
+		console.error("Error creating crew report:", error);
+		throw error;
+	}
+};
+
+export const updateCrewReport = async (
+	id: string,
+	updates: Partial<
+		Omit<CrewReport, "id" | "created_at" | "created_by">
+	>
+): Promise<CrewReport> => {
+	try {
+		console.log("Updating crew report:", id);
+
+		const supabase = createServiceClient();
+
+		const { data, error } = await supabase
+			.from("crew_reports")
+			.update(updates)
+			.eq("id", id)
+			.select()
+			.single();
+
+		if (error) {
+			console.error("Error updating crew report:", error);
+			throw error;
+		}
+
+		console.log("Crew report updated successfully");
+		return data;
+	} catch (error) {
+		console.error("Error updating crew report:", error);
+		throw error;
+	}
+};
+
+export const deleteCrewReport = async (id: string): Promise<void> => {
+	try {
+		console.log("Deleting crew report:", id);
+
+		const supabase = createServiceClient();
+
+		const { error } = await supabase
+			.from("crew_reports")
+			.delete()
+			.eq("id", id);
+
+		if (error) {
+			console.error("Error deleting crew report:", error);
+			throw error;
+		}
+
+		console.log("Crew report deleted successfully");
+	} catch (error) {
+		console.error("Error deleting crew report:", error);
+		throw error;
 	}
 };

@@ -514,10 +514,10 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 					</button>
 					<div className={styles.footerInfo}>
 						<div className={styles.appVersion}>
-							豪神教師管理系統 v2.4.2
+							豪神教師管理系統 v2.5.1
 						</div>
 						<div className={styles.lastUpdate}>
-							最後更新: 2026/07/22
+							最後更新: 2026/07/29
 						</div>
 					</div>
 				</div>

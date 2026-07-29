@@ -10,8 +10,9 @@ import styles from './SMS.module.css';
 import RRSMSTab from '@/components/sms/RRSMSTab';
 import SRMTableTab from '@/components/sms/SRMTableTab';
 import StatisticsTab from '@/components/sms/StatisticsTab';
+import CrewReportTab from '@/components/sms/CrewReportTab';
 
-type SMSTab = 'rr-sms' | 'srm-table' | 'statistics';
+type SMSTab = 'rr-sms' | 'srm-table' | 'statistics' | 'crew-report';
 
 function SMSContent() {
   const { user, token } = useAuth();
@@ -105,6 +106,13 @@ function SMSContent() {
             風險統計
             <span className={styles.tabSubtitle}>Statistics</span>
           </button>
+          <button
+            className={`${styles.tab} ${activeTab === 'crew-report' ? styles.activeTab : ''}`}
+            onClick={() => setActiveTab('crew-report')}
+          >
+            組員報告
+            <span className={styles.tabSubtitle}>Crew Report</span>
+          </button>
         </div>
 
         <div className={styles.tabContent}>
@@ -124,6 +132,13 @@ function SMSContent() {
           )}
           {activeTab === 'statistics' && (
             <StatisticsTab isAdmin={canEdit} />
+          )}
+          {activeTab === 'crew-report' && (
+            <CrewReportTab
+              currentYear={currentYear}
+              userId={user.id}
+              isAdmin={canEdit}
+            />
           )}
         </div>
       </div>

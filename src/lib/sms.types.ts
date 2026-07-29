@@ -140,5 +140,55 @@ export interface SRMTableFilters {
 	search?: string; // For searching in descriptions
 }
 
+// ============================================================================
+// CREW REPORTS (組員報告)
+// ============================================================================
+
+export interface CrewReportCategory {
+	id: string;
+	name: string;
+	color_hex: string;
+	active: boolean;
+	created_at: string;
+	created_by?: string;
+}
+
+export interface CrewReport {
+	id: string;
+	report_code?: string | null; // null = no code ("其他來源"); UI displays "NIL" as a fallback, never stored as a string
+	report_year: number;
+	report_month: number; // 1-12
+	description: string;
+	action_taken?: string | null;
+	category_ids: string[]; // FK into crew_report_categories.id, multiple allowed
+	created_at: string;
+	created_by?: string;
+}
+
+export interface CrewReportFilters {
+	year?: number;
+	month?: number;
+	category_id?: string;
+	search?: string; // matches description / report_code / action_taken
+}
+
+// Reserved 10-color palette for the category-creation color picker.
+// 5 reuse existing app colors; 5 are new (lime/cyan/pink/tan/stone) — the one
+// documented exception to "no invented color values," since categories are a
+// new concept with no precedent in the existing palette. Re-picked for max hue
+// separation + legibility against the #1a1f35->#2d3651 dark background.
+export const CREW_REPORT_CATEGORY_COLORS: string[] = [
+	"#4a9eff", // blue
+	"#ef4444", // red
+	"#f59e0b", // amber
+	"#10b981", // emerald
+	"#8b5cf6", // purple
+	"#a3e635", // lime
+	"#22d3ee", // cyan
+	"#f472b6", // pink
+	"#d4a373", // tan
+	"#a8a29e", // stone (neutral - good default for "其他"-style categories)
+];
+
 // Tab types
-export type SMSTab = "rr-sms" | "srm-table" | "statistics";
+export type SMSTab = "rr-sms" | "srm-table" | "statistics" | "crew-report";
