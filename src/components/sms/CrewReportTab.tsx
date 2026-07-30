@@ -665,11 +665,7 @@ function CategoryDonutChart({
 	});
 
 	return (
-		<svg
-			viewBox="0 0 360 360"
-			width="100%"
-			style={{ maxWidth: "440px", display: "block", margin: "0 auto" }}
-		>
+		<svg viewBox="0 0 360 360" className={styles.donutSvg}>
 			{slices.map((s) => (
 				<path
 					key={s.cat.id}
@@ -677,7 +673,12 @@ function CategoryDonutChart({
 					fill={s.cat.color_hex}
 					stroke="#1a1f35"
 					strokeWidth={2}
-				/>
+					strokeLinejoin="round"
+				>
+					<title>
+						{s.cat.name}: {s.count} ({s.pct}%)
+					</title>
+				</path>
 			))}
 
 			{/* Center total — replaces the need for a legend to see the whole-count. */}
@@ -707,8 +708,8 @@ function CategoryDonutChart({
 				const lineStart = polarToCartesian(cx, cy, outerR + 2, s.mid);
 				const lineBend = polarToCartesian(cx, cy, outerR + 14, s.mid);
 				const labelPos = polarToCartesian(cx, cy, outerR + 18, s.mid);
-				const sinMid = Math.sin(((s.mid - 90) * Math.PI) / 180);
-				const anchor = sinMid > 0.15 ? "start" : sinMid < -0.15 ? "end" : "middle";
+				const cosMid = Math.cos(((s.mid - 90) * Math.PI) / 180);
+				const anchor = cosMid > 0.15 ? "start" : cosMid < -0.15 ? "end" : "middle";
 				return (
 					<g key={`${s.cat.id}-label`}>
 						<line
@@ -718,6 +719,7 @@ function CategoryDonutChart({
 							y2={lineBend.y}
 							stroke={s.cat.color_hex}
 							strokeWidth={1.5}
+						strokeLinecap="round"
 						/>
 						<text
 							x={labelPos.x}

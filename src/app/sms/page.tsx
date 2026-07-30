@@ -107,7 +107,7 @@ function SMSContent() {
             <span className={styles.tabSubtitle}>Statistics</span>
           </button>
           <button
-            className={`${styles.tab} ${activeTab === 'crew-report' ? styles.activeTab : ''}`}
+            className={`${styles.tab} ${activeTab === 'crew-report' ? `${styles.activeTab} ${styles.crewReportActiveTab}` : ''}`}
             onClick={() => setActiveTab('crew-report')}
           >
             組員報告

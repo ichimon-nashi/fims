@@ -160,6 +160,18 @@
 	box-shadow: 0 -2px 8px rgba(74, 158, 255, 0.2);
 }
 
+/* 組員報告 uses a distinct orange active-state instead of the standard blue,
+   so it reads visually apart from the other three risk/audit-focused tabs.
+   Deliberately NOT the same #f59e0b used for "medium risk"/"due soon" status
+   elsewhere in this app, to avoid the active-tab color being mistaken for a
+   warning/alert state. */
+.tab.crewReportActiveTab {
+	background: rgba(251, 146, 60, 0.15);
+	color: #fb923c;
+	border-bottom-color: #fb923c;
+	box-shadow: 0 -2px 8px rgba(251, 146, 60, 0.2);
+}
+
 .tabSubtitle {
 	font-size: 0.75rem;
 	font-weight: 400;

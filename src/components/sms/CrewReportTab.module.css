@@ -42,9 +42,9 @@
 	align-items: center;
 	gap: 0.4rem;
 	padding: 0.5rem 0.85rem;
-	background: transparent;
-	color: #6b7280;
-	border: 1px solid rgba(255, 255, 255, 0.08);
+	background: rgba(139, 92, 246, 0.08);
+	color: #a78bfa;
+	border: 1px solid rgba(139, 92, 246, 0.25);
 	border-radius: 8px;
 	font-size: 0.78rem;
 	cursor: pointer;
@@ -52,8 +52,9 @@
 }
 
 .btnSettings:hover {
-	color: #a0aec0;
-	border-color: rgba(255, 255, 255, 0.15);
+	background: rgba(139, 92, 246, 0.15);
+	color: #c4b5fd;
+	border-color: rgba(139, 92, 246, 0.4);
 }
 
 /* Toolbar */
@@ -448,8 +449,36 @@
 	border-radius: 16px;
 	width: 100%;
 	max-width: 540px;
+	max-height: 90vh;
+	overflow-y: auto;
 	border: 1px solid rgba(255, 255, 255, 0.1);
 	box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+/* Larger modal + chart on wider screens, since there's room to use it */
+@media (min-width: 900px) {
+	.pieModal {
+		max-width: 720px;
+	}
+}
+
+.donutSvg {
+	width: 100%;
+	max-width: 380px;
+	display: block;
+	margin: 0 auto;
+}
+
+@media (min-width: 640px) {
+	.donutSvg {
+		max-width: 480px;
+	}
+}
+
+@media (min-width: 900px) {
+	.donutSvg {
+		max-width: 620px;
+	}
 }
 
 .modalHeader {
