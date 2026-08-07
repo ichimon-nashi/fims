@@ -3,13 +3,17 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./RoutineEntryModal.module.css";
-import { RoutineAuditEntry, SamCode, CreateEntryPayload } from "@/lib/routineAudit.types";
+import { RoutineAuditEntry, CreateEntryPayload } from "@/lib/routineAudit.types";
+import { EF_ATTRIBUTE_CATEGORIES } from "@/lib/sms.constants";
+import { SAM_AREAS, SAM_CODE_MAP, EF_CODE_MAP } from "@/lib/routineAudit.constants";
 
 interface FindingDraft {
+	id?: string; // present = existing DB row (PATCH/DELETE on save/remove); absent = new draft (POST on save, local-only on remove)
 	finding: string;
 	corrective_action: string;
 	result: "OK" | "NG";
-	sam_code_id: string | null;
+	sam_code: string | null;
+	ef_code: string | null;
 	is_non_flight_safety: boolean;
 }
 
@@ -26,9 +30,7 @@ interface HeaderDraft {
 interface Props {
 	open: boolean;
 	mode: "create" | "edit";
-	editingEntry: RoutineAuditEntry | null;
-	prefillEntryNo: string | null; // set when adding finding(s) to an existing audit
-	samCodes: SamCode[];
+	editingEntries: RoutineAuditEntry[] | null; // all findings sharing one entry_no
 	onClose: () => void;
 	onSaved: () => void;
 }
@@ -47,7 +49,8 @@ const emptyFinding: FindingDraft = {
 	finding: "",
 	corrective_action: "",
 	result: "OK",
-	sam_code_id: null,
+	sam_code: null,
+	ef_code: null,
 	is_non_flight_safety: false,
 };
 
@@ -87,20 +90,33 @@ interface UserOption {
 	employee_id: string;
 	full_name: string;
 	rank: string;
+	avatar_url: string;
 }
 
 function DateField({ value, onChange }: { value: string; onChange: (iso: string) => void }) {
-	const [y, m, d] = value ? value.split("-") : ["", "", ""];
+	const [segs, setSegs] = useState(() => {
+		const [y, m, d] = value ? value.split("-") : ["", "", ""];
+		return { y: y || "", m: m || "", d: d || "" };
+	});
 	const yearRef = useRef<HTMLInputElement>(null);
 	const monthRef = useRef<HTMLInputElement>(null);
 	const dayRef = useRef<HTMLInputElement>(null);
 
-	function emit(ny: string, nm: string, nd: string) {
-		if (ny.length === 4 && nm.length >= 1 && nd.length >= 1) {
-			onChange(`${ny}-${nm.padStart(2, "0")}-${nd.padStart(2, "0")}`);
-		} else {
-			onChange(""); // incomplete — don't hand the parent a partial/invalid date
+	// only resync from the parent on a genuine external change (e.g. loading
+	// an existing record into edit mode) — never mid-typing, since a partial
+	// date intentionally does NOT round-trip through onChange below
+	useEffect(() => {
+		const [y, m, d] = value ? value.split("-") : ["", "", ""];
+		setSegs({ y: y || "", m: m || "", d: d || "" });
+	}, [value]);
+
+	function update(next: { y: string; m: string; d: string }) {
+		setSegs(next);
+		if (next.y.length === 4 && next.m.length >= 1 && next.d.length >= 1) {
+			onChange(`${next.y}-${next.m.padStart(2, "0")}-${next.d.padStart(2, "0")}`);
 		}
+		// incomplete — deliberately don't call onChange; parent keeps its
+		// last valid value until this field is actually complete
 	}
 
 	return (
@@ -108,12 +124,13 @@ function DateField({ value, onChange }: { value: string; onChange: (iso: string)
 			<input
 				ref={yearRef}
 				className={styles.dateYear}
-				value={y}
+				value={segs.y}
 				placeholder="yyyy"
 				inputMode="numeric"
+				maxLength={4}
 				onChange={(e) => {
 					const v = e.target.value.replace(/\D/g, "").slice(0, 4);
-					emit(v, m, d);
+					update({ ...segs, y: v });
 					if (v.length === 4) monthRef.current?.focus();
 				}}
 			/>
@@ -121,12 +138,13 @@ function DateField({ value, onChange }: { value: string; onChange: (iso: string)
 			<input
 				ref={monthRef}
 				className={styles.dateSmall}
-				value={m}
+				value={segs.m}
 				placeholder="mm"
 				inputMode="numeric"
+				maxLength={2}
 				onChange={(e) => {
 					const v = e.target.value.replace(/\D/g, "").slice(0, 2);
-					emit(y, v, d);
+					update({ ...segs, m: v });
 					if (v.length === 2) dayRef.current?.focus();
 				}}
 			/>
@@ -134,12 +152,13 @@ function DateField({ value, onChange }: { value: string; onChange: (iso: string)
 			<input
 				ref={dayRef}
 				className={styles.dateSmall}
-				value={d}
+				value={segs.d}
 				placeholder="dd"
 				inputMode="numeric"
+				maxLength={2}
 				onChange={(e) => {
 					const v = e.target.value.replace(/\D/g, "").slice(0, 2);
-					emit(y, m, v);
+					update({ ...segs, d: v });
 				}}
 			/>
 		</div>
@@ -219,6 +238,14 @@ function AuditorField({ value, onChange }: { value: string; onChange: (name: str
 				<div className={styles.auditorDropdown} style={popStyle}>
 					{options.map((u) => (
 						<div key={u.employee_id} className={styles.auditorOption} onMouseDown={() => select(u)}>
+							<img
+								src={u.avatar_url}
+								alt=""
+								className={styles.auditorAvatar}
+								onError={(e) => {
+									(e.target as HTMLImageElement).style.visibility = "hidden";
+								}}
+							/>
 							<span>{u.full_name}</span>
 							<span className={styles.auditorMeta}>{u.employee_id}</span>
 						</div>
@@ -229,57 +256,50 @@ function AuditorField({ value, onChange }: { value: string; onChange: (name: str
 	);
 }
 
-function SamCodeField({
-	samCodes,
-	value,
-	onChange,
-}: {
-	samCodes: SamCode[];
-	value: string | null;
-	onChange: (id: string | null) => void;
-}) {
+function SamCodeField({ value, onChange }: { value: string | null; onChange: (code: string | null) => void }) {
 	const [open, setOpen] = useState(false);
 	const [query, setQuery] = useState("");
-	const [popStyle, setPopStyle] = useState<React.CSSProperties>({});
-	const triggerRef = useRef<HTMLButtonElement>(null);
+	const [selectedCategory, setSelectedCategory] = useState<string>(
+		SAM_AREAS[0]?.categories[0]?.name ?? ""
+	);
 
-	const selected = samCodes.find((c) => c.id === value) ?? null;
+	const selected = value ? SAM_CODE_MAP[value] : null;
 
-	const grouped = useMemo(() => {
-		const map = new Map<string, SamCode[]>();
-		for (const c of samCodes) {
-			if (!map.has(c.category)) map.set(c.category, []);
-			map.get(c.category)!.push(c);
-		}
-		return map;
-	}, [samCodes]);
+	// flatten to a single category list for tier 1 — area is kept in the
+	// data for the pie chart's 四大領域 grouping, but the picker itself is
+	// two tiers (分類/代碼), not three
+	const categories = useMemo(
+		() => SAM_AREAS.flatMap((area) => area.categories.map((cat) => ({ ...cat, areaCode: area.code }))),
+		[]
+	);
+	const currentCategory = categories.find((c) => c.name === selectedCategory);
 
-	const filtered = useMemo(() => {
+	const searchResults = useMemo(() => {
 		if (!query.trim()) return null;
 		const q = query.trim().toLowerCase();
-		return samCodes.filter(
+		return Object.values(SAM_CODE_MAP).filter(
 			(c) =>
 				c.code.toLowerCase().includes(q) ||
 				c.category.toLowerCase().includes(q) ||
-				(c.description_zh ?? "").toLowerCase().includes(q) ||
-				(c.description_en ?? "").toLowerCase().includes(q)
+				c.description_zh.toLowerCase().includes(q) ||
+				c.description_en.toLowerCase().includes(q)
 		);
-	}, [samCodes, query]);
+	}, [query]);
 
-	function toggleOpen() {
-		if (!open) setPopStyle(computePopoverStyle(triggerRef.current, 360));
-		setOpen((o) => !o);
+	function openPicker() {
+		setQuery("");
+		if (selected) setSelectedCategory(selected.category);
+		setOpen(true);
 	}
 
-	function select(id: string | null) {
-		onChange(id);
+	function select(code: string | null) {
+		onChange(code);
 		setOpen(false);
-		setQuery("");
 	}
 
 	return (
-		<div className={styles.samWrap}>
-			<button ref={triggerRef} type="button" className={styles.samTrigger} onClick={toggleOpen}>
+		<div className={styles.efWrap}>
+			<button type="button" className={styles.samTrigger} onClick={openPicker}>
 				{selected ? (
 					<span>
 						<span className={styles.samCode}>{selected.code}</span>
@@ -289,54 +309,80 @@ function SamCodeField({
 				) : (
 					<span className={styles.samPlaceholder}>選擇SAM代碼</span>
 				)}
-				<span className={styles.samChevron}>{open ? "▲" : "▼"}</span>
 			</button>
 
 			{open && (
-				<>
-					<div className={styles.samBackdrop} onMouseDown={() => setOpen(false)} />
-					<div className={styles.samPopover} style={popStyle}>
+				<div className={styles.efOverlay} onMouseDown={() => setOpen(false)}>
+					<div className={styles.efModal} onMouseDown={(e) => e.stopPropagation()}>
+						<div className={styles.efHeader}>
+							<h4>SAM代碼</h4>
+							<button className={styles.closeBtn} onClick={() => setOpen(false)}>×</button>
+						</div>
+
 						<input
 							autoFocus
-							className={styles.samSearch}
+							className={styles.efSearch}
 							placeholder="搜尋代碼、分類或關鍵字..."
 							value={query}
 							onChange={(e) => setQuery(e.target.value)}
 						/>
-						<div className={styles.samList}>
-							<div className={styles.samOption} onMouseDown={() => select(null)}>
-								<span className={styles.samCode}>-</span>
-								<span className={styles.samDesc}>無 (正常/無發現)</span>
-							</div>
 
-							{filtered ? (
-								filtered.length === 0 ? (
+						{searchResults ? (
+							<div className={styles.efSearchResults}>
+								{searchResults.length === 0 ? (
 									<p className={styles.samEmpty}>查無符合的代碼</p>
 								) : (
-									filtered.map((c) => (
-										<div key={c.id} className={styles.samOption} onMouseDown={() => select(c.id)}>
-											<span className={styles.samCode}>{c.code}</span>
-											<span className={styles.samDesc}>{c.description_zh}</span>
-											<span className={styles.samCategory}>{c.category}</span>
+									searchResults.map((c) => (
+										<div key={c.code} className={styles.efSearchOption} onMouseDown={() => select(c.code)}>
+											<span>
+												<strong>{c.code}</strong> {c.description_zh}
+												<span className={styles.efSearchMeta}>{c.category}</span>
+											</span>
 										</div>
 									))
-								)
-							) : (
-								Array.from(grouped.entries()).map(([category, codes]) => (
-									<details key={category} className={styles.samGroup}>
-										<summary>{category}</summary>
-										{codes.map((c) => (
-											<div key={c.id} className={styles.samOption} onMouseDown={() => select(c.id)}>
-												<span className={styles.samCode}>{c.code}</span>
-												<span className={styles.samDesc}>{c.description_zh}</span>
-											</div>
-										))}
-									</details>
-								))
-							)}
-						</div>
+								)}
+							</div>
+						) : (
+							<div className={styles.samPanels}>
+								<div className={styles.efPanelCol}>
+									<p className={styles.efPanelLabel}>分類</p>
+									<div
+										className={!selectedCategory ? styles.efCatBtnActive : styles.efCatBtn}
+										onMouseDown={() => select(null)}
+										role="button"
+									>
+										<strong>-</strong>
+										<span>無 (正常/無發現)</span>
+									</div>
+									{categories.map((cat) => (
+										<button
+											key={cat.name}
+											className={selectedCategory === cat.name ? styles.efCatBtnActive : styles.efCatBtn}
+											onClick={() => setSelectedCategory(cat.name)}
+										>
+											<span>{cat.name}</span>
+										</button>
+									))}
+								</div>
+
+								<div className={styles.efPanelColWide}>
+									<p className={styles.efPanelLabel}>代碼</p>
+									{currentCategory?.codes.map((c) => (
+										<div
+											key={c.code}
+											className={styles.efSearchOption}
+											onMouseDown={() => select(c.code)}
+										>
+											<span>
+												<strong>{c.code}</strong> {c.description_zh}
+											</span>
+										</div>
+									))}
+								</div>
+							</div>
+						)}
 					</div>
-				</>
+				</div>
 			)}
 		</div>
 	);
@@ -373,14 +419,155 @@ function RouteField({ value, onChange }: { value: string; onChange: (v: string) 
 	);
 }
 
+function EfCodeField({ value, onChange }: { value: string | null; onChange: (code: string | null) => void }) {
+	const [open, setOpen] = useState(false);
+	const [query, setQuery] = useState("");
+	const [selectedCategory, setSelectedCategory] = useState(EF_ATTRIBUTE_CATEGORIES[0]?.code ?? "");
+	const [selectedMiddle, setSelectedMiddle] = useState(
+		EF_ATTRIBUTE_CATEGORIES[0]?.middleCategories[0]?.code ?? ""
+	);
+
+	const selected = value ? EF_CODE_MAP[value] : null;
+
+	function openPicker() {
+		setQuery("");
+		if (selected) {
+			// jump straight to the currently-selected code's location on reopen
+			const cat = EF_ATTRIBUTE_CATEGORIES.find((c) =>
+				c.middleCategories.some((m) => m.code === selected.attributeName || m.subcodes.some((s) => s.code === value))
+			);
+			if (cat) {
+				setSelectedCategory(cat.code);
+				const mid = cat.middleCategories.find((m) => m.subcodes.some((s) => s.code === value));
+				if (mid) setSelectedMiddle(mid.code);
+			}
+		}
+		setOpen(true);
+	}
+
+	function select(code: string | null) {
+		onChange(code);
+		setOpen(false);
+	}
+
+	const category = EF_ATTRIBUTE_CATEGORIES.find((c) => c.code === selectedCategory);
+	const middle = category?.middleCategories.find((m) => m.code === selectedMiddle);
+
+	const searchResults = useMemo(() => {
+		if (!query.trim()) return null;
+		const q = query.trim().toLowerCase();
+		return EF_ATTRIBUTE_CATEGORIES.flatMap((cat) =>
+			cat.middleCategories.flatMap((mid) =>
+				mid.subcodes
+					.filter((s) => s.code.toLowerCase().includes(q) || s.description.toLowerCase().includes(q))
+					.map((s) => ({ ...s, categoryName: cat.name, middleName: mid.name }))
+			)
+		);
+	}, [query]);
+
+	return (
+		<div className={styles.efWrap}>
+			<button type="button" className={styles.samTrigger} onClick={openPicker}>
+				{selected ? (
+					<span>
+						<span className={styles.samCode}>{selected.code}</span>
+						{" — "}
+						{selected.description}
+					</span>
+				) : (
+					<span className={styles.samPlaceholder}>選擇EF屬性代碼</span>
+				)}
+			</button>
+
+			{open && (
+				<div className={styles.efOverlay} onMouseDown={() => setOpen(false)}>
+					<div className={styles.efModal} onMouseDown={(e) => e.stopPropagation()}>
+						<div className={styles.efHeader}>
+							<h4>EF屬性代碼</h4>
+							<button className={styles.closeBtn} onClick={() => setOpen(false)}>×</button>
+						</div>
+
+						<input
+							autoFocus
+							className={styles.efSearch}
+							placeholder="搜尋代碼或描述..."
+							value={query}
+							onChange={(e) => setQuery(e.target.value)}
+						/>
+
+						{searchResults ? (
+							<div className={styles.efSearchResults}>
+								{searchResults.length === 0 ? (
+									<p className={styles.samEmpty}>查無符合的代碼</p>
+								) : (
+									searchResults.map((s) => (
+										<div key={s.code} className={styles.efSearchOption} onMouseDown={() => select(s.code)}>
+											<span>
+												<strong>{s.code}</strong> {s.description}
+												<span className={styles.efSearchMeta}>{s.categoryName} / {s.middleName}</span>
+											</span>
+										</div>
+									))
+								)}
+							</div>
+						) : (
+							<div className={styles.efPanels}>
+								<div className={styles.efPanelCol}>
+									<p className={styles.efPanelLabel}>分類</p>
+									{EF_ATTRIBUTE_CATEGORIES.map((cat) => (
+										<button
+											key={cat.code}
+											className={selectedCategory === cat.code ? styles.efCatBtnActive : styles.efCatBtn}
+											onClick={() => {
+												setSelectedCategory(cat.code);
+												setSelectedMiddle(cat.middleCategories[0]?.code ?? "");
+											}}
+										>
+											<strong>{cat.code}</strong>
+											<span>{cat.name}</span>
+										</button>
+									))}
+								</div>
+
+								<div className={styles.efPanelCol}>
+									<p className={styles.efPanelLabel}>屬性</p>
+									{category?.middleCategories.map((mid) => (
+										<button
+											key={mid.code}
+											className={selectedMiddle === mid.code ? styles.efCatBtnActive : styles.efCatBtn}
+											onClick={() => setSelectedMiddle(mid.code)}
+										>
+											<strong>{mid.code}</strong>
+											<span>{mid.name}</span>
+										</button>
+									))}
+								</div>
+
+								<div className={styles.efPanelColWide}>
+									<p className={styles.efPanelLabel}>代碼</p>
+									{middle?.subcodes.map((s) => (
+										<div key={s.code} className={styles.efSearchOption} onMouseDown={() => select(s.code)}>
+											<span>
+												<strong>{s.code}</strong> {s.description}
+											</span>
+										</div>
+									))}
+								</div>
+							</div>
+						)}
+					</div>
+				</div>
+			)}
+		</div>
+	);
+}
+
 // --- main modal ---
 
 export default function RoutineEntryModal({
 	open,
 	mode,
-	editingEntry,
-	prefillEntryNo,
-	samCodes,
+	editingEntries,
 	onClose,
 	onSaved,
 }: Props) {
@@ -388,45 +575,68 @@ export default function RoutineEntryModal({
 	const [findings, setFindings] = useState<FindingDraft[]>([{ ...emptyFinding }]);
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [fieldErrors, setFieldErrors] = useState<{
+		audit_date?: boolean;
+		auditor_name?: boolean;
+		aircraft_tail?: boolean;
+		findings?: Set<number>; // indices of finding cards missing 記錄 text
+	}>({});
 	const submittingRef = useRef(false);
 
-	const isEdit = mode === "edit" && editingEntry;
+	const isEdit = mode === "edit" && editingEntries && editingEntries.length > 0;
 
 	useEffect(() => {
 		if (!open) return;
 		setError(null);
-		if (isEdit && editingEntry) {
+		setFieldErrors({});
+		if (isEdit && editingEntries) {
+			const first = editingEntries[0];
 			setHeader({
-				audit_date: editingEntry.audit_date,
-				report_year: editingEntry.report_year,
-				report_month: editingEntry.report_month,
-				auditor_name: editingEntry.auditor_name,
-				aircraft_tail: editingEntry.aircraft_tail,
-				flight_no: editingEntry.flight_no ?? "",
-				route: editingEntry.route ?? "",
+				audit_date: first.audit_date,
+				report_year: first.report_year,
+				report_month: first.report_month,
+				auditor_name: first.auditor_name,
+				aircraft_tail: first.aircraft_tail,
+				flight_no: first.flight_no ?? "",
+				route: first.route ?? "",
 			});
-			setFindings([
-				{
-					finding: editingEntry.finding,
-					corrective_action: editingEntry.corrective_action ?? "",
-					result: editingEntry.result,
-					sam_code_id: editingEntry.sam_code_id,
-					is_non_flight_safety: editingEntry.is_non_flight_safety,
-				},
-			]);
+			setFindings(
+				[...editingEntries]
+					.sort((a, b) => a.finding_seq - b.finding_seq)
+					.map((e) => ({
+						id: e.id,
+						finding: e.finding,
+						corrective_action: e.corrective_action ?? "",
+						result: e.result,
+						sam_code: e.sam_code,
+						ef_code: e.ef_code,
+						is_non_flight_safety: e.is_non_flight_safety,
+					}))
+			);
 		} else {
 			setHeader(emptyHeader);
 			setFindings([{ ...emptyFinding }]);
 		}
-	}, [open, isEdit, editingEntry]);
+	}, [open, isEdit, editingEntries]);
 
 	if (!open) return null;
 
 	function updateHeader<K extends keyof HeaderDraft>(key: K, val: HeaderDraft[K]) {
 		setHeader((h) => ({ ...h, [key]: val }));
+		if (val && (key === "audit_date" || key === "auditor_name" || key === "aircraft_tail")) {
+			setFieldErrors((fe) => ({ ...fe, [key]: false }));
+		}
 	}
 	function updateFinding<K extends keyof FindingDraft>(idx: number, key: K, val: FindingDraft[K]) {
 		setFindings((list) => list.map((f, i) => (i === idx ? { ...f, [key]: val } : f)));
+		if (key === "finding" && typeof val === "string" && val.trim()) {
+			setFieldErrors((fe) => {
+				if (!fe.findings?.has(idx)) return fe;
+				const next = new Set(fe.findings);
+				next.delete(idx);
+				return { ...fe, findings: next };
+			});
+		}
 	}
 	function handleDateChange(dateStr: string) {
 		updateHeader("audit_date", dateStr);
@@ -439,40 +649,98 @@ export default function RoutineEntryModal({
 	function addFindingCard() {
 		setFindings((list) => [...list, { ...emptyFinding }]);
 	}
-	function removeFindingCard(idx: number) {
-		setFindings((list) => (list.length > 1 ? list.filter((_, i) => i !== idx) : list));
+	async function removeFindingCard(idx: number) {
+		const f = findings[idx];
+		if (findings.length <= 1) return; // an audit needs at least one finding
+
+		if (f.id) {
+			// this is a persisted row, not a local draft — removing it means
+			// deleting it now, not deferring to the eventual save. There's no
+			// "undo on cancel" here; the delete already happened.
+			if (!confirm("此項發現已儲存，移除將立即刪除，確定要繼續嗎？")) return;
+			const token = localStorage.getItem("token");
+			const res = await fetch(`/api/audit/routine/entries/${f.id}`, {
+				method: "DELETE",
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			if (!res.ok) {
+				alert("刪除失敗");
+				return;
+			}
+			onSaved(); // parent list needs to reflect this immediately, independent of the eventual "儲存" click
+		}
+		setFindings((list) => list.filter((_, i) => i !== idx));
 	}
 
 	async function handleSubmit() {
 		if (submittingRef.current) return; // synchronous guard — setSaving(true) below isn't fast enough to stop a rapid double-click
-		if (!header.audit_date || !header.auditor_name || !header.aircraft_tail) {
+
+		const missingHeader = {
+			audit_date: !header.audit_date,
+			auditor_name: !header.auditor_name,
+			aircraft_tail: !header.aircraft_tail,
+		};
+		const missingFindings = new Set(
+			findings.map((f, i) => (f.finding.trim() ? -1 : i)).filter((i) => i >= 0)
+		);
+
+		if (missingHeader.audit_date || missingHeader.auditor_name || missingHeader.aircraft_tail) {
+			setFieldErrors({ ...missingHeader, findings: missingFindings });
 			setError("請填寫日期、查核員、機號");
 			return;
 		}
-		if (findings.some((f) => !f.finding.trim())) {
+		if (missingFindings.size > 0) {
+			setFieldErrors({ findings: missingFindings });
 			setError("每一項發現都需要填寫記錄內容");
 			return;
 		}
 
+		setFieldErrors({});
 		submittingRef.current = true;
 		setSaving(true);
 		setError(null);
 		const token = localStorage.getItem("token");
 
 		try {
-			if (isEdit && editingEntry) {
-				const payload = { ...header, ...findings[0] };
-				const res = await fetch(`/api/audit/routine/entries/${editingEntry.id}`, {
-					method: "PATCH",
-					headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-					body: JSON.stringify(payload),
-				});
-				if (!res.ok) {
-					const data = await res.json().catch(() => ({}));
-					throw new Error(data.error || "儲存失敗");
+			if (isEdit && editingEntries) {
+				const entryNo = editingEntries[0].entry_no;
+
+				for (const f of findings) {
+					if (f.id) {
+						// existing row — PATCH, including header fields, so header
+						// edits propagate to every finding in the group instead of
+						// only the one that happened to be open when you changed it
+						const patchPayload = { ...header, ...f };
+						const res = await fetch(`/api/audit/routine/entries/${f.id}`, {
+							method: "PATCH",
+							headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+							body: JSON.stringify(patchPayload),
+						});
+						if (!res.ok) {
+							const data = await res.json().catch(() => ({}));
+							throw new Error(data.error || "儲存失敗");
+						}
+					} else {
+						// new card added during this edit session — attach to the
+						// same audit rather than starting a new entry_no
+						const payload: CreateEntryPayload = {
+							...header,
+							...f,
+							existing_entry_no: entryNo,
+						};
+						const addRes = await fetch("/api/audit/routine/entries", {
+							method: "POST",
+							headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+							body: JSON.stringify(payload),
+						});
+						if (!addRes.ok) {
+							const data = await addRes.json().catch(() => ({}));
+							throw new Error(data.error || "儲存失敗");
+						}
+					}
 				}
 			} else {
-				let entryNo = prefillEntryNo;
+				let entryNo: string | null = null;
 				for (const f of findings) {
 					const payload: CreateEntryPayload = {
 						...header,
@@ -508,7 +776,7 @@ export default function RoutineEntryModal({
 			<div className={styles.panel}>
 				<div className={styles.header}>
 					<h3>
-						{isEdit ? "編輯紀錄" : prefillEntryNo ? `新增發現 (${prefillEntryNo})` : "新增查核紀錄"}
+						{isEdit ? "編輯紀錄" : "新增查核紀錄"}
 					</h3>
 					<button className={styles.closeBtn} onClick={onClose}>×</button>
 				</div>
@@ -517,17 +785,17 @@ export default function RoutineEntryModal({
 					<div className={styles.headerSection}>
 						<p className={styles.sectionLabel}>共用資訊 (此次稽核僅需填寫一次)</p>
 						<div className={styles.row}>
-							<div className={styles.field}>
+							<div className={fieldErrors.audit_date ? styles.fieldInvalid : styles.field}>
 								<label>稽核日期</label>
 								<DateField value={header.audit_date} onChange={handleDateChange} />
 							</div>
-							<div className={styles.field}>
+							<div className={fieldErrors.auditor_name ? styles.fieldInvalid : styles.field}>
 								<label>查核員</label>
 								<AuditorField value={header.auditor_name} onChange={(name) => updateHeader("auditor_name", name)} />
 							</div>
 						</div>
 						<div className={styles.row}>
-							<div className={styles.field}>
+							<div className={fieldErrors.aircraft_tail ? styles.fieldInvalid : styles.field}>
 								<label>機號</label>
 								<input
 									value={header.aircraft_tail}
@@ -551,41 +819,42 @@ export default function RoutineEntryModal({
 					</div>
 
 					<div className={styles.findingsSection}>
-						<p className={styles.sectionLabel}>發現事項 {!isEdit && "(每項可各自指定SAM代碼)"}</p>
+						<p className={styles.sectionLabel}>紀錄 (每項可各自指定SAM代碼)</p>
 						{findings.map((f, idx) => (
-							<div key={idx} className={styles.findingCard}>
-								{!isEdit && (
+							<div key={f.id ?? `new-${idx}`} className={styles.findingCard}>
+								{findings.length > 1 && (
 									<div className={styles.findingCardHeader}>
 										<span>第 {idx + 1} 項</span>
-										{findings.length > 1 && (
-											<button className={styles.removeBtn} onClick={() => removeFindingCard(idx)}>移除</button>
-										)}
+										<button className={styles.removeBtn} onClick={() => removeFindingCard(idx)}>移除</button>
 									</div>
 								)}
-								<textarea rows={3} placeholder="輸入此項發現..." value={f.finding} onChange={(e) => updateFinding(idx, "finding", e.target.value)} />
+								<textarea
+									rows={3}
+									placeholder="輸入此項發現..."
+									value={f.finding}
+									onChange={(e) => updateFinding(idx, "finding", e.target.value)}
+									className={fieldErrors.findings?.has(idx) ? styles.fieldInvalidTextarea : undefined}
+								/>
 								<textarea rows={2} placeholder="處置作為" value={f.corrective_action} onChange={(e) => updateFinding(idx, "corrective_action", e.target.value)} />
+								<label className={styles.checkboxLabel}>
+									<input type="checkbox" checked={f.is_non_flight_safety} onChange={(e) => updateFinding(idx, "is_non_flight_safety", e.target.checked)} />
+									非安全相關
+								</label>
 								<div className={styles.row}>
 									<div className={styles.field}>
-										<label>結果</label>
-										<select value={f.result} onChange={(e) => updateFinding(idx, "result", e.target.value as "OK" | "NG")}>
-											<option value="OK">OK</option>
-											<option value="NG">NG</option>
-										</select>
+										<label>SAM代碼</label>
+										<SamCodeField value={f.sam_code} onChange={(code) => updateFinding(idx, "sam_code", code)} />
 									</div>
-									<label className={styles.checkboxLabel}>
-										<input type="checkbox" checked={f.is_non_flight_safety} onChange={(e) => updateFinding(idx, "is_non_flight_safety", e.target.checked)} />
-										非飛安相關
-									</label>
-								</div>
-								<div className={styles.field}>
-									<label>SAM代碼</label>
-									<SamCodeField samCodes={samCodes} value={f.sam_code_id} onChange={(id) => updateFinding(idx, "sam_code_id", id)} />
+									<div className={styles.field}>
+										<label>EF屬性代碼</label>
+										<EfCodeField value={f.ef_code} onChange={(code) => updateFinding(idx, "ef_code", code)} />
+									</div>
 								</div>
 							</div>
 						))}
-						{!isEdit && (
-							<button className={styles.addFindingBtn} onClick={addFindingCard}>+ 新增一項發現</button>
-						)}
+						<button className={styles.addFindingBtn} onClick={addFindingCard}>
+							{isEdit ? "+ 新增一筆記錄到此次稽核" : "+ 新增一筆記錄"}
+						</button>
 					</div>
 
 					{error && <p className={styles.error}>{error}</p>}

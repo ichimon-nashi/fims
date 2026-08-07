@@ -1,15 +1,7 @@
 // src/lib/routineAudit.types.ts
-
-export interface SamCode {
-	id: string;
-	area: string;
-	category: string;
-	code: string;
-	description_en: string | null;
-	description_zh: string | null;
-	sort_order: number;
-	active: boolean;
-}
+// SamCode / sam_code_id are gone — SAM codes now live as a plain TS
+// constant (src/lib/routineAudit.constants.ts), same pattern as EF codes.
+// Entries store the code string directly.
 
 export interface RoutineAuditEntry {
 	id: string;
@@ -25,8 +17,8 @@ export interface RoutineAuditEntry {
 	finding: string;
 	corrective_action: string | null;
 	result: "OK" | "NG";
-	sam_code_id: string | null;
-	sam_code: Pick<SamCode, "area" | "category" | "code" | "description_zh"> | null;
+	sam_code: string | null; // e.g. "RM01" — resolve via SAM_CODE_MAP for category/area/description
+	ef_code: string | null; // e.g. "P4-03" — resolve via EF_CODE_MAP for attribute/description
 	is_non_flight_safety: boolean;
 	created_by: string;
 	created_at: string;
@@ -48,7 +40,8 @@ export interface CreateEntryPayload {
 	finding: string;
 	corrective_action?: string;
 	result?: "OK" | "NG";
-	sam_code_id?: string | null;
+	sam_code?: string | null;
+	ef_code?: string | null;
 	is_non_flight_safety?: boolean;
 }
 
@@ -57,8 +50,9 @@ export type UpdateEntryPayload = Partial<Omit<CreateEntryPayload, "existing_entr
 export interface RoutineSummaryResponse {
 	byCode: Record<string, Record<number, number>>;      // SAM code -> year -> count
 	byCategory: Record<string, Record<number, number>>; // category -> year -> count
-	byArea: Record<string, Record<number, number>>;      // area -> year -> count
+	byEfCode: Record<string, Record<number, number>>;    // EF code -> year -> count
+	byEfMiddle: Record<string, Record<number, number>>;  // EF middle category (attribute) -> year -> count
 	byMonth: Record<number, Record<number, number>>;     // year -> month -> count
 }
 
-export type PieGroupLevel = "code" | "category" | "area";
+export type PieGroupLevel = "code" | "category";

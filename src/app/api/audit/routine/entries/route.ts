@@ -21,9 +21,11 @@ export async function GET(req: NextRequest) {
 	const year = Number(yearParam);
 
 	const supabase = createServiceClient();
+	// no join needed anymore — sam_code is a plain text column, resolved to
+	// category/area/description client-side via SAM_CODE_MAP
 	let query = supabase
 		.from("routine_audit_entries")
-		.select("*, sam_code:routine_audit_sam_codes(area, category, code, description_zh)")
+		.select("*")
 		.eq("report_year", year);
 
 	// non-nullable ints — safe to filter directly, unlike the SMS review date columns
@@ -68,8 +70,8 @@ export async function POST(req: NextRequest) {
 		route,
 		finding,
 		corrective_action,
-		result,
-		sam_code_id,
+		sam_code,
+		ef_code,
 		is_non_flight_safety,
 	} = body;
 
@@ -77,88 +79,28 @@ export async function POST(req: NextRequest) {
 		return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
 	}
 
-	const MAX_ATTEMPTS = 5;
-	let lastError: string | null = null;
+	// entry_no/finding_seq generation + insert happen atomically inside the
+	// DB function via pg_advisory_xact_lock — this replaces the old
+	// "read max, retry on 23505" pattern, which only handled transient
+	// races and failed deterministically on non-transient collisions
+	const { data, error } = await supabase.rpc("create_routine_audit_finding", {
+		p_existing_entry_no: existing_entry_no ?? null,
+		p_audit_date: audit_date,
+		p_report_year: report_year,
+		p_report_month: report_month,
+		p_auditor_name: auditor_name,
+		p_aircraft_tail: aircraft_tail,
+		p_flight_no: flight_no ?? null,
+		p_route: route ?? null,
+		p_finding: finding,
+		p_corrective_action: corrective_action ?? null,
+		p_sam_code: sam_code ?? null,
+		p_ef_code: ef_code ?? null,
+		p_is_non_flight_safety: is_non_flight_safety ?? false,
+		p_created_by: userRecord.employee_id,
+	});
 
-	for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-		let entry_no: string;
-		let finding_seq: number;
-
-		if (existing_entry_no) {
-			const { data: siblings, error: siblingsError } = await supabase
-				.from("routine_audit_entries")
-				.select("finding_seq")
-				.eq("entry_no", existing_entry_no)
-				.order("finding_seq", { ascending: false })
-				.limit(1);
-
-			if (siblingsError)
-				return NextResponse.json({ error: siblingsError.message }, { status: 500 });
-			if (!siblings || siblings.length === 0)
-				return NextResponse.json({ error: "existing_entry_no not found" }, { status: 404 });
-
-			entry_no = existing_entry_no;
-			finding_seq = siblings[0].finding_seq + 1;
-		} else {
-			const mm = String(report_month).padStart(2, "0");
-			const { data: monthEntries, error: monthError } = await supabase
-				.from("routine_audit_entries")
-				.select("entry_no")
-				.eq("report_year", report_year)
-				.eq("report_month", report_month)
-				.like("entry_no", `SA${mm}%`);
-
-			if (monthError)
-				return NextResponse.json({ error: monthError.message }, { status: 500 });
-
-			const seqs = (monthEntries ?? [])
-				.map((r) => parseInt(r.entry_no.slice(4), 10))
-				.filter((n) => !Number.isNaN(n));
-			const nextSeq = (seqs.length ? Math.max(...seqs) : 0) + 1;
-			entry_no = `SA${mm}${String(nextSeq).padStart(2, "0")}`;
-			finding_seq = 1;
-		}
-
-		const { data, error } = await supabase
-			.from("routine_audit_entries")
-			.insert({
-				entry_no,
-				finding_seq,
-				audit_date,
-				report_year,
-				report_month,
-				auditor_name,
-				aircraft_tail,
-				flight_no,
-				route,
-				finding,
-				corrective_action,
-				result: result ?? "OK",
-				sam_code_id: sam_code_id ?? null,
-				is_non_flight_safety: is_non_flight_safety ?? false,
-				created_by: userRecord.employee_id,
-			})
-			.select("*, sam_code:routine_audit_sam_codes(area, category, code, description_zh)")
-			.single();
-
-		if (!error) {
-			return NextResponse.json({ record: data }, { status: 201 });
-		}
-
-		// 23505 = unique_violation — someone else's insert landed between our
-		// read and our write (the exact race this codebase already accepted
-		// as a known risk for single-person usage). Recompute and retry
-		// rather than surfacing a raw DB error to the user.
-		if (error.code === "23505") {
-			lastError = error.message;
-			continue;
-		}
-
+	if (error)
 		return NextResponse.json({ error: error.message }, { status: 500 });
-	}
-
-	return NextResponse.json(
-		{ error: `新增失敗，請重試 (${MAX_ATTEMPTS} 次嘗試後仍發生衝突: ${lastError})` },
-		{ status: 409 }
-	);
+	return NextResponse.json({ record: data }, { status: 201 });
 }

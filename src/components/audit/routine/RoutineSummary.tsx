@@ -1,45 +1,46 @@
 // src/components/audit/routine/RoutineSummary.tsx
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./RoutineSummary.module.css";
-import RoutineFilters from "./RoutineFilters";
-import RoutineCategoryChart from "./RoutineCategoryChart";
-import RoutineTrendChart from "./RoutineTrendChart";
+import { RoutineSamChart, RoutineEfChart, RoutineTrendChart } from "./RoutineCharts";
 import RoutineEntriesTable from "./RoutineEntriesTable";
 import RoutineEntryModal from "./RoutineEntryModal";
 import {
 	PieGroupLevel,
 	RoutineSummaryResponse,
 	RoutineAuditEntry,
-	SamCode,
 } from "@/lib/routineAudit.types";
 
 const AVAILABLE_YEARS = [2025, 2026]; // TODO: derive from distinct report_year once more years exist
 const TREND_COLORS = ["#4a9eff", "#fb923c"];
+const MONTHS = ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
 
 type ModalState =
 	| { open: false }
-	| { open: true; mode: "create"; prefillEntryNo: string | null }
-	| { open: true; mode: "edit"; entry: RoutineAuditEntry };
+	| { open: true; mode: "create" }
+	| { open: true; mode: "edit"; entries: RoutineAuditEntry[] };
 
 export default function RoutineSummary() {
 	const [primaryYear, setPrimaryYear] = useState<number>(2026);
 	const [compareYear, setCompareYear] = useState<number | null>(null);
+	const [comparePicking, setComparePicking] = useState(false);
 	const [monthFrom, setMonthFrom] = useState<number>(1);
 	const [monthTo, setMonthTo] = useState<number>(12);
 	const [pieLevel, setPieLevel] = useState<PieGroupLevel>("category");
 
 	const [summary, setSummary] = useState<RoutineSummaryResponse | null>(null);
 	const [entries, setEntries] = useState<RoutineAuditEntry[]>([]);
-	const [samCodes, setSamCodes] = useState<SamCode[]>([]);
+	const [compareEntries, setCompareEntries] = useState<RoutineAuditEntry[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [entriesLoading, setEntriesLoading] = useState(true);
+	const [compareEntriesLoading, setCompareEntriesLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [modal, setModal] = useState<ModalState>({ open: false });
 	const [importing, setImporting] = useState(false);
 	const [importResult, setImportResult] = useState<{ imported: number; warnings: string[] } | null>(null);
 	const [innerTab, setInnerTab] = useState<"charts" | "table">("table");
+	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const years = useMemo(
 		() => (compareYear ? [primaryYear, compareYear] : [primaryYear]),
@@ -68,45 +69,59 @@ export default function RoutineSummary() {
 			.finally(() => setLoading(false));
 	}, [years, monthFrom, monthTo]);
 
-	const fetchEntries = useCallback(() => {
-		const token = localStorage.getItem("token");
-		if (!token) return;
-		setEntriesLoading(true);
-		const params = new URLSearchParams({
-			year: String(primaryYear),
-			month_from: String(monthFrom),
-			month_to: String(monthTo),
-		});
-		fetch(`/api/audit/routine/entries?${params}`, {
-			headers: { Authorization: `Bearer ${token}` },
-		})
-			.then((res) => {
-				if (!res.ok) throw new Error("紀錄載入失敗");
-				return res.json();
+	const fetchEntriesFor = useCallback(
+		(year: number, setter: (rows: RoutineAuditEntry[]) => void, setLoadingFn: (v: boolean) => void) => {
+			const token = localStorage.getItem("token");
+			if (!token) return;
+			setLoadingFn(true);
+			const params = new URLSearchParams({
+				year: String(year),
+				month_from: String(monthFrom),
+				month_to: String(monthTo),
+			});
+			fetch(`/api/audit/routine/entries?${params}`, {
+				headers: { Authorization: `Bearer ${token}` },
 			})
-			.then((data) => setEntries(data.records ?? []))
-			.catch(() => setEntries([]))
-			.finally(() => setEntriesLoading(false));
-	}, [primaryYear, monthFrom, monthTo]);
+				.then((res) => {
+					if (!res.ok) throw new Error("紀錄載入失敗");
+					return res.json();
+				})
+				.then((data) => setter(data.records ?? []))
+				.catch(() => setter([]))
+				.finally(() => setLoadingFn(false));
+		},
+		[monthFrom, monthTo]
+	);
 
-	useEffect(() => {
-		const token = localStorage.getItem("token");
-		if (!token) return;
-		fetch("/api/audit/routine/sam-codes", {
-			headers: { Authorization: `Bearer ${token}` },
-		})
-			.then((res) => res.json())
-			.then((data) => setSamCodes(data.records ?? []))
-			.catch(() => setSamCodes([]));
-	}, []);
+	const fetchEntries = useCallback(
+		() => fetchEntriesFor(primaryYear, setEntries, setEntriesLoading),
+		[fetchEntriesFor, primaryYear]
+	);
 
 	useEffect(fetchSummary, [fetchSummary]);
 	useEffect(fetchEntries, [fetchEntries]);
 
+	// comparison year gets its own entries fetch, only when actually set
+	useEffect(() => {
+		if (compareYear === null) {
+			setCompareEntries([]);
+			return;
+		}
+		fetchEntriesFor(compareYear, setCompareEntries, setCompareEntriesLoading);
+	}, [compareYear, fetchEntriesFor]);
+
 	const categoryData = useMemo(() => {
 		if (!summary) return [];
-		const source =
-			(pieLevel === "area" ? summary.byArea : pieLevel === "code" ? summary.byCode : summary.byCategory) ?? {};
+		const source = (pieLevel === "code" ? summary.byCode : summary.byCategory) ?? {};
+		return Object.entries(source).map(([label, byYear]) => ({
+			label,
+			count: byYear[primaryYear] ?? 0,
+		}));
+	}, [summary, primaryYear, pieLevel]);
+
+	const efCodeData = useMemo(() => {
+		if (!summary) return [];
+		const source = (pieLevel === "code" ? summary.byEfCode : summary.byEfMiddle) ?? {};
 		return Object.entries(source).map(([label, byYear]) => ({
 			label,
 			count: byYear[primaryYear] ?? 0,
@@ -127,34 +142,30 @@ export default function RoutineSummary() {
 	function refetchAll() {
 		fetchSummary();
 		fetchEntries();
+		if (compareYear !== null) fetchEntriesFor(compareYear, setCompareEntries, setCompareEntriesLoading);
 	}
 
 	function handleAddEntry() {
-		setModal({ open: true, mode: "create", prefillEntryNo: null });
+		setModal({ open: true, mode: "create" });
+	}
+	function handleEdit(group: RoutineAuditEntry[]) {
+		setModal({ open: true, mode: "edit", entries: group });
 	}
 
-	function handleAddFinding(entryNo: string) {
-		setModal({ open: true, mode: "create", prefillEntryNo: entryNo });
-	}
-
-	function handleEdit(entry: RoutineAuditEntry) {
-		setModal({ open: true, mode: "edit", entry });
-	}
-
-	async function handleDelete(entry: RoutineAuditEntry) {
-		if (!confirm(`確定刪除此筆紀錄？(${entry.entry_no}, ${entry.finding.slice(0, 20)}...)`)) {
-			return;
-		}
+	async function handleDelete(group: RoutineAuditEntry[]) {
+		const label = group.length > 1 ? `此稽核的全部 ${group.length} 項發現` : "此筆紀錄";
+		if (!confirm(`確定刪除${label}？(${group[0].entry_no})`)) return;
 		const token = localStorage.getItem("token");
-		const res = await fetch(`/api/audit/routine/entries/${entry.id}`, {
-			method: "DELETE",
-			headers: { Authorization: `Bearer ${token}` },
-		});
-		if (res.ok) {
-			refetchAll();
-		} else {
-			alert("刪除失敗");
-		}
+		const results = await Promise.all(
+			group.map((entry) =>
+				fetch(`/api/audit/routine/entries/${entry.id}`, {
+					method: "DELETE",
+					headers: { Authorization: `Bearer ${token}` },
+				})
+			)
+		);
+		if (results.every((r) => r.ok)) refetchAll();
+		else alert("部分刪除失敗，請重新整理確認結果");
 	}
 
 	function handleExport() {
@@ -190,19 +201,107 @@ export default function RoutineSummary() {
 
 	return (
 		<div className={styles.container}>
-			<RoutineFilters
-				availableYears={AVAILABLE_YEARS}
-				primaryYear={primaryYear}
-				monthFrom={monthFrom}
-				monthTo={monthTo}
-				onPrimaryYearChange={setPrimaryYear}
-				onMonthFromChange={setMonthFrom}
-				onMonthToChange={setMonthTo}
-				onExport={handleExport}
-				onAddEntry={handleAddEntry}
-				onImportFile={handleImportFile}
-				importing={importing}
-			/>
+			{/* ---- filter bar (merged in from the former RoutineFilters.tsx) ---- */}
+			<div className={styles.filterBar}>
+				<div className={styles.field}>
+					<label className={styles.label}>年度</label>
+					<select
+						className={styles.select}
+						value={primaryYear}
+						onChange={(e) => setPrimaryYear(Number(e.target.value))}
+					>
+						{AVAILABLE_YEARS.map((y) => (
+							<option key={y} value={y}>{y}</option>
+						))}
+					</select>
+				</div>
+
+				{/* compare-year control lives here, in the persistent filter bar,
+				    so it's reachable from both 紀錄列表 and 圖表 — it used to be
+				    inside the trend chart's own header, which only rendered when
+				    圖表 was the active tab */}
+				<div className={styles.field}>
+					<label className={styles.label}>比較年度</label>
+					{compareYear === null ? (
+						comparePicking ? (
+							<select
+								autoFocus
+								className={styles.select}
+								onChange={(e) => {
+									setCompareYear(Number(e.target.value));
+									setComparePicking(false);
+								}}
+								onBlur={() => setComparePicking(false)}
+							>
+								<option value="">選擇年度...</option>
+								{AVAILABLE_YEARS.filter((y) => y !== primaryYear).map((y) => (
+									<option key={y} value={y}>{y}</option>
+								))}
+							</select>
+						) : (
+							<button className={styles.compareChip} onClick={() => setComparePicking(true)}>
+								+ 比較年度
+							</button>
+						)
+					) : (
+						<button className={styles.compareChipActive} onClick={() => setCompareYear(null)}>
+							vs {compareYear} ×
+						</button>
+					)}
+				</div>
+
+				<div className={styles.field}>
+					<label className={styles.label}>月份區間</label>
+					<div className={styles.monthRange}>
+						<select
+							className={styles.select}
+							value={monthFrom}
+							onChange={(e) => setMonthFrom(Number(e.target.value))}
+						>
+							{MONTHS.map((m, i) => (
+								<option key={i} value={i + 1}>{m}</option>
+							))}
+						</select>
+						<span className={styles.to}>至</span>
+						<select
+							className={styles.select}
+							value={monthTo}
+							onChange={(e) => setMonthTo(Number(e.target.value))}
+						>
+							{MONTHS.map((m, i) => (
+								<option key={i} value={i + 1}>{m}</option>
+							))}
+						</select>
+					</div>
+				</div>
+
+				<div className={styles.actions}>
+					<input
+						ref={fileInputRef}
+						type="file"
+						accept=".xls,.xlsx"
+						className={styles.hiddenFileInput}
+						onChange={(e) => {
+							const file = e.target.files?.[0];
+							if (file) handleImportFile(file);
+							e.target.value = "";
+						}}
+					/>
+					<button
+						className={styles.importBtn}
+						onClick={() => fileInputRef.current?.click()}
+						disabled={importing}
+					>
+						{importing ? "匯入中..." : "匯入Excel"}
+					</button>
+					<button className={styles.exportBtn} onClick={handleExport}>
+						匯出Excel
+					</button>
+					<button className={styles.primaryBtn} onClick={handleAddEntry}>
+						+ 新增紀錄
+					</button>
+				</div>
+			</div>
 
 			{importResult && (
 				<div className={styles.importResult}>
@@ -223,13 +322,6 @@ export default function RoutineSummary() {
 
 			{!loading && !error && (
 				<>
-					<div className={styles.kpiRow}>
-						<div className={styles.kpiCard}>
-							<p className={styles.kpiLabel}>飛安相關發現</p>
-							<p className={styles.kpiValue}>{totalFindings}</p>
-						</div>
-					</div>
-
 					<div className={styles.innerTabs}>
 						<button
 							className={innerTab === "table" ? styles.innerTabActive : styles.innerTab}
@@ -243,36 +335,74 @@ export default function RoutineSummary() {
 						>
 							圖表
 						</button>
+						<div className={styles.kpiInline}>
+							<span className={styles.kpiLabel}>安全相關紀錄</span>
+							<span className={styles.kpiValue}>{totalFindings}</span>
+						</div>
 					</div>
 
 					{innerTab === "charts" && (
-						<div className={styles.chartRow}>
-							<RoutineCategoryChart
-								data={categoryData}
-								year={primaryYear}
-								pieLevel={pieLevel}
-								onPieLevelChange={setPieLevel}
-							/>
-							<RoutineTrendChart
-								series={trendSeries}
-								monthFrom={monthFrom}
-								monthTo={monthTo}
-								compareYear={compareYear}
-								availableYears={AVAILABLE_YEARS}
-								primaryYear={primaryYear}
-								onCompareYearChange={setCompareYear}
-							/>
-						</div>
+						<>
+							<div className={styles.chartControls}>
+								<span className={styles.label}>分組方式</span>
+								<div className={styles.levelToggle}>
+									{(["code", "category"] as const).map((level) => (
+										<button
+											key={level}
+											className={pieLevel === level ? styles.levelBtnActive : styles.levelBtn}
+											onClick={() => setPieLevel(level)}
+										>
+											{level === "code" ? "代碼" : "類別"}
+										</button>
+									))}
+								</div>
+							</div>
+
+							<div className={styles.chartRow}>
+								<RoutineEfChart data={efCodeData} year={primaryYear} level={pieLevel} />
+								<RoutineSamChart data={categoryData} year={primaryYear} level={pieLevel} />
+							</div>
+
+							<div className={styles.trendRow}>
+								<RoutineTrendChart
+									series={trendSeries}
+									monthFrom={monthFrom}
+									monthTo={monthTo}
+								/>
+							</div>
+						</>
 					)}
 
 					{innerTab === "table" && (
-						<RoutineEntriesTable
-							entries={entries}
-							loading={entriesLoading}
-							onEdit={handleEdit}
-							onDelete={handleDelete}
-							onAddFinding={handleAddFinding}
-						/>
+						compareYear === null ? (
+							<RoutineEntriesTable
+								entries={entries}
+								loading={entriesLoading}
+								onEdit={handleEdit}
+								onDelete={handleDelete}
+							/>
+						) : (
+							<div className={styles.compareTables}>
+								<div className={styles.compareTableCol}>
+									<p className={styles.compareTableHeader}>{primaryYear}</p>
+									<RoutineEntriesTable
+										entries={entries}
+										loading={entriesLoading}
+										onEdit={handleEdit}
+										onDelete={handleDelete}
+									/>
+								</div>
+								<div className={styles.compareTableCol}>
+									<p className={styles.compareTableHeader}>{compareYear}</p>
+									<RoutineEntriesTable
+										entries={compareEntries}
+										loading={compareEntriesLoading}
+										onEdit={handleEdit}
+										onDelete={handleDelete}
+									/>
+								</div>
+							</div>
+						)
 					)}
 				</>
 			)}
@@ -280,9 +410,7 @@ export default function RoutineSummary() {
 			<RoutineEntryModal
 				open={modal.open}
 				mode={modal.open ? modal.mode : "create"}
-				editingEntry={modal.open && modal.mode === "edit" ? modal.entry : null}
-				prefillEntryNo={modal.open && modal.mode === "create" ? modal.prefillEntryNo : null}
-				samCodes={samCodes}
+				editingEntries={modal.open && modal.mode === "edit" ? modal.entries : null}
 				onClose={() => setModal({ open: false })}
 				onSaved={refetchAll}
 			/>

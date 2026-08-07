@@ -20,7 +20,7 @@ const RANK_SORT_ORDER: Record<string, number> = {
 };
 
 function sortUsers(
-	users: { employee_id: string; full_name: string; rank: string }[],
+	users: { employee_id: string; full_name: string; rank: string; avatar_url?: string }[],
 ) {
 	return users.sort((a, b) => {
 		const ra = RANK_SORT_ORDER[a.rank] ?? 99;
@@ -28,6 +28,20 @@ function sortUsers(
 		if (ra !== rb) return ra - rb;
 		return a.employee_id.localeCompare(b.employee_id);
 	});
+}
+
+// avatars bucket, ${employee_id}.png — per documented FIMS avatar convention.
+// Not verified against a live component that already renders one; the
+// <img onError> fallback in AuditorField covers the case where a given
+// employee_id has no file in the bucket.
+function withAvatarUrls<T extends { employee_id: string }>(
+	supabase: ReturnType<typeof createServiceClient>,
+	users: T[],
+): (T & { avatar_url: string })[] {
+	return users.map((u) => ({
+		...u,
+		avatar_url: supabase.storage.from("avatars").getPublicUrl(`${u.employee_id}.png`).data.publicUrl,
+	}));
 }
 
 export async function GET(req: NextRequest) {
@@ -52,7 +66,7 @@ export async function GET(req: NextRequest) {
 
 		if (error)
 			return NextResponse.json({ error: error.message }, { status: 500 });
-		return NextResponse.json({ users: sortUsers(data || []) });
+		return NextResponse.json({ users: sortUsers(withAvatarUrls(supabase, data || [])) });
 	}
 
 	// Search — all ranks except admin, excluding inactive users
@@ -66,5 +80,5 @@ export async function GET(req: NextRequest) {
 
 	if (error)
 		return NextResponse.json({ error: error.message }, { status: 500 });
-	return NextResponse.json({ users: sortUsers(data || []) });
+	return NextResponse.json({ users: sortUsers(withAvatarUrls(supabase, data || [])) });
 }

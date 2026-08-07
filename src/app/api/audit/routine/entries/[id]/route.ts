@@ -49,7 +49,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 		"finding",
 		"corrective_action",
 		"result",
-		"sam_code_id",
+		"sam_code",
+		"ef_code",
 		"is_non_flight_safety",
 	];
 	for (const key of allowed) {
@@ -60,7 +61,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 		.from("routine_audit_entries")
 		.update(updatePayload)
 		.eq("id", id)
-		.select("*, sam_code:routine_audit_sam_codes(area, category, code, description_zh)")
+		.select("*")
 		.single();
 
 	if (error)

@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/utils/supabase/service-client";
 import { verifyToken } from "@/lib/auth";
+import { SAM_CODE_MAP, EF_CODE_MAP } from "@/lib/routineAudit.constants";
 
 export async function GET(req: NextRequest) {
 	const token = req.headers.get("authorization")?.replace("Bearer ", "");
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
 	const supabase = createServiceClient();
 	const { data, error } = await supabase
 		.from("routine_audit_entries")
-		.select("report_year, report_month, is_non_flight_safety, sam_code:routine_audit_sam_codes(category, area)")
+		.select("report_year, report_month, is_non_flight_safety, sam_code, ef_code")
 		.in("report_year", years)
 		.gte("report_month", monthFrom)
 		.lte("report_month", monthTo);
@@ -32,26 +33,41 @@ export async function GET(req: NextRequest) {
 		return NextResponse.json({ error: error.message }, { status: 500 });
 
 	// aggregate server-side in JS — small row count/year, no Postgres view needed
+	const byCode: Record<string, Record<number, number>> = {};
 	const byCategory: Record<string, Record<number, number>> = {};
-	const byArea: Record<string, Record<number, number>> = {};
+	const byEfCode: Record<string, Record<number, number>> = {};
+	const byEfMiddle: Record<string, Record<number, number>> = {};
 	const byMonth: Record<number, Record<number, number>> = {};
 
 	for (const row of data ?? []) {
 		if (row.is_non_flight_safety) continue;
-		const samCode = row.sam_code as { category?: string; area?: string } | null;
-		if (samCode?.category) {
-			byCategory[samCode.category] ??= {};
-			byCategory[samCode.category][row.report_year] =
-				(byCategory[samCode.category][row.report_year] ?? 0) + 1;
+
+		const resolved = row.sam_code ? SAM_CODE_MAP[row.sam_code] : undefined;
+		if (resolved) {
+			byCode[resolved.code] ??= {};
+			byCode[resolved.code][row.report_year] = (byCode[resolved.code][row.report_year] ?? 0) + 1;
+
+			byCategory[resolved.category] ??= {};
+			byCategory[resolved.category][row.report_year] =
+				(byCategory[resolved.category][row.report_year] ?? 0) + 1;
 		}
-		if (samCode?.area) {
-			byArea[samCode.area] ??= {};
-			byArea[samCode.area][row.report_year] = (byArea[samCode.area][row.report_year] ?? 0) + 1;
+
+		if (row.ef_code) {
+			byEfCode[row.ef_code] ??= {};
+			byEfCode[row.ef_code][row.report_year] = (byEfCode[row.ef_code][row.report_year] ?? 0) + 1;
+
+			const efResolved = EF_CODE_MAP[row.ef_code];
+			if (efResolved) {
+				byEfMiddle[efResolved.attributeName] ??= {};
+				byEfMiddle[efResolved.attributeName][row.report_year] =
+					(byEfMiddle[efResolved.attributeName][row.report_year] ?? 0) + 1;
+			}
 		}
+
 		byMonth[row.report_year] ??= {};
 		byMonth[row.report_year][row.report_month] =
 			(byMonth[row.report_year][row.report_month] ?? 0) + 1;
 	}
 
-	return NextResponse.json({ byCategory, byArea, byMonth });
+	return NextResponse.json({ byCode, byCategory, byEfCode, byEfMiddle, byMonth });
 }
