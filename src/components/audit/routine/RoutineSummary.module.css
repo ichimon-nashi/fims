@@ -1,0 +1,99 @@
+/* src/components/audit/routine/RoutineSummary.module.css */
+
+.container {
+	display: flex;
+	flex-direction: column;
+	gap: 24px;
+}
+
+.kpiRow {
+	display: flex;
+	gap: 12px;
+}
+
+.kpiCard {
+	background: rgba(255, 255, 255, 0.03);
+	border-radius: 8px;
+	padding: 16px 20px;
+}
+
+.kpiLabel {
+	font-size: 0.8125rem;
+	color: rgba(232, 233, 237, 0.6);
+	margin: 0 0 4px;
+}
+
+.kpiValue {
+	font-size: 26px;
+	font-weight: 500;
+	margin: 0;
+}
+
+.chartRow {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 16px;
+}
+
+.innerTabs {
+	display: flex;
+	gap: 4px;
+	border-bottom: 1px solid rgba(232, 233, 237, 0.1);
+}
+
+.innerTab,
+.innerTabActive {
+	background: none;
+	border: none;
+	padding: 8px 4px;
+	margin-right: 20px;
+	font-size: 0.875rem;
+	cursor: pointer;
+	color: rgba(232, 233, 237, 0.5);
+	border-bottom: 2px solid transparent;
+}
+
+.innerTab:hover {
+	color: rgba(232, 233, 237, 0.8);
+}
+
+.innerTabActive {
+	color: #e8e9ed;
+	font-weight: 500;
+	border-bottom-color: #1baf7a;
+}
+
+.error {
+	color: #e34948;
+	font-size: 0.875rem;
+}
+
+.loading {
+	color: rgba(232, 233, 237, 0.5);
+	font-size: 0.875rem;
+}
+
+.importResult {
+	background: rgba(74, 158, 255, 0.08);
+	border: 1px solid rgba(74, 158, 255, 0.25);
+	border-radius: 8px;
+	padding: 12px 16px;
+	font-size: 0.875rem;
+}
+
+.importResult ul {
+	margin: 8px 0;
+	padding-left: 18px;
+	color: rgba(232, 233, 237, 0.7);
+	font-size: 0.8125rem;
+}
+
+.importResult button {
+	background: rgba(255, 255, 255, 0.08);
+	border: none;
+	color: #e8e9ed;
+	border-radius: 6px;
+	padding: 6px 12px;
+	font-size: 0.8125rem;
+	cursor: pointer;
+}

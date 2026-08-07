@@ -1,0 +1,449 @@
+/* src/components/audit/routine/RoutineEntryModal.module.css */
+
+.overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 24px;
+	z-index: 1000;
+}
+
+.panel {
+	width: 720px;
+	max-width: 100%;
+	max-height: calc(100vh - 48px);
+	background: #1a1f35;
+	color: #e8e9ed;
+	border-radius: 12px;
+	display: flex;
+	flex-direction: column;
+	box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+
+.header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 16px 20px;
+	border-bottom: 1px solid rgba(232, 233, 237, 0.12);
+	flex-shrink: 0;
+}
+
+.header h3 {
+	margin: 0;
+	font-size: 1.0625rem;
+	font-weight: 500;
+}
+
+.closeBtn {
+	background: none;
+	border: none;
+	color: rgba(232, 233, 237, 0.6);
+	font-size: 22px;
+	cursor: pointer;
+	line-height: 1;
+}
+
+.body {
+	flex: 1;
+	overflow-y: auto;
+}
+
+.sectionLabel {
+	font-size: 0.8125rem;
+	color: rgba(232, 233, 237, 0.5);
+	margin: 0 0 10px;
+}
+
+.headerSection {
+	padding: 16px 20px;
+	border-bottom: 1px solid rgba(232, 233, 237, 0.12);
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.findingsSection {
+	padding: 16px 20px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.findingCard {
+	border: 1px solid rgba(232, 233, 237, 0.12);
+	border-radius: 10px;
+	padding: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.findingCardHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-size: 0.8125rem;
+	color: rgba(232, 233, 237, 0.6);
+}
+
+.removeBtn {
+	background: none;
+	border: none;
+	color: #e34948;
+	font-size: 0.8125rem;
+	cursor: pointer;
+}
+
+.addFindingBtn {
+	width: 100%;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px dashed rgba(232, 233, 237, 0.25);
+	color: #e8e9ed;
+	border-radius: 8px;
+	padding: 10px;
+	font-size: 0.875rem;
+	cursor: pointer;
+}
+
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	flex: 1;
+}
+
+.field label {
+	font-size: 0.8125rem;
+	color: rgba(232, 233, 237, 0.85);
+	font-weight: 500;
+}
+
+.field input,
+.field select,
+.findingCard textarea {
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(232, 233, 237, 0.15);
+	border-radius: 6px;
+	color: #e8e9ed;
+	padding: 8px 10px;
+	font-size: 0.875rem;
+	font-family: inherit;
+	width: 100%;
+}
+
+.checkboxLabel {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 0.875rem;
+	color: rgba(232, 233, 237, 0.8);
+	white-space: nowrap;
+	align-self: flex-end;
+	padding-bottom: 8px;
+}
+
+.row {
+	display: flex;
+	gap: 12px;
+}
+
+.error {
+	color: #e34948;
+	font-size: 0.875rem;
+	padding: 0 20px 12px;
+}
+
+.footer {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	padding: 16px 20px;
+	border-top: 1px solid rgba(232, 233, 237, 0.12);
+	flex-shrink: 0;
+}
+
+.cancelBtn {
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(232, 233, 237, 0.15);
+	color: #e8e9ed;
+	border-radius: 6px;
+	padding: 8px 16px;
+	font-size: 0.875rem;
+	cursor: pointer;
+}
+
+.saveBtn {
+	background: #4a9eff;
+	color: #ffffff;
+	border: none;
+	border-radius: 6px;
+	padding: 8px 16px;
+	font-size: 0.875rem;
+	cursor: pointer;
+}
+
+.saveBtn:disabled,
+.cancelBtn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+/* --- AuditorField --- */
+
+.auditorWrap {
+	position: relative;
+}
+
+.auditorWrap input {
+	width: 100%;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(232, 233, 237, 0.15);
+	border-radius: 6px;
+	color: #e8e9ed;
+	padding: 8px 10px;
+	font-size: 0.875rem;
+}
+
+.auditorDropdown {
+	background: #2d3651;
+	border: 1px solid rgba(232, 233, 237, 0.15);
+	border-radius: 6px;
+	overflow-y: auto;
+	z-index: 1100;
+}
+
+.auditorOption {
+	display: flex;
+	justify-content: space-between;
+	padding: 8px 10px;
+	font-size: 0.875rem;
+	cursor: pointer;
+}
+
+.auditorOption:hover {
+	background: rgba(74, 158, 255, 0.15);
+}
+
+.dateWrap {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.dateYear,
+.dateSmall {
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(232, 233, 237, 0.15);
+	border-radius: 6px;
+	color: #e8e9ed;
+	padding: 8px 6px;
+	font-size: 0.875rem;
+	text-align: center;
+}
+
+.dateYear {
+	width: 64px;
+}
+
+.dateSmall {
+	width: 40px;
+}
+
+.dateSep {
+	color: rgba(232, 233, 237, 0.4);
+}
+
+.auditorError {
+	padding: 10px 12px;
+	font-size: 0.8125rem;
+	color: #e34948;
+}
+
+.auditorMeta {
+	color: rgba(232, 233, 237, 0.5);
+	font-size: 0.8125rem;
+}
+
+/* --- SamCodeField --- */
+
+.samWrap {
+	position: relative;
+}
+
+.samTrigger {
+	width: 100%;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(232, 233, 237, 0.15);
+	border-radius: 6px;
+	color: #e8e9ed;
+	padding: 8px 10px;
+	font-size: 0.875rem;
+	cursor: pointer;
+	text-align: left;
+}
+
+.samPlaceholder {
+	color: rgba(232, 233, 237, 0.4);
+}
+
+.samCode {
+	font-weight: 600;
+	color: #4a9eff;
+}
+
+.samChevron {
+	font-size: 0.75rem;
+	color: rgba(232, 233, 237, 0.4);
+	margin-left: 8px;
+}
+
+.samBackdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 1090;
+}
+
+.samPopover {
+	background: #2d3651;
+	border: 1px solid rgba(232, 233, 237, 0.15);
+	border-radius: 8px;
+	z-index: 1100;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+	display: flex;
+	flex-direction: column;
+}
+
+.samSearch {
+	width: 100%;
+	background: rgba(255, 255, 255, 0.05);
+	border: none;
+	border-bottom: 1px solid rgba(232, 233, 237, 0.15);
+	color: #e8e9ed;
+	padding: 10px 12px;
+	font-size: 0.875rem;
+	border-radius: 8px 8px 0 0;
+}
+
+.samList {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	padding: 4px 0;
+}
+
+.samGroup summary {
+	padding: 8px 12px;
+	font-size: 0.8125rem;
+	color: rgba(232, 233, 237, 0.6);
+	cursor: pointer;
+	list-style: none;
+}
+
+.samGroup summary::-webkit-details-marker {
+	display: none;
+}
+
+.samGroup summary::before {
+	content: "▸ ";
+	font-size: 0.75rem;
+}
+
+.samGroup[open] summary::before {
+	content: "▾ ";
+}
+
+.samOption {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	padding: 6px 12px 6px 24px;
+	font-size: 0.875rem;
+	cursor: pointer;
+}
+
+.samOption:hover {
+	background: rgba(74, 158, 255, 0.15);
+}
+
+.samDesc {
+	flex: 1;
+	color: #e8e9ed;
+}
+
+.samCategory {
+	color: rgba(232, 233, 237, 0.4);
+	font-size: 0.75rem;
+	white-space: nowrap;
+}
+
+.samEmpty {
+	padding: 16px;
+	text-align: center;
+	color: rgba(232, 233, 237, 0.4);
+	font-size: 0.875rem;
+}
+
+/* --- RouteField --- */
+
+.routeWrap {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.routeWrap select,
+.routeDestInput {
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(232, 233, 237, 0.15);
+	border-radius: 6px;
+	color: #e8e9ed;
+	padding: 8px 10px;
+	font-size: 0.875rem;
+}
+
+.routeWrap select {
+	flex: 1;
+}
+
+.routeDestInput {
+	flex: 1;
+	text-transform: uppercase;
+}
+
+.routeArrow {
+	color: rgba(232, 233, 237, 0.4);
+	font-size: 0.875rem;
+}
+
+/* mobile: full-screen sheet instead of a centered floating panel */
+@media (max-width: 640px) {
+	.overlay {
+		padding: 0;
+		align-items: flex-end;
+	}
+
+	.panel {
+		width: 100%;
+		max-width: 100%;
+		max-height: 100%;
+		height: 100%;
+		border-radius: 0;
+	}
+
+	.row {
+		flex-direction: column;
+		gap: 10px;
+	}
+
+	.checkboxLabel {
+		align-self: flex-start;
+		padding-bottom: 0;
+	}
+}

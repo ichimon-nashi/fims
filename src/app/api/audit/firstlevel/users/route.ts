@@ -46,19 +46,21 @@ export async function GET(req: NextRequest) {
 	if (query === "") {
 		const { data, error } = await supabase
 			.from("users")
-			.select("employee_id, full_name, rank")
-			.in("rank", DEFAULT_RANKS);
+			.select("employee_id, full_name, rank, is_inactive")
+			.in("rank", DEFAULT_RANKS)
+			.or("is_inactive.is.null,is_inactive.eq.false");
 
 		if (error)
 			return NextResponse.json({ error: error.message }, { status: 500 });
 		return NextResponse.json({ users: sortUsers(data || []) });
 	}
 
-	// Search — all ranks except admin
+	// Search — all ranks except admin, excluding inactive users
 	const { data, error } = await supabase
 		.from("users")
-		.select("employee_id, full_name, rank")
+		.select("employee_id, full_name, rank, is_inactive")
 		.neq("rank", "admin")
+		.or("is_inactive.is.null,is_inactive.eq.false")
 		.or(`full_name.ilike.%${query}%,employee_id.ilike.%${query}%`)
 		.limit(20);
 

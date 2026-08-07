@@ -1,0 +1,94 @@
+/* src/app/audit/routine/routine.module.css */
+
+.pageShell {
+	min-height: 100vh;
+	background: linear-gradient(180deg, #1a1f35 0%, #2d3651 100%);
+	color: #e8e9ed;
+}
+
+.content {
+	padding: 24px;
+}
+
+.tabBar {
+	display: flex;
+	gap: 4px;
+	border-bottom: 1px solid rgba(232, 233, 237, 0.12);
+	margin-bottom: 24px;
+}
+
+.tab,
+.tabActive,
+.tabDisabled {
+	background: none;
+	border: none;
+	padding: 10px 20px;
+	font-size: 0.9375rem;
+	cursor: pointer;
+	color: rgba(232, 233, 237, 0.6);
+	border-bottom: 2px solid transparent;
+}
+
+.tab:hover {
+	color: #e8e9ed;
+}
+
+.tabActive {
+	color: #e8e9ed;
+	font-weight: 500;
+	border-bottom-color: #fb923c;
+}
+
+.tabDisabled {
+	cursor: not-allowed;
+	color: rgba(232, 233, 237, 0.3);
+}
+
+/* ── Top-level audit nav (copied verbatim from firstlevel/iosa's topbar) ── */
+.topbar {
+	background: #2d3651;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+	padding: 0 1rem;
+	display: flex;
+	align-items: center;
+	height: 52px;
+	gap: 0;
+	flex-shrink: 0;
+}
+
+.auditTabs {
+	display: flex;
+	gap: 2px;
+}
+
+.auditTab {
+	padding: 0 1.25rem;
+	height: 52px;
+	display: flex;
+	align-items: center;
+	font-size: 1.0625rem;
+	color: #a0aec0;
+	cursor: pointer;
+	border: none;
+	background: transparent;
+	border-bottom: 2px solid transparent;
+	white-space: nowrap;
+	transition: color 0.15s;
+	font-family: inherit;
+}
+
+.auditTab:hover {
+	color: #e8e9ed;
+}
+
+.auditTabActive {
+	color: #4a9eff !important;
+	border-bottom-color: #4a9eff;
+}
+
+.topbarRight {
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	gap: 0.625rem;
+}
