@@ -6,6 +6,68 @@
 	gap: 12px;
 }
 
+.searchInput {
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(232, 233, 237, 0.15);
+	border-radius: 8px;
+	color: #e8e9ed;
+	padding: 8px 12px;
+	font-size: 0.875rem;
+	width: 100%;
+}
+
+.searchInput::placeholder {
+	color: rgba(232, 233, 237, 0.4);
+}
+
+.monthSection {
+	display: flex;
+	flex-direction: column;
+}
+
+.monthDivider {
+	position: sticky;
+	top: 0;
+	z-index: 5;
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	padding: 8px 4px;
+	margin-bottom: 8px;
+	background: #1a1f35;
+	border: none;
+	font-size: 0.9375rem;
+	font-weight: 600;
+	color: #4a9eff;
+	border-bottom: 1px solid rgba(74, 158, 255, 0.2);
+	cursor: pointer;
+	width: 100%;
+	text-align: left;
+}
+
+.monthDivider:hover {
+	color: #6bb0ff;
+}
+
+.monthChevron {
+	font-size: 0.75rem;
+	color: rgba(232, 233, 237, 0.5);
+	width: 12px;
+}
+
+.monthDividerCount {
+	font-size: 0.75rem;
+	font-weight: 400;
+	color: rgba(232, 233, 237, 0.5);
+}
+
+.monthCards {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin-bottom: 12px;
+}
+
 .card {
 	background: rgba(255, 255, 255, 0.03);
 	border: 1px solid rgba(232, 233, 237, 0.08);
@@ -49,10 +111,6 @@
 	color: rgba(232, 233, 237, 0.6);
 }
 
-.headerMeta {
-	color: rgba(232, 233, 237, 0.5);
-}
-
 .b738Badge {
 	background: rgba(250, 199, 117, 0.15);
 	color: #fac775;
@@ -63,8 +121,44 @@
 	font-size: 0.75rem;
 }
 
+.auditorBadge {
+	background: rgba(208, 173, 167, 0.12);
+	color: #d0ada7;
+	border-radius: 4px;
+	padding: 1px 8px;
+	font-size: 0.75rem;
+	font-weight: 500;
+}
+
 .tailBadge {
 	color: rgba(232, 233, 237, 0.8);
+}
+
+.flightBadge {
+	background: rgba(78, 205, 196, 0.12);
+	color: #4ECDC4;
+	border-radius: 4px;
+	padding: 1px 8px;
+	font-size: 0.75rem;
+	font-weight: 500;
+}
+
+.routeBadge {
+	background: rgba(184, 146, 255, 0.12);
+	color: #b892ff;
+	border-radius: 4px;
+	padding: 1px 8px;
+	font-size: 0.75rem;
+	font-weight: 500;
+}
+
+.specialBadge {
+	background: rgba(255, 194, 226, 0.15);
+	color: #ffc2e2;
+	border-radius: 4px;
+	padding: 1px 8px;
+	font-size: 0.75rem;
+	font-weight: 600;
 }
 
 .cardHeaderActions {

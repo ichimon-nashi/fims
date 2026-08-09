@@ -18,6 +18,7 @@ interface FindingDraft {
 }
 
 interface HeaderDraft {
+	entry_no?: string; // present only when editing — create mode auto-generates via the atomic function, never set here
 	audit_date: string;
 	report_year: number;
 	report_month: number;
@@ -25,6 +26,7 @@ interface HeaderDraft {
 	aircraft_tail: string;
 	flight_no: string;
 	route: string;
+	is_special_audit: boolean; // e.g. 春節加強查核
 }
 
 interface Props {
@@ -43,6 +45,7 @@ const emptyHeader: HeaderDraft = {
 	aircraft_tail: "",
 	flight_no: "",
 	route: "",
+	is_special_audit: false,
 };
 
 const emptyFinding: FindingDraft = {
@@ -54,7 +57,6 @@ const emptyFinding: FindingDraft = {
 	is_non_flight_safety: false,
 };
 
-const ORIGIN_OPTIONS = ["TSA", "TPE", "RMQ", "KHH"];
 
 // Popovers are rendered inside a scrolling modal body, so plain
 // `position: absolute` breaks once the trigger is near the bottom of that
@@ -62,6 +64,146 @@ const ORIGIN_OPTIONS = ["TSA", "TPE", "RMQ", "KHH"];
 // viewport edge instead of the panel). Computing viewport coordinates from
 // the trigger's real position and flipping upward when there isn't room
 // below fixes it regardless of where the field sits.
+// Excel prefixes a cell with a leading ' to force text formatting (e.g. so
+// a tail number or flight number isn't auto-converted to a number). That
+// character survives copy-paste into a plain text input, so every field
+// likely to receive pasted spreadsheet data strips it on the way in.
+function stripExcelQuote(value: string): string {
+	return value.startsWith("'") ? value.slice(1) : value;
+}
+
+// lets someone type "16855" instead of "B16855" — strips any leading B
+// first (case-insensitive) so re-prepending never doubles up regardless of
+// whether they typed the B themselves
+function normalizeTail(raw: string): string {
+	const cleaned = stripExcelQuote(raw).trim().toUpperCase().replace(/^B/, "");
+	return cleaned ? `B${cleaned}` : "";
+}
+
+// Matches the exact column order from the import template's 查核紀錄 sheets:
+// 序,日期,編號,查核員,機號,班次,航段,記錄,處置,結果,SAM分類,SAM代碼,非飛安相關
+interface ParsedDate {
+	iso: string | null; // full YYYY-MM-DD, only when a year was present
+	month: number | null;
+	day: number | null;
+}
+
+function parseDatePasted(raw: string): ParsedDate {
+	const cleaned = raw.trim();
+	// full date: YYYY-MM-DD or YYYY/M/D (with or without leading zeros)
+	const full = cleaned.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+	if (full) {
+		const [, y, mo, d] = full;
+		return {
+			iso: `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`,
+			month: Number(mo),
+			day: Number(d),
+		};
+	}
+	// partial: M/D with no year (common when the source sheet has no year
+	// column) — month/day are still usable, year has to come from the user
+	const partial = cleaned.match(/^(\d{1,2})[-/](\d{1,2})$/);
+	if (partial) {
+		const [, mo, d] = partial;
+		return { iso: null, month: Number(mo), day: Number(d) };
+	}
+	return { iso: null, month: null, day: null };
+}
+
+interface ParsedPaste {
+	header: Partial<HeaderDraft>;
+	findings: FindingDraft[];
+	warnings: string[];
+}
+
+function parseExcelPaste(text: string): ParsedPaste {
+	const warnings: string[] = [];
+	let lines = text
+		.split(/\r?\n/)
+		.map((l) => l.split("\t").map((c) => stripExcelQuote(c.trim())))
+		.filter((cols) => cols.some((c) => c !== ""));
+
+	// tolerate a copied header row (序, 日期, ...) by skipping it
+	if (lines.length > 0 && lines[0][0] === "序") lines = lines.slice(1);
+
+	if (lines.length === 0) {
+		return { header: {}, findings: [], warnings: ["未偵測到任何資料列"] };
+	}
+
+	const parsedFindings: FindingDraft[] = [];
+	let header: Partial<HeaderDraft> = {};
+
+	lines.forEach((cols, i) => {
+		const [, dateRaw, , auditorRaw, tailRaw, flightRaw, routeRaw, findingRaw, correctiveRaw, , , samRaw, flagRaw] = cols;
+
+		if (i === 0) {
+			const parsed = dateRaw ? parseDatePasted(dateRaw) : { iso: null, month: null, day: null };
+			let audit_date = "";
+			let report_year = new Date().getFullYear();
+			let report_month = new Date().getMonth() + 1;
+
+			if (parsed.iso) {
+				audit_date = parsed.iso;
+				report_year = Number(parsed.iso.slice(0, 4));
+				report_month = parsed.month!;
+			} else if (parsed.month && parsed.day) {
+				// no year in the source (e.g. "2/11") — represent as "-MM-DD"
+				// so DateField shows month/day filled and year genuinely
+				// blank for the user to complete, rather than guessing a
+				// year that might be wrong
+				audit_date = `-${String(parsed.month).padStart(2, "0")}-${String(parsed.day).padStart(2, "0")}`;
+				report_month = parsed.month;
+				warnings.push(`日期「${dateRaw}」未包含年份，已填入月/日，請手動選擇年度`);
+			} else if (dateRaw) {
+				warnings.push(`日期「${dateRaw}」格式無法辨識，請手動選擇`);
+			}
+
+			// source stores routes as "TSA/KNH" — normalize to the internal
+			// "TSA-KNH" format regardless of which separator was used, since
+			// RouteField splits on "-" and previously left destination empty
+			// when it got a "/"-separated value it didn't recognize
+			const routeParts = routeRaw ? routeRaw.split(/[/-]/) : [];
+			const route = routeParts.length === 2 ? `${routeParts[0]}-${routeParts[1]}` : routeRaw ?? "";
+
+			header = {
+				audit_date,
+				report_year,
+				report_month,
+				auditor_name: auditorRaw ?? "",
+				aircraft_tail: tailRaw ? normalizeTail(tailRaw) : "",
+				flight_no: flightRaw ?? "",
+				route,
+			};
+		}
+
+		const samCode = samRaw?.trim().toUpperCase();
+		const resolvedSam = samCode && samCode !== "-" ? SAM_CODE_MAP[samCode] : undefined;
+		if (samCode && samCode !== "-" && !resolvedSam) {
+			warnings.push(`第${i + 1}列：SAM代碼「${samCode}」找不到對應項目，已略過`);
+		}
+
+		if (!findingRaw) {
+			warnings.push(`第${i + 1}列缺少記錄內容，已略過此列`);
+			return;
+		}
+
+		parsedFindings.push({
+			finding: findingRaw,
+			corrective_action: correctiveRaw ?? "",
+			result: "OK",
+			sam_code: resolvedSam ? samCode! : null,
+			ef_code: null, // not part of the excel template — pick manually after paste
+			is_non_flight_safety: flagRaw?.trim().toLowerCase() === "v",
+		});
+	});
+
+	if (parsedFindings.length === 0 && lines.length > 0) {
+		warnings.push("所有列都缺少記錄內容，無法解析");
+	}
+
+	return { header, findings: parsedFindings, warnings };
+}
+
 function computePopoverStyle(
 	triggerEl: HTMLElement | null,
 	estimatedHeight: number
@@ -110,13 +252,30 @@ function DateField({ value, onChange }: { value: string; onChange: (iso: string)
 		setSegs({ y: y || "", m: m || "", d: d || "" });
 	}, [value]);
 
-	function update(next: { y: string; m: string; d: string }) {
-		setSegs(next);
-		if (next.y.length === 4 && next.m.length >= 1 && next.d.length >= 1) {
-			onChange(`${next.y}-${next.m.padStart(2, "0")}-${next.d.padStart(2, "0")}`);
+	function commitIfComplete(next: { y: string; m: string; d: string }) {
+		// only when every segment is at FULL length — not just non-empty.
+		// Committing on a single digit (length >= 1) was the bug: it round-
+		// tripped "1" through the parent as "01" mid-keystroke, and the
+		// resync-from-parent effect then overwrote the user's own typing.
+		if (next.y.length === 4 && next.m.length === 2 && next.d.length === 2) {
+			onChange(`${next.y}-${next.m}-${next.d}`);
 		}
-		// incomplete — deliberately don't call onChange; parent keeps its
-		// last valid value until this field is actually complete
+	}
+
+	// blur is the one safe place to pad a shorthand single digit (e.g. "1"
+	// for January) to "01" — it only fires once, when the user is actually
+	// done with that field, never mid-typing
+	function padOnBlur(field: "m" | "d") {
+		setSegs((s) => {
+			const v = s[field];
+			if (v.length === 1) {
+				const next = { ...s, [field]: v.padStart(2, "0") };
+				commitIfComplete(next);
+				return next;
+			}
+			commitIfComplete(s);
+			return s;
+		});
 	}
 
 	return (
@@ -130,7 +289,9 @@ function DateField({ value, onChange }: { value: string; onChange: (iso: string)
 				maxLength={4}
 				onChange={(e) => {
 					const v = e.target.value.replace(/\D/g, "").slice(0, 4);
-					update({ ...segs, y: v });
+					const next = { ...segs, y: v };
+					setSegs(next);
+					commitIfComplete(next);
 					if (v.length === 4) monthRef.current?.focus();
 				}}
 			/>
@@ -144,9 +305,12 @@ function DateField({ value, onChange }: { value: string; onChange: (iso: string)
 				maxLength={2}
 				onChange={(e) => {
 					const v = e.target.value.replace(/\D/g, "").slice(0, 2);
-					update({ ...segs, m: v });
+					const next = { ...segs, m: v };
+					setSegs(next);
+					commitIfComplete(next);
 					if (v.length === 2) dayRef.current?.focus();
 				}}
+				onBlur={() => padOnBlur("m")}
 			/>
 			<span className={styles.dateSep}>/</span>
 			<input
@@ -158,8 +322,11 @@ function DateField({ value, onChange }: { value: string; onChange: (iso: string)
 				maxLength={2}
 				onChange={(e) => {
 					const v = e.target.value.replace(/\D/g, "").slice(0, 2);
-					update({ ...segs, d: v });
+					const next = { ...segs, d: v };
+					setSegs(next);
+					commitIfComplete(next);
 				}}
+				onBlur={() => padOnBlur("d")}
 			/>
 		</div>
 	);
@@ -299,17 +466,29 @@ function SamCodeField({ value, onChange }: { value: string | null; onChange: (co
 
 	return (
 		<div className={styles.efWrap}>
-			<button type="button" className={styles.samTrigger} onClick={openPicker}>
-				{selected ? (
-					<span>
-						<span className={styles.samCode}>{selected.code}</span>
-						{" — "}
-						{selected.description_zh}
-					</span>
-				) : (
-					<span className={styles.samPlaceholder}>選擇SAM代碼</span>
+			<div className={styles.triggerRow}>
+				<button type="button" className={styles.samTrigger} onClick={openPicker}>
+					{selected ? (
+						<span>
+							<span className={styles.samCode}>{selected.code}</span>
+							{" — "}
+							{selected.description_zh}
+						</span>
+					) : (
+						<span className={styles.samPlaceholder}>選擇SAM代碼</span>
+					)}
+				</button>
+				{selected && (
+					<button
+						type="button"
+						className={styles.clearBtn}
+						onClick={() => onChange(null)}
+						title="清除選擇"
+					>
+						×
+					</button>
 				)}
-			</button>
+			</div>
 
 			{open && (
 				<div className={styles.efOverlay} onMouseDown={() => setOpen(false)}>
@@ -391,22 +570,24 @@ function SamCodeField({ value, onChange }: { value: string | null; onChange: (co
 function RouteField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
 	const [origin = "", destination = ""] = value.split("-");
 
-	function setOrigin(o: string) {
-		onChange(`${o}-${destination}`);
+	function setOrigin(raw: string) {
+		const cleaned = stripExcelQuote(raw).toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3);
+		onChange(`${cleaned}-${destination}`);
 	}
 	function setDestination(raw: string) {
-		const cleaned = raw.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3);
+		const cleaned = stripExcelQuote(raw).toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3);
 		onChange(`${origin}-${cleaned}`);
 	}
 
 	return (
 		<div className={styles.routeWrap}>
-			<select value={origin} onChange={(e) => setOrigin(e.target.value)}>
-				<option value="">-</option>
-				{ORIGIN_OPTIONS.map((o) => (
-					<option key={o} value={o}>{o}</option>
-				))}
-			</select>
+			<input
+				value={origin}
+				onChange={(e) => setOrigin(e.target.value)}
+				placeholder="TSA"
+				maxLength={3}
+				className={styles.routeDestInput}
+			/>
 			<span className={styles.routeArrow}>⇄</span>
 			<input
 				value={destination}
@@ -467,17 +648,29 @@ function EfCodeField({ value, onChange }: { value: string | null; onChange: (cod
 
 	return (
 		<div className={styles.efWrap}>
-			<button type="button" className={styles.samTrigger} onClick={openPicker}>
-				{selected ? (
-					<span>
-						<span className={styles.samCode}>{selected.code}</span>
-						{" — "}
-						{selected.description}
-					</span>
-				) : (
-					<span className={styles.samPlaceholder}>選擇EF屬性代碼</span>
+			<div className={styles.triggerRow}>
+				<button type="button" className={styles.samTrigger} onClick={openPicker}>
+					{selected ? (
+						<span>
+							<span className={styles.samCode}>{selected.code}</span>
+							{" — "}
+							{selected.description}
+						</span>
+					) : (
+						<span className={styles.samPlaceholder}>選擇EF屬性代碼</span>
+					)}
+				</button>
+				{selected && (
+					<button
+						type="button"
+						className={styles.clearBtn}
+						onClick={() => onChange(null)}
+						title="清除選擇"
+					>
+						×
+					</button>
 				)}
-			</button>
+			</div>
 
 			{open && (
 				<div className={styles.efOverlay} onMouseDown={() => setOpen(false)}>
@@ -582,6 +775,11 @@ export default function RoutineEntryModal({
 		findings?: Set<number>; // indices of finding cards missing 記錄 text
 	}>({});
 	const submittingRef = useRef(false);
+	const [pasteOpen, setPasteOpen] = useState(false);
+	const [prefix, setPrefix] = useState<"SA" | "GA">("SA");
+	const [entryNoTouched, setEntryNoTouched] = useState(false);
+	const [pasteText, setPasteText] = useState("");
+	const [pasteWarnings, setPasteWarnings] = useState<string[]>([]);
 
 	const isEdit = mode === "edit" && editingEntries && editingEntries.length > 0;
 
@@ -589,9 +787,15 @@ export default function RoutineEntryModal({
 		if (!open) return;
 		setError(null);
 		setFieldErrors({});
+		setPasteOpen(false);
+		setPasteText("");
+		setPasteWarnings([]);
+		setPrefix("SA");
+		setEntryNoTouched(false);
 		if (isEdit && editingEntries) {
 			const first = editingEntries[0];
 			setHeader({
+				entry_no: first.entry_no,
 				audit_date: first.audit_date,
 				report_year: first.report_year,
 				report_month: first.report_month,
@@ -599,6 +803,7 @@ export default function RoutineEntryModal({
 				aircraft_tail: first.aircraft_tail,
 				flight_no: first.flight_no ?? "",
 				route: first.route ?? "",
+				is_special_audit: first.is_special_audit,
 			});
 			setFindings(
 				[...editingEntries]
@@ -618,6 +823,25 @@ export default function RoutineEntryModal({
 			setFindings([{ ...emptyFinding }]);
 		}
 	}, [open, isEdit, editingEntries]);
+
+	useEffect(() => {
+		if (!open || isEdit || entryNoTouched) return;
+		const token = localStorage.getItem("token");
+		if (!token) return;
+		const params = new URLSearchParams({
+			prefix,
+			year: String(header.report_year),
+			month: String(header.report_month),
+		});
+		fetch(`/api/audit/routine/entries/next-number?${params}`, {
+			headers: { Authorization: `Bearer ${token}` },
+		})
+			.then((res) => (res.ok ? res.json() : null))
+			.then((data) => {
+				if (data?.entry_no) setHeader((h) => ({ ...h, entry_no: data.entry_no }));
+			})
+			.catch(() => {});
+	}, [open, isEdit, entryNoTouched, prefix, header.report_year, header.report_month]);
 
 	if (!open) return null;
 
@@ -649,6 +873,28 @@ export default function RoutineEntryModal({
 	function addFindingCard() {
 		setFindings((list) => [...list, { ...emptyFinding }]);
 	}
+	function handleApplyPaste() {
+		const result = parseExcelPaste(pasteText);
+		if (result.findings.length === 0) {
+			setPasteWarnings(result.warnings.length ? result.warnings : ["找不到可解析的資料"]);
+			return;
+		}
+		if (!isEdit) {
+			// create mode — paste replaces the header too, since there's
+			// nothing shared to preserve yet
+			setHeader((h) => ({ ...h, ...result.header }));
+			setFindings(result.findings);
+		} else {
+			// edit mode — header belongs to the existing audit; paste only
+			// appends findings, never overwrites shared fields you already set
+			setFindings((list) => [...list, ...result.findings]);
+		}
+		setPasteWarnings(result.warnings);
+		if (result.warnings.length === 0) {
+			setPasteOpen(false);
+			setPasteText("");
+		}
+	}
 	async function removeFindingCard(idx: number) {
 		const f = findings[idx];
 		if (findings.length <= 1) return; // an audit needs at least one finding
@@ -676,7 +922,7 @@ export default function RoutineEntryModal({
 		if (submittingRef.current) return; // synchronous guard — setSaving(true) below isn't fast enough to stop a rapid double-click
 
 		const missingHeader = {
-			audit_date: !header.audit_date,
+			audit_date: !/^\d{4}-\d{2}-\d{2}$/.test(header.audit_date),
 			auditor_name: !header.auditor_name,
 			aircraft_tail: !header.aircraft_tail,
 		};
@@ -703,7 +949,7 @@ export default function RoutineEntryModal({
 
 		try {
 			if (isEdit && editingEntries) {
-				const entryNo = editingEntries[0].entry_no;
+				const entryNo = header.entry_no ?? editingEntries[0].entry_no;
 
 				for (const f of findings) {
 					if (f.id) {
@@ -746,6 +992,8 @@ export default function RoutineEntryModal({
 						...header,
 						...f,
 						existing_entry_no: entryNo ?? undefined,
+						manual_entry_no: entryNo ? undefined : header.entry_no,
+						prefix,
 					};
 					const res = await fetch("/api/audit/routine/entries", {
 						method: "POST",
@@ -782,8 +1030,102 @@ export default function RoutineEntryModal({
 				</div>
 
 				<div className={styles.body}>
+					<div className={styles.pasteSection}>
+						<button className={styles.pasteToggle} onClick={() => setPasteOpen((o) => !o)}>
+							{pasteOpen ? "取消貼上" : "📋 貼上Excel資料列"}
+						</button>
+						{pasteOpen && (
+							<div className={styles.pasteBox}>
+								<p className={styles.pasteHint}>
+									直接從Excel複製一列或多列並貼上，欄位順序需與範本一致：序/日期/編號/查核員/機號/班次/航段/記錄/處置/結果/SAM分類/SAM代碼/非飛安相關。
+									{isEdit && "（編輯模式下僅新增記錄，不會覆蓋共用資訊）"}
+								</p>
+								<textarea
+									className={styles.pasteTextarea}
+									rows={4}
+									placeholder="在此貼上..."
+									value={pasteText}
+									onChange={(e) => setPasteText(e.target.value)}
+									onPaste={(e) => {
+										// apply immediately on paste so review/edit happens in the
+										// actual form fields right away, not in this intermediate box
+										const text = e.clipboardData.getData("text");
+										setTimeout(() => {
+											setPasteText(text);
+											const result = parseExcelPaste(text);
+											if (result.findings.length === 0) {
+												setPasteWarnings(result.warnings.length ? result.warnings : ["找不到可解析的資料"]);
+												return;
+											}
+											if (!isEdit) {
+												setHeader((h) => ({ ...h, ...result.header }));
+												setFindings(result.findings);
+											} else {
+												setFindings((list) => [...list, ...result.findings]);
+											}
+											setPasteWarnings(result.warnings);
+											if (result.warnings.length === 0) {
+												setPasteOpen(false);
+												setPasteText("");
+											}
+										}, 0);
+									}}
+								/>
+								{pasteText && (
+									<button className={styles.pasteApplyBtn} onClick={handleApplyPaste}>
+										重新解析
+									</button>
+								)}
+								{pasteWarnings.length > 0 && (
+									<ul className={styles.pasteWarnings}>
+										{pasteWarnings.map((w, i) => (
+											<li key={i}>{w}</li>
+										))}
+									</ul>
+								)}
+							</div>
+						)}
+					</div>
+
 					<div className={styles.headerSection}>
 						<p className={styles.sectionLabel}>共用資訊 (此次稽核僅需填寫一次)</p>
+						<div className={styles.row}>
+							<div className={styles.field}>
+								<label>查核編號</label>
+								<div className={styles.entryNoSplit}>
+									<select
+										value={header.entry_no?.slice(0, 2) ?? prefix}
+										onChange={(e) => {
+											const newPrefix = e.target.value as "SA" | "GA";
+											if (!isEdit) setPrefix(newPrefix);
+											updateHeader("entry_no", `${newPrefix}${header.entry_no?.slice(2) ?? ""}`);
+										}}
+									>
+										<option value="SA">SA</option>
+										<option value="GA">GA</option>
+									</select>
+									<input
+										value={header.entry_no?.slice(2) ?? ""}
+										onChange={(e) => {
+											if (!isEdit) setEntryNoTouched(true);
+											updateHeader(
+												"entry_no",
+												`${header.entry_no?.slice(0, 2) ?? prefix}${stripExcelQuote(e.target.value).toUpperCase()}`
+											);
+										}}
+										placeholder="0106"
+									/>
+								</div>
+							</div>
+							<label className={styles.checkboxLabel}>
+								<input
+									type="checkbox"
+									checked={header.is_special_audit}
+									onChange={(e) => updateHeader("is_special_audit", e.target.checked)}
+								/>
+								春節加強查核
+							</label>
+						</div>
 						<div className={styles.row}>
 							<div className={fieldErrors.audit_date ? styles.fieldInvalid : styles.field}>
 								<label>稽核日期</label>
@@ -799,7 +1141,7 @@ export default function RoutineEntryModal({
 								<label>機號</label>
 								<input
 									value={header.aircraft_tail}
-									onChange={(e) => updateHeader("aircraft_tail", e.target.value.toUpperCase())}
+									onChange={(e) => updateHeader("aircraft_tail", normalizeTail(e.target.value))}
 									placeholder="B16855"
 								/>
 							</div>
@@ -807,7 +1149,7 @@ export default function RoutineEntryModal({
 								<label>班次</label>
 								<input
 									value={header.flight_no}
-									onChange={(e) => updateHeader("flight_no", e.target.value)}
+									onChange={(e) => updateHeader("flight_no", stripExcelQuote(e.target.value))}
 									placeholder="343/344"
 								/>
 							</div>
@@ -832,10 +1174,10 @@ export default function RoutineEntryModal({
 									rows={3}
 									placeholder="輸入此項發現..."
 									value={f.finding}
-									onChange={(e) => updateFinding(idx, "finding", e.target.value)}
+									onChange={(e) => updateFinding(idx, "finding", stripExcelQuote(e.target.value))}
 									className={fieldErrors.findings?.has(idx) ? styles.fieldInvalidTextarea : undefined}
 								/>
-								<textarea rows={2} placeholder="處置作為" value={f.corrective_action} onChange={(e) => updateFinding(idx, "corrective_action", e.target.value)} />
+								<textarea rows={2} placeholder="處置作為" value={f.corrective_action} onChange={(e) => updateFinding(idx, "corrective_action", stripExcelQuote(e.target.value))} />
 								<label className={styles.checkboxLabel}>
 									<input type="checkbox" checked={f.is_non_flight_safety} onChange={(e) => updateFinding(idx, "is_non_flight_safety", e.target.checked)} />
 									非安全相關

@@ -20,6 +20,7 @@ export interface RoutineAuditEntry {
 	sam_code: string | null; // e.g. "RM01" — resolve via SAM_CODE_MAP for category/area/description
 	ef_code: string | null; // e.g. "P4-03" — resolve via EF_CODE_MAP for attribute/description
 	is_non_flight_safety: boolean;
+	is_special_audit: boolean; // e.g. 春節加強查核 — header-level, shared across all findings in the group
 	created_by: string;
 	created_at: string;
 	updated_by: string | null;
@@ -30,6 +31,8 @@ export interface RoutineAuditEntry {
 // finding under an existing one (see entries POST route)
 export interface CreateEntryPayload {
 	existing_entry_no?: string;
+	manual_entry_no?: string; // user-chosen/edited entry_no for a brand new audit, overrides prefix-based auto-generation
+	prefix?: string; // "SA" or "GA" — fallback if manual_entry_no is somehow empty
 	audit_date: string;
 	report_year: number;
 	report_month: number;
@@ -43,6 +46,7 @@ export interface CreateEntryPayload {
 	sam_code?: string | null;
 	ef_code?: string | null;
 	is_non_flight_safety?: boolean;
+	is_special_audit?: boolean;
 }
 
 export type UpdateEntryPayload = Partial<Omit<CreateEntryPayload, "existing_entry_no">>;

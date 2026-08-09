@@ -61,6 +61,8 @@ export async function POST(req: NextRequest) {
 	const body = await req.json();
 	const {
 		existing_entry_no, // set when adding another finding to the same audit
+		manual_entry_no, // user-chosen/edited entry_no for a brand new audit
+		prefix, // "SA" or "GA" — fallback if manual_entry_no is empty
 		audit_date,
 		report_year,
 		report_month,
@@ -73,6 +75,7 @@ export async function POST(req: NextRequest) {
 		sam_code,
 		ef_code,
 		is_non_flight_safety,
+		is_special_audit,
 	} = body;
 
 	if (!audit_date || !report_year || !report_month || !auditor_name || !aircraft_tail || !finding) {
@@ -85,6 +88,8 @@ export async function POST(req: NextRequest) {
 	// races and failed deterministically on non-transient collisions
 	const { data, error } = await supabase.rpc("create_routine_audit_finding", {
 		p_existing_entry_no: existing_entry_no ?? null,
+		p_manual_entry_no: manual_entry_no ?? null,
+		p_prefix: prefix ?? "SA",
 		p_audit_date: audit_date,
 		p_report_year: report_year,
 		p_report_month: report_month,
@@ -97,6 +102,7 @@ export async function POST(req: NextRequest) {
 		p_sam_code: sam_code ?? null,
 		p_ef_code: ef_code ?? null,
 		p_is_non_flight_safety: is_non_flight_safety ?? false,
+		p_is_special_audit: is_special_audit ?? false,
 		p_created_by: userRecord.employee_id,
 	});
 

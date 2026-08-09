@@ -116,6 +116,11 @@
 	flex: 1;
 }
 
+.entryNoSplit {
+	display: flex;
+	gap: 6px;
+}
+
 .fieldInvalid {
 	display: flex;
 	flex-direction: column;
@@ -148,6 +153,16 @@
 	font-size: 0.875rem;
 	font-family: inherit;
 	width: 100%;
+}
+
+.entryNoSplit select {
+	flex-shrink: 0;
+	width: 70px;
+}
+
+.entryNoSplit input {
+	width: auto;
+	flex: 1;
 }
 
 .fieldInvalidTextarea {
@@ -414,6 +429,26 @@
 	position: relative;
 }
 
+.triggerRow {
+	display: flex;
+	gap: 6px;
+}
+
+.triggerRow .samTrigger {
+	flex: 1;
+}
+
+.clearBtn {
+	flex-shrink: 0;
+	background: rgba(227, 73, 72, 0.1);
+	border: 1px solid rgba(227, 73, 72, 0.3);
+	color: #e34948;
+	border-radius: 6px;
+	width: 38px;
+	font-size: 1rem;
+	cursor: pointer;
+}
+
 .efOverlay {
 	position: fixed;
 	inset: 0;
@@ -569,4 +604,69 @@
 	color: rgba(232, 233, 237, 0.4);
 	font-size: 0.75rem;
 	margin-top: 2px;
+}
+
+
+/* --- Excel paste-parse --- */
+
+.pasteSection {
+	padding: 12px 20px 0;
+}
+
+.pasteToggle {
+	background: rgba(74, 158, 255, 0.1);
+	border: 1px dashed rgba(74, 158, 255, 0.4);
+	color: #4a9eff;
+	border-radius: 8px;
+	padding: 8px 14px;
+	font-size: 0.8125rem;
+	cursor: pointer;
+	width: 100%;
+	text-align: left;
+}
+
+.pasteBox {
+	margin-top: 8px;
+	padding: 12px;
+	background: rgba(255, 255, 255, 0.03);
+	border-radius: 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.pasteHint {
+	font-size: 0.75rem;
+	color: rgba(232, 233, 237, 0.5);
+	margin: 0;
+}
+
+.pasteTextarea {
+	background: #2d3651;
+	border: 1px solid rgba(232, 233, 237, 0.15);
+	border-radius: 6px;
+	color: #e8e9ed;
+	padding: 8px 10px;
+	font-size: 0.8125rem;
+	font-family: monospace;
+	width: 100%;
+	resize: vertical;
+}
+
+.pasteApplyBtn {
+	align-self: flex-start;
+	background: #4a9eff;
+	color: #ffffff;
+	border: none;
+	border-radius: 6px;
+	padding: 6px 14px;
+	font-size: 0.8125rem;
+	cursor: pointer;
+}
+
+.pasteWarnings {
+	margin: 4px 0 0;
+	padding-left: 18px;
+	font-size: 0.75rem;
+	color: #fb923c;
 }

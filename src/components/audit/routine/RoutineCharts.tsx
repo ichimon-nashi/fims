@@ -187,7 +187,14 @@ export function RoutineTrendChart({ series, monthFrom, monthTo }: TrendChartProp
 	const monthIndices = Array.from({ length: monthTo - monthFrom + 1 }, (_, i) => monthFrom - 1 + i);
 
 	const allValues = series.flatMap((s) => monthIndices.map((i) => s.values[i] ?? 0));
-	const maxVal = Math.max(1, ...allValues);
+	const rawMax = Math.max(1, ...allValues);
+	// round the axis ceiling to a "nice" step so labels read as a scale
+	// (0/5/10/15) rather than looking like a specific data callout — showing
+	// the raw max (e.g. "14") made it look like a real data point instead
+	// of a gridline, which is what was actually confusing here
+	const step = rawMax <= 5 ? 1 : rawMax <= 10 ? 2 : rawMax <= 25 ? 5 : rawMax <= 50 ? 10 : 20;
+	const maxVal = Math.ceil(rawMax / step) * step;
+	const tickCount = Math.min(5, maxVal / step);
 
 	const width = 900, height = 220, padL = 36, padB = 28, padT = 16, padR = 16;
 	const plotW = width - padL - padR;
@@ -213,7 +220,7 @@ export function RoutineTrendChart({ series, monthFrom, monthTo }: TrendChartProp
 		<div className={styles.wrap}>
 			<p className={styles.title}>月度趨勢</p>
 			<svg viewBox={`0 0 ${width} ${height}`} className={styles.svg}>
-				{[0, 0.5, 1].map((f, i) => {
+				{Array.from({ length: tickCount + 1 }, (_, i) => i / tickCount).map((f, i) => {
 					const y = padT + plotH * (1 - f);
 					return (
 						<g key={i}>

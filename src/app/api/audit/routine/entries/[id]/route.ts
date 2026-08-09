@@ -39,6 +39,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 	};
 
 	const allowed = [
+		"entry_no",
 		"audit_date",
 		"report_year",
 		"report_month",
@@ -52,6 +53,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 		"sam_code",
 		"ef_code",
 		"is_non_flight_safety",
+		"is_special_audit",
 	];
 	for (const key of allowed) {
 		if (key in body) updatePayload[key] = body[key];
