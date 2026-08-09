@@ -159,7 +159,7 @@ export default function RoutineEntriesTable({
 									<div key={entryNo} className={styles.card}>
 										<div className={styles.cardHeader}>
 											<div className={styles.cardHeaderMain}>
-												<span className={styles.entryNo}>{entryNo}</span>
+												<span className={entryNo.startsWith("GA") ? styles.entryNoGA : styles.entryNo}>{entryNo}</span>
 												<span className={styles.headerDate}>{header.audit_date}</span>
 												<span className={styles.auditorBadge}>👤 {header.auditor_name}</span>
 												<span className={isB738(header.aircraft_tail) ? styles.b738Badge : styles.tailBadge}>

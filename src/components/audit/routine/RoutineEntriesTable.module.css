@@ -107,6 +107,12 @@
 	font-size: 0.875rem;
 }
 
+.entryNoGA {
+	font-weight: 600;
+	color: #FF6B6B;
+	font-size: 0.875rem;
+}
+
 .headerDate {
 	color: rgba(232, 233, 237, 0.6);
 }

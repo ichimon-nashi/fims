@@ -20,13 +20,7 @@ const OTHER_LABEL = "其他";
 // ============ shared: horizontal bar (code level) ============
 
 function HorizontalBarChart({ data, color }: { data: CountItem[]; color: string }) {
-	const sorted = [...data].filter((d) => d.count > 0).sort((a, b) => b.count - a.count);
-	const top = sorted.slice(0, 8);
-	const rest = sorted.slice(8);
-	const otherTotal = rest.reduce((sum, d) => sum + d.count, 0);
-
-	const bars = [...top];
-	if (otherTotal > 0) bars.push({ label: OTHER_LABEL, count: otherTotal });
+	const bars = [...data].filter((d) => d.count > 0).sort((a, b) => b.count - a.count);
 
 	if (bars.length === 0) {
 		return <p className={styles.empty}>此區間無資料</p>;
@@ -42,7 +36,7 @@ function HorizontalBarChart({ data, color }: { data: CountItem[]; color: string 
 					<div className={styles.barTrack}>
 						<div
 							className={styles.barFill}
-							style={{ width: `${(b.count / max) * 100}%`, background: b.label === OTHER_LABEL ? OTHER_COLOR : color }}
+							style={{ width: `${(b.count / max) * 100}%`, background: color }}
 						/>
 					</div>
 					<span className={styles.barCount}>{b.count}</span>
@@ -219,52 +213,79 @@ export function RoutineTrendChart({ series, monthFrom, monthTo }: TrendChartProp
 	return (
 		<div className={styles.wrap}>
 			<p className={styles.title}>月度趨勢</p>
-			<svg viewBox={`0 0 ${width} ${height}`} className={styles.svg}>
-				{Array.from({ length: tickCount + 1 }, (_, i) => i / tickCount).map((f, i) => {
-					const y = padT + plotH * (1 - f);
-					return (
-						<g key={i}>
-							<line x1={padL} y1={y} x2={width - padR} y2={y} stroke="rgba(232,233,237,0.08)" />
-							<text x={padL - 8} y={y} textAnchor="end" dominantBaseline="middle" fill={AXIS_FILL} fontSize="11">
-								{Math.round(maxVal * f)}
+			<div className={styles.trendLayout}>
+				<div className={styles.trendChartCol}>
+					<svg viewBox={`0 0 ${width} ${height}`} className={styles.svg}>
+						{Array.from({ length: tickCount + 1 }, (_, i) => i / tickCount).map((f, i) => {
+							const y = padT + plotH * (1 - f);
+							return (
+								<g key={i}>
+									<line x1={padL} y1={y} x2={width - padR} y2={y} stroke="rgba(232,233,237,0.08)" />
+									<text x={padL - 8} y={y} textAnchor="end" dominantBaseline="middle" fill={AXIS_FILL} fontSize="11">
+										{Math.round(maxVal * f)}
+									</text>
+								</g>
+							);
+						})}
+
+						{months.map((m, i) => (
+							<text
+								key={m}
+								x={padL + i * stepX}
+								y={height - 8}
+								textAnchor="middle"
+								fill={AXIS_FILL}
+								fontSize="11"
+							>
+								{m}月
 							</text>
-						</g>
-					);
-				})}
+						))}
 
-				{months.map((m, i) => (
-					<text
-						key={m}
-						x={padL + i * stepX}
-						y={height - 8}
-						textAnchor="middle"
-						fill={AXIS_FILL}
-						fontSize="11"
-					>
-						{m}月
-					</text>
-				))}
-
-				{series.map((s) => {
-					const points = monthIndices.map((idx, i) => pointFor(s.values[idx] ?? 0, i));
-					const d = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
-					return (
-						<g key={s.year}>
-							<path d={d} fill="none" stroke={s.color} strokeWidth={2} />
-							{points.map((p, i) => (
-								<circle key={i} cx={p.x} cy={p.y} r={3} fill={s.color} />
-							))}
-						</g>
-					);
-				})}
-			</svg>
-			<div className={styles.legend}>
-				{series.map((s) => (
-					<div key={s.year} className={styles.legendItem}>
-						<span className={styles.swatch} style={{ background: s.color }} />
-						{s.year}
+						{series.map((s) => {
+							const points = monthIndices.map((idx, i) => pointFor(s.values[idx] ?? 0, i));
+							const d = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+							return (
+								<g key={s.year}>
+									<path d={d} fill="none" stroke={s.color} strokeWidth={2} />
+									{points.map((p, i) => (
+										<circle key={i} cx={p.x} cy={p.y} r={3} fill={s.color} />
+									))}
+								</g>
+							);
+						})}
+					</svg>
+					<div className={styles.legend}>
+						{series.map((s) => (
+							<div key={s.year} className={styles.legendItem}>
+								<span className={styles.swatch} style={{ background: s.color }} />
+								{s.year}
+							</div>
+						))}
 					</div>
-				))}
+				</div>
+
+				<div className={styles.trendTableCol}>
+					<table className={styles.trendTable}>
+						<thead>
+							<tr>
+								<th>月份</th>
+								{series.map((s) => (
+									<th key={s.year} style={{ color: s.color }}>{s.year}</th>
+								))}
+							</tr>
+						</thead>
+						<tbody>
+							{monthIndices.map((idx, i) => (
+								<tr key={idx}>
+									<td>{months[i]}月</td>
+									{series.map((s) => (
+										<td key={s.year}>{s.values[idx] ?? 0}</td>
+									))}
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
 			</div>
 		</div>
 	);
