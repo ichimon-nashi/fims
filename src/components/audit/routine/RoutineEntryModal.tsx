@@ -167,8 +167,8 @@ function parseExcelPaste(text: string): ParsedPaste {
 			// "TSA-KNH" format regardless of which separator was used, since
 			// RouteField splits on "-" and previously left destination empty
 			// when it got a "/"-separated value it didn't recognize
-			const routeParts = routeRaw ? routeRaw.split(/[/-]/) : [];
-			const route = routeParts.length === 2 ? `${routeParts[0]}-${routeParts[1]}` : routeRaw ?? "";
+			const routeParts = routeRaw ? routeRaw.split(/[/-]/).filter(Boolean) : [];
+			const route = routeParts.length >= 2 ? routeParts.join("-") : routeRaw ?? "";
 
 			header = {
 				audit_date,
@@ -572,35 +572,58 @@ function SamCodeField({ value, onChange }: { value: string | null; onChange: (co
 	);
 }
 
-function RouteField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-	const [origin = "", destination = ""] = value.split("-");
+const MAX_ROUTE_SEGMENTS = 5;
 
-	function setOrigin(raw: string) {
+function RouteField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+	const segments = value ? value.split("-") : ["", ""];
+	// always at least 2 segments (origin + destination) even if the stored
+	// value is momentarily empty or malformed
+	const padded = segments.length >= 2 ? segments : ["", ""];
+
+	function setSegment(index: number, raw: string) {
 		const cleaned = stripExcelQuote(raw).toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3);
-		onChange(`${cleaned}-${destination}`);
+		const next = [...padded];
+		next[index] = cleaned;
+		onChange(next.join("-"));
 	}
-	function setDestination(raw: string) {
-		const cleaned = stripExcelQuote(raw).toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3);
-		onChange(`${origin}-${cleaned}`);
+	function addSegment() {
+		if (padded.length >= MAX_ROUTE_SEGMENTS) return;
+		onChange([...padded, ""].join("-"));
+	}
+	function removeSegment(index: number) {
+		if (padded.length <= 2) return; // origin + destination is the minimum
+		onChange(padded.filter((_, i) => i !== index).join("-"));
 	}
 
 	return (
 		<div className={styles.routeWrap}>
-			<input
-				value={origin}
-				onChange={(e) => setOrigin(e.target.value)}
-				placeholder="TSA"
-				maxLength={3}
-				className={styles.routeDestInput}
-			/>
-			<span className={styles.routeArrow}>⇄</span>
-			<input
-				value={destination}
-				onChange={(e) => setDestination(e.target.value)}
-				placeholder="MZG"
-				maxLength={3}
-				className={styles.routeDestInput}
-			/>
+			{padded.map((seg, i) => (
+				<div key={i} className={styles.routeSegment}>
+					{i > 0 && <span className={styles.routeArrow}>⇄</span>}
+					<input
+						value={seg}
+						onChange={(e) => setSegment(i, e.target.value)}
+						placeholder={i === 0 ? "TSA" : "MZG"}
+						maxLength={3}
+						className={styles.routeDestInput}
+					/>
+					{padded.length > 2 && (
+						<button
+							type="button"
+							className={styles.routeRemoveBtn}
+							onClick={() => removeSegment(i)}
+							title="移除此站"
+						>
+							×
+						</button>
+					)}
+				</div>
+			))}
+			{padded.length < MAX_ROUTE_SEGMENTS && (
+				<button type="button" className={styles.routeAddBtn} onClick={addSegment} title="新增經停站">
+					+
+				</button>
+			)}
 		</div>
 	);
 }

@@ -177,11 +177,6 @@
 }
 
 .field select option,
-.routeWrap select option {
-	background: #2d3651;
-	color: #e8e9ed;
-}
-
 .checkboxLabel {
 	display: flex;
 	align-items: center;
@@ -383,10 +378,16 @@
 .routeWrap {
 	display: flex;
 	align-items: center;
+	flex-wrap: wrap;
 	gap: 6px;
 }
 
-.routeWrap select,
+.routeSegment {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
 .routeDestInput {
 	background: #2d3651;
 	border: 1px solid rgba(232, 233, 237, 0.15);
@@ -394,20 +395,36 @@
 	color: #e8e9ed;
 	padding: 8px 10px;
 	font-size: 0.875rem;
-}
-
-.routeWrap select {
-	flex: 1;
-}
-
-.routeDestInput {
-	flex: 1;
+	width: 70px;
 	text-transform: uppercase;
 }
 
 .routeArrow {
 	color: rgba(232, 233, 237, 0.4);
 	font-size: 0.875rem;
+}
+
+.routeAddBtn,
+.routeRemoveBtn {
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(232, 233, 237, 0.15);
+	border-radius: 6px;
+	color: rgba(232, 233, 237, 0.6);
+	width: 28px;
+	height: 34px;
+	font-size: 1rem;
+	cursor: pointer;
+	flex-shrink: 0;
+}
+
+.routeAddBtn:hover {
+	color: #4a9eff;
+	border-color: rgba(74, 158, 255, 0.4);
+}
+
+.routeRemoveBtn:hover {
+	color: #e34948;
+	border-color: rgba(227, 73, 72, 0.4);
 }
 
 /* mobile: full-screen sheet instead of a centered floating panel */
