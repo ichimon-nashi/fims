@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
 		sam_code,
 		ef_code,
 		is_non_flight_safety,
-		is_special_audit,
+		special_remarks,
 	} = body;
 
 	if (!audit_date || !report_year || !report_month || !auditor_name || !aircraft_tail || !finding) {
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
 		p_sam_code: sam_code ?? null,
 		p_ef_code: ef_code ?? null,
 		p_is_non_flight_safety: is_non_flight_safety ?? false,
-		p_is_special_audit: is_special_audit ?? false,
+		p_special_remarks: special_remarks ?? [],
 		p_created_by: userRecord.employee_id,
 	});
 

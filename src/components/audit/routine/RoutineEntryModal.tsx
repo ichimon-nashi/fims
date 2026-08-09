@@ -26,7 +26,7 @@ interface HeaderDraft {
 	aircraft_tail: string;
 	flight_no: string;
 	route: string;
-	is_special_audit: boolean; // e.g. 春節加強查核
+	special_remarks: string[]; // e.g. ["春節加強查核", "一級自我督察"]
 }
 
 interface Props {
@@ -45,7 +45,7 @@ const emptyHeader: HeaderDraft = {
 	aircraft_tail: "",
 	flight_no: "",
 	route: "",
-	is_special_audit: false,
+	special_remarks: [],
 };
 
 const emptyFinding: FindingDraft = {
@@ -56,6 +56,11 @@ const emptyFinding: FindingDraft = {
 	ef_code: null,
 	is_non_flight_safety: false,
 };
+
+// known recurring markers — add a new label here when one surfaces; no
+// schema change needed unless it's a genuinely new kind of data, not just
+// another label
+const KNOWN_SPECIAL_REMARKS = ["春節加強查核", "一級自我督察"];
 
 
 // Popovers are rendered inside a scrolling modal body, so plain
@@ -803,7 +808,7 @@ export default function RoutineEntryModal({
 				aircraft_tail: first.aircraft_tail,
 				flight_no: first.flight_no ?? "",
 				route: first.route ?? "",
-				is_special_audit: first.is_special_audit,
+				special_remarks: first.special_remarks ?? [],
 			});
 			setFindings(
 				[...editingEntries]
@@ -1117,14 +1122,23 @@ export default function RoutineEntryModal({
 									/>
 								</div>
 							</div>
-							<label className={styles.checkboxLabel}>
-								<input
-									type="checkbox"
-									checked={header.is_special_audit}
-									onChange={(e) => updateHeader("is_special_audit", e.target.checked)}
-								/>
-								春節加強查核
-							</label>
+							<div className={styles.specialRemarks}>
+								{KNOWN_SPECIAL_REMARKS.map((remark) => (
+									<label key={remark} className={styles.checkboxLabel}>
+										<input
+											type="checkbox"
+											checked={header.special_remarks.includes(remark)}
+											onChange={(e) => {
+												const next = e.target.checked
+													? [...header.special_remarks, remark]
+													: header.special_remarks.filter((r) => r !== remark);
+												updateHeader("special_remarks", next);
+											}}
+										/>
+										{remark}
+									</label>
+								))}
+							</div>
 						</div>
 						<div className={styles.row}>
 							<div className={fieldErrors.audit_date ? styles.fieldInvalid : styles.field}>

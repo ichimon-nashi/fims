@@ -71,6 +71,7 @@ export default function RoutineEntriesTable({
 				g.header.aircraft_tail,
 				g.header.flight_no ?? "",
 				g.header.route ?? "",
+				g.header.special_remarks.join(" "),
 			]
 				.join(" ")
 				.toLowerCase();
@@ -170,9 +171,9 @@ export default function RoutineEntriesTable({
 												{header.route && (
 													<span className={styles.routeBadge}>{header.route}</span>
 												)}
-												{header.is_special_audit && (
-													<span className={styles.specialBadge}>春節加強查核</span>
-												)}
+												{header.special_remarks.map((remark) => (
+													<span key={remark} className={styles.specialBadge}>{remark}</span>
+												))}
 											</div>
 											<div className={styles.cardHeaderActions}>
 												<button className={styles.iconBtn} onClick={() => onEdit(findings)}>編輯</button>

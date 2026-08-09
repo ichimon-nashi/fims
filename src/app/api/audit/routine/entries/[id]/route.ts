@@ -53,7 +53,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 		"sam_code",
 		"ef_code",
 		"is_non_flight_safety",
-		"is_special_audit",
+		"special_remarks",
 	];
 	for (const key of allowed) {
 		if (key in body) updatePayload[key] = body[key];

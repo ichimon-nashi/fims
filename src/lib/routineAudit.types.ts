@@ -20,7 +20,7 @@ export interface RoutineAuditEntry {
 	sam_code: string | null; // e.g. "RM01" — resolve via SAM_CODE_MAP for category/area/description
 	ef_code: string | null; // e.g. "P4-03" — resolve via EF_CODE_MAP for attribute/description
 	is_non_flight_safety: boolean;
-	is_special_audit: boolean; // e.g. 春節加強查核 — header-level, shared across all findings in the group
+	special_remarks: string[]; // e.g. ["春節加強查核", "一級自我督察"] — header-level, shared across all findings in the group
 	created_by: string;
 	created_at: string;
 	updated_by: string | null;
@@ -46,7 +46,7 @@ export interface CreateEntryPayload {
 	sam_code?: string | null;
 	ef_code?: string | null;
 	is_non_flight_safety?: boolean;
-	is_special_audit?: boolean;
+	special_remarks?: string[];
 }
 
 export type UpdateEntryPayload = Partial<Omit<CreateEntryPayload, "existing_entry_no">>;
