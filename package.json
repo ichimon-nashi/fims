@@ -23,6 +23,7 @@
     "jszip": "^3.10.1",
     "lucide-react": "^0.562.0",
     "next": "^16.1.1",
+    "office-chart": "^1.0.27",
     "pdfmake": "^0.3.6",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
