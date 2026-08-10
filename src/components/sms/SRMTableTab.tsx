@@ -830,7 +830,7 @@ export default function SRMTableTab({
 																									}
 																								>
 																									<strong>
-																										危害描述:
+																										標題:
 																									</strong>
 																									<p>
 																										{entry.hazard_description ||
@@ -843,7 +843,7 @@ export default function SRMTableTab({
 																									}
 																								>
 																									<strong>
-																										可能肇因:
+																										危害描述:
 																									</strong>
 																									<p>
 																										{entry.possible_cause ||

@@ -333,9 +333,9 @@ export default function SRMEntryModal({
 							</div>
 						</div>
 
-						{/* 危險源描述 */}
+						{/* 標題 */}
 						<div className={styles.formGroup}>
-							<label>危險源描述</label>
+							<label>標題</label>
 							<textarea
 								className={styles.textarea}
 								value={formData.hazard_description}
@@ -349,9 +349,9 @@ export default function SRMEntryModal({
 							/>
 						</div>
 
-						{/* 可能肇因 */}
+						{/* 危害描述 */}
 						<div className={styles.formGroup}>
-							<label>可能肇因</label>
+							<label>危害描述</label>
 							<textarea
 								className={styles.textarea}
 								value={formData.possible_cause}
@@ -383,7 +383,7 @@ export default function SRMEntryModal({
 							</div>
 
 							<div className={styles.formGroup}>
-								<label>現有管控措施</label>
+								<label>現有措施</label>
 								<textarea
 									className={styles.textarea}
 									value={formData.existing_measures}
