@@ -1,7 +1,7 @@
 // src/components/audit/routine/RoutineEntriesTable.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./RoutineEntriesTable.module.css";
 import { RoutineAuditEntry } from "@/lib/routineAudit.types";
 import { isB738 } from "@/utils/routineAuditHelpers";
@@ -12,6 +12,9 @@ interface Props {
 	loading: boolean;
 	onEdit: (group: RoutineAuditEntry[]) => void; // all findings sharing one entry_no
 	onDelete: (group: RoutineAuditEntry[]) => void;
+	openSections: Set<string>;
+	onToggleSection: (key: string) => void;
+	onDefaultSection: (key: string) => void; // called once to seed "latest month open" when openSections is still empty
 }
 
 function samLabel(code: string | null): string {
@@ -30,6 +33,9 @@ export default function RoutineEntriesTable({
 	loading,
 	onEdit,
 	onDelete,
+	openSections,
+	onToggleSection,
+	onDefaultSection,
 }: Props) {
 	const [search, setSearch] = useState("");
 
@@ -103,21 +109,16 @@ export default function RoutineEntriesTable({
 		});
 	}, [filteredGroups]);
 
-	// only the most recent month starts expanded — everything else is
-	// collapsed by default so reaching an older month is one click instead
-	// of a long scroll
-	const [openSections, setOpenSections] = useState<Set<string>>(
-		() => new Set(sections.length ? [sections[sections.length - 1].key] : [])
-	);
-
-	function toggleSection(key: string) {
-		setOpenSections((prev) => {
-			const next = new Set(prev);
-			if (next.has(key)) next.delete(key);
-			else next.add(key);
-			return next;
-		});
-	}
+	// state now lives in the parent (RoutineSummary) so it survives this
+	// component unmounting when the innerTab switches away and back — this
+	// component only seeds the initial "latest month open" default, once,
+	// and only if the parent hasn't already got something recorded
+	const hasSeeded = useRef(false);
+	useEffect(() => {
+		if (hasSeeded.current || openSections.size > 0 || sections.length === 0) return;
+		hasSeeded.current = true;
+		onDefaultSection(sections[sections.length - 1].key);
+	}, [sections, openSections, onDefaultSection]);
 
 	if (loading) {
 		return <p className={styles.status}>載入中...</p>;
@@ -147,7 +148,7 @@ export default function RoutineEntriesTable({
 				const isOpen = search.trim() ? true : openSections.has(key);
 				return (
 					<div key={key} className={styles.monthSection}>
-						<button className={styles.monthDivider} onClick={() => toggleSection(key)}>
+						<button className={styles.monthDivider} onClick={() => onToggleSection(key)}>
 							<span className={styles.monthChevron}>{isOpen ? "▾" : "▸"}</span>
 							<span>{year}年{month}月</span>
 							<span className={styles.monthDividerCount}>{monthGroups.length}筆</span>

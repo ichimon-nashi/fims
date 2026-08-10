@@ -46,15 +46,26 @@ export const HUMAN_FACTOR_CATEGORIES: HumanFactorCategory[] = [
 		subcodes: [
 			{
 				code: "RM1",
-				description:
-					"Lack of availability of appropriate/competent workforce",
+				description: "Insufficient human resources",
 			},
 			{
 				code: "RM2",
 				description:
-					"Lack of availability of appropriate equipment, material, tools, parts",
+					"Insufficient/defective equipment/facilities available",
 			},
-			{ code: "RM3", description: "Lack of appropriate support" },
+			{
+				code: "RM3",
+				description:
+					"Insufficient financial/budget resources, excessive cost cutting",
+			},
+			{
+				code: "RM4",
+				description: "Insufficient selection process/qualification",
+			},
+			{
+				code: "RM5",
+				description: "Poor planning, prioritization",
+			},
 		],
 	},
 	{
@@ -63,24 +74,15 @@ export const HUMAN_FACTOR_CATEGORIES: HumanFactorCategory[] = [
 		subcodes: [
 			{
 				code: "OC1",
-				description:
-					"Inadequate reporting system, reporting culture, just culture",
+				description: "Inadequate company culture",
 			},
-			{ code: "OC2", description: "Inadequate safety information" },
+			{
+				code: "OC2",
+				description: "Inadequate HR policies",
+			},
 			{
 				code: "OC3",
-				description:
-					"Failure to identify, track, manage risk, monitor safety",
-			},
-			{
-				code: "OC4",
-				description:
-					"Inadequate awareness, safety-cultural, supervision",
-			},
-			{
-				code: "OC5",
-				description:
-					"Pressure - time, delivery, schedule, commercial, cost",
+				description: "Inadequate organizational structure",
 			},
 		],
 	},
@@ -90,37 +92,27 @@ export const HUMAN_FACTOR_CATEGORIES: HumanFactorCategory[] = [
 		subcodes: [
 			{
 				code: "OP1",
-				description:
-					"Inadequate communications up and down organizational structure",
+				description: "Inadequate oversight resources",
 			},
 			{
 				code: "OP2",
 				description:
-					"Failure to correct known problems, lack of continuous improvement",
+					"Unclear/unavailable/inadequate regulations, standar procedures",
 			},
 			{
 				code: "OP3",
-				description:
-					"Incompatible goals, operating procedures, or organizational structure",
+				description: "Inadequate operations",
 			},
 			{
 				code: "OP4",
-				description:
-					"Inadequate organizational process for assuring competency",
-			},
-			{
-				code: "OP5",
-				description:
-					"Inadequate Crew scheduling, duty time, fatigue, pairing",
+				description: "Inadequate training",
 			},
 		],
 	},
 	{
 		code: "CMG",
 		name: "Change Management",
-		subcodes: [
-			{ code: "CMG1", description: "Inadequate Management of Change" },
-		],
+		subcodes: [{ code: "CMG1", description: "Management of change" }],
 	},
 	{
 		code: "IS",
@@ -128,13 +120,19 @@ export const HUMAN_FACTOR_CATEGORIES: HumanFactorCategory[] = [
 		subcodes: [
 			{
 				code: "IS1",
-				description:
-					"Failed to provide proper guidance, briefing, instruction",
+				description: "Failed to provide leadership and guidance",
 			},
 			{
 				code: "IS2",
-				description:
-					"Failed to provide adequate oversight, corrective action",
+				description: "Failed to track performance",
+			},
+			{
+				code: "IS3",
+				description: "Failed to track qualification",
+			},
+			{
+				code: "IS4",
+				description: "Failed to provide/ensure adequate training",
 			},
 		],
 	},
@@ -145,17 +143,15 @@ export const HUMAN_FACTOR_CATEGORIES: HumanFactorCategory[] = [
 			{
 				code: "PA1",
 				description:
-					"Inappropriate task assignment or allocation of resources",
+					"Inappropriate employee scheduling/assigning/manning",
 			},
 			{
 				code: "PA2",
-				description:
-					"Inappropriate operations tempo, scheduling, crew pairings",
+				description: "Inadequate Risk Assessment",
 			},
 			{
 				code: "PA3",
-				description:
-					"Inappropriate or inadequate planning of operation/ inadequate risk assessment",
+				description: "Authorization to take unnecessary risks",
 			},
 		],
 	},
@@ -166,7 +162,17 @@ export const HUMAN_FACTOR_CATEGORIES: HumanFactorCategory[] = [
 			{
 				code: "FP1",
 				description:
-					"Failed to identify risk/hazard, to correct known problem",
+					"Supervisor failed to identify and correct inappropriate behavior or unsafe tendencies",
+			},
+			{
+				code: "FP2",
+				description:
+					"Supervisor failed to correct known hazard/probelm/error/inefficiency",
+			},
+			{
+				code: "FP3",
+				description:
+					"Supervisor failed to report a hazard or unsafe tendencies",
 			},
 		],
 	},
@@ -177,7 +183,17 @@ export const HUMAN_FACTOR_CATEGORIES: HumanFactorCategory[] = [
 			{
 				code: "SV1",
 				description:
-					"Authorized or condoned inappropriate, unsafe, operations, actions, processes or behaviors",
+					"Supervisor failed to enforce rules and regulations",
+			},
+			{
+				code: "SV2",
+				description:
+					"Supervisor directed/authorized subordinates to violate existing rules",
+			},
+			{
+				code: "SV3",
+				description:
+					"Supervisor authorized unqualified person for work",
 			},
 		],
 	},
@@ -188,21 +204,20 @@ export const HUMAN_FACTOR_CATEGORIES: HumanFactorCategory[] = [
 			{
 				code: "PN1",
 				description:
-					"Weather / Icing, fog, rain, snow, sand/smoke, visibility/ wind, windshear",
+					"Restricted visibility, altitude, terrain, weather conditions",
 			},
 			{
 				code: "PN2",
-				description: "Terrain or obstacle, altitude, birds",
+				description: "Inadequate lighting, noise, vibration",
 			},
 			{
 				code: "PN3",
-				description:
-					"Poor work environment (noise, heat, humidity, vibration, lighting)",
+				description: "Inadequate cleanliness, surface conditions",
 			},
 			{
 				code: "PN4",
 				description:
-					"Inadequate facilities/walk/road layout, signing, marking",
+					"Inadequate facilites/walk/road layout, signing, marking",
 			},
 		],
 	},
@@ -219,8 +234,14 @@ export const HUMAN_FACTOR_CATEGORIES: HumanFactorCategory[] = [
 				code: "TN2",
 				description: "Inappropriate automation, function, reliability",
 			},
-			{ code: "TN3", description: "Inappropriate interface design" },
-			{ code: "TN4", description: "Inappropriate communication system" },
+			{
+				code: "TN3",
+				description: "Inappropriate interface design",
+			},
+			{
+				code: "TN4",
+				description: "Inappropriate communication system",
+			},
 		],
 	},
 	{
@@ -237,8 +258,14 @@ export const HUMAN_FACTOR_CATEGORIES: HumanFactorCategory[] = [
 				description:
 					"Channelized attention and actions, confusion, disorientation",
 			},
-			{ code: "PC3", description: "Personality Style" },
-			{ code: "PC4", description: "Illness, sickness" },
+			{
+				code: "PC3",
+				description: "Personality Style",
+			},
+			{
+				code: "PC4",
+				description: "Illness, sickness",
+			},
 			{
 				code: "PC5",
 				description:
@@ -260,7 +287,10 @@ export const HUMAN_FACTOR_CATEGORIES: HumanFactorCategory[] = [
 		code: "PR",
 		name: "Personal Readiness",
 		subcodes: [
-			{ code: "PR1", description: "Inadequate Rest" },
+			{
+				code: "PR1",
+				description: "Inadequate Rest",
+			},
 			{
 				code: "PR2",
 				description:
@@ -271,14 +301,20 @@ export const HUMAN_FACTOR_CATEGORIES: HumanFactorCategory[] = [
 				description:
 					"Self-medication and, unreported medical conditions",
 			},
-			{ code: "PR4", description: "Inadequate personal preparation" },
+			{
+				code: "PR4",
+				description: "Inadequate personal preparation",
+			},
 		],
 	},
 	{
 		code: "CM",
 		name: "CRM",
 		subcodes: [
-			{ code: "CM1", description: "Lack of assertiveness or leadership" },
+			{
+				code: "CM1",
+				description: "Lack of assertiveness or leadership",
+			},
 			{
 				code: "CM2",
 				description:
@@ -288,7 +324,10 @@ export const HUMAN_FACTOR_CATEGORIES: HumanFactorCategory[] = [
 				code: "CM3",
 				description: "Poor workload management or task delegation",
 			},
-			{ code: "CM4", description: "Authority gradient, poor teamwork" },
+			{
+				code: "CM4",
+				description: "Authority gradient, poor teamwork",
+			},
 			{
 				code: "CM5",
 				description:
@@ -310,8 +349,14 @@ export const HUMAN_FACTOR_CATEGORIES: HumanFactorCategory[] = [
 				description:
 					"Inadequate risk evaluation during operation, misjudging",
 			},
-			{ code: "DE2", description: "Ignored caution, warning" },
-			{ code: "DE3", description: "Task misprioritization" },
+			{
+				code: "DE2",
+				description: "Ignored caution, warning",
+			},
+			{
+				code: "DE3",
+				description: "Task misprioritization",
+			},
 		],
 	},
 	{
@@ -332,7 +377,10 @@ export const HUMAN_FACTOR_CATEGORIES: HumanFactorCategory[] = [
 				description:
 					"Inadvertently activating or deactivating equipment, controls or switches",
 			},
-			{ code: "SE4", description: "Failure to see and react / fail" },
+			{
+				code: "SE4",
+				description: "Failure to see and react / fail",
+			},
 		],
 	},
 	{
@@ -354,7 +402,10 @@ export const HUMAN_FACTOR_CATEGORIES: HumanFactorCategory[] = [
 		code: "EV",
 		name: "Exception Violations",
 		subcodes: [
-			{ code: "EV1", description: "Lack of discipline" },
+			{
+				code: "EV1",
+				description: "Lack of discipline",
+			},
 			{
 				code: "EV2",
 				description: "Rules, regulations, procedures not followed",
@@ -375,7 +426,10 @@ export const HUMAN_FACTOR_CATEGORIES: HumanFactorCategory[] = [
 				description:
 					"Widespread, routine, systemic, habitual violation by individual or team",
 			},
-			{ code: "RV2", description: "Violation based on Risk Assessment" },
+			{
+				code: "RV2",
+				description: "Violation based on Risk Assessment",
+			},
 		],
 	},
 	{
@@ -387,7 +441,7 @@ export const HUMAN_FACTOR_CATEGORIES: HumanFactorCategory[] = [
 
 // Flatten all human factor codes for easy lookup
 export const ALL_HUMAN_FACTOR_CODES = HUMAN_FACTOR_CATEGORIES.flatMap(
-	(category) => category.subcodes
+	(category) => category.subcodes,
 );
 
 // ============================================================================
@@ -1590,5 +1644,6 @@ export const EF_ATTRIBUTE_CATEGORIES: EFAttributeCategory[] = [
 
 // Flatten all EF codes for easy lookup
 export const ALL_EF_ATTRIBUTE_CODES = EF_ATTRIBUTE_CATEGORIES.flatMap(
-	(category) => category.middleCategories.flatMap((middle) => middle.subcodes)
+	(category) =>
+		category.middleCategories.flatMap((middle) => middle.subcodes),
 );

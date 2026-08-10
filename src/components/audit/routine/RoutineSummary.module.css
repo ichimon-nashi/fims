@@ -97,6 +97,11 @@
 	cursor: not-allowed;
 }
 
+.exportBtn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
 /* ---- KPI / tabs / charts ---- */
 
 .kpiInline {

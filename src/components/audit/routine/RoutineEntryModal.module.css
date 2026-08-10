@@ -176,7 +176,11 @@
 	width: 100%;
 }
 
-.field select option,
+.field select option {
+	background: #2d3651;
+	color: #e8e9ed;
+}
+
 .checkboxLabel {
 	display: flex;
 	align-items: center;
@@ -199,6 +203,43 @@
 .specialRemarks .checkboxLabel {
 	align-self: auto;
 	padding-bottom: 0;
+}
+
+.customRemarkChip {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	background: rgba(255, 194, 226, 0.12);
+	color: #ffc2e2;
+	border-radius: 4px;
+	padding: 4px 6px 4px 10px;
+	font-size: 0.8125rem;
+	font-weight: 500;
+}
+
+.customRemarkChip button {
+	background: none;
+	border: none;
+	color: inherit;
+	font-size: 0.875rem;
+	cursor: pointer;
+	line-height: 1;
+	padding: 0;
+}
+
+.customRemarkAdd {
+	flex: 1;
+	min-width: 160px;
+}
+
+.customRemarkAdd input {
+	width: 100%;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px dashed rgba(232, 233, 237, 0.25);
+	border-radius: 6px;
+	color: #e8e9ed;
+	padding: 6px 10px;
+	font-size: 0.8125rem;
 }
 
 .row {
@@ -378,14 +419,18 @@
 .routeWrap {
 	display: flex;
 	align-items: center;
-	flex-wrap: wrap;
-	gap: 6px;
+	flex-wrap: nowrap;
+	overflow-x: auto;
+	gap: 4px;
+	padding-bottom: 2px;
+	scrollbar-width: thin;
 }
 
 .routeSegment {
 	display: flex;
 	align-items: center;
-	gap: 6px;
+	gap: 4px;
+	flex-shrink: 0;
 }
 
 .routeDestInput {
@@ -393,15 +438,18 @@
 	border: 1px solid rgba(232, 233, 237, 0.15);
 	border-radius: 6px;
 	color: #e8e9ed;
-	padding: 8px 10px;
-	font-size: 0.875rem;
-	width: 70px;
+	padding: 8px 6px;
+	font-size: 0.8125rem;
+	width: 52px;
+	flex-shrink: 0;
+	text-align: center;
 	text-transform: uppercase;
 }
 
 .routeArrow {
 	color: rgba(232, 233, 237, 0.4);
-	font-size: 0.875rem;
+	font-size: 0.75rem;
+	flex-shrink: 0;
 }
 
 .routeAddBtn,
@@ -410,11 +458,17 @@
 	border: 1px solid rgba(232, 233, 237, 0.15);
 	border-radius: 6px;
 	color: rgba(232, 233, 237, 0.6);
-	width: 28px;
-	height: 34px;
-	font-size: 1rem;
+	box-sizing: border-box;
+	width: 24px;
+	height: 30px;
+	font-size: 0.875rem;
 	cursor: pointer;
 	flex-shrink: 0;
+	padding: 0;
+}
+
+.routeAddBtn {
+	margin-left: 4px;
 }
 
 .routeAddBtn:hover {

@@ -38,7 +38,27 @@ export default function RoutineSummary() {
 	const [error, setError] = useState<string | null>(null);
 	const [modal, setModal] = useState<ModalState>({ open: false });
 	const [importing, setImporting] = useState(false);
+	const [exporting, setExporting] = useState(false);
 	const [importResult, setImportResult] = useState<{ imported: number; warnings: string[] } | null>(null);
+	const [openSectionsMap, setOpenSectionsMap] = useState<Record<string, Set<string>>>({});
+
+	function getOpenSections(id: string): Set<string> {
+		return openSectionsMap[id] ?? new Set();
+	}
+	function handleToggleSection(id: string, key: string) {
+		setOpenSectionsMap((prev) => {
+			const current = new Set(prev[id] ?? []);
+			if (current.has(key)) current.delete(key);
+			else current.add(key);
+			return { ...prev, [id]: current };
+		});
+	}
+	function handleDefaultSection(id: string, key: string) {
+		setOpenSectionsMap((prev) => {
+			if (prev[id] && prev[id].size > 0) return prev; // already seeded — never override a real selection
+			return { ...prev, [id]: new Set([key]) };
+		});
+	}
 	const [innerTab, setInnerTab] = useState<"charts" | "table">("table");
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -168,8 +188,34 @@ export default function RoutineSummary() {
 		else alert("部分刪除失敗，請重新整理確認結果");
 	}
 
-	function handleExport() {
-		// TODO: export route not built yet
+	async function handleExport() {
+		setExporting(true);
+		try {
+			const token = localStorage.getItem("token");
+			const params = new URLSearchParams({
+				years: years.join(","),
+				month_from: String(monthFrom),
+				month_to: String(monthTo),
+			});
+			const res = await fetch(`/api/audit/routine/export?${params}`, {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			if (!res.ok) {
+				const data = await res.json().catch(() => ({}));
+				throw new Error(data.error || "匯出失敗");
+			}
+			const blob = await res.blob();
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = `routine_audit_export_${years.join("-")}.xlsx`;
+			a.click();
+			URL.revokeObjectURL(url);
+		} catch (err) {
+			alert(err instanceof Error ? err.message : "匯出失敗");
+		} finally {
+			setExporting(false);
+		}
 	}
 
 	async function handleImportFile(file: File) {
@@ -294,8 +340,8 @@ export default function RoutineSummary() {
 					>
 						{importing ? "匯入中..." : "匯入Excel"}
 					</button>
-					<button className={styles.exportBtn} onClick={handleExport}>
-						匯出Excel
+					<button className={styles.exportBtn} onClick={handleExport} disabled={exporting}>
+						{exporting ? "匯出中..." : "匯出Excel"}
 					</button>
 					<button className={styles.primaryBtn} onClick={handleAddEntry}>
 						+ 新增紀錄
@@ -380,6 +426,9 @@ export default function RoutineSummary() {
 								loading={entriesLoading}
 								onEdit={handleEdit}
 								onDelete={handleDelete}
+								openSections={getOpenSections("primary")}
+								onToggleSection={(key) => handleToggleSection("primary", key)}
+								onDefaultSection={(key) => handleDefaultSection("primary", key)}
 							/>
 						) : (
 							<div className={styles.compareTables}>
@@ -390,6 +439,9 @@ export default function RoutineSummary() {
 										loading={entriesLoading}
 										onEdit={handleEdit}
 										onDelete={handleDelete}
+										openSections={getOpenSections("primary")}
+										onToggleSection={(key) => handleToggleSection("primary", key)}
+										onDefaultSection={(key) => handleDefaultSection("primary", key)}
 									/>
 								</div>
 								<div className={styles.compareTableCol}>
@@ -399,6 +451,9 @@ export default function RoutineSummary() {
 										loading={compareEntriesLoading}
 										onEdit={handleEdit}
 										onDelete={handleDelete}
+										openSections={getOpenSections("compare")}
+										onToggleSection={(key) => handleToggleSection("compare", key)}
+										onDefaultSection={(key) => handleDefaultSection("compare", key)}
 									/>
 								</div>
 							</div>

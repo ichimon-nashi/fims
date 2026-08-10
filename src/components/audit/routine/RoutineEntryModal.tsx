@@ -607,12 +607,12 @@ function RouteField({ value, onChange }: { value: string; onChange: (v: string) 
 						maxLength={3}
 						className={styles.routeDestInput}
 					/>
-					{padded.length > 2 && (
+					{i === padded.length - 1 && padded.length > 2 && (
 						<button
 							type="button"
 							className={styles.routeRemoveBtn}
 							onClick={() => removeSegment(i)}
-							title="移除此站"
+							title="移除最後一站"
 						>
 							×
 						</button>
@@ -806,6 +806,7 @@ export default function RoutineEntryModal({
 	const [pasteOpen, setPasteOpen] = useState(false);
 	const [prefix, setPrefix] = useState<"SA" | "GA">("SA");
 	const [entryNoTouched, setEntryNoTouched] = useState(false);
+	const [customRemarkInput, setCustomRemarkInput] = useState("");
 	const [pasteText, setPasteText] = useState("");
 	const [pasteWarnings, setPasteWarnings] = useState<string[]>([]);
 
@@ -820,6 +821,7 @@ export default function RoutineEntryModal({
 		setPasteWarnings([]);
 		setPrefix("SA");
 		setEntryNoTouched(false);
+		setCustomRemarkInput("");
 		if (isEdit && editingEntries) {
 			const first = editingEntries[0];
 			setHeader({
@@ -1161,6 +1163,43 @@ export default function RoutineEntryModal({
 										{remark}
 									</label>
 								))}
+
+								{header.special_remarks
+									.filter((r) => !KNOWN_SPECIAL_REMARKS.includes(r))
+									.map((remark) => (
+										<span key={remark} className={styles.customRemarkChip}>
+											{remark}
+											<button
+												type="button"
+												onClick={() =>
+													updateHeader(
+														"special_remarks",
+														header.special_remarks.filter((r) => r !== remark)
+													)
+												}
+												title="移除"
+											>
+												×
+											</button>
+										</span>
+									))}
+
+								<div className={styles.customRemarkAdd}>
+									<input
+										value={customRemarkInput}
+										onChange={(e) => setCustomRemarkInput(e.target.value)}
+										onKeyDown={(e) => {
+											if (e.key !== "Enter") return;
+											e.preventDefault();
+											const text = stripExcelQuote(customRemarkInput).trim();
+											if (text && !header.special_remarks.includes(text)) {
+												updateHeader("special_remarks", [...header.special_remarks, text]);
+											}
+											setCustomRemarkInput("");
+										}}
+										placeholder="其他標籤"
+									/>
+								</div>
 							</div>
 						</div>
 						<div className={styles.row}>
