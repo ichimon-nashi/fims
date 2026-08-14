@@ -536,7 +536,7 @@ function SamCodeField({ value, onChange }: { value: string | null; onChange: (co
 										role="button"
 									>
 										<strong>-</strong>
-										<span>無 (正常/無發現)</span>
+										<span>無 (正常/無缺失)</span>
 									</div>
 									{categories.map((cat) => (
 										<button
@@ -933,7 +933,7 @@ export default function RoutineEntryModal({
 			// this is a persisted row, not a local draft — removing it means
 			// deleting it now, not deferring to the eventual save. There's no
 			// "undo on cancel" here; the delete already happened.
-			if (!confirm("此項發現已儲存，移除將立即刪除，確定要繼續嗎？")) return;
+			if (!confirm("此項缺失已儲存，移除將立即刪除，確定要繼續嗎？")) return;
 			const token = localStorage.getItem("token");
 			const res = await fetch(`/api/audit/routine/entries/${f.id}`, {
 				method: "DELETE",
@@ -967,7 +967,7 @@ export default function RoutineEntryModal({
 		}
 		if (missingFindings.size > 0) {
 			setFieldErrors({ findings: missingFindings });
-			setError("每一項發現都需要填寫記錄內容");
+			setError("每一項缺失都需要填寫記錄內容");
 			return;
 		}
 
@@ -1248,7 +1248,7 @@ export default function RoutineEntryModal({
 								)}
 								<textarea
 									rows={3}
-									placeholder="輸入此項發現..."
+									placeholder="輸入此項缺失..."
 									value={f.finding}
 									onChange={(e) => updateFinding(idx, "finding", stripExcelQuote(e.target.value))}
 									className={fieldErrors.findings?.has(idx) ? styles.fieldInvalidTextarea : undefined}

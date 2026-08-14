@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import PermissionGuard from '@/components/common/PermissionGuard';
@@ -11,16 +12,28 @@ import RRSMSTab from '@/components/sms/RRSMSTab';
 import SRMTableTab from '@/components/sms/SRMTableTab';
 import StatisticsTab from '@/components/sms/StatisticsTab';
 import CrewReportTab from '@/components/sms/CrewReportTab';
+import TrendAnalysisTab from '@/components/sms/TrendAnalysisTab';
 
-type SMSTab = 'rr-sms' | 'srm-table' | 'statistics' | 'crew-report';
+type SMSTab = 'rr-sms' | 'srm-table' | 'statistics' | 'crew-report' | 'trend-analysis';
 
 function SMSContent() {
   const { user, token } = useAuth();
   const permissions = usePermissions();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<SMSTab>('rr-sms');
   const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear());
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [yearsWithData, setYearsWithData] = useState<Set<number>>(new Set());
+
+  const VALID_TABS: SMSTab[] = ['rr-sms', 'srm-table', 'statistics', 'crew-report', 'trend-analysis'];
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && (VALID_TABS as string[]).includes(tabParam)) {
+      setActiveTab(tabParam as SMSTab);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   useEffect(() => {
     if (token) {
@@ -100,18 +113,27 @@ function SMSContent() {
             <span className={styles.tabSubtitle}>SRM Control Sheet</span>
           </button>
           <button
-            className={`${styles.tab} ${activeTab === 'statistics' ? styles.activeTab : ''}`}
+            className={`${styles.tab} ${activeTab === 'statistics' ? `${styles.activeTab} ${styles.statisticsActiveTab}` : ''}`}
             onClick={() => setActiveTab('statistics')}
           >
-            風險統計
-            <span className={styles.tabSubtitle}>Statistics</span>
+            SMS統計
+            <span className={styles.tabSubtitle}>SMS Statistics</span>
           </button>
+          <div className={styles.tabDivider} aria-hidden="true" />
           <button
             className={`${styles.tab} ${activeTab === 'crew-report' ? `${styles.activeTab} ${styles.crewReportActiveTab}` : ''}`}
             onClick={() => setActiveTab('crew-report')}
           >
             組員報告
             <span className={styles.tabSubtitle}>Crew Report</span>
+          </button>
+          <div className={styles.tabDivider} aria-hidden="true" />
+          <button
+            className={`${styles.tab} ${activeTab === 'trend-analysis' ? `${styles.activeTab} ${styles.trendActiveTab}` : ''}`}
+            onClick={() => setActiveTab('trend-analysis')}
+          >
+            趨勢分析
+            <span className={styles.tabSubtitle}>Risk Analysis</span>
           </button>
         </div>
 
@@ -140,6 +162,7 @@ function SMSContent() {
               isAdmin={canEdit}
             />
           )}
+          {activeTab === 'trend-analysis' && <TrendAnalysisTab />}
         </div>
       </div>
     </>

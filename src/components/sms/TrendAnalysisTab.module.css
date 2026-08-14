@@ -1,0 +1,557 @@
+/* src/components/sms/TrendAnalysisTab.module.css */
+
+.trendAnalysisTab {
+	width: 100%;
+}
+
+.loading {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-height: 300px;
+	gap: 1rem;
+}
+
+.spinner {
+	width: 50px;
+	height: 50px;
+	border: 4px solid rgba(74, 158, 255, 0.2);
+	border-top-color: #4a9eff;
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.emptyState {
+	text-align: center;
+	padding: 3rem;
+	color: #6b7280;
+}
+
+.header {
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 12px;
+	padding: 1rem;
+	margin-bottom: 1.5rem;
+}
+
+.controls {
+	display: flex;
+	align-items: center;
+	gap: 1.5rem;
+	flex-wrap: wrap;
+}
+
+.exportButton {
+	margin-left: auto;
+	padding: 0.6rem 1.2rem;
+	background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+	color: white;
+	border: none;
+	border-radius: 8px;
+	cursor: pointer;
+	font-weight: 600;
+	font-size: 0.85rem;
+	transition: all 0.2s;
+	box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+	white-space: nowrap;
+}
+
+.exportButton:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.exportButton:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+	transform: none;
+}
+
+.errorBanner {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	background: rgba(239, 68, 68, 0.1);
+	border: 1px solid rgba(239, 68, 68, 0.3);
+	border-radius: 8px;
+	padding: 0.85rem 1.25rem;
+	margin-bottom: 1.5rem;
+	color: #fca5a5;
+	font-size: 0.9rem;
+}
+
+.errorBanner button {
+	background: rgba(255, 255, 255, 0.1);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	color: #e8e9ed;
+	padding: 0.4rem 0.9rem;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 0.8rem;
+	white-space: nowrap;
+}
+
+.errorBanner button:hover {
+	background: rgba(255, 255, 255, 0.18);
+}
+
+.compareControls {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 1.5rem;
+	margin-bottom: 1.5rem;
+	flex-wrap: wrap;
+}
+
+.vsLabel {
+	color: #4a9eff;
+	font-weight: 700;
+	font-size: 1rem;
+}
+
+.rangeToLabel {
+	color: #6b7280;
+	font-size: 0.85rem;
+}
+
+.compareList {
+	display: flex;
+	flex-direction: column;
+	gap: 0.85rem;
+}
+
+.compareRow {
+	background: rgba(255, 255, 255, 0.02);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 8px;
+	padding: 0.75rem 1rem;
+}
+
+.compareRowHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin-bottom: 0.6rem;
+	font-size: 0.9rem;
+}
+
+.compareMiniBars {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+}
+
+.compareMiniBarRow {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+}
+
+.compareMiniBarLabel {
+	color: #6b7280;
+	font-size: 0.72rem;
+	font-weight: 600;
+	width: 64px;
+	flex-shrink: 0;
+	text-align: right;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.compareMiniBarTrack {
+	flex: 1;
+	background: rgba(255, 255, 255, 0.05);
+	border-radius: 4px;
+	overflow: hidden;
+	height: 18px;
+}
+
+.compareMiniBarFill {
+	display: flex;
+	height: 100%;
+	min-width: 2px;
+	transition: width 0.2s ease;
+}
+
+.compareBarSegment {
+	height: 100%;
+}
+
+.compareMiniBarTotal {
+	color: #e8e9ed;
+	font-size: 0.8rem;
+	font-weight: 600;
+	width: 28px;
+	text-align: right;
+	flex-shrink: 0;
+}
+
+.deltaGood {
+	color: #10b981;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.deltaBad {
+	color: #ef4444;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.deltaNeutral {
+	color: #a0aec0;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.controlGroup {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.controlGroup label {
+	color: #a0aec0;
+	font-weight: 500;
+	font-size: 0.9rem;
+}
+
+.select {
+	background: #1e293b;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	color: #e8e9ed;
+	padding: 0.5rem 0.75rem;
+	border-radius: 6px;
+	font-size: 0.9rem;
+	cursor: pointer;
+}
+
+.select option {
+	background: #1e293b;
+	color: #e8e9ed;
+}
+
+.typeToggle {
+	display: flex;
+	flex-wrap: wrap;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.15);
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.typeToggle button {
+	padding: 0.5rem 1rem;
+	background: transparent;
+	border: none;
+	color: #a0aec0;
+	font-size: 0.85rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	white-space: nowrap;
+}
+
+.typeToggle button:hover {
+	color: #e8e9ed;
+}
+
+.typeToggle .typeActive {
+	background: rgba(74, 158, 255, 0.2);
+	color: #4a9eff;
+}
+
+.legendRow {
+	display: flex;
+	gap: 1.5rem;
+	flex-wrap: wrap;
+	margin-top: 1rem;
+	padding-top: 1rem;
+	border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.legendItem {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	color: #a0aec0;
+	font-size: 0.9rem;
+	font-weight: 500;
+}
+
+.legendDot {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+}
+
+.sourceLinks {
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	color: #6b7280;
+	font-size: 0.85rem;
+}
+
+.sourceLinkButton {
+	background: rgba(74, 158, 255, 0.08);
+	color: #4a9eff;
+	border: 1px solid rgba(74, 158, 255, 0.25);
+	border-radius: 6px;
+	padding: 0.35rem 0.7rem;
+	font-size: 0.8rem;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	white-space: nowrap;
+}
+
+.sourceLinkButton:hover {
+	background: rgba(74, 158, 255, 0.15);
+	border-color: rgba(74, 158, 255, 0.4);
+}
+
+.section {
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 12px;
+	padding: 1rem;
+	margin-bottom: 1.5rem;
+}
+
+.sectionHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 1rem;
+	margin-bottom: 1rem;
+}
+
+.sectionHeader h3 {
+	color: #4a9eff;
+	font-size: 1.1rem;
+	margin: 0;
+	font-weight: 600;
+}
+
+.searchInput {
+	padding: 0.6rem 1rem;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-radius: 8px;
+	color: #e8e9ed;
+	font-size: 0.9rem;
+	width: 260px;
+	max-width: 100%;
+}
+
+.searchInput::placeholder {
+	color: #6b7280;
+}
+
+.trendControls {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	flex-wrap: wrap;
+}
+
+.compositionList {
+	display: flex;
+	flex-direction: column;
+	gap: 0.85rem;
+}
+
+.compositionRow {
+	display: block;
+	width: 100%;
+	text-align: left;
+	background: rgba(255, 255, 255, 0.02);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 8px;
+	padding: 0.75rem 1rem;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.compositionRow:hover {
+	background: rgba(255, 255, 255, 0.05);
+	border-color: rgba(74, 158, 255, 0.3);
+}
+
+.compositionRowActive {
+	border-color: #4a9eff;
+	box-shadow: 0 0 0 1px rgba(74, 158, 255, 0.3);
+}
+
+.compositionRowHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	margin-bottom: 0.5rem;
+	font-size: 0.9rem;
+}
+
+.compositionCode {
+	color: #4a9eff;
+	font-weight: 600;
+	font-family: "Courier New", monospace;
+}
+
+.compositionDesc {
+	color: #a0aec0;
+	font-weight: 400;
+	font-family: inherit;
+	margin-left: 0.6rem;
+	font-size: 0.85rem;
+}
+
+.compositionTotal {
+	color: #e8e9ed;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.compositionBar {
+	display: flex;
+	height: 24px;
+	border-radius: 4px;
+	overflow: hidden;
+	gap: 2px;
+	background: rgba(255, 255, 255, 0.05);
+}
+
+.compositionSegment {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: white;
+	white-space: nowrap;
+	transition: all 0.2s ease;
+}
+
+.showAllButton {
+	display: block;
+	margin: 1rem auto 0;
+	padding: 0.6rem 1.5rem;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-radius: 8px;
+	color: #e8e9ed;
+	font-size: 0.85rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.showAllButton:hover {
+	background: rgba(255, 255, 255, 0.1);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+	.controls {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.exportButton {
+		margin-left: 0;
+		width: 100%;
+		min-height: 44px;
+	}
+
+	.sectionHeader {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.searchInput {
+		width: 100%;
+		min-height: 44px;
+	}
+
+	.select {
+		min-height: 44px;
+	}
+
+	.typeToggle button {
+		min-height: 44px;
+		flex: 1;
+	}
+
+	.trendControls {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.compositionRowHeader {
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+
+	.sourceLinks {
+		margin-left: 0;
+		width: 100%;
+		flex-wrap: wrap;
+	}
+
+	.sourceLinkButton {
+		min-height: 44px;
+	}
+
+	.errorBanner {
+		flex-direction: column;
+		align-items: stretch;
+		text-align: center;
+	}
+
+	.errorBanner button {
+		min-height: 44px;
+	}
+
+	.compareControls {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.vsLabel {
+		text-align: center;
+	}
+
+	.compareRowHeader {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.25rem;
+	}
+
+	.compareMiniBarLabel {
+		width: 52px;
+		font-size: 0.65rem;
+	}
+
+	.compareMiniBarTotal {
+		width: 24px;
+	}
+
+	.showAllButton {
+		width: 100%;
+		min-height: 44px;
+	}
+}

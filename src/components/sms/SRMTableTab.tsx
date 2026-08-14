@@ -560,13 +560,15 @@ export default function SRMTableTab({
 																}
 															/>
 														</th>
-														<th
-															style={{
-																width: 100,
-															}}
-														>
-															操作
-														</th>
+														{isAdmin && (
+															<th
+																style={{
+																	width: 100,
+																}}
+															>
+																操作
+															</th>
+														)}
 													</tr>
 												</thead>
 												<tbody>
@@ -574,7 +576,7 @@ export default function SRMTableTab({
 													0 ? (
 														<tr>
 															<td
-																colSpan={8}
+																colSpan={isAdmin ? 8 : 7}
 																className={
 																	styles.emptyState
 																}
@@ -710,44 +712,42 @@ export default function SRMTableTab({
 																					"-"
 																				)}
 																			</td>
-																			<td>
-																				<div
-																					className={
-																						styles.actions
-																					}
-																				>
-																					{isAdmin && (
-																						<>
-																							<button
-																								onClick={() =>
-																									handleEdit(
-																										entry
-																									)
-																								}
-																								className={
-																									styles.editButton
-																								}
-																								title="編輯"
-																							>
-																								📝
-																							</button>
-																							<button
-																								onClick={() =>
-																									handleDelete(
-																										entry
-																									)
-																								}
-																								className={
-																									styles.deleteButton
-																								}
-																								title="刪除"
-																							>
-																								❌
-																							</button>
-																						</>
-																					)}
-																				</div>
-																			</td>
+																			{isAdmin && (
+																				<td>
+																					<div
+																						className={
+																							styles.actions
+																						}
+																					>
+																						<button
+																							onClick={() =>
+																								handleEdit(
+																									entry
+																								)
+																							}
+																							className={
+																								styles.editButton
+																							}
+																							title="編輯"
+																						>
+																							📝
+																						</button>
+																						<button
+																							onClick={() =>
+																								handleDelete(
+																									entry
+																								)
+																							}
+																							className={
+																								styles.deleteButton
+																							}
+																							title="刪除"
+																						>
+																							❌
+																						</button>
+																					</div>
+																				</td>
+																			)}
 																		</tr>
 																		{isExpanded && (
 																			<tr
@@ -757,7 +757,7 @@ export default function SRMTableTab({
 																			>
 																				<td
 																					colSpan={
-																						8
+																						isAdmin ? 8 : 7
 																					}
 																				>
 																					<div

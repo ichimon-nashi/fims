@@ -6,6 +6,7 @@ import styles from "./CrewReportTab.module.css";
 import CrewReportModal from "./CrewReportModal";
 import CrewReportCategoryModal from "./CrewReportCategoryModal";
 import { CrewReport, CrewReportCategory } from "@/lib/sms.types";
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 interface CrewReportTabProps {
 	currentYear: number;
@@ -603,41 +604,12 @@ export default function CrewReportTab({
 	);
 }
 
-// Polar -> cartesian helper, angle 0 = 12 o'clock, clockwise.
-function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
-	const rad = ((angleDeg - 90) * Math.PI) / 180;
-	return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-}
-
-// A single donut-ring wedge: outer arc, straight line in, inner arc back,
-// close. Standard SVG donut-segment path.
-function describeDonutSlice(
-	cx: number,
-	cy: number,
-	outerR: number,
-	innerR: number,
-	startAngle: number,
-	endAngle: number
-) {
-	const outerStart = polarToCartesian(cx, cy, outerR, startAngle);
-	const outerEnd = polarToCartesian(cx, cy, outerR, endAngle);
-	const innerEnd = polarToCartesian(cx, cy, innerR, endAngle);
-	const innerStart = polarToCartesian(cx, cy, innerR, startAngle);
-	const largeArc = endAngle - startAngle > 180 ? 1 : 0;
-	return [
-		"M", outerStart.x, outerStart.y,
-		"A", outerR, outerR, 0, largeArc, 1, outerEnd.x, outerEnd.y,
-		"L", innerEnd.x, innerEnd.y,
-		"A", innerR, innerR, 0, largeArc, 0, innerStart.x, innerStart.y,
-		"Z",
-	].join(" ");
-}
-
-// Donut chart with every label placed OUTSIDE the ring via a short leader
-// line — never on top of a color fill, which sidesteps the contrast problem
-// entirely (no need to pick per-slice text color). A center total count
-// replaces the need for a separate legend. viewBox has generous margin so
-// labels never clip regardless of how narrow the modal renders.
+// Donut chart via recharts (innerRadius creates the ring). Center total
+// count is an overlaid <text> — recharts renders unrecognized children
+// directly into the underlying <svg>, which is the standard pattern for
+// a center label in a recharts donut. cy/text y-offsets are both pulled
+// up from center to leave room for the legend below, same approach as
+// StatisticsTab's 類別分析 chart.
 function CategoryDonutChart({
 	categories,
 	counts,
@@ -647,94 +619,59 @@ function CategoryDonutChart({
 	counts: Record<string, number>;
 	total: number;
 }) {
-	const cx = 180;
-	const cy = 180;
-	const outerR = 95;
-	const innerR = 52;
-
-	let cursor = 0;
-	const slices = categories.map((cat) => {
-		const count = counts[cat.id] || 0;
-		const angle = total ? (count / total) * 360 : 0;
-		const start = cursor;
-		const end = cursor + angle;
-		cursor = end;
-		const mid = (start + end) / 2;
-		const pct = total ? Math.round((count / total) * 100) : 0;
-		return { cat, count, pct, start, end, mid, angle };
-	});
+	const data = categories.map((cat) => ({
+		id: cat.id,
+		name: cat.name,
+		value: counts[cat.id] || 0,
+		color: cat.color_hex,
+	}));
 
 	return (
-		<svg viewBox="0 0 360 360" className={styles.donutSvg}>
-			{slices.map((s) => (
-				<path
-					key={s.cat.id}
-					d={describeDonutSlice(cx, cy, outerR, innerR, s.start, s.end)}
-					fill={s.cat.color_hex}
-					stroke="#1a1f35"
-					strokeWidth={2}
-					strokeLinejoin="round"
+		<ResponsiveContainer width="100%" height={420}>
+			<PieChart margin={{ top: 10, right: 20, bottom: 30, left: 20 }}>
+				<Pie
+					data={data}
+					dataKey="value"
+					nameKey="name"
+					cx="50%"
+					cy="45%"
+					innerRadius={80}
+					outerRadius={140}
+					paddingAngle={2}
+					label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
 				>
-					<title>
-						{s.cat.name}: {s.count} ({s.pct}%)
-					</title>
-				</path>
-			))}
-
-			{/* Center total — replaces the need for a legend to see the whole-count. */}
-			<text
-				x={cx}
-				y={cy - 6}
-				textAnchor="middle"
-				dominantBaseline="middle"
-				fontSize="26"
-				fontWeight="700"
-				fill="#e8e9ed"
-			>
-				{total}
-			</text>
-			<text
-				x={cx}
-				y={cy + 16}
-				textAnchor="middle"
-				dominantBaseline="middle"
-				fontSize="12"
-				fill="#a0aec0"
-			>
-				總筆數
-			</text>
-
-			{slices.map((s) => {
-				const lineStart = polarToCartesian(cx, cy, outerR + 2, s.mid);
-				const lineBend = polarToCartesian(cx, cy, outerR + 14, s.mid);
-				const labelPos = polarToCartesian(cx, cy, outerR + 18, s.mid);
-				const cosMid = Math.cos(((s.mid - 90) * Math.PI) / 180);
-				const anchor = cosMid > 0.15 ? "start" : cosMid < -0.15 ? "end" : "middle";
-				return (
-					<g key={`${s.cat.id}-label`}>
-						<line
-							x1={lineStart.x}
-							y1={lineStart.y}
-							x2={lineBend.x}
-							y2={lineBend.y}
-							stroke={s.cat.color_hex}
-							strokeWidth={1.5}
-						strokeLinecap="round"
-						/>
-						<text
-							x={labelPos.x}
-							y={labelPos.y}
-							textAnchor={anchor as any}
-							dominantBaseline="middle"
-							fontSize="12"
-							fontWeight="600"
-							fill="#e8e9ed"
-						>
-							{s.cat.name} {s.pct}%
-						</text>
-					</g>
-				);
-			})}
-		</svg>
+					{data.map((entry) => (
+						<Cell key={entry.id} fill={entry.color} stroke="#1a1f35" strokeWidth={2} />
+					))}
+				</Pie>
+				<Tooltip
+					contentStyle={{
+						background: "#1a1f35",
+						border: "1px solid rgba(255,255,255,0.1)",
+						borderRadius: 8,
+						color: "#e8e9ed",
+					}}
+					formatter={(value: number, name: string) => [`${value} 筆`, name]}
+				/>
+				<Legend
+					wrapperStyle={{ paddingTop: 24 }}
+					formatter={(value) => <span style={{ color: "#e8e9ed" }}>{value}</span>}
+				/>
+				<text
+					x="50%"
+					y="43%"
+					textAnchor="middle"
+					dominantBaseline="middle"
+					fontSize={26}
+					fontWeight={700}
+					fill="#e8e9ed"
+				>
+					{total}
+				</text>
+				<text x="50%" y="49%" textAnchor="middle" dominantBaseline="middle" fontSize={12} fill="#a0aec0">
+					總筆數
+				</text>
+			</PieChart>
+		</ResponsiveContainer>
 	);
 }

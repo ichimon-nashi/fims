@@ -4,8 +4,8 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import styles from "./StatisticsTab.module.css";
 import html2canvas from "html2canvas";
-import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { EF_ATTRIBUTE_CATEGORIES } from "@/lib/sms.constants";
 
 interface SRMEntry {
@@ -175,6 +175,15 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 		return breakdown;
 	}, [yearlyTotals, EF_CATEGORIES]);
 
+	const pieChartData = useMemo(() => {
+		const colors = ["#4a9eff", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#ec4899", "#6366f1"];
+		return Object.values(EF_CATEGORIES).map((name, index) => ({
+			name,
+			value: categoryBreakdown[name] || 0,
+			color: colors[index % colors.length],
+		}));
+	}, [categoryBreakdown, EF_CATEGORIES]);
+
 	const comparisonData = useMemo(() => {
 		const year1Data: YearlyStats = {};
 		const year2Data: YearlyStats = {};
@@ -199,222 +208,49 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 	const exportToExcel = async () => {
 		setExporting(true);
 		try {
-			const workbook = new ExcelJS.Workbook();
-			workbook.creator = "SRM Statistics System";
-			workbook.created = new Date();
-			const totalCases = Object.values(yearlyTotals).reduce(
-				(sum, count) => sum + count,
-				0
-			);
+			const token = localStorage.getItem("token");
 
-			// Sheet 1: Monthly with Data Source
-			const ws1 = workbook.addWorksheet(`${selectedYear}年月度統計`);
-			const monthHeaders = activeMonths.map((m) => {
-				const [, month] = m.split("-");
-				return `${parseInt(month)}月`;
-			});
-
-			// Add headers (NO data source column)
-			ws1.addRow(["項目", "代碼", "內容", ...monthHeaders, "小計"]);
-
-			const headerRow = ws1.getRow(1);
-			headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
-			headerRow.fill = {
-				type: "pattern",
-				pattern: "solid",
-				fgColor: { argb: "FF4A9EFF" },
-			};
-			headerRow.alignment = { vertical: "middle", horizontal: "center" };
-
-			// Add data rows (NO source info)
-			let itemNumber = 1;
-			activeCodes.forEach((code) => {
-				const row = ws1.addRow([
-					itemNumber++,
-					code,
-					efCodeDescriptions[code] || code,
-					...activeMonths.map(
-						(month) => monthlyStats[code][month]?.count || 0
-					),
-					Object.values(monthlyStats[code]).reduce(
-						(sum, data) => sum + data.count,
-						0
-					),
-				]);
-				row.alignment = { vertical: "middle", horizontal: "center" };
-			});
-
-			const monthTotals = activeMonths.map((month) => {
-				return activeCodes.reduce(
-					(sum, code) =>
-						sum + (monthlyStats[code][month]?.count || 0),
-					0
-				);
-			});
-
-			const totalRow = ws1.addRow([
-				"",
-				"",
-				"總計",
-				...monthTotals,
-				totalCases,
-			]);
-
-			totalRow.font = { bold: true, color: { argb: "FF4A9EFF" } };
-			totalRow.fill = {
-				type: "pattern",
-				pattern: "solid",
-				fgColor: { argb: "FFE6F2FF" },
-			};
-			totalRow.alignment = { vertical: "middle", horizontal: "center" };
-
-			// Set column widths
-			ws1.getColumn(1).width = 8; // 項目
-			ws1.getColumn(2).width = 12; // 代碼
-			ws1.getColumn(3).width = 35; // 內容
-			monthHeaders.forEach((_, i) => {
-				ws1.getColumn(4 + i).width = 8; // Month columns
-			});
-			ws1.getColumn(4 + monthHeaders.length).width = 8; // 小計
-
-			// Add borders
-			ws1.eachRow((row) => {
-				row.eachCell((cell) => {
-					cell.border = {
-						top: { style: "thin" },
-						left: { style: "thin" },
-						bottom: { style: "thin" },
-						right: { style: "thin" },
-					};
+			// Reshape monthlyStats from { code: { month: { count, sources } } }
+			// to { code: { month: count } } — the export route only needs
+			// counts, not the sources Set (which doesn't survive JSON anyway).
+			const monthlyStatsForExport: Record<string, Record<string, number>> = {};
+			Object.entries(monthlyStats).forEach(([code, months]) => {
+				monthlyStatsForExport[code] = {};
+				Object.entries(months).forEach(([month, data]) => {
+					monthlyStatsForExport[code][month] = data.count;
 				});
 			});
 
-			// Sheet 2: Bar Chart Data with Instructions
-			const ws2 = workbook.addWorksheet(`${selectedYear}年EF代碼統計`);
-			ws2.addRow(["EF代碼", "內容", "件數"]);
-			Object.entries(yearlyTotals)
-				.sort((a, b) => b[1] - a[1])
-				.forEach(([code, count]) => {
-					ws2.addRow([code, efCodeDescriptions[code] || code, count]);
-				});
-
-			const ws2HeaderRow = ws2.getRow(1);
-			ws2HeaderRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
-			ws2HeaderRow.fill = {
-				type: "pattern",
-				pattern: "solid",
-				fgColor: { argb: "FF4A9EFF" },
-			};
-			ws2.getColumn(1).width = 12;
-			ws2.getColumn(2).width = 35;
-			ws2.getColumn(3).width = 10;
-
-			// Chart instructions
-			ws2.getCell("E2").value = "📊 建立直條圖：";
-			ws2.getCell("E3").value = `1. 選取 A1:C${
-				Object.keys(yearlyTotals).length + 1
-			}`;
-			ws2.getCell("E4").value = "2. 插入 → 圖表 → 直條圖";
-			ws2.getCell("E5").value = "3. 完成！（約30秒）";
-			ws2.getCell("E2").font = {
-				bold: true,
-				color: { argb: "FF4A9EFF" },
-			};
-
-			// Sheet 3: Pie Chart Data
-			const ws3 = workbook.addWorksheet(`${selectedYear}年類別分析`);
-			ws3.addRow(["類別", "件數", "百分比"]);
-			Object.entries(EF_CATEGORIES).forEach(([code, name]) => {
-				const count = categoryBreakdown[name] || 0;
-				const percentage =
-					totalCases > 0
-						? ((count / totalCases) * 100).toFixed(1)
-						: "0.0";
-				ws3.addRow([name, count, percentage + "%"]);
+			const response = await fetch("/api/sms/export-statistics", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify({
+					year: selectedYear,
+					activeMonths,
+					activeCodes,
+					efCodeDescriptions,
+					monthlyStats: monthlyStatsForExport,
+					yearlyTotals,
+					categoryBreakdown,
+					totalCases,
+					compareYear1,
+					compareYear2,
+					comparisonData,
+				}),
 			});
 
-			const ws3HeaderRow = ws3.getRow(1);
-			ws3HeaderRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
-			ws3HeaderRow.fill = {
-				type: "pattern",
-				pattern: "solid",
-				fgColor: { argb: "FF4A9EFF" },
-			};
-			ws3.getColumn(1).width = 20;
-			ws3.getColumn(2).width = 10;
-			ws3.getColumn(3).width = 10;
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => ({}));
+				throw new Error(errorData.error || "Failed to export");
+			}
 
-			ws3.getCell("E2").value = "🥧 建立圓餅圖：";
-			ws3.getCell("E3").value = "1. 選取 A1:B8";
-			ws3.getCell("E4").value = "2. 插入 → 圖表 → 圓餅圖";
-			ws3.getCell("E5").value = "3. 完成！（約30秒）";
-			ws3.getCell("E2").font = {
-				bold: true,
-				color: { argb: "FF4A9EFF" },
-			};
-
-			// Sheet 4: Year Comparison
-			const ws4 = workbook.addWorksheet(
-				`年度比較_${compareYear1}vs${compareYear2}`
-			);
-			ws4.addRow([
-				"EF代碼",
-				"內容",
-				`${compareYear1}年`,
-				`${compareYear2}年`,
-				"差異",
-			]);
-
-			const allComparisonCodes = new Set([
-				...Object.keys(comparisonData.year1),
-				...Object.keys(comparisonData.year2),
-			]);
-
-			Array.from(allComparisonCodes)
-				.sort()
-				.forEach((code) => {
-					const y1Count = comparisonData.year1[code] || 0;
-					const y2Count = comparisonData.year2[code] || 0;
-					ws4.addRow([
-						code,
-						efCodeDescriptions[code] || code,
-						y1Count,
-						y2Count,
-						y1Count - y2Count,
-					]);
-				});
-
-			const ws4HeaderRow = ws4.getRow(1);
-			ws4HeaderRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
-			ws4HeaderRow.fill = {
-				type: "pattern",
-				pattern: "solid",
-				fgColor: { argb: "FF4A9EFF" },
-			};
-			ws4.getColumn(1).width = 12;
-			ws4.getColumn(2).width = 35;
-			ws4.getColumn(3).width = 10;
-			ws4.getColumn(4).width = 10;
-			ws4.getColumn(5).width = 10;
-
-			ws4.getCell("G2").value = "📊 建立群組直條圖：";
-			ws4.getCell("G3").value = `1. 選取 A1:D${
-				allComparisonCodes.size + 1
-			}`;
-			ws4.getCell("G4").value = "2. 插入 → 圖表 → 群組直條圖";
-			ws4.getCell("G5").value = "3. 完成！（約30秒）";
-			ws4.getCell("G2").font = {
-				bold: true,
-				color: { argb: "FF4A9EFF" },
-			};
-
-			const buffer = await workbook.xlsx.writeBuffer();
-			const blob = new Blob([buffer], {
-				type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-			});
+			const blob = await response.blob();
 			saveAs(blob, `SRM統計報表_${selectedYear}.xlsx`);
 
-			alert("✅ Excel 檔案已匯出！\n💡 按照說明即可快速建立圖表");
+			alert("✅ Excel 檔案已匯出！圖表已內建，可直接編輯");
 		} catch (error) {
 			console.error("Export error:", error);
 			alert("匯出失敗：" + (error as Error).message);
@@ -483,24 +319,22 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 						</select>
 					</div>
 
-					{isAdmin && (
-						<div className={styles.buttonGroup}>
-							<button
-								onClick={captureScreenshot}
-								className={styles.screenshotButton}
-								disabled={capturing}
-							>
-								{capturing ? "⏳ 截圖中..." : "📸 截圖"}
-							</button>
-							<button
-								onClick={exportToExcel}
-								className={styles.exportButton}
-								disabled={exporting}
-							>
-								{exporting ? "⏳ 匯出中..." : "📊 匯出 Excel"}
-							</button>
-						</div>
-					)}
+					<div className={styles.buttonGroup}>
+						<button
+							onClick={captureScreenshot}
+							className={styles.screenshotButton}
+							disabled={capturing}
+						>
+							{capturing ? "⏳ 截圖中..." : "📸 截圖"}
+						</button>
+						<button
+							onClick={exportToExcel}
+							className={styles.exportButton}
+							disabled={exporting}
+						>
+							{exporting ? "⏳ 匯出中..." : "📊 匯出 Excel"}
+						</button>
+					</div>
 				</div>
 
 				<div className={styles.summary}>
@@ -654,58 +488,41 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 				<div className={styles.section}>
 					<h3>🗃️ {selectedYear}年 類別分析</h3>
 					<div className={styles.pieChartContainer}>
-						<div className={styles.pieChart}>
-							{Object.entries(EF_CATEGORIES).map(
-								([code, name], index) => {
-									const count = categoryBreakdown[name] || 0;
-									const percentage =
-										totalCases > 0
-											? (count / totalCases) * 100
-											: 0;
-									const colors = [
-										"#4a9eff",
-										"#f59e0b",
-										"#10b981",
-										"#ef4444",
-										"#8b5cf6",
-										"#ec4899",
-										"#6366f1",
-									];
-									const color = colors[index % colors.length];
-									return (
-										<div
-											key={code}
-											className={styles.pieSegment}
-											style={{ color }}
-										>
-											<div className={styles.pieLabel}>
-												<span
-													className={styles.pieDot}
-													style={{
-														backgroundColor: color,
-													}}
-												></span>
-												<span className={styles.pieLabelText}>{name}</span>
-											</div>
-											<div className={styles.pieStats}>
-												<span
-													className={styles.pieCount}
-												>
-													{count} 件
-												</span>
-												<span
-													className={
-														styles.piePercent
-													}
-												>
-													{percentage.toFixed(1)}%
-												</span>
-											</div>
-										</div>
-									);
-								}
-							)}
-						</div>
+						<ResponsiveContainer width="100%" height={460}>
+							<PieChart margin={{ top: 50, right: 30, bottom: 30, left: 30 }}>
+								<Pie
+									data={pieChartData}
+									dataKey="value"
+									nameKey="name"
+									cx="50%"
+									cy="48%"
+									outerRadius={120}
+									label={({ name, percent }) =>
+										`${name} ${((percent ?? 0) * 100).toFixed(1)}%`
+									}
+								>
+									{pieChartData.map((entry) => (
+										<Cell key={entry.name} fill={entry.color} />
+									))}
+								</Pie>
+								<Tooltip
+									contentStyle={{
+										background: "#1a1f35",
+										border: "1px solid rgba(255,255,255,0.1)",
+										borderRadius: 8,
+									}}
+									itemStyle={{ color: "#e8e9ed" }}
+									labelStyle={{ color: "#e8e9ed" }}
+									formatter={(value: number) => [`${value} 件`, "件數"]}
+								/>
+								<Legend
+									wrapperStyle={{ paddingTop: 24 }}
+									formatter={(value) => (
+										<span style={{ color: "#e8e9ed" }}>{value}</span>
+									)}
+								/>
+							</PieChart>
+						</ResponsiveContainer>
 					</div>
 				</div>
 			</div>
