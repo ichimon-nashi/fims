@@ -1,0 +1,239 @@
+/* src/components/sms/TrendRecordsModal.module.css */
+
+.modalOverlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.7);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+	padding: 1rem;
+	backdrop-filter: blur(4px);
+}
+
+.modal {
+	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+	border-radius: 16px;
+	width: 100%;
+	max-width: 900px;
+	max-height: 90vh;
+	overflow-y: auto;
+	box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modalHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1.5rem;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	background: rgba(255, 255, 255, 0.03);
+	position: sticky;
+	top: 0;
+	z-index: 10;
+}
+
+.modalHeader h2 {
+	margin: 0;
+	color: #4a9eff;
+	font-size: 1.3rem;
+	font-weight: 600;
+	font-family: "Courier New", monospace;
+}
+
+.headerDesc {
+	color: #a0aec0;
+	font-size: 0.95rem;
+	font-weight: 400;
+	font-family: inherit;
+	margin-left: 0.6rem;
+}
+
+.closeButton {
+	background: rgba(255, 255, 255, 0.1);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	color: white;
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 1.5rem;
+	line-height: 1;
+	padding: 0;
+	transition: all 0.2s ease;
+	flex-shrink: 0;
+}
+
+.closeButton:hover {
+	background: rgba(239, 68, 68, 0.3);
+	border-color: #ef4444;
+	transform: rotate(90deg);
+}
+
+.modalSubheader {
+	padding: 0.75rem 1.5rem;
+	color: #6b7280;
+	font-size: 0.85rem;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.modalBody {
+	padding: 1.5rem;
+}
+
+.status {
+	text-align: center;
+	padding: 2rem;
+	color: #6b7280;
+	font-style: italic;
+}
+
+.yearColumns {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 1.5rem;
+}
+
+.yearColumn {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.yearColumnHeader {
+	color: #4a9eff;
+	font-weight: 600;
+	font-size: 1rem;
+	padding-bottom: 0.5rem;
+	border-bottom: 1px solid rgba(74, 158, 255, 0.2);
+}
+
+.yearCount {
+	color: #a0aec0;
+	font-weight: 400;
+	font-size: 0.85rem;
+}
+
+.entryCard {
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 8px;
+	padding: 0.85rem;
+}
+
+.entryHeader {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	flex-wrap: wrap;
+	margin-bottom: 0.5rem;
+}
+
+.entryNumber {
+	color: #4a9eff;
+	font-weight: 600;
+	font-family: "Courier New", monospace;
+	font-size: 0.85rem;
+}
+
+.entryDate {
+	color: #a0aec0;
+	font-size: 0.8rem;
+}
+
+.entrySourceBadge {
+	background: rgba(59, 130, 246, 0.2);
+	color: #93c5fd;
+	border: 1px solid rgba(59, 130, 246, 0.3);
+	padding: 0.15rem 0.5rem;
+	border-radius: 10px;
+	font-size: 0.7rem;
+	font-weight: 600;
+	text-transform: uppercase;
+}
+
+.entryMeta {
+	color: #6b7280;
+	font-size: 0.78rem;
+}
+
+.entryText {
+	margin: 0;
+	color: #cbd5e0;
+	font-size: 0.88rem;
+	line-height: 1.5;
+	white-space: pre-wrap;
+	word-wrap: break-word;
+}
+
+.modalFooter {
+	padding: 1rem 1.5rem;
+	border-top: 1px solid rgba(255, 255, 255, 0.1);
+	display: flex;
+	justify-content: flex-end;
+	background: rgba(255, 255, 255, 0.02);
+	position: sticky;
+	bottom: 0;
+}
+
+.closeFooterButton {
+	background: rgba(255, 255, 255, 0.05);
+	color: #a0aec0;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	padding: 0.65rem 1.5rem;
+	border-radius: 8px;
+	cursor: pointer;
+	font-weight: 600;
+	transition: all 0.2s ease;
+}
+
+.closeFooterButton:hover {
+	background: rgba(255, 255, 255, 0.1);
+	color: #e8e9ed;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+	.modal {
+		max-width: 95vw;
+		max-height: 95vh;
+	}
+
+	.modalHeader,
+	.modalBody {
+		padding: 1rem;
+	}
+
+	.modalHeader h2 {
+		font-size: 1.1rem;
+	}
+
+	.headerDesc {
+		display: block;
+		margin-left: 0;
+		margin-top: 0.25rem;
+		font-size: 0.85rem;
+	}
+
+	.yearColumns {
+		grid-template-columns: 1fr;
+	}
+
+	.closeButton {
+		width: 44px;
+		height: 44px;
+	}
+
+	.closeFooterButton {
+		width: 100%;
+		min-height: 44px;
+	}
+}

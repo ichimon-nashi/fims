@@ -205,10 +205,18 @@ export default function RoutineSummary() {
 				throw new Error(data.error || "匯出失敗");
 			}
 			const blob = await res.blob();
+			const disposition = res.headers.get("content-disposition") ?? "";
+			const extendedMatch = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+			const plainMatch = /filename="([^"]+)"/i.exec(disposition);
+			const filename = extendedMatch
+				? decodeURIComponent(extendedMatch[1])
+				: plainMatch
+				? plainMatch[1]
+				: `routine_audit_export_${years.join("-")}.xlsx`;
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement("a");
 			a.href = url;
-			a.download = `routine_audit_export_${years.join("-")}.xlsx`;
+			a.download = filename;
 			a.click();
 			URL.revokeObjectURL(url);
 		} catch (err) {

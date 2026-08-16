@@ -1,13 +1,21 @@
 // src/app/api/sms/trend-analysis/export/route.ts
 //
-// Exports the 趨勢分析 tab to a native-chart .xlsx. Same pattern as
-// export-statistics/route.ts: client POSTs its already-computed data
-// (composition list, current trend selection already rolled up to
-// whatever granularity is on screen, period comparison), server builds
-// the workbook + charts. No re-querying — this route trusts the client's
-// numbers because they're the same numbers the user is looking at on
-// screen; re-deriving them here would risk the export silently disagreeing
-// with what was actually displayed.
+// Exports the 趨勢分析 tab. Restructured per SMS-analyst review:
+//   - 代碼組成分析 now ALWAYS includes both HFACS and EF composition,
+//     regardless of which one happens to be toggled on screen — a safety
+//     board export shouldn't silently drop one audit programme's codes.
+//   - 整體趨勢總覽 puts time back on the x-axis with one line per top-10
+//     risk (was briefly x-axis=risks, which was wrong: a line connecting
+//     unrelated categories has no meaningful slope).
+//   - 風險緩解分析 is now the single home for period-range comparison —
+//     merged what used to be a separate "{A} vs {B}區間分析" sheet into
+//     it, and dropped the plain period-totals bar chart as redundant next
+//     to the stacked source-composition chart (total height there already
+//     equals the stacked bar's height, so the second chart added no
+//     information, just another sheet to scroll past).
+//   - Every wide/tall table gets its chart anchored BELOW the data
+//     instead of the old fixed column-G position, which silently
+//     overlapped real data on any table wider than ~6 columns.
 import { NextRequest, NextResponse } from "next/server";
 import { checkSMSPermissions } from "@/lib/smsPermissions";
 import { injectChart, ChartSpec } from "@/lib/xlsxNativeCharts";
@@ -16,6 +24,13 @@ import JSZip from "jszip";
 
 const SRM_COLOR = "4a9eff";
 const SELF_COLOR = "fb923c";
+// Top-10 trend line palette — reuses hex values already established
+// elsewhere in this app (StatisticsTab category colors, SRM/SELF colors)
+// rather than inventing new ones.
+const TREND_LINE_COLORS = [
+	"4a9eff", "f59e0b", "10b981", "ef4444", "8b5cf6",
+	"ec4899", "6366f1", "fb923c", "1baf7a", "e87ba4",
+];
 
 interface CodeBucket {
 	code: string;
@@ -28,7 +43,7 @@ interface CodeBucket {
 
 interface PeriodPoint {
 	period: string;
-	srm: number | null; // null = genuine gap (future period, no data yet) — write as blank cell, not 0
+	srm: number | null; // null = genuine gap (future period, no data yet)
 	self: number | null;
 }
 
@@ -46,14 +61,17 @@ interface CodeComparison {
 }
 
 interface TrendExportPayload {
-	type: "hfacs" | "ef";
-	trendLabel: string; // e.g. "RM1 — 人力資源不足" or a category/area name
-	granularityLabel: string; // "月" | "季" | "半年" | "年"
-	codes: CodeBucket[]; // full composition list, not just the on-screen top 10
+	hfacsCodes: CodeBucket[];
+	efCodes: CodeBucket[];
+	trendLabel: string;
+	trendGranularityLabel: string; // "月" | "季" | "半年" | "年" — for the 趨勢分析 sheet
+	comparisonGranularityLabel: string; // for the 整體趨勢總覽 sheet — independently scoped, not necessarily the same as above
 	trendSeries: PeriodPoint[];
+	topCodesForTrend: { code: string; description: string }[];
+	topCodesTrendSeries: Array<Record<string, string | number | null>>; // one row per period, one key per code
 	periodALabel: string | null;
 	periodBLabel: string | null;
-	topCodesComparison: CodeComparison[]; // top 10 codes, already sorted (most-improved first)
+	topCodesComparison: CodeComparison[];
 }
 
 function styleHeaderRow(row: ExcelJS.Row) {
@@ -63,12 +81,30 @@ function styleHeaderRow(row: ExcelJS.Row) {
 }
 
 // Excel worksheet names are capped at 31 characters. With range-based
-// period labels (e.g. "2025-01~2025-06") this is now a common case, not
-// a rare edge case — a plain slice() produces an ugly mid-word cut, so an
-// ellipsis is used instead to make the truncation visible rather than
-// looking like a typo.
+// period labels this is a common case, not a rare edge case — an
+// ellipsis makes the truncation visible rather than looking like a typo.
 function safeSheetName(name: string): string {
 	return name.length > 31 ? name.slice(0, 30) + "…" : name;
+}
+
+function addCompositionSheet(workbook: ExcelJS.Workbook, sheetName: string, codes: CodeBucket[]): ExcelJS.Worksheet {
+	const ws = workbook.addWorksheet(sheetName);
+	ws.addRow(["代碼", "內容", "分類", "SRM", "自督", "小計"]);
+	styleHeaderRow(ws.getRow(1));
+	codes.forEach((c) => ws.addRow([c.code, c.description, c.category, c.srm, c.self, c.total]));
+	ws.getColumn(1).width = 12;
+	ws.getColumn(2).width = 35;
+	ws.getColumn(3).width = 30;
+	ws.getColumn(4).width = 10;
+	ws.getColumn(5).width = 10;
+	ws.getColumn(6).width = 10;
+	return ws;
+}
+
+// Column index (0-based) -> letter, only needs to cover up to ~10 columns
+// here (top-10 risks) so no need for double-letter (AA, AB, ...) handling.
+function colLetter(index0: number): string {
+	return String.fromCharCode("A".charCodeAt(0) + index0);
 }
 
 export async function POST(req: NextRequest) {
@@ -81,111 +117,104 @@ export async function POST(req: NextRequest) {
 	}
 
 	const body: TrendExportPayload = await req.json();
-	const { type, trendLabel, granularityLabel, codes, trendSeries, periodALabel, periodBLabel, topCodesComparison } = body;
+	const {
+		hfacsCodes,
+		efCodes,
+		trendLabel,
+		trendGranularityLabel,
+		comparisonGranularityLabel,
+		trendSeries,
+		topCodesForTrend,
+		topCodesTrendSeries,
+		periodALabel,
+		periodBLabel,
+		topCodesComparison,
+	} = body;
 
 	const workbook = new ExcelJS.Workbook();
 	workbook.creator = "SMS Trend Analysis";
 	workbook.created = new Date();
 
-	// ---- Sheet 1: 代碼組成分析 — full list, styled table + clustered bar ----
-	const ws1 = workbook.addWorksheet("代碼組成分析");
-	ws1.addRow(["代碼", "內容", "分類", "SRM", "自督", "小計"]);
-	styleHeaderRow(ws1.getRow(1));
-	codes.forEach((c) => {
-		ws1.addRow([c.code, c.description, c.category, c.srm, c.self, c.total]);
-	});
-	ws1.getColumn(1).width = 12;
-	ws1.getColumn(2).width = 35;
-	ws1.getColumn(3).width = 30;
-	ws1.getColumn(4).width = 10;
-	ws1.getColumn(5).width = 10;
-	ws1.getColumn(6).width = 10;
+	// ---- Sheet 1a/1b: both code taxonomies, always both ----
+	addCompositionSheet(workbook, "代碼組成分析(HFACS)", hfacsCodes);
+	addCompositionSheet(workbook, "代碼組成分析(EF)", efCodes);
 
-	// ---- Sheet 2: 趨勢分析 — current selection's rolled-up series + line chart ----
+	// ---- Sheet 2: 趨勢分析 — current single-entity selection over time ----
 	const ws2 = workbook.addWorksheet("趨勢分析");
-	ws2.addRow([`${granularityLabel}份`, "SRM", "自督"]);
+	ws2.addRow([`${trendGranularityLabel}份`, "SRM", "自督"]);
 	styleHeaderRow(ws2.getRow(1));
-	trendSeries.forEach((p) => {
-		ws2.addRow([p.period, p.srm, p.self]);
-	});
+	trendSeries.forEach((p) => ws2.addRow([p.period, p.srm, p.self]));
 	ws2.getColumn(1).width = 16;
 	ws2.getColumn(2).width = 10;
 	ws2.getColumn(3).width = 10;
 
-	// ---- Sheet 2b: 整體趨勢總覽 — risks as rows, one column per range's
-	// combined total — mirrors the on-screen redesign where the overview
-	// toggle plots codes on the x-axis with a line per range, not time.
-	if (topCodesComparison.length > 0) {
-		const ws2b = workbook.addWorksheet("整體趨勢總覽");
-		ws2b.addRow(["代碼", "內容", `${periodALabel} 合計`, `${periodBLabel} 合計`]);
-		styleHeaderRow(ws2b.getRow(1));
-		topCodesComparison.forEach((c) => {
-			ws2b.addRow([c.code, c.description, c.a.srm + c.a.self, c.b.srm + c.b.self]);
-		});
-		ws2b.getColumn(1).width = 12;
-		ws2b.getColumn(2).width = 30;
-		ws2b.getColumn(3).width = 14;
-		ws2b.getColumn(4).width = 14;
-	}
+	// ---- Sheet 3: 整體趨勢總覽 — time as rows, one column per top-10 risk ----
+	const ws3 = workbook.addWorksheet("整體趨勢總覽");
+	ws3.addRow([
+		`${comparisonGranularityLabel}份`,
+		...topCodesForTrend.map((c) => (c.description ? `${c.code} - ${c.description}` : c.code)),
+	]);
+	styleHeaderRow(ws3.getRow(1));
+	topCodesTrendSeries.forEach((row) => {
+		ws3.addRow([row.period, ...topCodesForTrend.map((c) => (row[c.code] as number | null) ?? null)]);
+	});
+	ws3.getColumn(1).width = 14;
+	topCodesForTrend.forEach((_, i) => (ws3.getColumn(i + 2).width = 10));
 
-	// ---- Sheet 3: 風險緩解分析 — top 10 codes, full A/B/diff table ----
-	const mergedSheetName = safeSheetName(`${periodALabel} vs ${periodBLabel}區間分析`);
+	// ---- Sheet 4: 風險緩解分析 — merged: detail table (10 cols) + a
+	// long-format table backing the stacked chart, all on one sheet ----
+	let longFormatStartRow = 0;
+	let mergedChartAnchorRow = 0;
 	if (topCodesComparison.length > 0) {
-		const ws3 = workbook.addWorksheet("風險緩解分析");
-		ws3.addRow([
-			"代碼",
-			"內容",
-			`${periodALabel} SRM`,
-			`${periodALabel} 自督`,
-			`${periodALabel} 小計`,
-			`${periodBLabel} SRM`,
-			`${periodBLabel} 自督`,
-			`${periodBLabel} 小計`,
-			"差異",
-			"變化%",
+		const ws4 = workbook.addWorksheet("風險緩解分析");
+		ws4.addRow([
+			"代碼", "內容",
+			`${periodALabel} SRM`, `${periodALabel} 自督`, `${periodALabel} 小計`,
+			`${periodBLabel} SRM`, `${periodBLabel} 自督`, `${periodBLabel} 小計`,
+			"差異", "變化%",
 		]);
-		styleHeaderRow(ws3.getRow(1));
+		styleHeaderRow(ws4.getRow(1));
 		topCodesComparison.forEach((c) => {
 			const totalA = c.a.srm + c.a.self;
 			const totalB = c.b.srm + c.b.self;
 			const diff = totalB - totalA;
 			const pct = totalA > 0 ? Math.round((diff / totalA) * 100) : null;
-			ws3.addRow([
-				c.code,
-				c.description,
-				c.a.srm,
-				c.a.self,
-				totalA,
-				c.b.srm,
-				c.b.self,
-				totalB,
-				diff,
-				pct !== null ? `${pct}%` : "N/A",
+			ws4.addRow([
+				c.code, c.description,
+				c.a.srm, c.a.self, totalA,
+				c.b.srm, c.b.self, totalB,
+				diff, pct !== null ? `${pct}%` : "N/A",
 			]);
 		});
-		ws3.getColumn(1).width = 12;
-		ws3.getColumn(2).width = 30;
-		[3, 4, 5, 6, 7, 8, 9, 10].forEach((i) => (ws3.getColumn(i).width = 12));
+		ws4.getColumn(1).width = 12;
+		ws4.getColumn(2).width = 30;
+		[3, 4, 5, 6, 7, 8, 9, 10].forEach((i) => (ws4.getColumn(i).width = 12));
 
-		// ---- Merged composition sheet: both periods, one stacked chart.
-		// A true "code x period" two-level category axis isn't something
-		// this injector builds, so instead each code gets TWO adjacent
-		// category slots (one per period) on a single-level axis — same
-		// visual result (stacked SRM/自督 bars, period pairs side by side
-		// per code), built entirely with the stacked-bar support that's
-		// already verified to work.
-		const wsMerged = workbook.addWorksheet(mergedSheetName);
-		wsMerged.addRow(["代碼", "期間", "SRM", "自督", "小計"]);
-		styleHeaderRow(wsMerged.getRow(1));
-		topCodesComparison.forEach((c) => {
-			wsMerged.addRow([c.code, c.a.period, c.a.srm, c.a.self, c.a.srm + c.a.self]);
-			wsMerged.addRow([c.code, c.b.period, c.b.srm, c.b.self, c.b.srm + c.b.self]);
+		// Long-format table (代碼,期間,SRM,自督,小計), 2 rows per code — the
+		// alternating-category trick that lets a single-level-axis chart
+		// show both periods per code, stacked by source.
+		longFormatStartRow = topCodesComparison.length + 3; // header + data rows + 1 blank row
+		["代碼", "期間", "SRM", "自督", "小計"].forEach((h, i) => {
+			ws4.getCell(longFormatStartRow, i + 1).value = h;
 		});
-		wsMerged.getColumn(1).width = 12;
-		wsMerged.getColumn(2).width = 14;
-		wsMerged.getColumn(3).width = 10;
-		wsMerged.getColumn(4).width = 10;
-		wsMerged.getColumn(5).width = 10;
+		styleHeaderRow(ws4.getRow(longFormatStartRow));
+
+		let r = longFormatStartRow + 1;
+		topCodesComparison.forEach((c) => {
+			ws4.getCell(r, 1).value = c.code;
+			ws4.getCell(r, 2).value = c.a.period;
+			ws4.getCell(r, 3).value = c.a.srm;
+			ws4.getCell(r, 4).value = c.a.self;
+			ws4.getCell(r, 5).value = c.a.srm + c.a.self;
+			r++;
+			ws4.getCell(r, 1).value = c.code;
+			ws4.getCell(r, 2).value = c.b.period;
+			ws4.getCell(r, 3).value = c.b.srm;
+			ws4.getCell(r, 4).value = c.b.self;
+			ws4.getCell(r, 5).value = c.b.srm + c.b.self;
+			r++;
+		});
+		mergedChartAnchorRow = r + 2; // a couple rows of padding below the long-format table
 	}
 
 	// ---- write base workbook, then inject native charts ----
@@ -193,15 +222,34 @@ export async function POST(req: NextRequest) {
 	const zip = await JSZip.loadAsync(baseBuffer);
 	let chartIndex = 1;
 
-	if (codes.length > 0) {
+	if (hfacsCodes.length > 0) {
 		const spec: ChartSpec = {
 			type: "bar",
-			title: `代碼組成分析 (${type === "hfacs" ? "HFACS" : "EF"})`,
-			sheetName: "代碼組成分析",
-			categories: codes.map((c) => c.code),
+			title: "代碼組成分析 (HFACS)",
+			sheetName: "代碼組成分析(HFACS)",
+			categories: hfacsCodes.map((c) => c.code),
 			series: [
-				{ name: "SRM", values: codes.map((c) => c.srm), color: SRM_COLOR },
-				{ name: "自督", values: codes.map((c) => c.self), color: SELF_COLOR },
+				{ name: "SRM", values: hfacsCodes.map((c) => c.srm), color: SRM_COLOR },
+				{ name: "自督", values: hfacsCodes.map((c) => c.self), color: SELF_COLOR },
+			],
+			categoryColumn: "A",
+			firstDataRow: 2,
+			seriesColumns: ["D", "E"],
+			categoryAxisTitle: "代碼",
+			valueAxisTitle: "件數",
+		};
+		await injectChart(zip, spec, chartIndex++);
+	}
+
+	if (efCodes.length > 0) {
+		const spec: ChartSpec = {
+			type: "bar",
+			title: "代碼組成分析 (EF)",
+			sheetName: "代碼組成分析(EF)",
+			categories: efCodes.map((c) => c.code),
+			series: [
+				{ name: "SRM", values: efCodes.map((c) => c.srm), color: SRM_COLOR },
+				{ name: "自督", values: efCodes.map((c) => c.self), color: SELF_COLOR },
 			],
 			categoryColumn: "A",
 			firstDataRow: 2,
@@ -225,104 +273,69 @@ export async function POST(req: NextRequest) {
 			categoryColumn: "A",
 			firstDataRow: 2,
 			seriesColumns: ["B", "C"],
-			categoryAxisTitle: granularityLabel,
+			categoryAxisTitle: trendGranularityLabel,
 			valueAxisTitle: "件數",
+		};
+		await injectChart(zip, spec, chartIndex++);
+	}
+
+	if (topCodesForTrend.length > 0 && topCodesTrendSeries.length > 0) {
+		// Table is 1 (period) + N (up to 10) columns wide — wider than the
+		// default column-G anchor tolerates once N > 5, so it goes below
+		// the data instead in that case.
+		const wideTable = topCodesForTrend.length > 5;
+		const spec: ChartSpec = {
+			type: "line",
+			title: "整體趨勢總覽 — 前10大風險趨勢",
+			sheetName: "整體趨勢總覽",
+			categories: topCodesTrendSeries.map((r) => String(r.period)),
+			series: topCodesForTrend.map((c, i) => ({
+				name: c.description ? `${c.code} - ${c.description}` : c.code,
+				values: topCodesTrendSeries.map((r) => (r[c.code] as number | null) ?? null),
+				color: TREND_LINE_COLORS[i % TREND_LINE_COLORS.length],
+			})),
+			categoryColumn: "A",
+			firstDataRow: 2,
+			seriesColumns: topCodesForTrend.map((_, i) => colLetter(i + 1)), // B, C, D, ...
+			categoryAxisTitle: comparisonGranularityLabel,
+			valueAxisTitle: "件數",
+			anchorCol: wideTable ? 0 : 6,
+			anchorRow: wideTable ? topCodesTrendSeries.length + 3 : 1,
 		};
 		await injectChart(zip, spec, chartIndex++);
 	}
 
 	if (topCodesComparison.length > 0) {
 		const spec: ChartSpec = {
-			type: "line",
-			title: "整體趨勢總覽 — 風險比較",
-			sheetName: "整體趨勢總覽",
-			categories: topCodesComparison.map((c) => c.code),
-			series: [
-				{
-					name: String(periodALabel),
-					values: topCodesComparison.map((c) => c.a.srm + c.a.self),
-					color: SRM_COLOR,
-				},
-				{
-					name: String(periodBLabel),
-					values: topCodesComparison.map((c) => c.b.srm + c.b.self),
-					color: SELF_COLOR,
-				},
-			],
-			categoryColumn: "A",
-			firstDataRow: 2,
-			seriesColumns: ["C", "D"],
-			categoryAxisTitle: "代碼",
-			valueAxisTitle: "件數",
-		};
-		await injectChart(zip, spec, chartIndex++);
-	}
-
-	if (topCodesComparison.length > 0) {
-		const summarySpec: ChartSpec = {
 			type: "bar",
-			title: "風險緩解分析 — 期間總數比較",
+			title: `風險緩解分析 (${periodALabel} vs ${periodBLabel})`,
 			sheetName: "風險緩解分析",
-			categories: topCodesComparison.map((c) => c.code),
+			categories: topCodesComparison.flatMap((c) => [`${c.code} (${c.a.period})`, `${c.code} (${c.b.period})`]),
 			series: [
-				{
-					name: String(periodALabel),
-					values: topCodesComparison.map((c) => c.a.srm + c.a.self),
-					color: SRM_COLOR,
-				},
-				{
-					name: String(periodBLabel),
-					values: topCodesComparison.map((c) => c.b.srm + c.b.self),
-					color: SELF_COLOR,
-				},
+				{ name: "SRM", values: topCodesComparison.flatMap((c) => [c.a.srm, c.b.srm]), color: SRM_COLOR },
+				{ name: "自督", values: topCodesComparison.flatMap((c) => [c.a.self, c.b.self]), color: SELF_COLOR },
 			],
 			categoryColumn: "A",
-			firstDataRow: 2,
-			seriesColumns: ["E", "H"],
-			categoryAxisTitle: "代碼",
-			valueAxisTitle: "件數",
-		};
-		await injectChart(zip, summarySpec, chartIndex++);
-
-		// Merged composition chart: category axis alternates code+period
-		// (2 rows per code), stacked SRM/自督 — adjacent bars per code are
-		// directly comparable, both periods visible in one chart.
-		const mergedCategories = topCodesComparison.flatMap((c) => [
-			`${c.code} (${c.a.period})`,
-			`${c.code} (${c.b.period})`,
-		]);
-		const mergedSrmValues = topCodesComparison.flatMap((c) => [c.a.srm, c.b.srm]);
-		const mergedSelfValues = topCodesComparison.flatMap((c) => [c.a.self, c.b.self]);
-		const mergedSpec: ChartSpec = {
-			type: "bar",
-			title: mergedSheetName,
-			sheetName: mergedSheetName,
-			categories: mergedCategories,
-			series: [
-				{ name: "SRM", values: mergedSrmValues, color: SRM_COLOR },
-				{ name: "自督", values: mergedSelfValues, color: SELF_COLOR },
-			],
-			categoryColumn: "A",
-			firstDataRow: 2,
+			firstDataRow: longFormatStartRow + 1,
 			seriesColumns: ["C", "D"],
 			stacked: true,
 			categoryAxisTitle: "代碼 (期間)",
 			valueAxisTitle: "件數",
+			anchorCol: 0,
+			anchorRow: mergedChartAnchorRow,
 		};
-		await injectChart(zip, mergedSpec, chartIndex++);
+		await injectChart(zip, spec, chartIndex++);
 	}
 
 	const finalBuffer = await zip.generateAsync({ type: "nodebuffer" });
-
 	const filename = `趨勢分析_${trendLabel}.xlsx`;
 
 	return new NextResponse(new Uint8Array(finalBuffer), {
 		status: 200,
 		headers: {
 			"Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-			// encodeURIComponent is required here — raw Chinese characters in a
-			// header value throw "Cannot convert to ByteString" (hit this exact
-			// bug on the statistics export route already).
+			// encodeURIComponent required — raw Chinese characters in a
+			// header value throw "Cannot convert to ByteString".
 			"Content-Disposition": `attachment; filename="${encodeURIComponent(filename)}"`,
 		},
 	});

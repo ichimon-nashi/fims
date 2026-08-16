@@ -54,6 +54,13 @@ export interface ChartSpec {
 	categoryColumn: string; // e.g. "A"
 	firstDataRow: number; // 1-indexed row where categories/values start (row 1 is usually the header)
 	seriesColumns: string[]; // one column letter per series, e.g. ["C"] or ["C","D"]
+	// Chart placement — both default to the original hardcoded position
+	// (col G, row 2) for full backward compatibility. Override anchorRow
+	// for any table wider than ~6 columns, since the default column
+	// position will otherwise sit directly on top of real data — this bit
+	// the "風險緩解分析" sheet (10 columns) in production.
+	anchorCol?: number; // 0-indexed starting column, default 6 (column G)
+	anchorRow?: number; // 0-indexed starting row, default 1 (row 2)
 }
 
 function escapeXml(str: string): string {
@@ -243,12 +250,14 @@ export function buildChartXml(spec: ChartSpec): string {
 	return spec.type === "pie" ? buildPieChartXml(spec) : buildBarOrLineChartXml(spec);
 }
 
-function buildDrawingXml(chartRelId: string): string {
+function buildDrawingXml(chartRelId: string, fromCol: number = 6, fromRow: number = 1): string {
+	const toCol = fromCol + 10;
+	const toRow = fromRow + 21;
 	return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
 	<xdr:twoCellAnchor>
-		<xdr:from><xdr:col>6</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>1</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
-		<xdr:to><xdr:col>16</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>22</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>
+		<xdr:from><xdr:col>${fromCol}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${fromRow}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
+		<xdr:to><xdr:col>${toCol}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${toRow}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>
 		<xdr:graphicFrame macro="">
 			<xdr:nvGraphicFramePr>
 				<xdr:cNvPr id="2" name="Chart 1"/>
@@ -351,12 +360,109 @@ export async function injectChart(zip: JSZip, spec: ChartSpec, chartIndex: numbe
 	const drawingFileName = `drawing${chartIndex}.xml`;
 
 	zip.file(`xl/charts/${chartFileName}`, buildChartXml(spec));
-	zip.file(`xl/drawings/${drawingFileName}`, buildDrawingXml("rId1"));
+	zip.file(`xl/drawings/${drawingFileName}`, buildDrawingXml("rId1", spec.anchorCol ?? 6, spec.anchorRow ?? 1));
 	zip.file(`xl/drawings/_rels/${drawingFileName}.rels`, buildDrawingRelsXml(chartFileName));
 
 	const sheetPath = await resolveSheetPath(zip, spec.sheetName);
 	await wireDrawingIntoWorksheet(zip, sheetPath, drawingFileName);
 	await addContentTypeOverrides(zip, chartFileName, drawingFileName);
+}
+
+export interface ChartPlacement {
+	chartIndex: number;
+	anchor: { fromCol: number; fromRow: number; toCol: number; toRow: number };
+	spec: ChartSpec;
+}
+
+function buildMultiDrawingXml(entries: { relId: string; anchor: ChartPlacement["anchor"] }[]): string {
+	const anchorsXml = entries
+		.map(
+			({ relId, anchor }, i) => `
+	<xdr:twoCellAnchor>
+		<xdr:from><xdr:col>${anchor.fromCol}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${anchor.fromRow}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
+		<xdr:to><xdr:col>${anchor.toCol}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${anchor.toRow}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>
+		<xdr:graphicFrame macro="">
+			<xdr:nvGraphicFramePr>
+				<xdr:cNvPr id="${i + 2}" name="Chart ${i + 1}"/>
+				<xdr:cNvGraphicFramePr/>
+			</xdr:nvGraphicFramePr>
+			<xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm>
+			<a:graphic>
+				<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
+					<c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="${relId}"/>
+				</a:graphicData>
+			</a:graphic>
+		</xdr:graphicFrame>
+		<xdr:clientData/>
+	</xdr:twoCellAnchor>`
+		)
+		.join("");
+
+	return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">${anchorsXml}
+</xdr:wsDr>`;
+}
+
+function buildMultiDrawingRelsXml(chartFileNames: string[]): string {
+	const rels = chartFileNames
+		.map(
+			(name, i) =>
+				`<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/${name}"/>`
+		)
+		.join("");
+	return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${rels}</Relationships>`;
+}
+
+async function addContentTypeOverridesMulti(zip: JSZip, chartFileNames: string[], drawingFileName: string): Promise<void> {
+	const ctPath = "[Content_Types].xml";
+	let ctXml = await zip.file(ctPath)!.async("string");
+	const chartOverrides = chartFileNames
+		.map(
+			(name) =>
+				`<Override PartName="/xl/charts/${name}" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>`
+		)
+		.join("");
+	const drawingOverride = `<Override PartName="/xl/drawings/${drawingFileName}" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>`;
+	ctXml = ctXml.replace("</Types>", `${chartOverrides}${drawingOverride}</Types>`);
+	zip.file(ctPath, ctXml);
+}
+
+/**
+ * Injects one or more native charts onto the SAME sheet, all anchored
+ * within a single shared drawing part — unlike injectChart (exactly one
+ * chart per sheet, throws on a second call), this is for sheets that
+ * need multiple charts at once (e.g. routine audit's 代碼統計 sheet:
+ * both a SAM bar chart and an EF bar chart on one sheet). Reuses
+ * buildChartXml for each placement's actual chart content, so both this
+ * and injectChart produce identical, already-verified bar/line/pie/
+ * stacked XML — only the drawing/anchor plumbing differs.
+ */
+export async function injectChartsForSheet(
+	zip: JSZip,
+	sheetName: string,
+	placements: ChartPlacement[],
+	drawingIndex: number
+): Promise<void> {
+	if (placements.length === 0) return;
+
+	const drawingFileName = `drawing${drawingIndex}.xml`;
+	const chartFileNames: string[] = [];
+	const entries: { relId: string; anchor: ChartPlacement["anchor"] }[] = [];
+
+	placements.forEach((p, i) => {
+		const chartFileName = `chart${p.chartIndex}.xml`;
+		zip.file(`xl/charts/${chartFileName}`, buildChartXml(p.spec));
+		chartFileNames.push(chartFileName);
+		entries.push({ relId: `rId${i + 1}`, anchor: p.anchor });
+	});
+
+	zip.file(`xl/drawings/${drawingFileName}`, buildMultiDrawingXml(entries));
+	zip.file(`xl/drawings/_rels/${drawingFileName}.rels`, buildMultiDrawingRelsXml(chartFileNames));
+
+	const sheetPath = await resolveSheetPath(zip, sheetName);
+	await wireDrawingIntoWorksheet(zip, sheetPath, drawingFileName);
+	await addContentTypeOverridesMulti(zip, chartFileNames, drawingFileName);
 }
 
 /**

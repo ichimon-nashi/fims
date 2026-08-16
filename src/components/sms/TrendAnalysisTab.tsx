@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { saveAs } from "file-saver";
 import styles from "./TrendAnalysisTab.module.css";
+import TrendRecordsModal from "./TrendRecordsModal";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 type CodeType = "hfacs" | "ef";
@@ -107,30 +108,18 @@ function rollUp(months: string[], split: MonthSplit, granularity: Granularity, h
 	});
 }
 
-// Given two boundary period labels (order not assumed), returns the
-// inclusive slice of allPeriods between them plus a display label —
-// a single period if start===end, otherwise "start~end".
-function computeRange(allPeriods: string[], start: string | null, end: string | null): { periods: string[]; label: string } {
-	if (!start || !end) return { periods: [], label: "" };
-	const idxStart = allPeriods.indexOf(start);
-	const idxEnd = allPeriods.indexOf(end);
-	if (idxStart === -1 || idxEnd === -1) return { periods: [], label: "" };
-	const [lo, hi] = idxStart <= idxEnd ? [idxStart, idxEnd] : [idxEnd, idxStart];
-	const periods = allPeriods.slice(lo, hi + 1);
-	const label = periods.length === 1 ? periods[0] : `${periods[0]}~${periods[periods.length - 1]}`;
-	return { periods, label };
-}
-
 // Sums a rolled-up series across a set of period labels. Null (future,
 // no data) contributes 0 — summing across a range has no ambiguity the
 // way a single continuous time point does, so this doesn't need the
 // hideFuture distinction rollUp makes.
-function sumRange(series: PeriodValue[], periods: string[]): { srm: number; self: number } {
-	return periods.reduce(
-		(acc, p) => {
-			const entry = series.find((s) => s.period === p);
-			acc.srm += entry?.srm ?? 0;
-			acc.self += entry?.self ?? 0;
+// Sums raw monthly srm/self counts across a set of month keys — used for
+// the calendar-year comparison, which operates directly on months rather
+// than a granularity-bucketed series.
+function sumMonths(split: MonthSplit, months: string[]): { srm: number; self: number } {
+	return months.reduce(
+		(acc, m) => {
+			acc.srm += split[m]?.srm ?? 0;
+			acc.self += split[m]?.self ?? 0;
 			return acc;
 		},
 		{ srm: 0, self: 0 }
@@ -145,26 +134,57 @@ export default function TrendAnalysisTab() {
 	const [loading, setLoading] = useState(true);
 	const [exporting, setExporting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [data, setData] = useState<TrendAnalysisResponse | null>(null);
+	const [hfacsData, setHfacsData] = useState<TrendAnalysisResponse | null>(null);
+	const [efData, setEfData] = useState<TrendAnalysisResponse | null>(null);
 
 	const [searchTerm, setSearchTerm] = useState("");
 	const [showAll, setShowAll] = useState(false);
+	const [showAllComparison, setShowAllComparison] = useState(false);
+	const [recordsModal, setRecordsModal] = useState<{
+		code: string;
+		description: string;
+		source: "srm" | "routine";
+	} | null>(null);
+	const [hiddenTrendLines, setHiddenTrendLines] = useState<Set<string>>(new Set());
+
+	const toggleTrendLine = (code: string) => {
+		setHiddenTrendLines((prev) => {
+			const next = new Set(prev);
+			if (next.has(code)) next.delete(code);
+			else next.add(code);
+			return next;
+		});
+	};
 
 	const [trendMode, setTrendMode] = useState<TrendMode>("code");
 	const [selectedCode, setSelectedCode] = useState<string | null>(null);
 	const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 	const [selectedArea, setSelectedArea] = useState<string | null>(null);
-	const [granularity, setGranularity] = useState<Granularity>("month");
-	const [periodAStart, setPeriodAStart] = useState<string | null>(null);
-	const [periodAEnd, setPeriodAEnd] = useState<string | null>(null);
-	const [periodBStart, setPeriodBStart] = useState<string | null>(null);
-	const [periodBEnd, setPeriodBEnd] = useState<string | null>(null);
+	const [trendGranularity, setTrendGranularity] = useState<Granularity>("month");
+	const [comparisonGranularity, setComparisonGranularity] = useState<Granularity>("month");
+	const [comparisonType, setComparisonType] = useState<CodeType>("hfacs");
 	const [mitigationView, setMitigationView] = useState<"list" | "overview">("list");
+
+	// Both code types are always fetched together now — HFACS/EF toggles
+	// for 趨勢分析 and 風險緩解分析 are independent (see comparisonType),
+	// so both datasets need to already be in memory rather than
+	// re-fetching whichever one wasn't currently displayed.
+	const data = useMemo(() => (type === "hfacs" ? hfacsData : efData), [type, hfacsData, efData]);
+	const comparisonData = useMemo(() => (comparisonType === "hfacs" ? hfacsData : efData), [comparisonType, hfacsData, efData]);
 
 	useEffect(() => {
 		fetchData();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [fromYear, toYear, type]);
+	}, [fromYear, toYear]);
+
+	// Default trend selection to the top code/category/area whenever the
+	// relevant dataset changes (type toggled, or a fresh fetch arrived).
+	useEffect(() => {
+		if (!data) return;
+		if (data.codes.length > 0) setSelectedCode(data.codes[0].code);
+		if (data.categories.length > 0) setSelectedCategory(data.categories[0].category);
+		if (data.areas.length > 0) setSelectedArea(data.areas[0].area);
+	}, [data]);
 
 	// EF codes have no area tier (see route) — if the user had "area" mode
 	// selected under HFACS and switches to EF, fall back to category
@@ -192,34 +212,27 @@ export default function TrendAnalysisTab() {
 			const token = localStorage.getItem("token");
 			const years = [];
 			for (let y = fromYear; y <= toYear; y++) years.push(y);
+			const baseParams = { years: years.join(","), month_from: "1", month_to: "12" };
 
-			const params = new URLSearchParams({
-				years: years.join(","),
-				month_from: "1",
-				month_to: "12",
-				type,
-			});
+			const [hfacsRes, efRes] = await Promise.all([
+				fetch(`/api/sms/trend-analysis?${new URLSearchParams({ ...baseParams, type: "hfacs" })}`, {
+					headers: { Authorization: `Bearer ${token}` },
+				}),
+				fetch(`/api/sms/trend-analysis?${new URLSearchParams({ ...baseParams, type: "ef" })}`, {
+					headers: { Authorization: `Bearer ${token}` },
+				}),
+			]);
 
-			const response = await fetch(`/api/sms/trend-analysis?${params}`, {
-				headers: { Authorization: `Bearer ${token}` },
-			});
-			if (!response.ok) {
-				const err = await response.json().catch(() => ({}));
+			if (!hfacsRes.ok || !efRes.ok) {
+				const failedRes = !hfacsRes.ok ? hfacsRes : efRes;
+				const err = await failedRes.json().catch(() => ({}));
 				throw new Error(err.error || "Failed to load trend analysis");
 			}
-			const json: TrendAnalysisResponse = await response.json();
-			setData(json);
 
-			// default trend selection to the top code/category/area, once data arrives
-			if (json.codes.length > 0) {
-				setSelectedCode(json.codes[0].code);
-			}
-			if (json.categories.length > 0) {
-				setSelectedCategory(json.categories[0].category);
-			}
-			if (json.areas.length > 0) {
-				setSelectedArea(json.areas[0].area);
-			}
+			const hfacsJson: TrendAnalysisResponse = await hfacsRes.json();
+			const efJson: TrendAnalysisResponse = await efRes.json();
+			setHfacsData(hfacsJson);
+			setEfData(efJson);
 		} catch (e: any) {
 			console.error("Error fetching trend analysis:", e);
 			setError(e.message || "載入失敗");
@@ -243,66 +256,55 @@ export default function TrendAnalysisTab() {
 		if (!data) return [];
 		if (trendMode === "code" && selectedCode) {
 			const split = data.trendByCode[selectedCode] ?? {};
-			return rollUp(data.months, split, granularity, true);
+			return rollUp(data.months, split, trendGranularity, true);
 		}
 		if (trendMode === "category" && selectedCategory) {
 			const split = data.trendByCategory[selectedCategory] ?? {};
-			return rollUp(data.months, split, granularity, true);
+			return rollUp(data.months, split, trendGranularity, true);
 		}
 		if (trendMode === "area" && selectedArea) {
 			const split = data.trendByArea[selectedArea] ?? {};
-			return rollUp(data.months, split, granularity, true);
+			return rollUp(data.months, split, trendGranularity, true);
 		}
 		return [];
-	}, [data, trendMode, selectedCode, selectedCategory, selectedArea, granularity]);
+	}, [data, trendMode, selectedCode, selectedCategory, selectedArea, trendGranularity]);
 
-	// Every available period label at the current granularity, independent
-	// of which code/category/area the trend line above is showing — period
-	// comparison now covers the top 10 codes at once, not one entity, so it
-	// can't be tied to a single entity's series anymore. rollUp's period
-	// labels only depend on months+granularity, not the split contents, so
-	// an empty split here safely yields just the label list.
+	// Every available period label at the current comparison granularity —
+	// scoped to comparisonData (風險緩解分析's own independent HFACS/EF
+	// selection), not the trend chart's dataset above.
 	const allPeriods = useMemo(() => {
-		if (!data) return [];
-		return rollUp(data.months, {}, granularity).map((p) => p.period);
-	}, [data, granularity]);
+		if (!comparisonData) return [];
+		return rollUp(comparisonData.months, {}, comparisonGranularity).map((p) => p.period);
+	}, [comparisonData, comparisonGranularity]);
 
-	// Re-default both ranges (each starting as a single-period range: latest
-	// vs earliest) whenever the available periods change — otherwise a
-	// stale period label from a previous granularity could silently point
-	// at nothing. The user can then widen either range's start/end
-	// independently to compare spans, e.g. "2025 vs 2026 Jan-June".
-	useEffect(() => {
-		if (allPeriods.length >= 2) {
-			setPeriodAStart(allPeriods[0]);
-			setPeriodAEnd(allPeriods[0]);
-			setPeriodBStart(allPeriods[allPeriods.length - 1]);
-			setPeriodBEnd(allPeriods[allPeriods.length - 1]);
-		} else {
-			setPeriodAStart(null);
-			setPeriodAEnd(null);
-			setPeriodBStart(null);
-			setPeriodBEnd(null);
-		}
-	}, [allPeriods]);
+	// Comparison is always fromYear vs toYear (the same year range already
+	// set at the top of the page) — a natural "2025 vs 2026", not an
+	// arbitrary midpoint split of the month list. Deliberately independent
+	// of comparisonGranularity, which is now purely a display setting for
+	// the overview line chart below, not part of what's being compared.
+	const periodARange = useMemo(() => {
+		if (!comparisonData || fromYear === toYear) return { periods: [] as string[], label: "" };
+		const periods = comparisonData.months.filter((m) => parseInt(m.slice(0, 4), 10) === fromYear);
+		return { periods, label: `${fromYear}年` };
+	}, [comparisonData, fromYear, toYear]);
 
-	// Each side's start/end are free pickers — chronological order within a
-	// range is normalized here (swap if picked backwards), same principle
-	// as the single-period fix from before, just generalized to a span.
-	const periodARange = useMemo(() => computeRange(allPeriods, periodAStart, periodAEnd), [allPeriods, periodAStart, periodAEnd]);
-	const periodBRange = useMemo(() => computeRange(allPeriods, periodBStart, periodBEnd), [allPeriods, periodBStart, periodBEnd]);
+	const periodBRange = useMemo(() => {
+		if (!comparisonData || fromYear === toYear) return { periods: [] as string[], label: "" };
+		const periods = comparisonData.months.filter((m) => parseInt(m.slice(0, 4), 10) === toYear);
+		return { periods, label: `${toYear}年` };
+	}, [comparisonData, fromYear, toYear]);
 
-	// Top 10 codes, ranked by relevance to the two RANGES actually being
-	// compared (their combined activity summed across each full range),
+	// Top 10 codes, ranked by relevance to the two years actually being
+	// compared (their combined activity summed across each full year),
 	// not by total across the entire fetched year range. Rows with zero
-	// in both ranges are dropped entirely rather than shown as noise.
-	const topCodesComparison = useMemo(() => {
-		if (!data || periodARange.periods.length === 0 || periodBRange.periods.length === 0) return [];
-		const rows = data.codes
+	// in both years are dropped entirely rather than shown as noise.
+	const allComparisonRows = useMemo(() => {
+		if (!comparisonData || periodARange.periods.length === 0 || periodBRange.periods.length === 0) return [];
+		const rows = comparisonData.codes
 			.map((c) => {
-				const series = rollUp(data.months, data.trendByCode[c.code] ?? {}, granularity);
-				const aSum = sumRange(series, periodARange.periods);
-				const bSum = sumRange(series, periodBRange.periods);
+				const split = comparisonData.trendByCode[c.code] ?? {};
+				const aSum = sumMonths(split, periodARange.periods);
+				const bSum = sumMonths(split, periodBRange.periods);
 				return {
 					code: c.code,
 					description: c.description,
@@ -317,26 +319,55 @@ export default function TrendAnalysisTab() {
 			const totalY = y.a.srm + y.a.self + y.b.srm + y.b.self;
 			return totalY - totalX; // most relevant to this specific comparison first
 		});
+		return rows;
+	}, [comparisonData, periodARange, periodBRange]);
 
-		return rows.slice(0, 10).sort((x, y) => {
+	const topCodesComparison = useMemo(() => {
+		const visible = showAllComparison ? allComparisonRows : allComparisonRows.slice(0, 10);
+		return [...visible].sort((x, y) => {
 			const diffX = x.b.srm + x.b.self - (x.a.srm + x.a.self);
 			const diffY = y.b.srm + y.b.self - (y.a.srm + y.a.self);
-			return diffX - diffY; // then most-improved (largest decrease) first, for display
+			return diffX - diffY; // most-improved (largest decrease) first, for display
 		});
-	}, [data, periodARange, periodBRange, granularity]);
+	}, [allComparisonRows, showAllComparison]);
 
-	// Collective overview, redesigned: x-axis is the risks themselves (the
-	// same top-10 list above), not time — one line per range, each point
-	// being that code's combined SRM+自督 total for that range. Directly
-	// reuses topCodesComparison so the list and this chart always agree.
-	const riskComparisonSeries = useMemo(() => {
-		return topCodesComparison.map((c) => ({
-			code: c.code,
-			description: c.description,
-			[periodARange.label]: c.a.srm + c.a.self,
-			[periodBRange.label]: c.b.srm + c.b.self,
-		}));
-	}, [topCodesComparison, periodARange.label, periodBRange.label]);
+	// Fixed palette for the top-10 trend lines — reuses hex values already
+	// established elsewhere in this app (StatisticsTab's category colors,
+	// SRM_COLOR/SELF_COLOR) rather than inventing new ones. Cycled if more
+	// than 10 lines somehow render.
+	const TREND_LINE_COLORS = [
+		"#4a9eff", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6",
+		"#ec4899", "#6366f1", "#fb923c", "#1baf7a", "#e87ba4",
+	];
+
+	// Collective overview, corrected: time stays on the x-axis (a line
+	// chart only makes sense along a continuous axis — codes on the x-axis
+	// was the earlier mistake, since there's no real relationship between
+	// adjacent codes for a line's slope to represent). One line per top-10
+	// risk, each showing that code's combined SRM+自督 count over the full
+	// selected range — this is what actually shows whether each risk is
+	// individually trending up or down.
+	const topCodesForTrend = useMemo(() => {
+		if (!comparisonData) return [];
+		return comparisonData.codes.slice(0, 10).map((c) => ({ code: c.code, description: c.description }));
+	}, [comparisonData]);
+
+	const codeDescLookup = useMemo(() => {
+		return Object.fromEntries(topCodesForTrend.map((c) => [c.code, c.description]));
+	}, [topCodesForTrend]);
+
+	const topCodesTrendSeries = useMemo(() => {
+		if (!comparisonData) return [];
+		return allPeriods.map((period) => {
+			const row: Record<string, string | number | null> = { period };
+			topCodesForTrend.forEach(({ code }) => {
+				const series = rollUp(comparisonData.months, comparisonData.trendByCode[code] ?? {}, comparisonGranularity, true);
+				const entry = series.find((p) => p.period === period);
+				row[code] = entry && entry.srm !== null && entry.self !== null ? entry.srm + entry.self : null;
+			});
+			return row;
+		});
+	}, [comparisonData, allPeriods, topCodesForTrend, comparisonGranularity]);
 
 	const trendLabel = useMemo(() => {
 		if (trendMode === "code" && selectedCode) {
@@ -348,8 +379,8 @@ export default function TrendAnalysisTab() {
 		return "";
 	}, [trendMode, selectedCode, selectedCategory, selectedArea, data]);
 
-	const granularityLabel = useMemo(() => {
-		switch (granularity) {
+	function granularityLabelOf(g: Granularity): string {
+		switch (g) {
 			case "month":
 				return "月";
 			case "quarter":
@@ -359,7 +390,10 @@ export default function TrendAnalysisTab() {
 			case "year":
 				return "年";
 		}
-	}, [granularity]);
+	}
+
+	const trendGranularityLabel = useMemo(() => granularityLabelOf(trendGranularity), [trendGranularity]);
+	const comparisonGranularityLabel = useMemo(() => granularityLabelOf(comparisonGranularity), [comparisonGranularity]);
 
 	const yearOptions = useMemo(() => {
 		const years = [];
@@ -371,6 +405,7 @@ export default function TrendAnalysisTab() {
 		setExporting(true);
 		try {
 			const token = localStorage.getItem("token");
+
 			const response = await fetch("/api/sms/trend-analysis/export", {
 				method: "POST",
 				headers: {
@@ -378,11 +413,14 @@ export default function TrendAnalysisTab() {
 					Authorization: `Bearer ${token}`,
 				},
 				body: JSON.stringify({
-					type,
+					hfacsCodes: hfacsData?.codes ?? [],
+					efCodes: efData?.codes ?? [],
 					trendLabel: trendLabel || "全部",
-					granularityLabel,
-					codes: data?.codes ?? [],
+					trendGranularityLabel,
+					comparisonGranularityLabel,
 					trendSeries,
+					topCodesForTrend,
+					topCodesTrendSeries,
 					periodALabel: periodARange.label,
 					periodBLabel: periodBRange.label,
 					topCodesComparison,
@@ -415,33 +453,35 @@ export default function TrendAnalysisTab() {
 		<div className={styles.trendAnalysisTab}>
 			<div className={styles.header}>
 				<div className={styles.controls}>
-					<div className={styles.controlGroup}>
-						<label>起始年:</label>
-						<select
-							className={styles.select}
-							value={fromYear}
-							onChange={(e) => handleFromYearChange(parseInt(e.target.value))}
-						>
-							{yearOptions.map((y) => (
-								<option key={y} value={y}>
-									{y}年
-								</option>
-							))}
-						</select>
-					</div>
-					<div className={styles.controlGroup}>
-						<label>結束年:</label>
-						<select
-							className={styles.select}
-							value={toYear}
-							onChange={(e) => handleToYearChange(parseInt(e.target.value))}
-						>
-							{yearOptions.map((y) => (
-								<option key={y} value={y}>
-									{y}年
-								</option>
-							))}
-						</select>
+					<div className={styles.yearControlsRow}>
+						<div className={styles.controlGroup}>
+							<label>起始年:</label>
+							<select
+								className={styles.select}
+								value={fromYear}
+								onChange={(e) => handleFromYearChange(parseInt(e.target.value))}
+							>
+								{yearOptions.map((y) => (
+									<option key={y} value={y}>
+										{y}年
+									</option>
+								))}
+							</select>
+						</div>
+						<div className={styles.controlGroup}>
+							<label>結束年:</label>
+							<select
+								className={styles.select}
+								value={toYear}
+								onChange={(e) => handleToYearChange(parseInt(e.target.value))}
+							>
+								{yearOptions.map((y) => (
+									<option key={y} value={y}>
+										{y}年
+									</option>
+								))}
+							</select>
+						</div>
 					</div>
 
 					<div className={styles.typeToggle}>
@@ -481,13 +521,13 @@ export default function TrendAnalysisTab() {
 					<span className={styles.sourceLinks}>
 						資料來源：
 						<button
-							className={styles.sourceLinkButton}
+							className={`${styles.sourceLinkButton} ${styles.sourceLinkSrm}`}
 							onClick={() => router.push("/sms?tab=statistics")}
 						>
 							SMS統計 ↗
 						</button>
 						<button
-							className={styles.sourceLinkButton}
+							className={`${styles.sourceLinkButton} ${styles.sourceLinkRoutine}`}
 							onClick={() => router.push("/audit/routine")}
 						>
 							例行性查核彙整 ↗
@@ -651,26 +691,26 @@ export default function TrendAnalysisTab() {
 
 						<div className={styles.typeToggle}>
 							<button
-								className={granularity === "month" ? styles.typeActive : ""}
-								onClick={() => setGranularity("month")}
+								className={trendGranularity === "month" ? styles.typeActive : ""}
+								onClick={() => setTrendGranularity("month")}
 							>
 								月
 							</button>
 							<button
-								className={granularity === "quarter" ? styles.typeActive : ""}
-								onClick={() => setGranularity("quarter")}
+								className={trendGranularity === "quarter" ? styles.typeActive : ""}
+								onClick={() => setTrendGranularity("quarter")}
 							>
 								季
 							</button>
 							<button
-								className={granularity === "halfYear" ? styles.typeActive : ""}
-								onClick={() => setGranularity("halfYear")}
+								className={trendGranularity === "halfYear" ? styles.typeActive : ""}
+								onClick={() => setTrendGranularity("halfYear")}
 							>
 								半年
 							</button>
 							<button
-								className={granularity === "year" ? styles.typeActive : ""}
-								onClick={() => setGranularity("year")}
+								className={trendGranularity === "year" ? styles.typeActive : ""}
+								onClick={() => setTrendGranularity("year")}
 							>
 								年
 							</button>
@@ -731,194 +771,251 @@ export default function TrendAnalysisTab() {
 					</div>
 				</div>
 
-				{allPeriods.length < 2 ? (
+				<div className={styles.mitigationHint}>
+					{mitigationView === "overview"
+						? "顯示前 10 大風險代碼隨時間的變化趨勢（點擊圖例可單獨顯示/隱藏個別代碼）"
+						: fromYear === toYear
+						? "請選擇不同的起始年與結束年以進行比較"
+						: `比較 ${fromYear}年 與 ${toYear}年 的風險緩解成效`}
+				</div>
+
+				<div className={styles.inlineControlsRow}>
+					<div className={styles.typeToggle}>
+						<button
+							className={comparisonType === "hfacs" ? styles.typeActive : ""}
+							onClick={() => setComparisonType("hfacs")}
+						>
+							HFACS 代碼
+						</button>
+						<button
+							className={comparisonType === "ef" ? styles.typeActive : ""}
+							onClick={() => setComparisonType("ef")}
+						>
+							EF 代碼
+						</button>
+					</div>
+
+					{mitigationView === "overview" && (
+						<div className={`${styles.controlGroup} ${styles.inlineControlsSpaced}`}>
+							<label>時間單位:</label>
+							<div className={styles.typeToggle}>
+								<button
+									className={comparisonGranularity === "month" ? styles.typeActive : ""}
+									onClick={() => setComparisonGranularity("month")}
+								>
+									月
+								</button>
+								<button
+									className={comparisonGranularity === "quarter" ? styles.typeActive : ""}
+									onClick={() => setComparisonGranularity("quarter")}
+								>
+									季
+								</button>
+								<button
+									className={comparisonGranularity === "halfYear" ? styles.typeActive : ""}
+									onClick={() => setComparisonGranularity("halfYear")}
+								>
+									半年
+								</button>
+								<button
+									className={comparisonGranularity === "year" ? styles.typeActive : ""}
+									onClick={() => setComparisonGranularity("year")}
+								>
+									年
+								</button>
+							</div>
+						</div>
+					)}
+				</div>
+
+				{mitigationView === "overview" ? (
+					topCodesTrendSeries.length === 0 ? (
+						<div className={styles.emptyState}>
+							<p>尚無資料可顯示</p>
+						</div>
+					) : (
+						<ResponsiveContainer width="100%" height={520}>
+							<LineChart data={topCodesTrendSeries} margin={{ top: 20, right: 30, bottom: 10, left: 0 }}>
+								<CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+								<XAxis dataKey="period" stroke="#a0aec0" fontSize={12} />
+								<YAxis stroke="#a0aec0" fontSize={12} allowDecimals={false} />
+								<Tooltip
+									contentStyle={{
+										background: "#1a1f35",
+										border: "1px solid rgba(255,255,255,0.1)",
+										borderRadius: 8,
+									}}
+									itemStyle={{ color: "#e8e9ed" }}
+									labelStyle={{ color: "#e8e9ed" }}
+								/>
+								<Legend
+									onClick={(e: any) => toggleTrendLine(e.dataKey)}
+									formatter={(value, entry: any) => {
+										const isHidden = hiddenTrendLines.has(entry?.dataKey ?? value);
+										return (
+											<span
+												style={{
+													color: isHidden ? "#6b7280" : "#ffffff",
+													cursor: "pointer",
+													textDecoration: isHidden ? "line-through" : "none",
+												}}
+											>
+												{value}
+												{codeDescLookup[value] && (
+													<span className={styles.legendDesc}>
+														{" "}
+														— {codeDescLookup[value]}
+													</span>
+												)}
+											</span>
+										);
+									}}
+								/>
+								{topCodesForTrend.map(({ code }, i) => (
+									<Line
+										key={code}
+										type="monotone"
+										dataKey={code}
+										name={code}
+										stroke={TREND_LINE_COLORS[i % TREND_LINE_COLORS.length]}
+										strokeWidth={2}
+										dot={{ r: 2 }}
+										connectNulls={false}
+										hide={hiddenTrendLines.has(code)}
+									/>
+								))}
+							</LineChart>
+						</ResponsiveContainer>
+					)
+				) : fromYear === toYear ? (
 					<div className={styles.emptyState}>
-						<p>至少需要 2 個期間才能比較</p>
+						<p>起始年與結束年相同，無法比較 — 請調整頁面上方的年份範圍</p>
+					</div>
+				) : topCodesComparison.length === 0 ? (
+					<div className={styles.emptyState}>
+						<p>本期間尚無資料</p>
 					</div>
 				) : (
 					<>
-						<div className={styles.compareControls}>
-							<div className={styles.controlGroup}>
-								<label>期間 A:</label>
-								<select
-									className={styles.select}
-									value={periodAStart ?? ""}
-									onChange={(e) => setPeriodAStart(e.target.value)}
-								>
-									{allPeriods.map((p) => (
-										<option key={p} value={p}>
-											{p}
-										</option>
-									))}
-								</select>
-								<span className={styles.rangeToLabel}>至</span>
-								<select
-									className={styles.select}
-									value={periodAEnd ?? ""}
-									onChange={(e) => setPeriodAEnd(e.target.value)}
-								>
-									{allPeriods.map((p) => (
-										<option key={p} value={p}>
-											{p}
-										</option>
-									))}
-								</select>
-							</div>
+						<div className={styles.presetSummary}>
+							<span className={styles.presetSummaryRange}>{periodARange.label}</span>
 							<span className={styles.vsLabel}>vs</span>
-							<div className={styles.controlGroup}>
-								<label>期間 B:</label>
-								<select
-									className={styles.select}
-									value={periodBStart ?? ""}
-									onChange={(e) => setPeriodBStart(e.target.value)}
-								>
-									{allPeriods.map((p) => (
-										<option key={p} value={p}>
-											{p}
-										</option>
-									))}
-								</select>
-								<span className={styles.rangeToLabel}>至</span>
-								<select
-									className={styles.select}
-									value={periodBEnd ?? ""}
-									onChange={(e) => setPeriodBEnd(e.target.value)}
-								>
-									{allPeriods.map((p) => (
-										<option key={p} value={p}>
-											{p}
-										</option>
-									))}
-								</select>
-							</div>
+							<span className={styles.presetSummaryRange}>{periodBRange.label}</span>
 						</div>
 
-						{mitigationView === "overview" ? (
-							riskComparisonSeries.length === 0 ? (
-								<div className={styles.emptyState}>
-									<p>本期間尚無資料</p>
-								</div>
-							) : (
-								<ResponsiveContainer width="100%" height={380}>
-									<LineChart data={riskComparisonSeries} margin={{ top: 20, right: 30, bottom: 40, left: 0 }}>
-										<CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
-										<XAxis
-											dataKey="code"
-											stroke="#a0aec0"
-											fontSize={12}
-											angle={-35}
-											textAnchor="end"
-											height={60}
-										/>
-										<YAxis stroke="#a0aec0" fontSize={12} allowDecimals={false} />
-										<Tooltip
-											contentStyle={{
-												background: "#1a1f35",
-												border: "1px solid rgba(255,255,255,0.1)",
-												borderRadius: 8,
-											}}
-											itemStyle={{ color: "#e8e9ed" }}
-											labelStyle={{ color: "#e8e9ed" }}
-										/>
-										<Legend formatter={(value) => <span style={{ color: "#e8e9ed" }}>{value}</span>} />
-										<Line
-											type="monotone"
-											dataKey={periodARange.label}
-											name={periodARange.label}
-											stroke={SRM_COLOR}
-											strokeWidth={2}
-											dot={{ r: 3 }}
-										/>
-										<Line
-											type="monotone"
-											dataKey={periodBRange.label}
-											name={periodBRange.label}
-											stroke={SELF_COLOR}
-											strokeWidth={2}
-											dot={{ r: 3 }}
-										/>
-									</LineChart>
-								</ResponsiveContainer>
-							)
-						) : topCodesComparison.length === 0 ? (
-							<div className={styles.emptyState}>
-								<p>本期間尚無資料</p>
-							</div>
-						) : (
-							<div className={styles.compareList}>
-								{topCodesComparison.map(({ code, description, a, b }) => {
-									const totalA = a.srm + a.self;
-									const totalB = b.srm + b.self;
-									const diff = totalB - totalA;
-									const pct = totalA > 0 ? Math.round((diff / totalA) * 100) : null;
-									const improved = diff < 0;
-									const unchanged = diff === 0;
-									const maxTotal = Math.max(totalA, totalB, 1);
+						<div className={styles.compareList}>
+							{topCodesComparison.map(({ code, description, a, b }) => {
+								const totalA = a.srm + a.self;
+								const totalB = b.srm + b.self;
+								const sampleSize = totalA + totalB;
+								const diff = totalB - totalA;
+								const pct = totalA > 0 ? Math.round((diff / totalA) * 100) : null;
+								const improved = diff < 0;
+								const unchanged = diff === 0;
+								const maxTotal = Math.max(totalA, totalB, 1);
 
-									return (
-										<div key={code} className={styles.compareRow}>
-											<div className={styles.compareRowHeader}>
-												<span className={styles.compositionCode}>
-													{code}
-													<span className={styles.compositionDesc}>{description}</span>
-												</span>
-												<span
-													className={
-														unchanged
-															? styles.deltaNeutral
-															: improved
-															? styles.deltaGood
-															: styles.deltaBad
-													}
-												>
-													{totalA} → {totalB}
-													{" "}
-													({diff > 0 ? "+" : ""}
-													{diff}
-													{pct !== null && `, ${diff > 0 ? "+" : ""}${pct}%`})
-													{!unchanged && (improved ? " ↓ 改善" : " ↑ 惡化")}
-												</span>
-											</div>
-
-											<div className={styles.compareMiniBars}>
-												{[
-													{ label: a.period, total: totalA, srm: a.srm, self: a.self },
-													{ label: b.period, total: totalB, srm: b.srm, self: b.self },
-												].map(({ label, total, srm, self }) => (
-													<div key={label} className={styles.compareMiniBarRow}>
-														<span className={styles.compareMiniBarLabel}>{label}</span>
-														<div className={styles.compareMiniBarTrack}>
-															<div
-																className={styles.compareMiniBarFill}
-																style={{ width: `${(total / maxTotal) * 100}%` }}
-															>
-																{srm > 0 && (
-																	<div
-																		className={styles.compareBarSegment}
-																		style={{ flex: srm, background: SRM_COLOR }}
-																	/>
-																)}
-																{self > 0 && (
-																	<div
-																		className={styles.compareBarSegment}
-																		style={{ flex: self, background: SELF_COLOR }}
-																	/>
-																)}
-															</div>
-														</div>
-														<span className={styles.compareMiniBarTotal}>{total}</span>
-													</div>
-												))}
-											</div>
+								return (
+									<div key={code} className={styles.compareRow}>
+										<div className={styles.compareRowHeader}>
+											<span className={styles.compositionCode}>
+												{code}
+												<span className={styles.compositionDesc}>{description}</span>
+												<span className={styles.sampleSizeTag}>n={sampleSize}</span>
+											</span>
+											<span
+												className={
+													unchanged
+														? styles.deltaNeutral
+														: improved
+														? styles.deltaGood
+														: styles.deltaBad
+												}
+											>
+												{totalA} → {totalB}
+												{" "}
+												({diff > 0 ? "+" : ""}
+												{diff}
+												{pct !== null && `, ${diff > 0 ? "+" : ""}${pct}%`})
+												{!unchanged && (improved ? " ↓ 改善" : " ↑ 惡化")}
+											</span>
 										</div>
-									);
-								})}
-							</div>
+
+										<div className={styles.compareMiniBars}>
+											{[
+												{ label: a.period, total: totalA, srm: a.srm, self: a.self },
+												{ label: b.period, total: totalB, srm: b.srm, self: b.self },
+											].map(({ label, total, srm, self }) => (
+												<div key={label} className={styles.compareMiniBarRow}>
+													<span className={styles.compareMiniBarLabel}>{label}</span>
+													<div className={styles.compareMiniBarTrack}>
+														<div
+															className={styles.compareMiniBarFill}
+															style={{ width: `${(total / maxTotal) * 100}%` }}
+														>
+															{srm > 0 && (
+																<div
+																	className={styles.compareBarSegment}
+																	style={{ flex: srm, background: SRM_COLOR }}
+																/>
+															)}
+															{self > 0 && (
+																<div
+																	className={styles.compareBarSegment}
+																	style={{ flex: self, background: SELF_COLOR }}
+																/>
+															)}
+														</div>
+													</div>
+													<span className={styles.compareMiniBarTotal}>{total}</span>
+												</div>
+											))}
+										</div>
+
+										<div className={styles.crossLinkRow}>
+											<button
+												className={`${styles.crossLinkButton} ${styles.crossLinkSrm}`}
+												onClick={() => setRecordsModal({ code, description, source: "srm" })}
+											>
+												🔍 查看 SRM 相關記錄
+											</button>
+											<button
+												className={`${styles.crossLinkButton} ${styles.crossLinkRoutine}`}
+												onClick={() => setRecordsModal({ code, description, source: "routine" })}
+											>
+												🔍 查看例行性查核記錄
+											</button>
+										</div>
+									</div>
+								);
+							})}
+						</div>
+
+						{!showAllComparison && allComparisonRows.length > 10 && (
+							<button className={styles.showAllButton} onClick={() => setShowAllComparison(true)}>
+								顯示全部 ({allComparisonRows.length})
+							</button>
+						)}
+						{showAllComparison && allComparisonRows.length > 10 && (
+							<button className={styles.showAllButton} onClick={() => setShowAllComparison(false)}>
+								只顯示前 10 項
+							</button>
 						)}
 					</>
 				)}
 			</div>
 				</>
+			)}
+
+			{recordsModal && (
+				<TrendRecordsModal
+					code={recordsModal.code}
+					description={recordsModal.description}
+					type={comparisonType}
+					source={recordsModal.source}
+					yearA={fromYear}
+					yearB={toYear}
+					onClose={() => setRecordsModal(null)}
+				/>
 			)}
 		</div>
 	);
