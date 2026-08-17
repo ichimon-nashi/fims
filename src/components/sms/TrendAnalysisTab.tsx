@@ -146,6 +146,7 @@ export default function TrendAnalysisTab() {
 		source: "srm" | "routine";
 	} | null>(null);
 	const [hiddenTrendLines, setHiddenTrendLines] = useState<Set<string>>(new Set());
+	const [showAllTrendCodes, setShowAllTrendCodes] = useState(false);
 
 	const toggleTrendLine = (code: string) => {
 		setHiddenTrendLines((prev) => {
@@ -349,8 +350,9 @@ export default function TrendAnalysisTab() {
 	// individually trending up or down.
 	const topCodesForTrend = useMemo(() => {
 		if (!comparisonData) return [];
-		return comparisonData.codes.slice(0, 10).map((c) => ({ code: c.code, description: c.description }));
-	}, [comparisonData]);
+		const codes = showAllTrendCodes ? comparisonData.codes : comparisonData.codes.slice(0, 10);
+		return codes.map((c) => ({ code: c.code, description: c.description }));
+	}, [comparisonData, showAllTrendCodes]);
 
 	const codeDescLookup = useMemo(() => {
 		return Object.fromEntries(topCodesForTrend.map((c) => [c.code, c.description]));
@@ -773,7 +775,9 @@ export default function TrendAnalysisTab() {
 
 				<div className={styles.mitigationHint}>
 					{mitigationView === "overview"
-						? "顯示前 10 大風險代碼隨時間的變化趨勢（點擊圖例可單獨顯示/隱藏個別代碼）"
+						? showAllTrendCodes
+							? "顯示全部風險代碼隨時間的變化趨勢（點選圖例可單獨顯示/隱藏個別代碼）"
+							: "顯示前 10 大風險代碼隨時間的變化趨勢（點選圖例可單獨顯示/隱藏個別代碼）"
 						: fromYear === toYear
 						? "請選擇不同的起始年與結束年以進行比較"
 						: `比較 ${fromYear}年 與 ${toYear}年 的風險緩解成效`}
@@ -834,58 +838,87 @@ export default function TrendAnalysisTab() {
 							<p>尚無資料可顯示</p>
 						</div>
 					) : (
-						<ResponsiveContainer width="100%" height={520}>
-							<LineChart data={topCodesTrendSeries} margin={{ top: 20, right: 30, bottom: 10, left: 0 }}>
-								<CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
-								<XAxis dataKey="period" stroke="#a0aec0" fontSize={12} />
-								<YAxis stroke="#a0aec0" fontSize={12} allowDecimals={false} />
-								<Tooltip
-									contentStyle={{
-										background: "#1a1f35",
-										border: "1px solid rgba(255,255,255,0.1)",
-										borderRadius: 8,
-									}}
-									itemStyle={{ color: "#e8e9ed" }}
-									labelStyle={{ color: "#e8e9ed" }}
-								/>
-								<Legend
-									onClick={(e: any) => toggleTrendLine(e.dataKey)}
-									formatter={(value, entry: any) => {
-										const isHidden = hiddenTrendLines.has(entry?.dataKey ?? value);
-										return (
-											<span
-												style={{
-													color: isHidden ? "#6b7280" : "#ffffff",
-													cursor: "pointer",
-													textDecoration: isHidden ? "line-through" : "none",
-												}}
-											>
-												{value}
-												{codeDescLookup[value] && (
-													<span className={styles.legendDesc}>
-														{" "}
-														— {codeDescLookup[value]}
-													</span>
-												)}
-											</span>
+						<>
+							<div className={styles.trendLineActions}>
+								<button
+									className={styles.toggleAllLinesButton}
+									onClick={() => {
+										const allHidden =
+											topCodesForTrend.length > 0 &&
+											topCodesForTrend.every((c) => hiddenTrendLines.has(c.code));
+										setHiddenTrendLines(
+											allHidden ? new Set() : new Set(topCodesForTrend.map((c) => c.code))
 										);
 									}}
-								/>
-								{topCodesForTrend.map(({ code }, i) => (
-									<Line
-										key={code}
-										type="monotone"
-										dataKey={code}
-										name={code}
-										stroke={TREND_LINE_COLORS[i % TREND_LINE_COLORS.length]}
-										strokeWidth={2}
-										dot={{ r: 2 }}
-										connectNulls={false}
-										hide={hiddenTrendLines.has(code)}
+								>
+									{topCodesForTrend.length > 0 && topCodesForTrend.every((c) => hiddenTrendLines.has(c.code))
+										? "全部顯示"
+										: "全部隱藏"}
+								</button>
+							</div>
+
+							<ResponsiveContainer width="100%" height={520}>
+								<LineChart data={topCodesTrendSeries} margin={{ top: 20, right: 30, bottom: 10, left: 0 }}>
+									<CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+									<XAxis dataKey="period" stroke="#a0aec0" fontSize={12} />
+									<YAxis stroke="#a0aec0" fontSize={12} allowDecimals={false} />
+									<Tooltip
+										contentStyle={{
+											background: "#1a1f35",
+											border: "1px solid rgba(255,255,255,0.1)",
+											borderRadius: 8,
+										}}
+										itemStyle={{ color: "#e8e9ed" }}
+										labelStyle={{ color: "#e8e9ed" }}
 									/>
-								))}
-							</LineChart>
-						</ResponsiveContainer>
+									<Legend
+										onClick={(e: any) => toggleTrendLine(e.dataKey)}
+										formatter={(value, entry: any) => {
+											const isHidden = hiddenTrendLines.has(entry?.dataKey ?? value);
+											return (
+												<span
+													style={{
+														color: isHidden ? "#6b7280" : "#ffffff",
+														cursor: "pointer",
+														textDecoration: isHidden ? "line-through" : "none",
+													}}
+												>
+													{value}
+													{codeDescLookup[value] && (
+														<span className={styles.legendDesc}>
+															{" "}
+															— {codeDescLookup[value]}
+														</span>
+													)}
+												</span>
+											);
+										}}
+									/>
+									{topCodesForTrend.map(({ code }, i) => (
+										<Line
+											key={code}
+											type="monotone"
+											dataKey={code}
+											name={code}
+											stroke={TREND_LINE_COLORS[i % TREND_LINE_COLORS.length]}
+											strokeWidth={2}
+											dot={{ r: 2 }}
+											connectNulls={false}
+											hide={hiddenTrendLines.has(code)}
+										/>
+									))}
+								</LineChart>
+							</ResponsiveContainer>
+
+							{comparisonData && comparisonData.codes.length > 10 && (
+								<button
+									className={styles.showAllButton}
+									onClick={() => setShowAllTrendCodes((v) => !v)}
+								>
+									{showAllTrendCodes ? "只顯示前 10 項" : `顯示全部 (${comparisonData.codes.length})`}
+								</button>
+							)}
+						</>
 					)
 				) : fromYear === toYear ? (
 					<div className={styles.emptyState}>

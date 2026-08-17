@@ -116,6 +116,30 @@
 	margin-bottom: 1rem;
 }
 
+.trendLineActions {
+	display: flex;
+	justify-content: flex-end;
+	margin-bottom: 0.75rem;
+}
+
+.toggleAllLinesButton {
+	background: rgba(74, 158, 255, 0.08);
+	color: #4a9eff;
+	border: 1px solid rgba(74, 158, 255, 0.25);
+	border-radius: 6px;
+	padding: 0.4rem 0.9rem;
+	font-size: 0.8rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	white-space: nowrap;
+}
+
+.toggleAllLinesButton:hover {
+	background: rgba(74, 158, 255, 0.15);
+	border-color: rgba(74, 158, 255, 0.4);
+}
+
 .legendDesc {
 	color: #9ca3af;
 	font-size: 0.75rem;
