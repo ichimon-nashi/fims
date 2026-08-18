@@ -63,7 +63,7 @@ export default function RoutineSummary() {
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const years = useMemo(
-		() => (compareYear ? [primaryYear, compareYear] : [primaryYear]),
+		() => (compareYear ? [primaryYear, compareYear].sort((a, b) => a - b) : [primaryYear]),
 		[primaryYear, compareYear]
 	);
 
@@ -440,30 +440,61 @@ export default function RoutineSummary() {
 							/>
 						) : (
 							<div className={styles.compareTables}>
-								<div className={styles.compareTableCol}>
-									<p className={styles.compareTableHeader}>{primaryYear}</p>
-									<RoutineEntriesTable
-										entries={entries}
-										loading={entriesLoading}
-										onEdit={handleEdit}
-										onDelete={handleDelete}
-										openSections={getOpenSections("primary")}
-										onToggleSection={(key) => handleToggleSection("primary", key)}
-										onDefaultSection={(key) => handleDefaultSection("primary", key)}
-									/>
-								</div>
-								<div className={styles.compareTableCol}>
-									<p className={styles.compareTableHeader}>{compareYear}</p>
-									<RoutineEntriesTable
-										entries={compareEntries}
-										loading={compareEntriesLoading}
-										onEdit={handleEdit}
-										onDelete={handleDelete}
-										openSections={getOpenSections("compare")}
-										onToggleSection={(key) => handleToggleSection("compare", key)}
-										onDefaultSection={(key) => handleDefaultSection("compare", key)}
-									/>
-								</div>
+								{compareYear < primaryYear ? (
+									<>
+										<div className={styles.compareTableCol}>
+											<p className={styles.compareTableHeader}>{compareYear}</p>
+											<RoutineEntriesTable
+												entries={compareEntries}
+												loading={compareEntriesLoading}
+												onEdit={handleEdit}
+												onDelete={handleDelete}
+												openSections={getOpenSections("compare")}
+												onToggleSection={(key) => handleToggleSection("compare", key)}
+												onDefaultSection={(key) => handleDefaultSection("compare", key)}
+											/>
+										</div>
+										<div className={styles.compareTableCol}>
+											<p className={styles.compareTableHeader}>{primaryYear}</p>
+											<RoutineEntriesTable
+												entries={entries}
+												loading={entriesLoading}
+												onEdit={handleEdit}
+												onDelete={handleDelete}
+												openSections={getOpenSections("primary")}
+												onToggleSection={(key) => handleToggleSection("primary", key)}
+												onDefaultSection={(key) => handleDefaultSection("primary", key)}
+											/>
+										</div>
+									</>
+								) : (
+									<>
+										<div className={styles.compareTableCol}>
+											<p className={styles.compareTableHeader}>{primaryYear}</p>
+											<RoutineEntriesTable
+												entries={entries}
+												loading={entriesLoading}
+												onEdit={handleEdit}
+												onDelete={handleDelete}
+												openSections={getOpenSections("primary")}
+												onToggleSection={(key) => handleToggleSection("primary", key)}
+												onDefaultSection={(key) => handleDefaultSection("primary", key)}
+											/>
+										</div>
+										<div className={styles.compareTableCol}>
+											<p className={styles.compareTableHeader}>{compareYear}</p>
+											<RoutineEntriesTable
+												entries={compareEntries}
+												loading={compareEntriesLoading}
+												onEdit={handleEdit}
+												onDelete={handleDelete}
+												openSections={getOpenSections("compare")}
+												onToggleSection={(key) => handleToggleSection("compare", key)}
+												onDefaultSection={(key) => handleDefaultSection("compare", key)}
+											/>
+										</div>
+									</>
+								)}
 							</div>
 						)
 					)}

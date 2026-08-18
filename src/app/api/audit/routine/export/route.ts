@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
 
 	if (!yearsParam)
 		return NextResponse.json({ error: "years is required" }, { status: 400 });
-	const years = yearsParam.split(",").map(Number);
+	const years = yearsParam.split(",").map(Number).sort((a, b) => a - b);
 
 	const supabase = createServiceClient();
 	const { data, error } = await supabase
@@ -83,24 +83,59 @@ export async function GET(req: NextRequest) {
 
 	const rows = data ?? [];
 
-	// ---- aggregate for the charts ----
-	const byCategory: Record<string, number> = {};
-	const byEfMiddle: Record<string, number> = {};
+	// ---- aggregate for the charts — year-aware throughout, since a
+	// comparison export needs per-year breakdowns, not one combined total
+	// silently merging both years (which is what byCategory/byEfMiddle used
+	// to do before this — a real bug, not just a chart-type preference) ----
+	const byCategory: Record<string, Record<number, number>> = {}; // category -> year -> count
+	const byEfMiddle: Record<string, Record<number, number>> = {}; // EF attribute -> year -> count
+	const byCode: Record<string, Record<number, number>> = {}; // SAM code -> year -> count
+	const byEfCode: Record<string, Record<number, number>> = {}; // EF code -> year -> count
 	const byMonth: Record<number, Record<number, number>> = {};
 
 	for (const row of rows) {
 		if (row.is_non_flight_safety) continue;
 		const resolved = row.sam_code ? SAM_CODE_MAP[row.sam_code] : undefined;
-		if (resolved) byCategory[resolved.category] = (byCategory[resolved.category] ?? 0) + 1;
+		if (resolved) {
+			byCategory[resolved.category] ??= {};
+			byCategory[resolved.category][row.report_year] = (byCategory[resolved.category][row.report_year] ?? 0) + 1;
+			byCode[resolved.code] ??= {};
+			byCode[resolved.code][row.report_year] = (byCode[resolved.code][row.report_year] ?? 0) + 1;
+		}
 		if (row.ef_code) {
 			const efResolved = EF_CODE_MAP[row.ef_code];
-			if (efResolved) byEfMiddle[efResolved.attributeName] = (byEfMiddle[efResolved.attributeName] ?? 0) + 1;
+			if (efResolved) {
+				byEfMiddle[efResolved.attributeName] ??= {};
+				byEfMiddle[efResolved.attributeName][row.report_year] = (byEfMiddle[efResolved.attributeName][row.report_year] ?? 0) + 1;
+			}
+			byEfCode[row.ef_code] ??= {};
+			byEfCode[row.ef_code][row.report_year] = (byEfCode[row.ef_code][row.report_year] ?? 0) + 1;
 		}
 		byMonth[row.report_year] ??= {};
 		byMonth[row.report_year][row.report_month] = (byMonth[row.report_year][row.report_month] ?? 0) + 1;
 	}
-	const samEntries = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
-	const efEntries = Object.entries(byEfMiddle).sort((a, b) => b[1] - a[1]);
+
+	function buildYearBreakdown(byLabelYear: Record<string, Record<number, number>>) {
+		return Object.entries(byLabelYear)
+			.map(([label, byYear]) => ({
+				label,
+				perYear: years.map((y) => byYear[y] ?? 0),
+				total: years.reduce((sum, y) => sum + (byYear[y] ?? 0), 0),
+			}))
+			.filter((e) => e.total > 0)
+			.sort((a, b) => b.total - a.total);
+	}
+	// 代碼統計's overview stays a combined total across whichever years are
+	// selected — it's a general-purpose overview, not a comparison; the
+	// dedicated comparison sheets below are where the per-year breakdown lives
+	const samBreakdown = buildYearBreakdown(byCategory);
+	const efBreakdown = buildYearBreakdown(byEfMiddle);
+	const samCodeBreakdown = buildYearBreakdown(byCode);
+	const efCodeBreakdown = buildYearBreakdown(byEfCode);
+	const samEntries: [string, number][] = samBreakdown.map((e) => [e.label, e.total]);
+	const efEntries: [string, number][] = efBreakdown.map((e) => [e.label, e.total]);
+
+	const isComparison = years.length > 1;
 
 	const workbook = new ExcelJS.Workbook();
 	const allPlacements: { sheetName: string; placements: ChartPlacement[] }[] = [];
@@ -259,80 +294,86 @@ export async function GET(req: NextRequest) {
 		allPlacements.push({ sheetName: "代碼統計", placements });
 	}
 
-	// ==== sheet 3: {year}SAM分類統計 — pie, matching the app's pie palette ====
-	if (samEntries.length > 0) {
-		const sheetName = `${yearsLabel(years)}SAM分類統計`;
+	// ==== sheets 3+4: {year}SAM分類統計 / {year}EF屬性統計 ====
+	// Single year -> pie, matching the app's pie mode. Comparing years ->
+	// grouped bar (one bar per year, per category) instead — a pie can only
+	// ever show one year's proportions, it has no way to show change
+	// between years, which is the whole point of a comparison export.
+	const BAR_COMPARE_COLORS = ["4a9eff", "fb923c"];
+	function addCategoryStatsSheet(
+		sheetName: string,
+		headerLabel: string,
+		breakdown: { label: string; perYear: number[]; total: number }[],
+		pieColor: string
+	) {
+		if (breakdown.length === 0) return;
 		const sheet = workbook.addWorksheet(sheetName);
-		sheet.columns = [{ width: 24 }, { width: 10 }];
-		sheet.getCell(1, 1).value = "類別"; sheet.getCell(1, 2).value = "數量";
-		[1, 2].forEach((c) => {
-			const cell = sheet.getCell(1, c);
-			cell.fill = HEADER_FILL; cell.font = HEADER_FONT; cell.alignment = CENTER; cell.border = CELL_BORDER;
+		sheet.columns = [{ width: 24 }, ...years.map(() => ({ width: 10 }))];
+
+		const headerRow = [headerLabel, ...years.map(String)];
+		headerRow.forEach((label, i) => {
+			const cell = sheet.getCell(1, i + 1);
+			cell.value = label; cell.fill = HEADER_FILL; cell.font = HEADER_FONT; cell.alignment = CENTER; cell.border = CELL_BORDER;
 		});
-		samEntries.forEach(([label, count], i) => {
-			sheet.getCell(i + 2, 1).value = label;
-			sheet.getCell(i + 2, 2).value = count;
-			sheet.getCell(i + 2, 1).border = CELL_BORDER;
-			sheet.getCell(i + 2, 2).border = CELL_BORDER;
-			sheet.getCell(i + 2, 1).alignment = MIDDLE;
-			sheet.getCell(i + 2, 2).alignment = MIDDLE;
+		breakdown.forEach((entry, i) => {
+			const r = i + 2;
+			sheet.getCell(r, 1).value = entry.label;
+			sheet.getCell(r, 1).border = CELL_BORDER;
+			sheet.getCell(r, 1).alignment = MIDDLE;
+			entry.perYear.forEach((v, yi) => {
+				const cell = sheet.getCell(r, yi + 2);
+				cell.value = v;
+				cell.border = CELL_BORDER;
+				cell.alignment = MIDDLE;
+			});
 		});
-		allPlacements.push({
-			sheetName,
-			placements: [{
-				chartIndex: nextChartIndex++,
-				anchor: { fromCol: 3, fromRow: 0, toCol: 13, toRow: Math.max(20, samEntries.length + 2) },
-				spec: {
+
+		const anchorFromCol = years.length + 2;
+		const spec: ChartPlacement["spec"] = isComparison
+			? {
+					type: "bar",
+					title: sheetName,
+					sheetName,
+					categories: breakdown.map((e) => e.label),
+					series: years.map((y, yi) => ({
+						name: String(y),
+						values: breakdown.map((e) => e.perYear[yi]),
+						color: BAR_COMPARE_COLORS[yi % BAR_COMPARE_COLORS.length],
+					})),
+					categoryColumn: "A",
+					firstDataRow: 2,
+					seriesColumns: years.map((_, i) => String.fromCharCode("B".charCodeAt(0) + i)),
+				}
+			: {
 					type: "pie",
 					title: sheetName,
 					sheetName,
-					categories: samEntries.map(([l]) => l),
-					series: [{ name: "數量", values: samEntries.map(([, c]) => c), color: "4a9eff" }],
+					categories: breakdown.map((e) => e.label),
+					series: [{ name: "數量", values: breakdown.map((e) => e.total), color: pieColor }],
 					sliceColors: PIE_COLORS,
 					categoryColumn: "A",
 					firstDataRow: 2,
 					seriesColumns: ["B"],
-				},
+				};
+
+		allPlacements.push({
+			sheetName,
+			placements: [{
+				chartIndex: nextChartIndex++,
+				anchor: { fromCol: anchorFromCol, fromRow: 0, toCol: anchorFromCol + 11, toRow: Math.max(20, breakdown.length + 2) },
+				spec,
 			}],
 		});
 	}
 
-	// ==== sheet 4: {year}EF屬性統計 — pie ====
-	if (efEntries.length > 0) {
-		const sheetName = `${yearsLabel(years)}EF屬性統計`;
-		const sheet = workbook.addWorksheet(sheetName);
-		sheet.columns = [{ width: 24 }, { width: 10 }];
-		sheet.getCell(1, 1).value = "屬性"; sheet.getCell(1, 2).value = "數量";
-		[1, 2].forEach((c) => {
-			const cell = sheet.getCell(1, c);
-			cell.fill = HEADER_FILL; cell.font = HEADER_FONT; cell.alignment = CENTER; cell.border = CELL_BORDER;
-		});
-		efEntries.forEach(([label, count], i) => {
-			sheet.getCell(i + 2, 1).value = label;
-			sheet.getCell(i + 2, 2).value = count;
-			sheet.getCell(i + 2, 1).border = CELL_BORDER;
-			sheet.getCell(i + 2, 2).border = CELL_BORDER;
-			sheet.getCell(i + 2, 1).alignment = MIDDLE;
-			sheet.getCell(i + 2, 2).alignment = MIDDLE;
-		});
-		allPlacements.push({
-			sheetName,
-			placements: [{
-				chartIndex: nextChartIndex++,
-				anchor: { fromCol: 3, fromRow: 0, toCol: 13, toRow: Math.max(20, efEntries.length + 2) },
-				spec: {
-					type: "pie",
-					title: sheetName,
-					sheetName,
-					categories: efEntries.map(([l]) => l),
-					series: [{ name: "數量", values: efEntries.map(([, c]) => c), color: "1baf7a" }],
-					sliceColors: PIE_COLORS,
-					categoryColumn: "A",
-					firstDataRow: 2,
-					seriesColumns: ["B"],
-				},
-			}],
-		});
+	addCategoryStatsSheet(`${yearsLabel(years)}SAM分類統計`, "類別", samBreakdown, "4a9eff");
+	addCategoryStatsSheet(`${yearsLabel(years)}EF屬性統計`, "屬性", efBreakdown, "1baf7a");
+
+	// ==== sheets: SAM代碼比較 / EF代碼比較 — code-level (not category-level)
+	// comparison, only meaningful when actually comparing years ====
+	if (isComparison) {
+		addCategoryStatsSheet(`${yearsLabel(years)}SAM代碼比較`, "代碼", samCodeBreakdown, "4a9eff");
+		addCategoryStatsSheet(`${yearsLabel(years)}EF代碼比較`, "代碼", efCodeBreakdown, "1baf7a");
 	}
 
 	// ==== sheet 5: 趨勢分析 — line, one series per compared year ====

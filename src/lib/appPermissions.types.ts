@@ -37,9 +37,12 @@ export interface MDAfaatPermissions {
 }
 
 // ── NEW ──────────────────────────────────────────
+export type AuditTab = 'routine' | 'first_level' | 'iosa';
+
 export interface AuditPermissions {
   access: boolean;
   view_only: boolean; // future-proof: false = full edit, true = read-only
+  tabs?: AuditTab[]; // which audit sub-pages this user may open. Undefined = legacy/full access.
 }
 // ─────────────────────────────────────────────────
 

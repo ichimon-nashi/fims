@@ -1,7 +1,7 @@
 // src/lib/permissionHelpers.ts
 // Helper functions for working with app permissions
 
-import { AppPermissions, AppName, OralTestPage, PermissionCheckResult } from './appPermissions.types';
+import { AppPermissions, AppName, OralTestPage, AuditTab, PermissionCheckResult } from './appPermissions.types';
 import { User } from './types';
 
 /**
@@ -124,6 +124,44 @@ export const hasOralTestPageAccess = (
   
   return { granted: false, reason: `Access denied to oral test page: ${page}` };
 };
+
+// ── NEW ──────────────────────────────────────────────────────────────
+/**
+ * Check if user has access to a specific audit tab (routine / first_level / iosa)
+ */
+export const hasAuditTabAccess = (
+  user: User | null,
+  tab: AuditTab
+): PermissionCheckResult => {
+  if (!user) {
+    return { granted: false, reason: 'User not authenticated' };
+  }
+
+  const auditAccess = hasAppAccess(user, 'audit');
+  if (!auditAccess.granted) {
+    return auditAccess;
+  }
+
+  const isSpecialAdmin =
+    user.employee_id === 'admin' || user.employee_id === '51892';
+  if (isSpecialAdmin) {
+    return { granted: true };
+  }
+
+  const auditTabs = user.app_permissions?.audit?.tabs;
+
+  // No tabs array stored → legacy/full access, don't lock out existing users
+  if (!auditTabs) {
+    return { granted: true };
+  }
+
+  if (auditTabs.includes(tab)) {
+    return { granted: true };
+  }
+
+  return { granted: false, reason: `Access denied to audit tab: ${tab}` };
+};
+// ─────────────────────────────────────────────────────────────────────
 
 /**
  * Check if user can edit SMS entries (not just view)

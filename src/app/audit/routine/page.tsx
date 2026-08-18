@@ -1,28 +1,40 @@
 // src/app/audit/routine/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { usePermissions } from "@/hooks/usePermissions";
 import styles from "./routine.module.css";
 import RoutineSummary from "@/components/audit/routine/RoutineSummary";
 
 type Tab = "new" | "summary";
 
 const AUDIT_TABS = [
-	{ id: "routine", label: "例行性", href: "/audit/routine" },
-	{ id: "firstlevel", label: "一級查核", href: "/audit/firstlevel" },
-	{ id: "iosa", label: "IOSA", href: "/audit/iosa" },
+	{ id: "routine", label: "例行性", href: "/audit/routine", tab: "routine" as const },
+	{ id: "firstlevel", label: "一級查核", href: "/audit/firstlevel", tab: "first_level" as const },
+	{ id: "iosa", label: "IOSA", href: "/audit/iosa", tab: "iosa" as const },
 ];
 
 export default function RoutineAuditPage() {
 	const [tab, setTab] = useState<Tab>("summary");
 	const router = useRouter();
+	const permissions = usePermissions();
+	const hasAccess = permissions.hasAuditTabAccess("routine");
+	const visibleAuditTabs = AUDIT_TABS.filter((t) =>
+		permissions.hasAuditTabAccess(t.tab)
+	);
+
+	useEffect(() => {
+		if (!hasAccess) router.replace("/audit");
+	}, [hasAccess, router]);
+
+	if (!hasAccess) return null;
 
 	return (
 		<div className={styles.pageShell}>
 			<div className={styles.topbar}>
 				<div className={styles.auditTabs}>
-					{AUDIT_TABS.map((t) => (
+					{visibleAuditTabs.map((t) => (
 						<button
 							key={t.id}
 							className={`${styles.auditTab} ${t.id === "routine" ? styles.auditTabActive : ""}`}

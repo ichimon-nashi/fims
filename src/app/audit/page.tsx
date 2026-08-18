@@ -3,22 +3,26 @@
 
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const AUDIT_TYPES = [
 	{
 		href: "/audit/routine",
+		tab: "routine" as const,
 		icon: "/images/routineicon.png",
 		title: "例行性查核",
 		desc: "每月至少11次",
 	},
 	{
 		href: "/audit/firstlevel",
+		tab: "first_level" as const,
 		icon: "/images/firstlevelicon.png",
 		title: "一級查核",
 		desc: "每半年一次",
 	},
 	{
 		href: "/audit/iosa",
+		tab: "iosa" as const,
 		icon: "/images/iosaicon.png",
 		title: "IOSA 查核",
 		desc: "每兩年一次",
@@ -27,6 +31,10 @@ const AUDIT_TYPES = [
 
 export default function AuditIndexPage() {
 	const router = useRouter();
+	const permissions = usePermissions();
+	const visibleAuditTypes = AUDIT_TYPES.filter((a) =>
+		permissions.hasAuditTabAccess(a.tab)
+	);
 
 	return (
 		<div
@@ -73,7 +81,7 @@ export default function AuditIndexPage() {
 					maxWidth: "860px",
 				}}
 			>
-				{AUDIT_TYPES.map((a) => (
+				{visibleAuditTypes.map((a) => (
 					<div
 						key={a.href}
 						onClick={() => router.push(a.href)}

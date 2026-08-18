@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { 
   hasAppAccess, 
   hasOralTestPageAccess,
+  hasAuditTabAccess,
   canEditSMS,
   canCreateTasks,
   canEditOthersSchedules,
@@ -12,7 +13,7 @@ import {
   canAccessControlPanel,
   getAccessibleOralTestPages
 } from '@/lib/permissionHelpers';
-import { AppName, OralTestPage } from '@/lib/appPermissions.types';
+import { AppName, OralTestPage, AuditTab } from '@/lib/appPermissions.types';
 
 /**
  * Custom hook for checking user permissions
@@ -41,6 +42,11 @@ export const usePermissions = () => {
     // Get list of accessible oral test pages
     getAccessibleOralTestPages: () => {
       return getAccessibleOralTestPages(user);
+    },
+
+    // Audit tab access (routine / first_level / iosa)
+    hasAuditTabAccess: (tab: AuditTab) => {
+      return hasAuditTabAccess(user, tab).granted;
     },
 
     // SMS permissions

@@ -161,10 +161,10 @@ export async function POST(req: NextRequest) {
 	ws3.getColumn(1).width = 14;
 	topCodesForTrend.forEach((_, i) => (ws3.getColumn(i + 2).width = 10));
 
-	// ---- Sheet 4: 風險緩解分析 — merged: detail table (10 cols) + a
-	// long-format table backing the stacked chart, all on one sheet ----
-	let longFormatStartRow = 0;
-	let mergedChartAnchorRow = 0;
+	// ---- Sheet 4: 風險緩解分析 — detail table (10 cols), chart reads
+	// straight from its 小計 columns rather than a separate long-format
+	// table (removed — it existed only to feed the old alternating-
+	// category chart, and duplicated data already in this table) ----
 	if (topCodesComparison.length > 0) {
 		const ws4 = workbook.addWorksheet("風險緩解分析");
 		ws4.addRow([
@@ -189,32 +189,6 @@ export async function POST(req: NextRequest) {
 		ws4.getColumn(1).width = 12;
 		ws4.getColumn(2).width = 30;
 		[3, 4, 5, 6, 7, 8, 9, 10].forEach((i) => (ws4.getColumn(i).width = 12));
-
-		// Long-format table (代碼,期間,SRM,自督,小計), 2 rows per code — the
-		// alternating-category trick that lets a single-level-axis chart
-		// show both periods per code, stacked by source.
-		longFormatStartRow = topCodesComparison.length + 3; // header + data rows + 1 blank row
-		["代碼", "期間", "SRM", "自督", "小計"].forEach((h, i) => {
-			ws4.getCell(longFormatStartRow, i + 1).value = h;
-		});
-		styleHeaderRow(ws4.getRow(longFormatStartRow));
-
-		let r = longFormatStartRow + 1;
-		topCodesComparison.forEach((c) => {
-			ws4.getCell(r, 1).value = c.code;
-			ws4.getCell(r, 2).value = c.a.period;
-			ws4.getCell(r, 3).value = c.a.srm;
-			ws4.getCell(r, 4).value = c.a.self;
-			ws4.getCell(r, 5).value = c.a.srm + c.a.self;
-			r++;
-			ws4.getCell(r, 1).value = c.code;
-			ws4.getCell(r, 2).value = c.b.period;
-			ws4.getCell(r, 3).value = c.b.srm;
-			ws4.getCell(r, 4).value = c.b.self;
-			ws4.getCell(r, 5).value = c.b.srm + c.b.self;
-			r++;
-		});
-		mergedChartAnchorRow = r + 2; // a couple rows of padding below the long-format table
 	}
 
 	// ---- write base workbook, then inject native charts ----
@@ -310,19 +284,18 @@ export async function POST(req: NextRequest) {
 			type: "bar",
 			title: `風險緩解分析 (${periodALabel} vs ${periodBLabel})`,
 			sheetName: "風險緩解分析",
-			categories: topCodesComparison.flatMap((c) => [`${c.code} (${c.a.period})`, `${c.code} (${c.b.period})`]),
+			categories: topCodesComparison.map((c) => c.code),
 			series: [
-				{ name: "SRM", values: topCodesComparison.flatMap((c) => [c.a.srm, c.b.srm]), color: SRM_COLOR },
-				{ name: "自督", values: topCodesComparison.flatMap((c) => [c.a.self, c.b.self]), color: SELF_COLOR },
+				{ name: String(periodALabel), values: topCodesComparison.map((c) => c.a.srm + c.a.self), color: SRM_COLOR },
+				{ name: String(periodBLabel), values: topCodesComparison.map((c) => c.b.srm + c.b.self), color: SELF_COLOR },
 			],
 			categoryColumn: "A",
-			firstDataRow: longFormatStartRow + 1,
-			seriesColumns: ["C", "D"],
-			stacked: true,
-			categoryAxisTitle: "代碼 (期間)",
+			firstDataRow: 2,
+			seriesColumns: ["E", "H"],
+			categoryAxisTitle: "代碼",
 			valueAxisTitle: "件數",
 			anchorCol: 0,
-			anchorRow: mergedChartAnchorRow,
+			anchorRow: topCodesComparison.length + 3,
 		};
 		await injectChart(zip, spec, chartIndex++);
 	}
