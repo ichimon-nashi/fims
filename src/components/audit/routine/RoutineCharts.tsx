@@ -4,9 +4,13 @@
 // Both SAM and EF charts share one level toggle, owned by the parent
 // (RoutineSummary), not each chart individually — flipping "類別" switches
 // both breakdowns together instead of needing two separate controls.
+//
+// Compare charts (grouped bar / radar) are a separate family added for
+// year-over-year comparison — same level toggle applies, plus a
+// bar/radar ChartStyle toggle also owned by the parent.
 
 import styles from "./RoutineCharts.module.css";
-import { PieGroupLevel } from "@/lib/routineAudit.types";
+import { PieGroupLevel, ChartStyle } from "@/lib/routineAudit.types";
 
 interface CountItem {
 	label: string;
@@ -16,10 +20,22 @@ interface CountItem {
 const PIE_COLORS = ["#4a9eff", "#fb923c", "#1baf7a", "#e87ba4", "#eda100", "#6b7280"];
 const OTHER_COLOR = "#6b7280";
 const OTHER_LABEL = "其他";
+const COMPARE_COLORS = ["#4a9eff", "#fb923c"];
 
 // ============ shared: horizontal bar (code level) ============
 
-function HorizontalBarChart({ data, color }: { data: CountItem[]; color: string }) {
+// descriptions is optional: code -> plain-language meaning (e.g.
+// "I1-13" -> "組員因個人未依標準程序規定作業，造成違反內規"), rendered as
+// a small caption under each row so the code isn't the only thing shown
+function HorizontalBarChart({
+	data,
+	color,
+	descriptions,
+}: {
+	data: CountItem[];
+	color: string;
+	descriptions?: Record<string, string>;
+}) {
 	const bars = [...data].filter((d) => d.count > 0).sort((a, b) => b.count - a.count);
 
 	if (bars.length === 0) {
@@ -30,18 +46,24 @@ function HorizontalBarChart({ data, color }: { data: CountItem[]; color: string 
 
 	return (
 		<div className={styles.barChart}>
-			{bars.map((b) => (
-				<div key={b.label} className={styles.barRow}>
-					<span className={styles.barLabel} title={b.label}>{b.label}</span>
-					<div className={styles.barTrack}>
-						<div
-							className={styles.barFill}
-							style={{ width: `${(b.count / max) * 100}%`, background: color }}
-						/>
+			{bars.map((b) => {
+				const description = descriptions?.[b.label];
+				return (
+					<div key={b.label} className={styles.barGroup}>
+						<div className={styles.barRow}>
+							<span className={styles.barLabel} title={description || b.label}>{b.label}</span>
+							<div className={styles.barTrack}>
+								<div
+									className={styles.barFill}
+									style={{ width: `${(b.count / max) * 100}%`, background: color }}
+								/>
+							</div>
+							<span className={styles.barCount}>{b.count}</span>
+						</div>
+						{description && <p className={styles.barDescription}>{description}</p>}
 					</div>
-					<span className={styles.barCount}>{b.count}</span>
-				</div>
-			))}
+				);
+			})}
 		</div>
 	);
 }
@@ -53,14 +75,16 @@ function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
 	return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
 }
 
-function PieChart({ data }: { data: CountItem[] }) {
+// otherLabel lets a caller localize the "everything past top-5" bucket —
+// SAM's category pie shows it in English ("Others"), EF's keeps "其他"
+function PieChart({ data, otherLabel = OTHER_LABEL }: { data: CountItem[]; otherLabel?: string }) {
 	const sorted = [...data].filter((d) => d.count > 0).sort((a, b) => b.count - a.count);
 	const top5 = sorted.slice(0, 5);
 	const rest = sorted.slice(5);
 	const otherTotal = rest.reduce((sum, d) => sum + d.count, 0);
 
 	const slices = [...top5];
-	if (otherTotal > 0) slices.push({ label: OTHER_LABEL, count: otherTotal });
+	if (otherTotal > 0) slices.push({ label: otherLabel, count: otherTotal });
 	const total = slices.reduce((sum, s) => sum + s.count, 0);
 
 	if (total === 0) {
@@ -87,7 +111,7 @@ function PieChart({ data }: { data: CountItem[] }) {
 
 		return {
 			path,
-			color: slice.label === OTHER_LABEL ? OTHER_COLOR : PIE_COLORS[i % PIE_COLORS.length],
+			color: slice.label === otherLabel ? OTHER_COLOR : PIE_COLORS[i % PIE_COLORS.length],
 			label: slice.label,
 			count: slice.count,
 			pct,
@@ -131,30 +155,311 @@ function PieChart({ data }: { data: CountItem[] }) {
 	);
 }
 
-function BreakdownChart({ data, level, color }: { data: CountItem[]; level: PieGroupLevel; color: string }) {
-	return level === "category" ? <PieChart data={data} /> : <HorizontalBarChart data={data} color={color} />;
+function BreakdownChart({
+	data,
+	level,
+	color,
+	otherLabel,
+	descriptions,
+}: {
+	data: CountItem[];
+	level: PieGroupLevel;
+	color: string;
+	otherLabel?: string;
+	descriptions?: Record<string, string>;
+}) {
+	return level === "category" ? (
+		<PieChart data={data} otherLabel={otherLabel} />
+	) : (
+		<HorizontalBarChart data={data} color={color} descriptions={descriptions} />
+	);
 }
 
 // ============ RoutineSamChart ============
 
-export function RoutineSamChart({ data, year, level }: { data: CountItem[]; year: number; level: PieGroupLevel }) {
-	const label = level === "category" ? "類別" : "SAM代碼";
+export function RoutineSamChart({
+	data,
+	year,
+	level,
+	descriptions,
+}: {
+	data: CountItem[];
+	year: number;
+	level: PieGroupLevel;
+	descriptions?: Record<string, string>;
+}) {
+	const label = level === "category" ? "SAM類別" : "SAM代碼";
 	return (
 		<div className={styles.wrap}>
-			<p className={styles.title}>{year} {label} (不含非安全)</p>
-			<BreakdownChart data={data} level={level} color="#4a9eff" />
+			<p className={styles.title}>{year} {label} (安全類)</p>
+			<BreakdownChart data={data} level={level} color="#4a9eff" otherLabel="Others" descriptions={descriptions} />
 		</div>
 	);
 }
 
 // ============ RoutineEfChart ============
 
-export function RoutineEfChart({ data, year, level }: { data: CountItem[]; year: number; level: PieGroupLevel }) {
+export function RoutineEfChart({
+	data,
+	year,
+	level,
+	descriptions,
+}: {
+	data: CountItem[];
+	year: number;
+	level: PieGroupLevel;
+	descriptions?: Record<string, string>;
+}) {
 	const label = level === "category" ? "EF類別" : "EF代碼";
 	return (
 		<div className={styles.wrap}>
-			<p className={styles.title}>{year} {label} (不含非安全)</p>
-			<BreakdownChart data={data} level={level} color="#1baf7a" />
+			<p className={styles.title}>{year} {label} (安全類)</p>
+			<BreakdownChart data={data} level={level} color="#1baf7a" descriptions={descriptions} />
+		</div>
+	);
+}
+
+// ============ year-over-year comparison charts (bar / radar) ============
+// Separate from BreakdownChart above — comparison always needs 2 series
+// (one per year) plotted against the same category set, which pie/single
+// -series bar can't represent. GroupedBarChart mirrors HorizontalBarChart's
+// row layout (one row per category, now with one sub-row per year).
+// RadarChart reuses polarToCartesian from the pie chart above.
+
+interface CompareItem {
+	label: string;
+	values: number[]; // one entry per year, same order as the `years` prop
+}
+
+function GroupedBarChart({
+	data,
+	years,
+	colors,
+	descriptions,
+}: {
+	data: CompareItem[];
+	years: number[];
+	colors: string[];
+	descriptions?: Record<string, string>;
+}) {
+	const items = [...data]
+		.filter((d) => d.values.some((v) => v > 0))
+		.sort((a, b) => Math.max(...b.values) - Math.max(...a.values));
+
+	if (items.length === 0) {
+		return <p className={styles.empty}>此區間無資料</p>;
+	}
+
+	const max = Math.max(...items.flatMap((d) => d.values));
+
+	return (
+		<div>
+			<div className={styles.legend}>
+				{years.map((y, yi) => (
+					<div key={y} className={styles.legendItem}>
+						<span className={styles.swatch} style={{ background: colors[yi % colors.length] }} />
+						{y}
+					</div>
+				))}
+			</div>
+			<div className={styles.barChart}>
+			{items.map((d) => {
+				const description = descriptions?.[d.label];
+				return (
+					<div key={d.label} className={styles.compareBarGroup}>
+						<span className={styles.compareBarLabel} title={description || d.label}>{d.label}</span>
+						{description && <p className={styles.compareBarDescription}>{description}</p>}
+						<div className={styles.compareBarRows}>
+							{years.map((y, yi) => (
+								<div key={y} className={styles.compareBarRow}>
+									<div className={styles.barTrack}>
+										<div
+											className={styles.barFill}
+											style={{
+												width: `${((d.values[yi] ?? 0) / max) * 100}%`,
+												background: colors[yi % colors.length],
+											}}
+										/>
+									</div>
+									<span className={styles.barCount}>{d.values[yi] ?? 0}</span>
+								</div>
+							))}
+						</div>
+					</div>
+				);
+			})}
+			</div>
+		</div>
+	);
+}
+
+function RadarChart({ data, years, colors }: { data: CompareItem[]; years: number[]; colors: string[] }) {
+	const items = data.filter((d) => d.values.some((v) => v > 0));
+
+	if (items.length === 0) {
+		return <p className={styles.empty}>此區間無資料</p>;
+	}
+
+	// radar gets cluttered past ~8 spokes — fold the remainder into "其他",
+	// same convention as the pie chart's top-5-plus-other
+	const ranked = [...items].sort((a, b) => Math.max(...b.values) - Math.max(...a.values));
+	const top8 = ranked.slice(0, 8);
+	const rest = ranked.slice(8);
+
+	let slices = top8;
+	if (rest.length > 0) {
+		const otherValues = years.map((_, yi) => rest.reduce((sum, r) => sum + (r.values[yi] ?? 0), 0));
+		slices = [...top8, { label: OTHER_LABEL, values: otherValues }];
+	}
+
+	const allValues = slices.flatMap((s) => s.values);
+	const rawMax = Math.max(1, ...allValues);
+	const step = rawMax <= 5 ? 1 : rawMax <= 10 ? 2 : rawMax <= 25 ? 5 : rawMax <= 50 ? 10 : 20;
+	const maxVal = Math.ceil(rawMax / step) * step;
+	const ringCount = Math.min(5, Math.max(1, maxVal / step));
+
+	const cx = 190, cy = 170, r = 115;
+	const n = slices.length;
+	const angleStep = 360 / n;
+
+	const rings = Array.from({ length: ringCount }, (_, i) => {
+		const frac = (i + 1) / ringCount;
+		return slices.map((_, si) => polarToCartesian(cx, cy, r * frac, si * angleStep));
+	});
+
+	const seriesPolygons = years.map((y, yi) => {
+		const points = slices.map((s, si) => {
+			const val = s.values[yi] ?? 0;
+			const frac = val / maxVal;
+			return polarToCartesian(cx, cy, r * frac, si * angleStep);
+		});
+		return { year: y, color: colors[yi % colors.length], points };
+	});
+
+	const labelPositions = slices.map((s, si) => {
+		const p = polarToCartesian(cx, cy, r + 25, si * angleStep);
+		return { ...p, label: s.label };
+	});
+
+	return (
+		<svg viewBox="0 0 380 340" className={styles.svgRadar}>
+			{rings.map((ring, i) => (
+				<polygon
+					key={i}
+					points={ring.map((p) => `${p.x},${p.y}`).join(" ")}
+					fill="none"
+					stroke="rgba(232,233,237,0.12)"
+					strokeWidth={1}
+				/>
+			))}
+			{slices.map((_, si) => {
+				const edge = polarToCartesian(cx, cy, r, si * angleStep);
+				return (
+					<line
+						key={si}
+						x1={cx}
+						y1={cy}
+						x2={edge.x}
+						y2={edge.y}
+						stroke="rgba(232,233,237,0.12)"
+						strokeWidth={1}
+					/>
+				);
+			})}
+			{seriesPolygons.map((s) => (
+				<polygon
+					key={s.year}
+					points={s.points.map((p) => `${p.x},${p.y}`).join(" ")}
+					fill={s.color}
+					fillOpacity={0.15}
+					stroke={s.color}
+					strokeWidth={2}
+				/>
+			))}
+			{seriesPolygons.map((s) =>
+				s.points.map((p, i) => (
+					<circle key={`${s.year}-${i}`} cx={p.x} cy={p.y} r={3} fill={s.color} />
+				))
+			)}
+			{labelPositions.map((l, i) => (
+				<text
+					key={i}
+					x={l.x}
+					y={l.y}
+					textAnchor="middle"
+					dominantBaseline="middle"
+					fill="#e8e9ed"
+					fontSize="10"
+				>
+					{l.label}
+				</text>
+			))}
+		</svg>
+	);
+}
+
+function CompareBreakdownChart({
+	data,
+	years,
+	chartStyle,
+	descriptions,
+}: {
+	data: CompareItem[];
+	years: number[];
+	chartStyle: ChartStyle;
+	descriptions?: Record<string, string>;
+}) {
+	// radar has no room for a description line per spoke — descriptions
+	// only apply to the bar rendering
+	return chartStyle === "radar" ? (
+		<RadarChart data={data} years={years} colors={COMPARE_COLORS} />
+	) : (
+		<GroupedBarChart data={data} years={years} colors={COMPARE_COLORS} descriptions={descriptions} />
+	);
+}
+
+// ============ RoutineSamCompareChart / RoutineEfCompareChart ============
+
+export function RoutineSamCompareChart({
+	data,
+	years,
+	level,
+	chartStyle,
+	descriptions,
+}: {
+	data: CompareItem[];
+	years: number[];
+	level: PieGroupLevel;
+	chartStyle: ChartStyle;
+	descriptions?: Record<string, string>;
+}) {
+	const label = level === "category" ? "SAM類別" : "SAM代碼";
+	return (
+		<div className={styles.wrap}>
+			<p className={styles.title}>{years.join(" vs ")} {label} (安全類) 比較</p>
+			<CompareBreakdownChart data={data} years={years} chartStyle={chartStyle} descriptions={descriptions} />
+		</div>
+	);
+}
+
+export function RoutineEfCompareChart({
+	data,
+	years,
+	level,
+	chartStyle,
+	descriptions,
+}: {
+	data: CompareItem[];
+	years: number[];
+	level: PieGroupLevel;
+	chartStyle: ChartStyle;
+	descriptions?: Record<string, string>;
+}) {
+	const label = level === "category" ? "EF類別" : "EF代碼";
+	return (
+		<div className={styles.wrap}>
+			<p className={styles.title}>{years.join(" vs ")} {label} (安全類) 比較</p>
+			<CompareBreakdownChart data={data} years={years} chartStyle={chartStyle} descriptions={descriptions} />
 		</div>
 	);
 }

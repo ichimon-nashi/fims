@@ -16,17 +16,20 @@
 // Excel itself writes, so title/legend/colors/data are fully editable in
 // Excel afterward.
 //
-// SCOPE: bar (incl. multi-series clustered) and pie only — the two chart
-// types this app currently needs. Extend buildChartXml's dispatch if a
-// third type is ever needed; the series/axis-building helpers below are
-// written to be reusable for a "line" branch later, following the same
-// shape as the bar branch.
+// SCOPE: bar (incl. multi-series clustered), line, pie, and radar — the
+// four chart types this app currently needs. Radar was added additively
+// (buildRadarChartXml below) — reuses the same catAx/valAx axis wiring as
+// bar/line per ECMA-376 (c:radarChart plots against a standard category +
+// value axis pair, just rendered radially), and reuses buildBarSeriesXml's
+// line-style series branch for stroke+marker rendering. Existing bar/
+// line/pie code paths are untouched by this addition.
 //
 // NOT verified by actually opening output in Excel — there's no way to do
 // that in this environment. XML structure follows ECMA-376 element
 // ordering as closely as I can without a validator; if Excel reports the
 // file needs repair, the fix is localized to this file, not a black-box
-// dependency.
+// dependency. This applies especially to the radar branch, which has no
+// prior production usage to lean on the way bar/line/pie do.
 
 import JSZip from "jszip";
 import type { Worksheet } from "exceljs";
@@ -38,16 +41,22 @@ export interface ChartSeries {
 }
 
 export interface ChartSpec {
-	type: "bar" | "line" | "pie"; // "bar" = vertical column, matching Excel's own naming for this OOXML chart type
+	type: "bar" | "line" | "pie" | "radar"; // "bar" = vertical column, matching Excel's own naming for this OOXML chart type
 	title: string;
 	sheetName: string; // must exactly match the exceljs-added worksheet name
-	categories: string[]; // x-axis labels (bar/line) or slice labels (pie)
+	categories: string[]; // x-axis labels (bar/line/radar) or slice labels (pie)
 	series: ChartSeries[]; // pie only ever uses series[0]
 	sliceColors?: string[]; // pie only — one color per category, cycled if shorter than categories
-	categoryAxisTitle?: string; // bar/line only
-	valueAxisTitle?: string; // bar/line only
+	categoryAxisTitle?: string; // bar/line/radar only
+	valueAxisTitle?: string; // bar/line/radar only
 	stacked?: boolean; // bar only — stacked instead of clustered, default false
 	showPercentOnPie?: boolean; // pie only, default true
+	// radar only — explicit value-axis ceiling. Excel auto-scales a
+	// radar's axis from the data, but its default rounding tends to land
+	// well above the actual max, which shrinks the plotted polygon toward
+	// the center and makes the whole chart read as "small" even though
+	// the frame size is fine. Omit to fall back to Excel's auto scaling.
+	valueAxisMax?: number;
 	// cell locations backing this chart — must match what was actually
 	// written to the sheet via exceljs, since the chart's <c:f> formulas
 	// reference these cells directly
@@ -100,11 +109,20 @@ function buildBarSeriesXml(spec: ChartSpec, series: ChartSeries, idx: number): s
 		.map((v, i) => (v === null ? "" : `<c:pt idx="${i}"><c:v>${v}</c:v></c:pt>`))
 		.join("");
 
+	// line and radar both plot as stroked, marked series (no fill) rather
+	// than the solid-fill rectangles bar/column uses
 	const spPr =
-		spec.type === "line"
+		spec.type === "line" || spec.type === "radar"
 			? `<c:spPr><a:ln w="19050"><a:solidFill><a:srgbClr val="${series.color}"/></a:solidFill></a:ln></c:spPr>
 				<c:marker><c:symbol val="circle"/><c:size val="5"/><c:spPr><a:solidFill><a:srgbClr val="${series.color}"/></a:solidFill></c:spPr></c:marker>`
 			: `<c:spPr><a:solidFill><a:srgbClr val="${series.color}"/></a:solidFill></c:spPr>`;
+
+	// line charts default to smoothed curves in Excel when <c:smooth> is
+	// omitted (schema default is true) — explicit val="0" keeps the
+	// straight-segment rendering the trend sheet needs. Not applicable to
+	// radar: CT_RadarSer has no smooth element, so it's only emitted here
+	// for "line".
+	const smoothXml = spec.type === "line" ? `<c:smooth val="0"/>` : "";
 
 	return `
 		<c:ser>
@@ -124,6 +142,7 @@ function buildBarSeriesXml(spec: ChartSpec, series: ChartSeries, idx: number): s
 			<c:val><c:numRef><c:f>${sheetRef}!$${valRange}</c:f>
 				<c:numCache><c:formatCode>General</c:formatCode><c:ptCount val="${series.values.length}"/>${valPts}</c:numCache>
 			</c:numRef></c:val>
+			${smoothXml}
 		</c:ser>`;
 }
 
@@ -246,8 +265,68 @@ function buildPieChartXml(spec: ChartSpec): string {
 </c:chartSpace>`;
 }
 
+// ── radar chart support ─────────────────────────────────────────────
+// Per ECMA-376, c:radarChart plots against a standard category axis +
+// value axis pair — same axId linking pattern as barChart/lineChart above
+// — so this reuses buildBarSeriesXml (which already branches on
+// type "line" | "radar" for stroke+marker series styling) rather than
+// duplicating the series-building logic. radarStyle "marker" draws lines
+// with point markers at each category, no area fill. valueAxisMax, when
+// provided, pins the axis ceiling instead of leaving it to Excel's
+// auto-scaling — see the ChartSpec.valueAxisMax comment above for why.
+function buildRadarChartXml(spec: ChartSpec): string {
+	const seriesXml = spec.series.map((s, i) => buildBarSeriesXml(spec, s, i)).join("");
+	const axId1 = 333333333;
+	const axId2 = 444444444;
+
+	const valScalingXml =
+		spec.valueAxisMax !== undefined
+			? `<c:orientation val="minMax"/><c:max val="${spec.valueAxisMax}"/><c:min val="0"/>`
+			: `<c:orientation val="minMax"/>`;
+
+	return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+	<c:chart>
+		${titleXml(spec.title)}
+		<c:autoTitleDeleted val="0"/>
+		<c:plotArea>
+			<c:layout/>
+			<c:radarChart>
+				<c:radarStyle val="marker"/>
+				<c:varyColors val="0"/>
+				${seriesXml}
+				<c:axId val="${axId1}"/>
+				<c:axId val="${axId2}"/>
+			</c:radarChart>
+			<c:catAx>
+				<c:axId val="${axId1}"/>
+				<c:scaling><c:orientation val="minMax"/></c:scaling>
+				<c:delete val="0"/>
+				<c:axPos val="b"/>
+				${spec.categoryAxisTitle ? titleXml(spec.categoryAxisTitle) : ""}
+				<c:crossAx val="${axId2}"/>
+			</c:catAx>
+			<c:valAx>
+				<c:axId val="${axId2}"/>
+				<c:scaling>${valScalingXml}</c:scaling>
+				<c:delete val="0"/>
+				<c:axPos val="l"/>
+				${spec.valueAxisTitle ? titleXml(spec.valueAxisTitle) : ""}
+				<c:crossAx val="${axId1}"/>
+			</c:valAx>
+		</c:plotArea>
+		<c:legend><c:legendPos val="b"/><c:overlay val="0"/></c:legend>
+		<c:plotVisOnly val="1"/>
+		<c:dispBlanksAs val="gap"/>
+	</c:chart>
+</c:chartSpace>`;
+}
+// ─────────────────────────────────────────────────────────────────────
+
 export function buildChartXml(spec: ChartSpec): string {
-	return spec.type === "pie" ? buildPieChartXml(spec) : buildBarOrLineChartXml(spec);
+	if (spec.type === "pie") return buildPieChartXml(spec);
+	if (spec.type === "radar") return buildRadarChartXml(spec);
+	return buildBarOrLineChartXml(spec);
 }
 
 function buildDrawingXml(chartRelId: string, fromCol: number = 6, fromRow: number = 1): string {
@@ -433,10 +512,11 @@ async function addContentTypeOverridesMulti(zip: JSZip, chartFileNames: string[]
  * within a single shared drawing part — unlike injectChart (exactly one
  * chart per sheet, throws on a second call), this is for sheets that
  * need multiple charts at once (e.g. routine audit's 代碼統計 sheet:
- * both a SAM bar chart and an EF bar chart on one sheet). Reuses
- * buildChartXml for each placement's actual chart content, so both this
- * and injectChart produce identical, already-verified bar/line/pie/
- * stacked XML — only the drawing/anchor plumbing differs.
+ * both a SAM bar chart and an EF bar chart on one sheet; or a comparison
+ * sheet with both a bar chart and a radar chart). Reuses buildChartXml
+ * for each placement's actual chart content, so both this and injectChart
+ * produce identical, already-verified bar/line/pie/stacked XML — only the
+ * drawing/anchor plumbing differs.
  */
 export async function injectChartsForSheet(
 	zip: JSZip,
@@ -468,7 +548,7 @@ export async function injectChartsForSheet(
 /**
  * For a chart shape this injector doesn't build natively (e.g. a true
  * two-level category axis, per-bar conditional coloring, chart types
- * beyond bar/line/pie) — writes a clear "how to build this by hand"
+ * beyond bar/line/pie/radar) — writes a clear "how to build this by hand"
  * remark into the sheet instead of silently omitting the visualization.
  * Call this BEFORE injectChart-ing anything else onto the same sheet if
  * both are used (it just writes cells, no drawing — doesn't conflict with

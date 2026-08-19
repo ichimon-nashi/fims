@@ -34,9 +34,10 @@ export async function GET(req: NextRequest) {
 
 	// aggregate server-side in JS — small row count/year, no Postgres view needed
 	const byCode: Record<string, Record<number, number>> = {};
-	const byCategory: Record<string, Record<number, number>> = {};
+	const byCategory: Record<string, Record<number, number>> = {}; // SAM category, e.g. "Resource Management" — feeds the single-year pie
+	const byArea: Record<string, Record<number, number>> = {}; // SAM area / HFACS top tier, e.g. "組織影響" — feeds the comparison view only
 	const byEfCode: Record<string, Record<number, number>> = {};
-	const byEfMiddle: Record<string, Record<number, number>> = {};
+	const byEfMiddle: Record<string, Record<number, number>> = {}; // EF top-level attribute category, e.g. "個人 (Individual)"
 	const byMonth: Record<number, Record<number, number>> = {};
 
 	for (const row of data ?? []) {
@@ -50,6 +51,10 @@ export async function GET(req: NextRequest) {
 			byCategory[resolved.category] ??= {};
 			byCategory[resolved.category][row.report_year] =
 				(byCategory[resolved.category][row.report_year] ?? 0) + 1;
+
+			byArea[resolved.area] ??= {};
+			byArea[resolved.area][row.report_year] =
+				(byArea[resolved.area][row.report_year] ?? 0) + 1;
 		}
 
 		if (row.ef_code) {
@@ -58,9 +63,13 @@ export async function GET(req: NextRequest) {
 
 			const efResolved = EF_CODE_MAP[row.ef_code];
 			if (efResolved) {
-				byEfMiddle[efResolved.attributeName] ??= {};
-				byEfMiddle[efResolved.attributeName][row.report_year] =
-					(byEfMiddle[efResolved.attributeName][row.report_year] ?? 0) + 1;
+				// top-tier grouping (e.g. "個人 (Individual)"), not the middle
+				// tier (e.g. "客艙組員行為") — matches the same change made in
+				// the export route so the in-app chart and the exported Excel
+				// agree on what "EF類別" means
+				byEfMiddle[efResolved.categoryName] ??= {};
+				byEfMiddle[efResolved.categoryName][row.report_year] =
+					(byEfMiddle[efResolved.categoryName][row.report_year] ?? 0) + 1;
 			}
 		}
 
@@ -69,5 +78,5 @@ export async function GET(req: NextRequest) {
 			(byMonth[row.report_year][row.report_month] ?? 0) + 1;
 	}
 
-	return NextResponse.json({ byCode, byCategory, byEfCode, byEfMiddle, byMonth });
+	return NextResponse.json({ byCode, byCategory, byArea, byEfCode, byEfMiddle, byMonth });
 }

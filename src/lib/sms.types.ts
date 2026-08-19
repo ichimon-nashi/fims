@@ -155,12 +155,14 @@ export interface CrewReportCategory {
 
 export interface CrewReport {
 	id: string;
-	report_code?: string | null; // null = no code ("其他來源"); UI displays "NIL" as a fallback, never stored as a string
+	report_code?: string | null; // AQD Code — always populated for new entries as of the 報告來源 removal; legacy records may still be null, displayed as "NIL"
 	report_year: number;
 	report_month: number; // 1-12
-	description: string;
-	action_taken?: string | null;
-	category_ids: string[]; // FK into crew_report_categories.id, multiple allowed
+	title: string; // 標題 — from AQD's Title column
+	description: string; // 描述 — from AQD's Description column
+	hazard_type?: string | null; // OF分類 — from AQD's Hazard Type column. Distinct from EF分類 (category_ids below), which is this app's own department-defined tagging system, not an AQD import field.
+	action_taken?: string | null; // 辦理情形 — from AQD's Synopsis column
+	category_ids: string[]; // EF分類 — FK into crew_report_categories.id, multiple allowed
 	created_at: string;
 	created_by?: string;
 }

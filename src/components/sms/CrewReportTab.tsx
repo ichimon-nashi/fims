@@ -1,7 +1,7 @@
 // src/components/sms/CrewReportTab.tsx
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Fragment } from "react";
 import styles from "./CrewReportTab.module.css";
 import CrewReportModal from "./CrewReportModal";
 import CrewReportCategoryModal from "./CrewReportCategoryModal";
@@ -39,6 +39,9 @@ export default function CrewReportTab({
 	);
 	const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
 	const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+		new Set()
+	);
+	const [expandedReportRows, setExpandedReportRows] = useState<Set<string>>(
 		new Set()
 	);
 
@@ -174,6 +177,15 @@ export default function CrewReportTab({
 		});
 	};
 
+	const toggleReportRow = (id: string) => {
+		setExpandedReportRows((prev) => {
+			const next = new Set(prev);
+			if (next.has(id)) next.delete(id);
+			else next.add(id);
+			return next;
+		});
+	};
+
 	const handleAdd = () => {
 		setEditingEntry(null);
 		setShowAddModal(true);
@@ -201,59 +213,96 @@ export default function CrewReportTab({
 		}
 	};
 
-	const renderReportRow = (report: CrewReport) => (
-		<tr key={report.id}>
-			<td>
-				{report.report_code ? (
-					<span className={styles.reportCode}>{report.report_code}</span>
-				) : (
-					<span className={`${styles.reportCode} ${styles.nil}`}>NIL</span>
+	const renderReportRow = (report: CrewReport) => {
+		const isRowExpanded = expandedReportRows.has(report.id);
+		return (
+			<Fragment key={report.id}>
+				<tr>
+					<td className={styles.expandCol}>
+						<button
+							className={styles.expandButton}
+							onClick={() => toggleReportRow(report.id)}
+							title={isRowExpanded ? "收合" : "展開詳情"}
+						>
+							{isRowExpanded ? "▼" : "▶"}
+						</button>
+					</td>
+					<td>
+						{report.report_code ? (
+							<span className={styles.reportCode}>{report.report_code}</span>
+						) : (
+							<span className={`${styles.reportCode} ${styles.nil}`}>NIL</span>
+						)}
+					</td>
+					<td className={styles.descCell}>{report.title}</td>
+					<td className={styles.descCell}>{report.description}</td>
+					<td>
+						<div className={styles.tags}>
+							{report.category_ids.map((id) => {
+								const cat = categoryMap.get(id);
+								if (!cat) return null;
+								return (
+									<span
+										key={id}
+										className={styles.tag}
+										style={{
+											background: `${cat.color_hex}33`,
+											borderColor: `${cat.color_hex}80`,
+										}}
+									>
+										{cat.name}
+									</span>
+								);
+							})}
+						</div>
+					</td>
+					{isAdmin && (
+						<td>
+							<div className={styles.rowActions}>
+								<button
+									className={styles.iconBtnSm}
+									onClick={() => handleEdit(report)}
+									title="編輯"
+								>
+									📝
+								</button>
+								<button
+									className={styles.iconBtnSm}
+									onClick={() => handleDelete(report)}
+									title="刪除"
+								>
+									❌
+								</button>
+							</div>
+						</td>
+					)}
+				</tr>
+				{isRowExpanded && (
+					<tr className={styles.expandedRow}>
+						<td colSpan={isAdmin ? 6 : 5}>
+							<div className={styles.expandedContent}>
+								<div className={styles.detailItem}>
+									<strong>OF分類:</strong>
+									<p>{report.hazard_type || "-"}</p>
+								</div>
+								<div className={styles.detailItem}>
+									<strong>辦理情形:</strong>
+									<p>{report.action_taken || "-"}</p>
+								</div>
+								<div className={styles.detailItem}>
+									<strong>年/月:</strong>
+									<p>
+										{report.report_year}-
+										{String(report.report_month).padStart(2, "0")}
+									</p>
+								</div>
+							</div>
+						</td>
+					</tr>
 				)}
-			</td>
-			<td className={styles.descCell}>{report.description}</td>
-			<td>
-				<div className={styles.tags}>
-					{report.category_ids.map((id) => {
-						const cat = categoryMap.get(id);
-						if (!cat) return null;
-						return (
-							<span
-								key={id}
-								className={styles.tag}
-								style={{
-									background: `${cat.color_hex}33`,
-									borderColor: `${cat.color_hex}80`,
-								}}
-							>
-								{cat.name}
-							</span>
-						);
-					})}
-				</div>
-			</td>
-			<td className={styles.actionCell}>{report.action_taken || "-"}</td>
-			{isAdmin && (
-				<td>
-					<div className={styles.rowActions}>
-						<button
-							className={styles.iconBtnSm}
-							onClick={() => handleEdit(report)}
-							title="編輯"
-						>
-							📝
-						</button>
-						<button
-							className={styles.iconBtnSm}
-							onClick={() => handleDelete(report)}
-							title="刪除"
-						>
-							❌
-						</button>
-					</div>
-				</td>
-			)}
-		</tr>
-	);
+			</Fragment>
+		);
+	};
 
 	if (loading) {
 		return (
@@ -376,20 +425,22 @@ export default function CrewReportTab({
 											<div className={styles.tableWrapper}>
 											<table className={styles.table}>
 												<colgroup>
-													<col style={{ width: "14%" }} />
-													<col style={{ width: "32%" }} />
+													<col style={{ width: "6%" }} />
+													<col style={{ width: "12%" }} />
 													<col style={{ width: "18%" }} />
-													<col style={{ width: "26%" }} />
+													<col style={{ width: "28%" }} />
+													<col style={{ width: "18%" }} />
 													{isAdmin && (
 														<col style={{ width: "10%" }} />
 													)}
 												</colgroup>
 												<thead>
 													<tr>
+														<th></th>
 														<th>編號</th>
+														<th>標題</th>
 														<th>描述</th>
-														<th>分類</th>
-														<th>辦理情形</th>
+														<th>EF分類</th>
 														{isAdmin && <th>操作</th>}
 													</tr>
 												</thead>
@@ -447,10 +498,11 @@ export default function CrewReportTab({
 									<div className={styles.tableWrapper}>
 										<table className={styles.table}>
 											<colgroup>
-												<col style={{ width: "14%" }} />
-												<col style={{ width: "32%" }} />
-												<col style={{ width: "18%" }} />
+												<col style={{ width: "12%" }} />
+												<col style={{ width: "16%" }} />
 												<col style={{ width: "26%" }} />
+												<col style={{ width: "14%" }} />
+												<col style={{ width: "22%" }} />
 												{isAdmin && (
 													<col style={{ width: "10%" }} />
 												)}
@@ -458,6 +510,7 @@ export default function CrewReportTab({
 											<thead>
 												<tr>
 													<th>編號</th>
+													<th>標題</th>
 													<th>描述</th>
 													<th>年/月</th>
 													<th>辦理情形</th>
@@ -483,6 +536,9 @@ export default function CrewReportTab({
 																	NIL
 																</span>
 															)}
+														</td>
+														<td className={styles.descCell}>
+															{report.title}
 														</td>
 														<td className={styles.descCell}>
 															{report.description}
@@ -649,9 +705,13 @@ function CategoryDonutChart({
 						background: "#1a1f35",
 						border: "1px solid rgba(255,255,255,0.1)",
 						borderRadius: 8,
-						color: "#e8e9ed",
 					}}
-					formatter={(value: number, name: string) => [`${value} 筆`, name]}
+					itemStyle={{ color: "#e8e9ed" }}
+					labelStyle={{ color: "#e8e9ed" }}
+					formatter={(value: number, name: string) => {
+						const pct = total ? Math.round((value / total) * 100) : 0;
+						return [`${value} 筆 (${pct}%)`, name];
+					}}
 				/>
 				<Legend
 					wrapperStyle={{ paddingTop: 24 }}

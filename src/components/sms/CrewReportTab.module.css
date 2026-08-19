@@ -426,6 +426,66 @@
 	transform: scale(1.1);
 }
 
+/* Row-level expand/collapse for the collapsed 編號/標題/描述/EF分類 view —
+   OF分類/辦理情形/年月 shown on expand. Same chevron + detail-row
+   convention already established in SRMTableTab. */
+.expandCol {
+	width: 40px;
+	text-align: center;
+}
+
+.expandButton {
+	background: rgba(74, 158, 255, 0.1);
+	border: 1px solid rgba(74, 158, 255, 0.3);
+	color: #4a9eff;
+	padding: 0.4rem 0.6rem;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	font-size: 0.85rem;
+	min-width: 36px;
+	min-height: 36px;
+}
+
+.expandButton:hover {
+	background: rgba(74, 158, 255, 0.2);
+	transform: scale(1.05);
+}
+
+.expandedRow {
+	background: rgba(255, 255, 255, 0.02);
+}
+
+.expandedRow td {
+	padding: 0 !important;
+}
+
+.expandedContent {
+	padding: 1.25rem 1.5rem;
+	border-top: 1px solid rgba(74, 158, 255, 0.2);
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	text-align: left;
+}
+
+.detailItem strong {
+	display: block;
+	color: #a0aec0;
+	font-size: 0.85rem;
+	margin-bottom: 0.25rem;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.detailItem p {
+	margin: 0;
+	color: #e8e9ed;
+	line-height: 1.6;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
 /* Pie chart modal — self-contained to this component, deliberately not part
    of StatisticsTab. */
 .modalOverlay {

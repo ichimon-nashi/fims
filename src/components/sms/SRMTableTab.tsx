@@ -3,7 +3,60 @@
 
 import React, { useState, useEffect } from "react";
 import styles from "./SRMTableTab.module.css";
-import SRMEntryModal from "./SRMEntryModal";
+import SRMEntryModal, { SRM_SOURCE_TYPES } from "./SRMEntryModal";
+
+// One distinct color per 資料來源 category, applied via inline style (same
+// dynamic-coloring pattern already used for risk badges below) rather than
+// a CSS-class lookup — that approach was the actual bug fixed several
+// rounds ago, since Chinese category text can't safely serve as a CSS
+// module class key. Matches the existing translucent-chip visual style
+// already used for this badge (and .codeTag elsewhere in this file)
+// rather than switching to riskBadge's solid-fill style, so all badges in
+// this table stay visually consistent.
+//
+// Colors are D3's "category10" palette — a professionally designed,
+// widely-used categorical scheme — rather than a self-derived hue wheel.
+// Two earlier attempts both failed on the same pair (外部查核 vs
+// 日常作業監控, both green): the second attempt used mathematically exact
+// 36° hue steps, verified by computing every gap, and STILL produced two
+// colors that read as "green" — because equal hue-angle spacing isn't
+// equal *perceptual* spacing. Human hue discrimination is weakest in the
+// green region of the wheel (roughly 90–150°), so two colors 36° apart
+// there can still look like shades of the same color. category10 sidesteps
+// this by construction — it contains exactly one green — rather than by
+// further degree-counting, which was already shown not to be sufficient.
+interface SourceTypeColorSet {
+	bg: string;
+	text: string;
+	border: string;
+}
+
+const SOURCE_TYPE_COLOR_SETS: SourceTypeColorSet[] = [
+	{ bg: "rgba(31, 119, 180, 0.2)", text: "#9fceef", border: "rgba(31, 119, 180, 0.4)" }, // blue
+	{ bg: "rgba(255, 127, 14, 0.2)", text: "#ffc38f", border: "rgba(255, 127, 14, 0.4)" }, // orange
+	{ bg: "rgba(44, 160, 44, 0.2)", text: "#a7e7a7", border: "rgba(44, 160, 44, 0.4)" }, // green
+	{ bg: "rgba(214, 39, 40, 0.2)", text: "#eea0a1", border: "rgba(214, 39, 40, 0.4)" }, // red
+	{ bg: "rgba(148, 103, 189, 0.2)", text: "#c8b0dd", border: "rgba(148, 103, 189, 0.4)" }, // purple
+	{ bg: "rgba(140, 86, 75, 0.2)", text: "#ddb8b0", border: "rgba(140, 86, 75, 0.4)" }, // brown
+	{ bg: "rgba(227, 119, 194, 0.2)", text: "#eca2d5", border: "rgba(227, 119, 194, 0.4)" }, // pink
+	{ bg: "rgba(127, 127, 127, 0.2)", text: "#d1d5db", border: "rgba(127, 127, 127, 0.4)" }, // gray (achromatic — text kept neutral, not hue-derived)
+	{ bg: "rgba(188, 189, 34, 0.2)", text: "#edeea0", border: "rgba(188, 189, 34, 0.4)" }, // olive
+	{ bg: "rgba(23, 190, 207, 0.2)", text: "#9aebf4", border: "rgba(23, 190, 207, 0.4)" }, // cyan
+];
+
+const SOURCE_TYPE_COLORS: Record<string, SourceTypeColorSet> = Object.fromEntries(
+	SRM_SOURCE_TYPES.map((type, i) => [type, SOURCE_TYPE_COLOR_SETS[i % SOURCE_TYPE_COLOR_SETS.length]])
+);
+
+const DEFAULT_SOURCE_TYPE_COLOR: SourceTypeColorSet = {
+	bg: "rgba(107, 114, 128, 0.15)",
+	text: "#d1d5db",
+	border: "rgba(107, 114, 128, 0.3)",
+}; // legacy "SA"/"SRM" or unrecognized values
+
+function getSourceTypeColors(sourceType: string): SourceTypeColorSet {
+	return SOURCE_TYPE_COLORS[sourceType] || DEFAULT_SOURCE_TYPE_COLOR;
+}
 
 interface SRMTableTabProps {
 	currentYear: number;
@@ -15,7 +68,7 @@ interface SRMEntry {
 	id: string;
 	number: string;
 	file_date: string;
-	identification_source_type: "SA" | "SRM";
+	identification_source_type: string; // 資料來源 — 10 categories as of the latest update; historical records may still hold the old "SA"/"SRM" values
 	hazard_description?: string;
 	possible_cause?: string;
 	hazard_impact?: string;
@@ -225,13 +278,14 @@ export default function SRMTableTab({
 	};
 
 	const toggleRow = (id: string) => {
-		const newExpanded = new Set(expandedRows);
-		if (newExpanded.has(id)) {
-			newExpanded.delete(id);
-		} else {
-			newExpanded.add(id);
-		}
-		setExpandedRows(newExpanded);
+		setExpandedRows((prev) => {
+			// Accordion: expanding a row collapses whichever other row was
+			// open, rather than allowing multiple rows expanded at once.
+			if (prev.has(id)) {
+				return new Set();
+			}
+			return new Set([id]);
+		});
 	};
 
 	const handleAdd = () => {
@@ -467,7 +521,7 @@ export default function SRMTableTab({
 														<th
 															style={getColumnStyle(
 																"source",
-																80
+																140
 															)}
 														>
 															來源
@@ -483,7 +537,7 @@ export default function SRMTableTab({
 																		"source",
 																		columnWidths[
 																			"source"
-																		] || 80
+																		] || 140
 																	)
 																}
 															/>
@@ -494,7 +548,7 @@ export default function SRMTableTab({
 																250
 															)}
 														>
-															危害描述
+															標題
 															<div
 																className={
 																	styles.resizeHandle
@@ -595,11 +649,13 @@ export default function SRMTableTab({
 																	);
 																return (
 																	<React.Fragment key={entry.id}>
-																		<tr
-																			className={
-																				styles.mainRow
-																			}
-																		>
+																	<tr
+																		className={
+																			isExpanded
+																				? `${styles.mainRow} ${styles.mainRowExpanded}`
+																				: styles.mainRow
+																		}
+																	>
 																			<td
 																				className={
 																					styles.expandCol
@@ -620,7 +676,7 @@ export default function SRMTableTab({
 																							: "展開詳情"
 																					}
 																				>
-																					≡
+																					{isExpanded ? "▼" : "▶"}
 																				</button>
 																			</td>
 																			<td
@@ -639,17 +695,14 @@ export default function SRMTableTab({
 																			</td>
 																			<td>
 																				<span
-																					className={`${
-																						styles.sourceBadge
-																					} ${
-																						styles[
-																							entry.identification_source_type?.toLowerCase() || ''
-																						]
-																					}`}
+																					className={styles.sourceBadge}
+																					style={{
+																						backgroundColor: getSourceTypeColors(entry.identification_source_type).bg,
+																						color: getSourceTypeColors(entry.identification_source_type).text,
+																						borderColor: getSourceTypeColors(entry.identification_source_type).border,
+																					}}
 																				>
-																					{
-																						entry.identification_source_type || 'N/A'
-																					}
+																					{entry.identification_source_type || 'N/A'}
 																				</span>
 																			</td>
 																			<td
@@ -765,340 +818,152 @@ export default function SRMTableTab({
 																							styles.expandedContent
 																						}
 																					>
-																						<div
-																							className={
-																								styles.detailGrid
-																							}
-																						>
-																							<div
-																								className={
-																									styles.detailSection
-																								}
-																							>
-																								<h4>
-																									基本資訊
-																								</h4>
-																								<div
-																									className={
-																										styles.detailItem
-																									}
-																								>
-																									<strong>
-																										管控表編號:
-																									</strong>{" "}
-																									{
-																										entry.number
-																									}
-																								</div>
-																								<div
-																									className={
-																										styles.detailItem
-																									}
-																								>
-																									<strong>
-																										建檔日期:
-																									</strong>{" "}
-																									{formatDate(
-																										entry.file_date
-																									)}
-																								</div>
-																								<div
-																									className={
-																										styles.detailItem
-																									}
-																								>
-																									<strong>
-																										來源類型:
-																									</strong>{" "}
-																									{
-																										entry.identification_source_type || 'N/A'
-																									}
-																								</div>
-																							</div>
+										<div className={styles.metaBar}>
+											<span className={styles.metaBarItem}>
+												<strong>管控表編號:</strong> {entry.number}
+											</span>
+											<span className={styles.metaBarItem}>
+												<strong>建檔日期:</strong> {formatDate(entry.file_date)}
+											</span>
+											<span className={styles.metaBarItem}>
+												<strong>來源:</strong>
+												<span
+													className={styles.sourceBadge}
+													style={{
+														backgroundColor: getSourceTypeColors(entry.identification_source_type).bg,
+														color: getSourceTypeColors(entry.identification_source_type).text,
+														borderColor: getSourceTypeColors(entry.identification_source_type).border,
+													}}
+												>
+													{entry.identification_source_type || "N/A"}
+												</span>
+											</span>
+										</div>
 
-																							<div
-																								className={
-																									styles.detailSection
-																								}
-																							>
-																								<h4>
-																									危害資訊
-																								</h4>
-																								<div
-																									className={
-																										styles.detailItem
-																									}
-																								>
-																									<strong>
-																										標題:
-																									</strong>
-																									<p>
-																										{entry.hazard_description ||
-																											"-"}
-																									</p>
-																								</div>
-																								<div
-																									className={
-																										styles.detailItem
-																									}
-																								>
-																									<strong>
-																										危害描述:
-																									</strong>
-																									<p>
-																										{entry.possible_cause ||
-																											"-"}
-																									</p>
-																								</div>
-																								<div
-																									className={
-																										styles.detailItem
-																									}
-																								>
-																									<strong>
-																										危害影響:
-																									</strong>
-																									<p>
-																										{entry.hazard_impact ||
-																											"-"}
-																									</p>
-																								</div>
-																							</div>
+										<div className={styles.detailStack}>
+											<div className={styles.detailRow}>
+											<div className={styles.detailSection}>
+												<h4>危害資訊</h4>
+												<div className={styles.detailItem}>
+													<strong>標題:</strong>
+													<p>{entry.hazard_description || "-"}</p>
+												</div>
+												<div className={styles.detailItem}>
+													<strong>危害描述:</strong>
+													<p>{entry.possible_cause || "-"}</p>
+												</div>
+												<div className={styles.detailItem}>
+													<strong>危害影響:</strong>
+													<p>{entry.hazard_impact || "-"}</p>
+												</div>
+											</div>
 
-																							<div
-																								className={
-																									styles.detailSection
-																								}
-																							>
-																								<h4>
-																									風險評估
-																								</h4>
-																								<div
-																									className={
-																										styles.detailItem
-																									}
-																								>
-																									<strong>
-																										現有措施:
-																									</strong>
-																									<p>
-																										{entry.existing_measures ||
-																											"-"}
-																									</p>
-																								</div>
-																								<div
-																									className={
-																										styles.detailItem
-																									}
-																								>
-																									<strong>
-																										當前風險評估:
-																									</strong>{" "}
-																									{entry.current_risk_assessment ||
-																										"-"}
-																								</div>
-																								<div
-																									className={
-																										styles.detailItem
-																									}
-																								>
-																									<strong>
-																										風險緩解措施:
-																									</strong>
-																									{(() => {
-																										if (
-																											!entry.risk_mitigation_measures
-																										)
-																											return (
-																												<p>
-																													-
-																												</p>
-																											);
+											<div className={styles.detailSection}>
+												<h4>分析代碼</h4>
+												<div className={styles.detailItem}>
+													<strong>人因代碼:</strong>
+													<div className={styles.codeTags}>
+														{entry.human_factors_codes && entry.human_factors_codes.length > 0
+															? entry.human_factors_codes.map((code) => (
+																	<span key={code} className={styles.codeTag}>
+																		{code}
+																	</span>
+															  ))
+															: "-"}
+													</div>
+												</div>
+												<div className={styles.detailItem}>
+													<strong>EF屬性代碼:</strong>
+													<div className={styles.codeTags}>
+														{entry.ef_attribute_codes && entry.ef_attribute_codes.length > 0
+															? entry.ef_attribute_codes.map((code) => (
+																	<span key={code} className={styles.codeTag}>
+																		{code}
+																	</span>
+															  ))
+															: "-"}
+													</div>
+												</div>
+											</div>
+											</div>
 
-																										try {
-																											const measures =
-																												JSON.parse(
-																													entry.risk_mitigation_measures
-																												);
-																											if (
-																												Array.isArray(
-																													measures
-																												) &&
-																												measures.length >
-																													0
-																											) {
-																												return (
-																													<div
-																														className={
-																															styles.measuresTable
-																														}
-																													>
-																														<table>
-																															<thead>
-																																<tr>
-																																	<th>
-																																		風險緩解措施
-																																	</th>
-																																	<th>
-																																		辦理單位
-																																	</th>
-																																	<th>
-																																		實施期限
-																																	</th>
-																																</tr>
-																															</thead>
-																															<tbody>
-																																{measures.map(
-																																	(
-																																		measure: any,
-																																		idx: number
-																																	) => (
-																																		<tr
-																																			key={
-																																				idx
-																																			}
-																																		>
-																																			<td>
-																																				{measure.description ||
-																																					"-"}
-																																			</td>
-																																			<td>
-																																				{measure.department ||
-																																					"-"}
-																																			</td>
-																																			<td>
-																																				{measure.deadline ||
-																																					"-"}
-																																			</td>
-																																		</tr>
-																																	)
-																																)}
-																															</tbody>
-																														</table>
-																													</div>
-																												);
-																											}
-																											// Fallback for non-array JSON
-																											return (
-																												<p>
-																													{
-																														entry.risk_mitigation_measures
-																													}
-																												</p>
-																											);
-																										} catch {
-																											// Old string format
-																											return (
-																												<p>
-																													{
-																														entry.risk_mitigation_measures
-																													}
-																												</p>
-																											);
-																										}
-																									})()}
-																								</div>
-																								<div
-																									className={
-																										styles.detailItem
-																									}
-																								>
-																									<strong>
-																										緩解後評估:
-																									</strong>{" "}
-																									{entry.post_mitigation_assessment ||
-																										"-"}
-																								</div>
-																							</div>
+											<div className={styles.detailSection}>
+												<h4>風險評估</h4>
+												<div className={styles.detailItem}>
+													<strong>現有措施:</strong>
+													<p>{entry.existing_measures || "-"}</p>
+												</div>
+												<div className={styles.detailItem}>
+													<strong>當前風險評估:</strong>{" "}
+													{entry.current_risk_assessment ? (
+														<span
+															className={styles.riskBadge}
+															style={{
+																backgroundColor: getRiskColor(entry.current_risk_assessment),
+															}}
+														>
+															{entry.current_risk_assessment}
+														</span>
+													) : (
+														"-"
+													)}
+												</div>
+												<div className={styles.detailItem}>
+													<strong>風險緩解措施:</strong>
+													{(() => {
+														if (!entry.risk_mitigation_measures) return <p>-</p>;
 
-																							<div
-																								className={
-																									styles.detailSection
-																								}
-																							>
-																								<h4>
-																									分析代碼
-																								</h4>
-																								<div
-																									className={
-																										styles.detailItem
-																									}
-																								>
-																									<strong>
-																										人因代碼:
-																									</strong>
-																									<div
-																										className={
-																											styles.codeTags
-																										}
-																									>
-																										{entry.human_factors_codes &&
-																										entry
-																											.human_factors_codes
-																											.length >
-																											0
-																											? entry.human_factors_codes.map(
-																													(
-																														code
-																													) => (
-																														<span
-																															key={
-																																code
-																															}
-																															className={
-																																styles.codeTag
-																															}
-																														>
-																															{
-																																code
-																															}
-																														</span>
-																													)
-																											  )
-																											: "-"}
-																									</div>
-																								</div>
-																								<div
-																									className={
-																										styles.detailItem
-																									}
-																								>
-																									<strong>
-																										EF屬性代碼:
-																									</strong>
-																									<div
-																										className={
-																											styles.codeTags
-																										}
-																									>
-																										{entry.ef_attribute_codes &&
-																										entry
-																											.ef_attribute_codes
-																											.length >
-																											0
-																											? entry.ef_attribute_codes.map(
-																													(
-																														code
-																													) => (
-																														<span
-																															key={
-																																code
-																															}
-																															className={
-																																styles.codeTag
-																															}
-																														>
-																															{
-																																code
-																															}
-																														</span>
-																													)
-																											  )
-																											: "-"}
-																									</div>
-																								</div>
-																							</div>
-																						</div>
+														try {
+															const measures = JSON.parse(entry.risk_mitigation_measures);
+															if (Array.isArray(measures) && measures.length > 0) {
+																return (
+																	<div className={styles.measuresTable}>
+																		<table>
+																			<thead>
+																				<tr>
+																					<th>風險緩解措施</th>
+																					<th>辦理單位</th>
+																					<th>實施期限</th>
+																				</tr>
+																			</thead>
+																			<tbody>
+																				{measures.map((measure: any, idx: number) => (
+																					<tr key={idx}>
+																						<td>{measure.description || "-"}</td>
+																						<td>{measure.department || "-"}</td>
+																						<td>{measure.deadline || "-"}</td>
+																					</tr>
+																				))}
+																			</tbody>
+																		</table>
+																	</div>
+																);
+															}
+															// Fallback for non-array JSON
+															return <p>{entry.risk_mitigation_measures}</p>;
+														} catch {
+															// Old string format
+															return <p>{entry.risk_mitigation_measures}</p>;
+														}
+													})()}
+												</div>
+												<div className={styles.detailItem}>
+													<strong>緩解後評估:</strong>{" "}
+													{entry.post_mitigation_assessment ? (
+														<span
+															className={styles.riskBadge}
+															style={{
+																backgroundColor: getRiskColor(entry.post_mitigation_assessment),
+															}}
+														>
+															{entry.post_mitigation_assessment}
+														</span>
+													) : (
+														"-"
+													)}
+												</div>
+											</div>
+										</div>
 																					</div>
 																				</td>
 																			</tr>

@@ -30,8 +30,12 @@ export async function PUT(
 			updates.report_year = body.report_year;
 		if (body.report_month !== undefined)
 			updates.report_month = body.report_month;
+		if (body.title !== undefined)
+			updates.title = body.title;
 		if (body.description !== undefined)
 			updates.description = body.description;
+		if (body.hazard_type !== undefined)
+			updates.hazard_type = body.hazard_type || null;
 		if (body.action_taken !== undefined)
 			updates.action_taken = body.action_taken || null;
 		if (body.category_ids !== undefined)

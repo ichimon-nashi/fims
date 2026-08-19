@@ -10,6 +10,25 @@ import {
 	EF_ATTRIBUTE_CATEGORIES,
 } from "@/lib/sms.constants";
 
+// 資料來源 categories — replaces the old binary SA/SRM distinction.
+// Historical entries may still have "SA" or "SRM" stored as their raw
+// value (no data migration was requested); this list only governs what
+// NEW entries can select going forward.
+export const SRM_SOURCE_TYPES = [
+	"跨單位溝通/其他",
+	"例行性自我督查",
+	"一級查核",
+	"外部查核",
+	"日常作業監控",
+	"安全報告AQD",
+	"CAA/FAA飛安通告",
+	"安全案例",
+	"組員報告e-TR",
+	"改變管理",
+] as const;
+
+export type SRMSourceType = (typeof SRM_SOURCE_TYPES)[number];
+
 interface RiskMitigationMeasure {
 	description: string;
 	department: string;
@@ -32,7 +51,7 @@ export default function SRMEntryModal({
 	const [formData, setFormData] = useState({
 		number: "",
 		file_date: "",
-		identification_source_type: "SA" as "SA" | "SRM",
+		identification_source_type: SRM_SOURCE_TYPES[0] as SRMSourceType,
 		occurrence_month: "", // NEW: YYYY-MM format
 		hazard_description: "",
 		possible_cause: "",
@@ -60,7 +79,7 @@ export default function SRMEntryModal({
 				number: entry.number || "",
 				file_date: entry.file_date || "",
 				identification_source_type:
-					entry.identification_source_type || "SA",
+					entry.identification_source_type || SRM_SOURCE_TYPES[0],
 				occurrence_month: entry.occurrence_month || "",
 				hazard_description: entry.hazard_description || "",
 				possible_cause: entry.possible_cause || "",
@@ -221,10 +240,7 @@ export default function SRMEntryModal({
 				<form onSubmit={handleSubmit}>
 					<div className={styles.modalBody}>
 						{/* Row 1: 檔案日期, 編號, 資料來源, 事件月份 in four columns */}
-						<div
-							className={styles.formRow}
-							style={{ gridTemplateColumns: "1fr 1fr 1fr 1fr" }}
-						>
+						<div className={`${styles.formRow} ${styles.formRowFourCol}`}>
 							<div className={styles.formGroup}>
 								<label className={styles.required}>
 									檔案日期
@@ -262,48 +278,22 @@ export default function SRMEntryModal({
 
 							<div className={styles.formGroup}>
 								<label>資料來源</label>
-								<div className={styles.radioGroup}>
-									<label>
-										<input
-											type="radio"
-											value="SA"
-											checked={
-												formData.identification_source_type ===
-												"SA"
-											}
-											onChange={(e) =>
-												setFormData({
-													...formData,
-													identification_source_type:
-														e.target.value as
-															| "SA"
-															| "SRM",
-												})
-											}
-										/>
-										SA
-									</label>
-									<label>
-										<input
-											type="radio"
-											value="SRM"
-											checked={
-												formData.identification_source_type ===
-												"SRM"
-											}
-											onChange={(e) =>
-												setFormData({
-													...formData,
-													identification_source_type:
-														e.target.value as
-															| "SA"
-															| "SRM",
-												})
-											}
-										/>
-										SRM
-									</label>
-								</div>
+								<select
+									className={styles.select}
+									value={formData.identification_source_type}
+									onChange={(e) =>
+										setFormData({
+											...formData,
+											identification_source_type: e.target.value as SRMSourceType,
+										})
+									}
+								>
+									{SRM_SOURCE_TYPES.map((sourceType) => (
+										<option key={sourceType} value={sourceType}>
+											{sourceType}
+										</option>
+									))}
+								</select>
 							</div>
 
 							<div className={styles.formGroup}>

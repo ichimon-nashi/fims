@@ -103,7 +103,7 @@ function SMSContent() {
             onClick={() => setActiveTab('rr-sms')}
           >
             風險檢視
-            <span className={styles.tabSubtitle}>AQD RR SMS</span>
+            <span className={styles.tabSubtitle}>AQD RR</span>
           </button>
           <button
             className={`${styles.tab} ${activeTab === 'srm-table' ? styles.activeTab : ''}`}
@@ -116,7 +116,7 @@ function SMSContent() {
             className={`${styles.tab} ${activeTab === 'statistics' ? `${styles.activeTab} ${styles.statisticsActiveTab}` : ''}`}
             onClick={() => setActiveTab('statistics')}
           >
-            SMS統計
+            SMS統計分析
             <span className={styles.tabSubtitle}>SMS Statistics</span>
           </button>
           <div className={styles.tabDivider} aria-hidden="true" />
@@ -124,8 +124,8 @@ function SMSContent() {
             className={`${styles.tab} ${activeTab === 'crew-report' ? `${styles.activeTab} ${styles.crewReportActiveTab}` : ''}`}
             onClick={() => setActiveTab('crew-report')}
           >
-            組員報告
-            <span className={styles.tabSubtitle}>Crew Report</span>
+            OF安全報告
+            <span className={styles.tabSubtitle}>OF Safety Report</span>
           </button>
           <div className={styles.tabDivider} aria-hidden="true" />
           <button

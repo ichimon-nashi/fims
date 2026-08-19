@@ -60,3 +60,8 @@ export interface RoutineSummaryResponse {
 }
 
 export type PieGroupLevel = "code" | "category";
+
+// ── NEW ──────────────────────────────────────────
+// Chart style for the year-over-year category comparison view
+export type ChartStyle = "bar" | "radar";
+// ─────────────────────────────────────────────────

@@ -42,13 +42,14 @@ export default function CrewReportModal({
 	onClose,
 	onSave,
 }: CrewReportModalProps) {
-	const [source, setSource] = useState<"haz" | "other">("haz");
 	const [digits1, setDigits1] = useState(""); // 3 digits
 	const [digits2, setDigits2] = useState(""); // 2 digits
 	const [yearMonth, setYearMonth] = useState(
 		`${currentYear}-${String(new Date().getMonth() + 1).padStart(2, "0")}`
 	);
+	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
+	const [hazardType, setHazardType] = useState("");
 	const [actionTaken, setActionTaken] = useState("");
 	const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
 	const [loading, setLoading] = useState(false);
@@ -56,19 +57,14 @@ export default function CrewReportModal({
 	useEffect(() => {
 		if (entry) {
 			const parsed = parseHazCode(entry.report_code);
-			if (parsed) {
-				setSource("haz");
-				setDigits1(parsed.digits1);
-				setDigits2(parsed.digits2);
-			} else {
-				setSource("other");
-				setDigits1("");
-				setDigits2("");
-			}
+			setDigits1(parsed?.digits1 || "");
+			setDigits2(parsed?.digits2 || "");
 			setYearMonth(
 				`${entry.report_year}-${String(entry.report_month).padStart(2, "0")}`
 			);
+			setTitle(entry.title || "");
 			setDescription(entry.description || "");
+			setHazardType(entry.hazard_type || "");
 			setActionTaken(entry.action_taken || "");
 			setSelectedCategoryIds(entry.category_ids || []);
 		}
@@ -97,8 +93,13 @@ export default function CrewReportModal({
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 
-		if (source === "haz" && (!digits1 || !digits2)) {
+		if (!digits1 || !digits2) {
 			alert("請輸入完整的報告編號");
+			return;
+		}
+
+		if (!title.trim()) {
+			alert("請輸入標題");
 			return;
 		}
 
@@ -107,7 +108,8 @@ export default function CrewReportModal({
 			return;
 		}
 
-		// 分類 is optional — no validation on selectedCategoryIds.
+		// EF分類 is optional — no validation on selectedCategoryIds.
+		// OF分類 (hazard_type) is also optional — not every report has one.
 
 		const [yearStr, monthStr] = yearMonth.split("-");
 		if (!yearStr || !monthStr) {
@@ -120,16 +122,15 @@ export default function CrewReportModal({
 		try {
 			const token = localStorage.getItem("token");
 
-			const report_code =
-				source === "haz"
-					? `HAZ${digits1.padStart(3, "0")}-${digits2.padStart(2, "0")}`
-					: null;
+			const report_code = `HAZ${digits1.padStart(3, "0")}-${digits2.padStart(2, "0")}`;
 
 			const payload = {
 				report_code,
 				report_year: parseInt(yearStr, 10),
 				report_month: parseInt(monthStr, 10),
+				title: title.trim(),
 				description: description.trim(),
+				hazard_type: hazardType.trim() || null,
 				action_taken: actionTaken.trim() || null,
 				category_ids: selectedCategoryIds,
 				created_by: userId,
@@ -157,7 +158,7 @@ export default function CrewReportModal({
 			onSave();
 			onClose();
 		} catch (error: any) {
-			console.error("Error saving crew report:", error);
+			console.error("Error saving safety report:", error);
 			alert(error.message || "儲存失敗，請重試");
 		} finally {
 			setLoading(false);
@@ -170,7 +171,7 @@ export default function CrewReportModal({
 			    click must not discard an in-progress report. */}
 			<div className={styles.modal}>
 				<div className={styles.modalHeader}>
-					<h2>{entry ? "編輯組員報告" : "新增組員報告"}</h2>
+					<h2>{entry ? "編輯安全報告" : "新增安全報告"}</h2>
 					<button
 						type="button"
 						onClick={onClose}
@@ -183,61 +184,37 @@ export default function CrewReportModal({
 
 				<form onSubmit={handleSubmit}>
 					<div className={styles.form}>
-						<div className={styles.formGroup}>
-							<label>報告來源</label>
-							<div className={styles.radioGroup}>
-								<label>
-									<input
-										type="radio"
-										checked={source === "haz"}
-										onChange={() => setSource("haz")}
-									/>
-									安全報告
-								</label>
-								<label>
-									<input
-										type="radio"
-										checked={source === "other"}
-										onChange={() => setSource("other")}
-									/>
-									其他來源
-								</label>
-							</div>
-						</div>
-
 						<div className={styles.formRow}>
-							{source === "haz" && (
-								<div className={styles.formGroup}>
-									<label>
-										報告編號{" "}
-										<span className={styles.required}>*</span>
-									</label>
-									<div className={styles.codeInputGroup}>
-										<span className={styles.codePrefix}>HAZ</span>
-										<input
-											className={styles.codeSmallInput}
-											value={digits1}
-											onChange={(e) =>
-												handleDigits1Change(e.target.value)
-											}
-											maxLength={3}
-											placeholder="111"
-											inputMode="numeric"
-										/>
-										<span className={styles.codeSeparator}>-</span>
-										<input
-											className={styles.codeSmallInput}
-											value={digits2}
-											onChange={(e) =>
-												handleDigits2Change(e.target.value)
-											}
-											maxLength={2}
-											placeholder="11"
-											inputMode="numeric"
-										/>
-									</div>
+							<div className={styles.formGroup}>
+								<label>
+									報告編號{" "}
+									<span className={styles.required}>*</span>
+								</label>
+								<div className={styles.codeInputGroup}>
+									<span className={styles.codePrefix}>HAZ</span>
+									<input
+										className={styles.codeSmallInput}
+										value={digits1}
+										onChange={(e) =>
+											handleDigits1Change(e.target.value)
+										}
+										maxLength={3}
+										placeholder="111"
+										inputMode="numeric"
+									/>
+									<span className={styles.codeSeparator}>-</span>
+									<input
+										className={styles.codeSmallInput}
+										value={digits2}
+										onChange={(e) =>
+											handleDigits2Change(e.target.value)
+										}
+										maxLength={2}
+										placeholder="11"
+										inputMode="numeric"
+									/>
 								</div>
-							)}
+							</div>
 
 							<div className={styles.formGroup}>
 								<label>
@@ -255,6 +232,19 @@ export default function CrewReportModal({
 
 						<div className={styles.formGroup}>
 							<label>
+								標題 <span className={styles.required}>*</span>
+							</label>
+							<input
+								className={styles.input}
+								type="text"
+								value={title}
+								onChange={(e) => setTitle(e.target.value)}
+								required
+							/>
+						</div>
+
+						<div className={styles.formGroup}>
+							<label>
 								描述 <span className={styles.required}>*</span>
 							</label>
 							<textarea
@@ -267,7 +257,21 @@ export default function CrewReportModal({
 						</div>
 
 						<div className={styles.formGroup}>
-							<label>分類</label>
+							<label>OF分類</label>
+							<input
+								className={styles.input}
+								type="text"
+								value={hazardType}
+								onChange={(e) => setHazardType(e.target.value)}
+								placeholder="例如：Passenger、Employee Lapse"
+							/>
+							<small style={{ color: "#6b7280", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+								來自 AQD 匯入資料的 Hazard Type，與下方 EF分類（本系統自訂分類）為不同欄位
+							</small>
+						</div>
+
+						<div className={styles.formGroup}>
+							<label>EF分類</label>
 							<div className={styles.pillGrid}>
 								{pickableCategories.length === 0 && (
 									<span className={styles.placeholder}>

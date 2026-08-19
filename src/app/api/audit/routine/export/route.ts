@@ -24,10 +24,18 @@ import JSZip from "jszip";
 const MONTH_LABELS = ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
 const PIE_COLORS = ["4a9eff", "fb923c", "1baf7a", "e87ba4", "eda100", "6b7280"];
 
-// single year -> "2026年"; comparison -> "2025vs2026" (matches the sheet
-// naming convention requested, no "年" suffix when comparing two years)
+// single year -> "2026年 "; comparison -> "2025vs2026 " (trailing space is
+// intentional — every caller concatenates a Chinese suffix directly after
+// this, e.g. `${yearsLabel(years)}SAM分類統計`, and titles/sheet names
+// need a visible gap between the year and the label)
 function yearsLabel(years: number[]): string {
-	return years.length === 1 ? `${years[0]}年` : years.join("vs");
+	return (years.length === 1 ? `${years[0]}年` : years.join("vs")) + " ";
+}
+
+function niceAxisMax(values: number[]): number {
+	const rawMax = Math.max(1, ...values);
+	const step = rawMax <= 5 ? 1 : rawMax <= 10 ? 2 : rawMax <= 25 ? 5 : rawMax <= 50 ? 10 : 20;
+	return Math.ceil(rawMax / step) * step;
 }
 
 // ---- styling constants ----
@@ -87,8 +95,9 @@ export async function GET(req: NextRequest) {
 	// comparison export needs per-year breakdowns, not one combined total
 	// silently merging both years (which is what byCategory/byEfMiddle used
 	// to do before this — a real bug, not just a chart-type preference) ----
-	const byCategory: Record<string, Record<number, number>> = {}; // category -> year -> count
-	const byEfMiddle: Record<string, Record<number, number>> = {}; // EF attribute -> year -> count
+	const byCategory: Record<string, Record<number, number>> = {}; // SAM category, e.g. "Resource Management" — feeds the single-year pie
+	const byArea: Record<string, Record<number, number>> = {}; // SAM area / HFACS top tier, e.g. "組織影響" — feeds the comparison sheet only
+	const byEfMiddle: Record<string, Record<number, number>> = {}; // EF top-level attribute category -> year -> count
 	const byCode: Record<string, Record<number, number>> = {}; // SAM code -> year -> count
 	const byEfCode: Record<string, Record<number, number>> = {}; // EF code -> year -> count
 	const byMonth: Record<number, Record<number, number>> = {};
@@ -99,14 +108,20 @@ export async function GET(req: NextRequest) {
 		if (resolved) {
 			byCategory[resolved.category] ??= {};
 			byCategory[resolved.category][row.report_year] = (byCategory[resolved.category][row.report_year] ?? 0) + 1;
+			byArea[resolved.area] ??= {};
+			byArea[resolved.area][row.report_year] = (byArea[resolved.area][row.report_year] ?? 0) + 1;
 			byCode[resolved.code] ??= {};
 			byCode[resolved.code][row.report_year] = (byCode[resolved.code][row.report_year] ?? 0) + 1;
 		}
 		if (row.ef_code) {
 			const efResolved = EF_CODE_MAP[row.ef_code];
 			if (efResolved) {
-				byEfMiddle[efResolved.attributeName] ??= {};
-				byEfMiddle[efResolved.attributeName][row.report_year] = (byEfMiddle[efResolved.attributeName][row.report_year] ?? 0) + 1;
+				// top-tier grouping (e.g. "個人 (Individual)"), not the middle
+				// tier (e.g. "客艙組員行為") — EF's "類別" view was one level
+				// too granular; SAM/HFACS's single-year tier stays unchanged,
+				// only its comparison view moves up (see byArea above)
+				byEfMiddle[efResolved.categoryName] ??= {};
+				byEfMiddle[efResolved.categoryName][row.report_year] = (byEfMiddle[efResolved.categoryName][row.report_year] ?? 0) + 1;
 			}
 			byEfCode[row.ef_code] ??= {};
 			byEfCode[row.ef_code][row.report_year] = (byEfCode[row.ef_code][row.report_year] ?? 0) + 1;
@@ -129,11 +144,20 @@ export async function GET(req: NextRequest) {
 	// selected — it's a general-purpose overview, not a comparison; the
 	// dedicated comparison sheets below are where the per-year breakdown lives
 	const samBreakdown = buildYearBreakdown(byCategory);
+	const samAreaBreakdown = buildYearBreakdown(byArea);
 	const efBreakdown = buildYearBreakdown(byEfMiddle);
 	const samCodeBreakdown = buildYearBreakdown(byCode);
 	const efCodeBreakdown = buildYearBreakdown(byEfCode);
 	const samEntries: [string, number][] = samBreakdown.map((e) => [e.label, e.total]);
 	const efEntries: [string, number][] = efBreakdown.map((e) => [e.label, e.total]);
+
+	// code -> description, for the 代碼比較 sheets' extra column
+	const samCodeDescriptions: Record<string, string> = Object.fromEntries(
+		samCodeBreakdown.map((e) => [e.label, SAM_CODE_MAP[e.label]?.description_zh ?? ""])
+	);
+	const efCodeDescriptions: Record<string, string> = Object.fromEntries(
+		efCodeBreakdown.map((e) => [e.label, EF_CODE_MAP[e.label]?.description ?? ""])
+	);
 
 	const isComparison = years.length > 1;
 
@@ -296,43 +320,94 @@ export async function GET(req: NextRequest) {
 
 	// ==== sheets 3+4: {year}SAM分類統計 / {year}EF屬性統計 ====
 	// Single year -> pie, matching the app's pie mode. Comparing years ->
-	// grouped bar (one bar per year, per category) instead — a pie can only
-	// ever show one year's proportions, it has no way to show change
-	// between years, which is the whole point of a comparison export.
+	// grouped bar (one bar per year, per category) PLUS a radar chart on
+	// the same sheet (both anchored under one shared drawing part via
+	// injectChartsForSheet) — a pie can only ever show one year's
+	// proportions, it has no way to show change between years, which is
+	// the whole point of a comparison export. includeRadar is false for
+	// the code-level 代碼比較 sheets below — those have far more
+	// categories (individual SAM/EF codes) than the category-level
+	// sheets, and a radar with that many spokes isn't useful.
+	//
+	// descriptions is optional: when given, inserts an extra column
+	// between the label and the year columns (used only by the EF代碼比較
+	// sheet, to show what each code actually means) — every other caller
+	// omits it and the sheet layout is unchanged from before.
 	const BAR_COMPARE_COLORS = ["4a9eff", "fb923c"];
 	function addCategoryStatsSheet(
 		sheetName: string,
 		headerLabel: string,
 		breakdown: { label: string; perYear: number[]; total: number }[],
-		pieColor: string
+		pieColor: string,
+		includeRadar: boolean = true,
+		descriptions?: Record<string, string>
 	) {
 		if (breakdown.length === 0) return;
 		const sheet = workbook.addWorksheet(sheetName);
-		sheet.columns = [{ width: 24 }, ...years.map(() => ({ width: 10 }))];
+		const hasDescCol = !!descriptions;
+		sheet.columns = [
+			{ width: 24 },
+			...(hasDescCol ? [{ width: 45 }] : []),
+			...years.map(() => ({ width: 10 })),
+		];
 
-		const headerRow = [headerLabel, ...years.map(String)];
+		const headerRow = [headerLabel, ...(hasDescCol ? ["說明"] : []), ...years.map(String)];
 		headerRow.forEach((label, i) => {
 			const cell = sheet.getCell(1, i + 1);
 			cell.value = label; cell.fill = HEADER_FILL; cell.font = HEADER_FONT; cell.alignment = CENTER; cell.border = CELL_BORDER;
 		});
+
+		const firstYearCol = hasDescCol ? 3 : 2; // 1-indexed
 		breakdown.forEach((entry, i) => {
 			const r = i + 2;
 			sheet.getCell(r, 1).value = entry.label;
 			sheet.getCell(r, 1).border = CELL_BORDER;
 			sheet.getCell(r, 1).alignment = MIDDLE;
+			if (hasDescCol) {
+				const descCell = sheet.getCell(r, 2);
+				descCell.value = descriptions![entry.label] ?? "";
+				descCell.border = CELL_BORDER;
+				descCell.alignment = MIDDLE_LEFT;
+			}
 			entry.perYear.forEach((v, yi) => {
-				const cell = sheet.getCell(r, yi + 2);
+				const cell = sheet.getCell(r, firstYearCol + yi);
 				cell.value = v;
 				cell.border = CELL_BORDER;
 				cell.alignment = MIDDLE;
 			});
 		});
 
-		const anchorFromCol = years.length + 2;
-		const spec: ChartPlacement["spec"] = isComparison
-			? {
-					type: "bar",
-					title: sheetName,
+		const anchorFromCol = years.length + firstYearCol;
+		const firstYearColLetter = String.fromCharCode("A".charCodeAt(0) + firstYearCol - 1);
+		const seriesColumns = years.map((_, i) => String.fromCharCode(firstYearColLetter.charCodeAt(0) + i));
+
+		if (isComparison) {
+			const barToRow = Math.max(20, breakdown.length + 2);
+			const barSpec: ChartPlacement["spec"] = {
+				type: "bar",
+				title: sheetName,
+				sheetName,
+				categories: breakdown.map((e) => e.label),
+				series: years.map((y, yi) => ({
+					name: String(y),
+					values: breakdown.map((e) => e.perYear[yi]),
+					color: BAR_COMPARE_COLORS[yi % BAR_COMPARE_COLORS.length],
+				})),
+				categoryColumn: "A",
+				firstDataRow: 2,
+				seriesColumns,
+			};
+
+			const placements: ChartPlacement[] = [{
+				chartIndex: nextChartIndex++,
+				anchor: { fromCol: anchorFromCol, fromRow: 0, toCol: anchorFromCol + 11, toRow: barToRow },
+				spec: barSpec,
+			}];
+
+			if (includeRadar) {
+				const radarSpec: ChartPlacement["spec"] = {
+					type: "radar",
+					title: `${sheetName} (雷達圖)`,
 					sheetName,
 					categories: breakdown.map((e) => e.label),
 					series: years.map((y, yi) => ({
@@ -342,44 +417,104 @@ export async function GET(req: NextRequest) {
 					})),
 					categoryColumn: "A",
 					firstDataRow: 2,
-					seriesColumns: years.map((_, i) => String.fromCharCode("B".charCodeAt(0) + i)),
-				}
-			: {
-					type: "pie",
-					title: sheetName,
-					sheetName,
-					categories: breakdown.map((e) => e.label),
-					series: [{ name: "數量", values: breakdown.map((e) => e.total), color: pieColor }],
-					sliceColors: PIE_COLORS,
-					categoryColumn: "A",
-					firstDataRow: 2,
-					seriesColumns: ["B"],
+					seriesColumns,
+					valueAxisMax: niceAxisMax(breakdown.flatMap((e) => e.perYear)),
 				};
+				// larger allocation than the bar chart above it — radar's
+				// spoke labels wrap and eat into the plot circle otherwise,
+				// which is what made it look small next to a same-size bar
+				placements.push({
+					chartIndex: nextChartIndex++,
+					anchor: { fromCol: anchorFromCol, fromRow: barToRow + 2, toCol: anchorFromCol + 15, toRow: barToRow + 2 + 32 },
+					spec: radarSpec,
+				});
+			}
 
-		allPlacements.push({
-			sheetName,
-			placements: [{
-				chartIndex: nextChartIndex++,
-				anchor: { fromCol: anchorFromCol, fromRow: 0, toCol: anchorFromCol + 11, toRow: Math.max(20, breakdown.length + 2) },
-				spec,
-			}],
-		});
+			allPlacements.push({ sheetName, placements });
+		} else {
+			const pieSpec: ChartPlacement["spec"] = {
+				type: "pie",
+				title: sheetName,
+				sheetName,
+				categories: breakdown.map((e) => e.label),
+				series: [{ name: "數量", values: breakdown.map((e) => e.total), color: pieColor }],
+				sliceColors: PIE_COLORS,
+				categoryColumn: "A",
+				firstDataRow: 2,
+				seriesColumns: ["B"],
+			};
+
+			allPlacements.push({
+				sheetName,
+				placements: [{
+					chartIndex: nextChartIndex++,
+					anchor: { fromCol: anchorFromCol, fromRow: 0, toCol: anchorFromCol + 11, toRow: Math.max(20, breakdown.length + 2) },
+					spec: pieSpec,
+				}],
+			});
+		}
 	}
 
-	addCategoryStatsSheet(`${yearsLabel(years)}SAM分類統計`, "類別", samBreakdown, "4a9eff");
+	// SAM's sheet gets a different breakdown depending on mode: the
+	// single-year pie uses samBreakdown (category tier, e.g. "Resource
+	// Management"); the comparison bar+radar use samAreaBreakdown (HFACS
+	// area tier, e.g. "組織影響") instead — a deliberate tier bump for the
+	// comparison view only, matching the same asymmetry in RoutineSummary.tsx.
+	addCategoryStatsSheet(`${yearsLabel(years)}SAM分類統計`, "類別", isComparison ? samAreaBreakdown : samBreakdown, "4a9eff");
 	addCategoryStatsSheet(`${yearsLabel(years)}EF屬性統計`, "屬性", efBreakdown, "1baf7a");
 
 	// ==== sheets: SAM代碼比較 / EF代碼比較 — code-level (not category-level)
-	// comparison, only meaningful when actually comparing years ====
+	// comparison, only meaningful when actually comparing years. No radar
+	// on these two — too many individual codes for a radar to read well.
+	// Both get an extra 說明 column showing what each code means. ====
 	if (isComparison) {
-		addCategoryStatsSheet(`${yearsLabel(years)}SAM代碼比較`, "代碼", samCodeBreakdown, "4a9eff");
-		addCategoryStatsSheet(`${yearsLabel(years)}EF代碼比較`, "代碼", efCodeBreakdown, "1baf7a");
+		addCategoryStatsSheet(`${yearsLabel(years)}SAM代碼比較`, "代碼", samCodeBreakdown, "4a9eff", false, samCodeDescriptions);
+		addCategoryStatsSheet(`${yearsLabel(years)}EF代碼比較`, "代碼", efCodeBreakdown, "1baf7a", false, efCodeDescriptions);
 	}
 
 	// ==== sheet 5: 趨勢分析 — line, one series per compared year ====
-	const trendSheet = workbook.addWorksheet("趨勢分析");
-	trendSheet.columns = [{ width: 10 }, ...years.map(() => ({ width: 10 }))];
-	const trendHeader = ["月份", ...years.map(String)];
+	// Defaults to prior-year-vs-current-year when the export was requested
+	// for a single year (the common case — exporting "2025" should still
+	// show 2024 vs 2025 on this sheet without the user manually adding a
+	// compare year first). Falls back to current-year-only if the prior
+	// year genuinely has no data (earliest year in the system) rather than
+	// plotting an all-zero comparison series. Only applies when exactly one
+	// year was requested — an explicit multi-year selection is left as-is,
+	// the user already chose their comparison.
+	let trendYears = years;
+	let trendByMonth = byMonth;
+
+	if (years.length === 1) {
+		const priorYear = years[0] - 1;
+		const { data: priorCheck } = await supabase
+			.from("routine_audit_entries")
+			.select("id")
+			.eq("report_year", priorYear)
+			.limit(1);
+
+		if (priorCheck && priorCheck.length > 0) {
+			const { data: priorRows, error: priorError } = await supabase
+				.from("routine_audit_entries")
+				.select("report_month")
+				.eq("report_year", priorYear)
+				.gte("report_month", monthFrom)
+				.lte("report_month", monthTo);
+
+			if (!priorError && priorRows) {
+				const priorByMonth: Record<number, number> = {};
+				for (const r of priorRows) {
+					priorByMonth[r.report_month] = (priorByMonth[r.report_month] ?? 0) + 1;
+				}
+				trendYears = [priorYear, years[0]];
+				trendByMonth = { ...byMonth, [priorYear]: priorByMonth };
+			}
+		}
+	}
+
+	const trendSheetName = `${yearsLabel(trendYears)}趨勢分析`;
+	const trendSheet = workbook.addWorksheet(trendSheetName);
+	trendSheet.columns = [{ width: 10 }, ...trendYears.map(() => ({ width: 10 }))];
+	const trendHeader = ["月份", ...trendYears.map(String)];
 	trendHeader.forEach((label, i) => {
 		const cell = trendSheet.getCell(1, i + 1);
 		cell.value = label; cell.fill = HEADER_FILL; cell.font = HEADER_FONT; cell.alignment = CENTER; cell.border = CELL_BORDER;
@@ -391,28 +526,28 @@ export async function GET(req: NextRequest) {
 		trendSheet.getCell(r, 1).value = label;
 		trendSheet.getCell(r, 1).border = CELL_BORDER;
 		trendSheet.getCell(r, 1).alignment = MIDDLE;
-		years.forEach((y, yi) => {
+		trendYears.forEach((y, yi) => {
 			const cell = trendSheet.getCell(r, yi + 2);
-			cell.value = byMonth[y]?.[month] ?? 0;
+			cell.value = trendByMonth[y]?.[month] ?? 0;
 			cell.border = CELL_BORDER;
 			cell.alignment = MIDDLE;
 		});
 	});
 	const trendColors = ["4a9eff", "fb923c"];
-	const trendSeriesColumns = years.map((_, i) => String.fromCharCode("B".charCodeAt(0) + i));
+	const trendSeriesColumns = trendYears.map((_, i) => String.fromCharCode("B".charCodeAt(0) + i));
 	allPlacements.push({
-		sheetName: "趨勢分析",
+		sheetName: trendSheetName,
 		placements: [{
 			chartIndex: nextChartIndex++,
-			anchor: { fromCol: years.length + 2, fromRow: 0, toCol: years.length + 12, toRow: Math.max(20, monthLabelsInRange.length + 2) },
+			anchor: { fromCol: trendYears.length + 2, fromRow: 0, toCol: trendYears.length + 12, toRow: Math.max(20, monthLabelsInRange.length + 2) },
 			spec: {
 				type: "line",
-				title: "趨勢分析",
-				sheetName: "趨勢分析",
+				title: trendSheetName,
+				sheetName: trendSheetName,
 				categories: monthLabelsInRange,
-				series: years.map((y, i) => ({
+				series: trendYears.map((y, i) => ({
 					name: String(y),
-					values: monthLabelsInRange.map((_, mi) => byMonth[y]?.[monthFrom + mi] ?? 0),
+					values: monthLabelsInRange.map((_, mi) => trendByMonth[y]?.[monthFrom + mi] ?? 0),
 					color: trendColors[i % trendColors.length],
 				})),
 				categoryColumn: "A",
@@ -433,7 +568,7 @@ export async function GET(req: NextRequest) {
 
 	const today = new Date();
 	const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
-	const filename = `例行性查核彙整_${dateStr}.xlsx`;
+	const filename = `${years.join("vs")}年例行性查核彙整_${dateStr}.xlsx`;
 
 	return new NextResponse(new Uint8Array(finalBuffer), {
 		status: 200,

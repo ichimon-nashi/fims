@@ -59,9 +59,11 @@ export async function POST(request: NextRequest) {
 		const body = await request.json();
 
 		// Validate required fields. report_code is intentionally NOT required —
-		// "其他來源" reports have no code. category_ids is also NOT required —
-		// 分類 is optional.
-		if (!body.report_year || !body.report_month || !body.description) {
+		// legacy "其他來源" reports have no code, even though new entries always
+		// get one now. category_ids is also NOT required — EF分類 is optional.
+		// hazard_type (OF分類) is also NOT required — not every report has an
+		// AQD-sourced hazard type.
+		if (!body.report_year || !body.report_month || !body.title || !body.description) {
 			return NextResponse.json(
 				{ error: "Missing required fields" },
 				{ status: 400 }
@@ -74,7 +76,9 @@ export async function POST(request: NextRequest) {
 			report_code: body.report_code || null,
 			report_year: body.report_year,
 			report_month: body.report_month,
+			title: body.title,
 			description: body.description,
+			hazard_type: body.hazard_type || null,
 			action_taken: body.action_taken || null,
 			category_ids: Array.isArray(body.category_ids) ? body.category_ids : [],
 			created_by: permissions.userId!,

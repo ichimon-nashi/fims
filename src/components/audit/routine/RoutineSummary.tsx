@@ -3,11 +3,19 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./RoutineSummary.module.css";
-import { RoutineSamChart, RoutineEfChart, RoutineTrendChart } from "./RoutineCharts";
+import {
+	RoutineSamChart,
+	RoutineEfChart,
+	RoutineTrendChart,
+	RoutineSamCompareChart,
+	RoutineEfCompareChart,
+} from "./RoutineCharts";
 import RoutineEntriesTable from "./RoutineEntriesTable";
 import RoutineEntryModal from "./RoutineEntryModal";
+import { SAM_CODE_MAP, EF_CODE_MAP } from "@/lib/routineAudit.constants";
 import {
 	PieGroupLevel,
+	ChartStyle,
 	RoutineSummaryResponse,
 	RoutineAuditEntry,
 } from "@/lib/routineAudit.types";
@@ -28,6 +36,7 @@ export default function RoutineSummary() {
 	const [monthFrom, setMonthFrom] = useState<number>(1);
 	const [monthTo, setMonthTo] = useState<number>(12);
 	const [pieLevel, setPieLevel] = useState<PieGroupLevel>("category");
+	const [chartStyle, setChartStyle] = useState<ChartStyle>("bar");
 
 	const [summary, setSummary] = useState<RoutineSummaryResponse | null>(null);
 	const [entries, setEntries] = useState<RoutineAuditEntry[]>([]);
@@ -61,6 +70,17 @@ export default function RoutineSummary() {
 	}
 	const [innerTab, setInnerTab] = useState<"charts" | "table">("table");
 	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	// code -> description lookups for the code-level bar charts — built
+	// once, not per-render, since SAM_CODE_MAP/EF_CODE_MAP are static
+	const samCodeDescriptions = useMemo(
+		() => Object.fromEntries(Object.entries(SAM_CODE_MAP).map(([code, r]) => [code, r.description_zh])),
+		[]
+	);
+	const efCodeDescriptions = useMemo(
+		() => Object.fromEntries(Object.entries(EF_CODE_MAP).map(([code, r]) => [code, r.description])),
+		[]
+	);
 
 	const years = useMemo(
 		() => (compareYear ? [primaryYear, compareYear].sort((a, b) => a - b) : [primaryYear]),
@@ -147,6 +167,29 @@ export default function RoutineSummary() {
 			count: byYear[primaryYear] ?? 0,
 		}));
 	}, [summary, primaryYear, pieLevel]);
+
+	// ── year-over-year comparison data, only meaningful once a compare
+	// year is picked. SAM's category-level comparison reads from byArea
+	// (HFACS top tier, e.g. "組織影響") rather than byCategory (e.g.
+	// "Resource Management") — a deliberate tier bump for the comparison
+	// view only; the single-year pie above stays at the category tier. ──
+	const categoryCompareData = useMemo(() => {
+		if (!summary || compareYear === null) return [];
+		const source = (pieLevel === "code" ? summary.byCode : summary.byArea) ?? {};
+		return Object.entries(source).map(([label, byYear]) => ({
+			label,
+			values: years.map((y) => byYear[y] ?? 0),
+		}));
+	}, [summary, years, compareYear, pieLevel]);
+
+	const efCompareData = useMemo(() => {
+		if (!summary || compareYear === null) return [];
+		const source = (pieLevel === "code" ? summary.byEfCode : summary.byEfMiddle) ?? {};
+		return Object.entries(source).map(([label, byYear]) => ({
+			label,
+			values: years.map((y) => byYear[y] ?? 0),
+		}));
+	}, [summary, years, compareYear, pieLevel]);
 
 	const trendSeries = useMemo(() => {
 		if (!summary) return [];
@@ -413,9 +456,58 @@ export default function RoutineSummary() {
 							</div>
 
 							<div className={styles.chartRow}>
-								<RoutineEfChart data={efCodeData} year={primaryYear} level={pieLevel} />
-								<RoutineSamChart data={categoryData} year={primaryYear} level={pieLevel} />
+								<RoutineEfChart
+									data={efCodeData}
+									year={primaryYear}
+									level={pieLevel}
+									descriptions={efCodeDescriptions}
+								/>
+								<RoutineSamChart
+									data={categoryData}
+									year={primaryYear}
+									level={pieLevel}
+									descriptions={samCodeDescriptions}
+								/>
 							</div>
+
+							{/* ── year-over-year comparison charts, only once a compare
+							    year is picked — mirrors the trend chart's own
+							    years-aware rendering just above it in layout order. ── */}
+							{compareYear !== null && (
+								<>
+									<div className={styles.chartControls}>
+										<span className={styles.label}>比較圖表</span>
+										<div className={styles.levelToggle}>
+											{(["bar", "radar"] as const).map((style) => (
+												<button
+													key={style}
+													className={chartStyle === style ? styles.levelBtnActive : styles.levelBtn}
+													onClick={() => setChartStyle(style)}
+												>
+													{style === "bar" ? "長條圖" : "雷達圖"}
+												</button>
+											))}
+										</div>
+									</div>
+
+									<div className={styles.chartRow}>
+										<RoutineEfCompareChart
+											data={efCompareData}
+											years={years}
+											level={pieLevel}
+											chartStyle={chartStyle}
+											descriptions={pieLevel === "code" ? efCodeDescriptions : undefined}
+										/>
+										<RoutineSamCompareChart
+											data={categoryCompareData}
+											years={years}
+											level={pieLevel}
+											chartStyle={chartStyle}
+											descriptions={pieLevel === "code" ? samCodeDescriptions : undefined}
+										/>
+									</div>
+								</>
+							)}
 
 							<div className={styles.trendRow}>
 								<RoutineTrendChart

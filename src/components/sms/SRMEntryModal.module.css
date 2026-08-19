@@ -515,19 +515,19 @@
 	cursor: not-allowed;
 }
 
-/* Three-column row for 檔案日期, 編號, 資料來源 */
-.formRow[style*="gridTemplateColumns: '1fr 1fr 1fr'"] {
-	grid-template-columns: 1fr 1fr 1fr !important;
-}
-
-/* Four-column row for 檔案日期, 編號, 資料來源, 事件月份 */
-.formRow[style*="gridTemplateColumns: '1fr 1fr 1fr 1fr'"] {
-	grid-template-columns: 1fr 1fr 1fr 1fr !important;
+/* Four-column row for 檔案日期, 編號, 資料來源, 事件月份 — a real class
+   instead of matching on inline style content, which never worked:
+   React/the DOM serialize camelCase style props to kebab-case in the
+   actual style attribute (grid-template-columns, not gridTemplateColumns),
+   so [style*="gridTemplateColumns"] could never match and this row was
+   stuck at 4 columns on every screen size, mobile included. */
+.formRowFourCol {
+	grid-template-columns: 1fr 1fr 1fr 1fr;
 }
 
 @media (max-width: 900px) {
-	.formRow[style*="gridTemplateColumns"] {
-		grid-template-columns: 1fr !important;
+	.formRowFourCol {
+		grid-template-columns: 1fr;
 	}
 }
 

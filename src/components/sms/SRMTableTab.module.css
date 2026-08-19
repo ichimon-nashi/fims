@@ -146,6 +146,15 @@
 	background: rgba(255, 255, 255, 0.03);
 }
 
+.mainRowExpanded,
+.mainRowExpanded:hover {
+	background: rgba(74, 158, 255, 0.08);
+}
+
+.mainRowExpanded td:first-child {
+	box-shadow: inset 3px 0 0 0 #4a9eff;
+}
+
 .mainRow td {
 	padding: 1rem;
 	color: #e8e9ed;
@@ -184,18 +193,8 @@
 	font-size: 0.75rem;
 	font-weight: 600;
 	text-transform: uppercase;
-}
-
-.sourceBadge.sa {
-	background: rgba(239, 68, 68, 0.2);
-	color: #fca5a5;
-	border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-.sourceBadge.srm {
-	background: rgba(59, 130, 246, 0.2);
-	color: #93c5fd;
-	border: 1px solid rgba(59, 130, 246, 0.3);
+	border-style: solid;
+	border-width: 1px;
 }
 
 .description {
@@ -273,10 +272,58 @@
 	}
 }
 
-.detailGrid {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+/* Compact single-row strip for short one-line fields (編號/日期/來源) —
+   these don't need a full boxed detailSection the way long-text sections
+   do; giving them equal grid width alongside 危害資訊/風險評估 was wasted
+   space on one side and cramped text on the other. */
+.metaBar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem 1.5rem;
+	padding: 0.75rem 1rem;
+	margin-bottom: 1.25rem;
+	background: rgba(255, 255, 255, 0.03);
+	border-radius: 8px;
+	border: 1px solid rgba(255, 255, 255, 0.05);
+	font-size: 0.85rem;
+}
+
+.metaBarItem {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	color: #e8e9ed;
+	white-space: nowrap;
+}
+
+.metaBarItem strong {
+	color: #a0aec0;
+	font-weight: 500;
+}
+
+/* Content-heavy sections (long text, an embedded table) stacked full-width
+   instead of squeezed into equal-width side-by-side columns — rows suit
+   this data better than columns, per the actual content shape. */
+.detailStack {
+	display: flex;
+	flex-direction: column;
 	gap: 1.5rem;
+}
+
+/* 危害資訊 + 分析代碼 share a row — 危害資訊 gets more room since it holds
+   three text fields versus 分析代碼's two tag lists, which wrap fine in
+   less space. 風險評估 (with its embedded measures table) stays full
+   width as its own row below, not part of this grid. */
+.detailRow {
+	display: grid;
+	grid-template-columns: 1.5fr 1fr;
+	gap: 1.5rem;
+}
+
+@media (max-width: 700px) {
+	.detailRow {
+		grid-template-columns: 1fr;
+	}
 }
 
 .detailSection {
@@ -316,6 +363,8 @@
 	margin: 0;
 	color: #e8e9ed;
 	line-height: 1.6;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
 }
 
 .codeTags {
@@ -345,9 +394,10 @@
 }
 
 /* Mobile Responsive */
-@media (max-width: 1200px) {
-	.detailGrid {
-		grid-template-columns: 1fr;
+@media (max-width: 480px) {
+	.metaBar {
+		flex-direction: column;
+		gap: 0.5rem;
 	}
 }
 
@@ -520,6 +570,8 @@
 	border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 	color: #e2e8f0;
 	vertical-align: top;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
 }
 
 .measuresTable tbody tr:last-child td {
