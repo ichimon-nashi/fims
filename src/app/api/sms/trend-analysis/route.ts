@@ -1,20 +1,24 @@
 // src/app/api/sms/trend-analysis/route.ts
 //
-// 趨勢分析 (Risk Analysis) tab data source. Combines two separate tables
-// that were never designed to be queried together:
-//   - srm_table_entries (SMS module): human_factors_codes[], ef_attribute_codes[]
-//   - routine_audit_entries (Routine Audit module): sam_code, ef_code
+// 趨勢分析 (Risk Analysis) tab data source. SRM only — srm_table_entries
+// (human_factors_codes[], ef_attribute_codes[]). Previously also unioned
+// routine_audit_entries (自督) from the Routine Audit module; that source
+// was intentionally dropped per explicit upper-management decision (SMS
+// Statistics doc), since with SRM as the only source this tab's data
+// became equivalent in scope to SMS統計分析, prompting a page merge.
 //
-// HFACS/human-factors codes differ in zero-padding between the two
-// modules (SAM writes "RM01", SMS writes "RM1") — normalized via
-// src/lib/hfacsCodeMap.ts. EF codes need no normalization; both modules
-// already share the same EF_ATTRIBUTE_CATEGORIES constant.
+// The payload shape (CodeBucket.srm/self, MonthSplit.srm/self, etc.) is
+// deliberately UNCHANGED — TrendAnalysisTab.tsx, TrendRecordsModal.tsx,
+// and trend-analysis-export-route.ts all consume that exact shape, and
+// changing it would require updating all three in the same pass. `self`
+// simply computes to 0 everywhere now, which satisfies "SRM only"
+// without a coordinated multi-file shape change. A follow-up cleanup
+// pass to actually remove the dead srm/self split (collapsing to a
+// single `total`) is optional future work, not required for correctness.
 //
-// Source labeling: every srm_table_entries row counts as "SRM" (both its
-// own SA/SRM sub-tags collapse into one bucket here), every
-// routine_audit_entries row counts as "自督" — per [user]'s explicit
-// naming decision. Rows with is_non_flight_safety=true are excluded from
-// the routine side, matching every other aggregation route in this module.
+// HFACS/human-factors codes are normalized via src/lib/hfacsCodeMap.ts
+// (SRM writes zero-padded and unpadded forms inconsistently). EF codes
+// need no normalization.
 //
 // No caching (see design discussion) — this mirrors
 // routine_summary_route.ts's own reasoning: small per-year row counts,
@@ -26,7 +30,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/utils/supabase/service-client";
 import { checkSMSPermissions } from "@/lib/smsPermissions";
-import { SAM_CODE_MAP, EF_CODE_MAP } from "@/lib/routineAudit.constants";
+import { EF_CODE_MAP } from "@/lib/routineAudit.constants";
 import { CANONICAL_HFACS_MAP, normalizeHfacsCode } from "@/lib/hfacsCodeMap";
 
 type Source = "srm" | "self"; // self = 自督
@@ -93,29 +97,23 @@ export async function GET(req: NextRequest) {
 
 	const supabase = createServiceClient();
 
-	// ---- fetch both sources in parallel ----
-	const [srmResult, routineResult] = await Promise.all([
-		supabase
-			.from("srm_table_entries")
-			.select("human_factors_codes, ef_attribute_codes, occurrence_month, year")
-			.in("year", years),
-		supabase
-			.from("routine_audit_entries")
-			.select("sam_code, ef_code, report_year, report_month, is_non_flight_safety")
-			.in("report_year", years)
-			.gte("report_month", monthFrom)
-			.lte("report_month", monthTo),
-	]);
+	// ---- SRM only — routine_audit_entries (自督) intentionally dropped
+	// per explicit decision. The srm/self split in the payload shape below
+	// is kept as-is rather than removed, since TrendAnalysisTab.tsx,
+	// TrendRecordsModal.tsx, and trend-analysis-export-route.ts all
+	// consume that exact shape — self now always computes to 0, which is
+	// a safe, non-breaking way to satisfy "SRM only" without a
+	// coordinated multi-file shape change. ----
+	const srmResult = await supabase
+		.from("srm_table_entries")
+		.select("human_factors_codes, ef_attribute_codes, occurrence_month, year")
+		.in("year", years);
 
 	if (srmResult.error) {
 		return NextResponse.json({ error: srmResult.error.message }, { status: 500 });
 	}
-	if (routineResult.error) {
-		return NextResponse.json({ error: routineResult.error.message }, { status: 500 });
-	}
 
 	const srmRows = srmResult.data ?? [];
-	const routineRows = routineResult.data ?? [];
 
 	// month_from/month_to filtering for SRM happens here in JS, not via a
 	// Supabase range filter on occurrence_month — this codebase has
@@ -203,18 +201,6 @@ export async function GET(req: NextRequest) {
 				});
 			});
 		});
-		routineRows.forEach((row) => {
-			if (row.is_non_flight_safety) return;
-			if (!row.sam_code) return;
-			const norm = normalizeHfacsCode(row.sam_code);
-			const canon = CANONICAL_HFACS_MAP[norm];
-			const mKey = monthKey(row.report_year, row.report_month);
-			record(norm, canon?.category ?? norm, canon?.description ?? row.sam_code, "self", mKey, {
-				inSam: canon?.inSam,
-				inSms: canon?.inSms,
-				area: canon?.area,
-			});
-		});
 	} else {
 		srmRowsInRange.forEach((row) => {
 			const year = row.year;
@@ -227,16 +213,6 @@ export async function GET(req: NextRequest) {
 					inSam: true,
 					inSms: true,
 				});
-			});
-		});
-		routineRows.forEach((row) => {
-			if (row.is_non_flight_safety) return;
-			if (!row.ef_code) return;
-			const resolved = EF_CODE_MAP[row.ef_code];
-			const mKey = monthKey(row.report_year, row.report_month);
-			record(row.ef_code, efCategoryName(row.ef_code), resolved?.description ?? row.ef_code, "self", mKey, {
-				inSam: true,
-				inSms: true,
 			});
 		});
 	}

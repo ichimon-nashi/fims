@@ -673,9 +673,25 @@ export const createCrewReport = async (reportData: {
 	report_code?: string | null;
 	report_year: number;
 	report_month: number;
+	title: string;
 	description: string;
+	hazard_type?: string | null;
 	action_taken?: string | null;
 	category_ids: string[];
+	occurrence_date?: string | null;
+	registered_date?: string | null;
+	aircraft?: string | null;
+	flight_no?: string | null;
+	departure?: string | null;
+	arrival?: string | null;
+	location?: string | null;
+	potential_consequence?: string | null;
+	reporter_name?: string | null;
+	operational_category?: string | null;
+	assessment_code?: string | null;
+	risk_assessment_calculation?: string | null;
+	risk_assessment?: string | null;
+	closed_status?: string | null;
 	created_by: string;
 }): Promise<CrewReport> => {
 	try {

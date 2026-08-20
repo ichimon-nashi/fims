@@ -56,6 +56,13 @@
 	flex-wrap: wrap;
 }
 
+.filterGroup {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	flex-wrap: wrap;
+}
+
 .buttonGroup {
 	display: flex;
 	gap: 0.75rem;
@@ -198,6 +205,49 @@
 	font-size: 1.1rem;
 	margin: 0 0 1rem 0;
 	font-weight: 600;
+}
+
+.tableSectionHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+	margin-bottom: 1rem;
+}
+
+.tableSectionHeader h3 {
+	margin: 0;
+}
+
+.toggleGroup {
+	display: inline-flex;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.15);
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.toggleButton,
+.toggleActive {
+	padding: 0.5rem 1rem;
+	background: transparent;
+	border: none;
+	color: #a0aec0;
+	font-size: 0.85rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	white-space: nowrap;
+}
+
+.toggleButton:hover {
+	color: #e8e9ed;
+}
+
+.toggleActive {
+	background: rgba(74, 158, 255, 0.2);
+	color: #4a9eff;
 }
 
 /* Top grid */
@@ -353,6 +403,177 @@
 }
 
 /* Pie Chart - Desktop: 3 columns, Mobile: 1 column with width constraint */
+.emptyState {
+	text-align: center;
+	padding: 3rem;
+	color: #6b7280;
+}
+
+.searchInput {
+	padding: 0.6rem 1rem;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-radius: 8px;
+	color: #e8e9ed;
+	font-size: 0.9rem;
+	width: 260px;
+	max-width: 100%;
+}
+
+.searchInput::placeholder {
+	color: #6b7280;
+}
+
+.sectionHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 1rem;
+	margin-bottom: 1rem;
+}
+
+.sectionHeader h3 {
+	margin: 0;
+}
+
+.compositionList {
+	display: flex;
+	flex-direction: column;
+	gap: 0.85rem;
+}
+
+.compositionRow {
+	display: block;
+	width: 100%;
+	text-align: left;
+	background: rgba(255, 255, 255, 0.02);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 8px;
+	padding: 0.75rem 1rem;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.compositionRow:hover {
+	background: rgba(255, 255, 255, 0.05);
+	border-color: rgba(74, 158, 255, 0.3);
+}
+
+.compositionRowActive {
+	border-color: #4a9eff;
+	box-shadow: 0 0 0 1px rgba(74, 158, 255, 0.3);
+}
+
+.trendPanel {
+	margin-top: 1.25rem;
+	padding-top: 1.25rem;
+	border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.trendPanelHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 0.75rem;
+}
+
+.trendPanelHeader h4 {
+	margin: 0;
+	color: #4a9eff;
+	font-size: 1rem;
+	font-weight: 600;
+}
+
+.closeButton {
+	background: rgba(255, 255, 255, 0.1);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	color: white;
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 1.3rem;
+	line-height: 1;
+	padding: 0;
+	transition: all 0.2s ease;
+	flex-shrink: 0;
+}
+
+.closeButton:hover {
+	background: rgba(239, 68, 68, 0.3);
+	border-color: #ef4444;
+}
+
+.compositionRowHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	margin-bottom: 0.5rem;
+	font-size: 0.9rem;
+}
+
+.compositionCode {
+	color: #4a9eff;
+	font-weight: 600;
+	font-family: "Courier New", monospace;
+}
+
+.compositionDesc {
+	color: #a0aec0;
+	font-weight: 400;
+	font-family: inherit;
+	margin-left: 0.6rem;
+	font-size: 0.85rem;
+}
+
+.compositionTotal {
+	color: #e8e9ed;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.compositionBar {
+	display: flex;
+	height: 24px;
+	border-radius: 4px;
+	overflow: hidden;
+	gap: 2px;
+	background: rgba(255, 255, 255, 0.05);
+}
+
+.compositionSegment {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: white;
+	white-space: nowrap;
+	transition: all 0.2s ease;
+}
+
+.showAllButton {
+	display: block;
+	margin: 1rem auto 0;
+	padding: 0.6rem 1.5rem;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-radius: 8px;
+	color: #e8e9ed;
+	font-size: 0.85rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.showAllButton:hover {
+	background: rgba(255, 255, 255, 0.1);
+}
+
 .pieChartContainer {
 	padding: 0.75rem;
 	width: 100%;
@@ -823,6 +1044,17 @@
 	.section h3 {
 		font-size: 1rem;
 		margin-bottom: 0.75rem;
+	}
+
+	.tableSectionHeader {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.toggleButton,
+	.toggleActive {
+		flex: 1;
+		min-height: 44px;
 	}
 
 	.statsTable th,

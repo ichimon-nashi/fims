@@ -27,9 +27,15 @@
 	border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+@media (min-width: 1100px) {
+	.modal {
+		max-width: 960px;
+	}
+}
+
 .modalHeader {
 	display: flex;
-	justify-content: space-between;
+	justify-content: center;
 	align-items: center;
 	padding: 1.5rem;
 	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -37,6 +43,17 @@
 	position: sticky;
 	top: 0;
 	z-index: 10;
+}
+
+.modalHeader h2 {
+	text-align: center;
+}
+
+.modalHeader .closeButton {
+	position: absolute;
+	right: 1.5rem;
+	top: 50%;
+	transform: translateY(-50%);
 }
 
 .modalHeader h2 {
@@ -222,13 +239,57 @@
 	font-style: italic;
 }
 
+.collapsibleSection {
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	margin-bottom: 0.75rem;
+	overflow: hidden;
+}
+
+.collapsibleHeader {
+	width: 100%;
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	padding: 0.75rem 1rem;
+	background: rgba(255, 255, 255, 0.03);
+	border: none;
+	color: #a0aec0 !important;
+	font-size: 0.9rem;
+	font-weight: 600;
+	cursor: pointer;
+	text-align: left;
+	transition: background 0.2s ease;
+}
+
+.collapsibleHeader span {
+	color: inherit;
+}
+
+.collapsibleHeader:hover {
+	background: rgba(255, 255, 255, 0.06);
+	color: #e8e9ed !important;
+}
+
+.collapsibleChevron {
+	color: #4a9eff !important;
+	font-size: 0.85rem;
+	min-width: 16px;
+}
+
+.collapsibleBody {
+	padding: 1rem;
+	border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
 .modalFooter {
 	padding: 1rem 1.5rem;
 	border-top: 1px solid rgba(255, 255, 255, 0.1);
 	display: flex;
 	justify-content: flex-end;
 	gap: 1rem;
-	background: rgba(255, 255, 255, 0.02);
+	/* background: rgba(255, 255, 255, 0.02); */
+	background: #2D334B;
 	position: sticky;
 	bottom: 0;
 }

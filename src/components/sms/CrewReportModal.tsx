@@ -1,7 +1,7 @@
 // src/components/sms/CrewReportModal.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, ReactNode } from "react";
 import styles from "./CrewReportModal.module.css";
 import { CrewReport, CrewReportCategory } from "@/lib/sms.types";
 
@@ -42,10 +42,10 @@ export default function CrewReportModal({
 	onClose,
 	onSave,
 }: CrewReportModalProps) {
-	const [digits1, setDigits1] = useState(""); // 3 digits
-	const [digits2, setDigits2] = useState(""); // 2 digits
-	const [yearMonth, setYearMonth] = useState(
-		`${currentYear}-${String(new Date().getMonth() + 1).padStart(2, "0")}`
+	const [digits1, setDigits1] = useState(""); // variable-length, stored/displayed exactly as entered — no zero-padding
+	const [digits2, setDigits2] = useState("");
+	const [occurrenceDate, setOccurrenceDate] = useState(
+		new Date().toISOString().slice(0, 10)
 	);
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
@@ -54,19 +54,62 @@ export default function CrewReportModal({
 	const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
 	const [loading, setLoading] = useState(false);
 
+	// All optional AQD-sourced fields not shown in the always-visible core
+	// of the form — grouped into one object given the volume, matching the
+	// object-state pattern already used for volume in SRMEntryModal.tsx's
+	// formData. occurrence_date lives in its own state above now — it's a
+	// primary always-visible field, not an optional extra.
+	const [extraFields, setExtraFields] = useState({
+		registered_date: "",
+		aircraft: "",
+		flight_no: "",
+		departure: "",
+		arrival: "",
+		location: "",
+		potential_consequence: "",
+		reporter_name: "",
+		operational_category: "",
+		assessment_code: "",
+		risk_assessment_calculation: "",
+		risk_assessment: "",
+		closed_status: "",
+	});
+
+	const setExtraField = (key: keyof typeof extraFields, value: string) => {
+		setExtraFields((prev) => ({ ...prev, [key]: value }));
+	};
+
 	useEffect(() => {
 		if (entry) {
 			const parsed = parseHazCode(entry.report_code);
 			setDigits1(parsed?.digits1 || "");
 			setDigits2(parsed?.digits2 || "");
-			setYearMonth(
-				`${entry.report_year}-${String(entry.report_month).padStart(2, "0")}`
+			// Falls back to report_year/report_month (day 01) for older
+			// entries created before occurrence_date existed as a field.
+			setOccurrenceDate(
+				entry.occurrence_date?.slice(0, 10) ||
+					`${entry.report_year}-${String(entry.report_month).padStart(2, "0")}-01`
 			);
 			setTitle(entry.title || "");
 			setDescription(entry.description || "");
 			setHazardType(entry.hazard_type || "");
 			setActionTaken(entry.action_taken || "");
 			setSelectedCategoryIds(entry.category_ids || []);
+			setExtraFields({
+				registered_date: entry.registered_date?.slice(0, 10) || "",
+				aircraft: entry.aircraft || "",
+				flight_no: entry.flight_no || "",
+				departure: entry.departure || "",
+				arrival: entry.arrival || "",
+				location: entry.location || "",
+				potential_consequence: entry.potential_consequence || "",
+				reporter_name: entry.reporter_name || "",
+				operational_category: entry.operational_category || "",
+				assessment_code: entry.assessment_code || "",
+				risk_assessment_calculation: entry.risk_assessment_calculation || "",
+				risk_assessment: entry.risk_assessment || "",
+				closed_status: entry.closed_status || "",
+			});
 		}
 	}, [entry]);
 
@@ -111,9 +154,8 @@ export default function CrewReportModal({
 		// EF分類 is optional — no validation on selectedCategoryIds.
 		// OF分類 (hazard_type) is also optional — not every report has one.
 
-		const [yearStr, monthStr] = yearMonth.split("-");
-		if (!yearStr || !monthStr) {
-			alert("請選擇年/月");
+		if (!occurrenceDate) {
+			alert("請選擇事件日期");
 			return;
 		}
 
@@ -122,7 +164,15 @@ export default function CrewReportModal({
 		try {
 			const token = localStorage.getItem("token");
 
-			const report_code = `HAZ${digits1.padStart(3, "0")}-${digits2.padStart(2, "0")}`;
+			// Stored exactly as entered — no zero-padding. AQD codes aren't
+			// fixed-width (e.g. "HAZ2-26", not "HAZ002-26").
+			const report_code = `HAZ${digits1}-${digits2}`;
+
+			const [yearStr, monthStr] = occurrenceDate.split("-");
+
+			const trimmedExtras = Object.fromEntries(
+				Object.entries(extraFields).map(([key, value]) => [key, value.trim() || null])
+			);
 
 			const payload = {
 				report_code,
@@ -133,6 +183,8 @@ export default function CrewReportModal({
 				hazard_type: hazardType.trim() || null,
 				action_taken: actionTaken.trim() || null,
 				category_ids: selectedCategoryIds,
+				occurrence_date: occurrenceDate,
+				...trimmedExtras,
 				created_by: userId,
 			};
 
@@ -187,7 +239,7 @@ export default function CrewReportModal({
 						<div className={styles.formRow}>
 							<div className={styles.formGroup}>
 								<label>
-									報告編號{" "}
+									報告編號 (AQD Code){" "}
 									<span className={styles.required}>*</span>
 								</label>
 								<div className={styles.codeInputGroup}>
@@ -218,13 +270,14 @@ export default function CrewReportModal({
 
 							<div className={styles.formGroup}>
 								<label>
-									年/月 <span className={styles.required}>*</span>
+									事件日期 (Occurrence Date){" "}
+									<span className={styles.required}>*</span>
 								</label>
 								<input
 									className={styles.input}
-									type="month"
-									value={yearMonth}
-									onChange={(e) => setYearMonth(e.target.value)}
+									type="date"
+									value={occurrenceDate}
+									onChange={(e) => setOccurrenceDate(e.target.value)}
 									required
 								/>
 							</div>
@@ -232,7 +285,7 @@ export default function CrewReportModal({
 
 						<div className={styles.formGroup}>
 							<label>
-								標題 <span className={styles.required}>*</span>
+								標題 (Title) <span className={styles.required}>*</span>
 							</label>
 							<input
 								className={styles.input}
@@ -245,7 +298,7 @@ export default function CrewReportModal({
 
 						<div className={styles.formGroup}>
 							<label>
-								描述 <span className={styles.required}>*</span>
+								描述 (Description) <span className={styles.required}>*</span>
 							</label>
 							<textarea
 								className={styles.textarea}
@@ -254,20 +307,6 @@ export default function CrewReportModal({
 								rows={3}
 								required
 							/>
-						</div>
-
-						<div className={styles.formGroup}>
-							<label>OF分類</label>
-							<input
-								className={styles.input}
-								type="text"
-								value={hazardType}
-								onChange={(e) => setHazardType(e.target.value)}
-								placeholder="例如：Passenger、Employee Lapse"
-							/>
-							<small style={{ color: "#6b7280", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
-								來自 AQD 匯入資料的 Hazard Type，與下方 EF分類（本系統自訂分類）為不同欄位
-							</small>
 						</div>
 
 						<div className={styles.formGroup}>
@@ -324,6 +363,160 @@ export default function CrewReportModal({
 								rows={2}
 							/>
 						</div>
+
+						{/* Everything below is optional AQD-sourced detail — collapsed by
+						    default so the form doesn't overwhelm on open. Grouped to
+						    match the same sections used in the table's expanded row view. */}
+						<CollapsibleSection title="航班資訊 (Flight Info)">
+							<div className={styles.formRow}>
+								<div className={styles.formGroup}>
+									<label>機號 (A/C)</label>
+									<input
+										className={styles.input}
+										type="text"
+										value={extraFields.aircraft}
+										onChange={(e) => setExtraField("aircraft", e.target.value)}
+									/>
+								</div>
+								<div className={styles.formGroup}>
+									<label>班機編號 (Flight no.)</label>
+									<input
+										className={styles.input}
+										type="text"
+										value={extraFields.flight_no}
+										onChange={(e) => setExtraField("flight_no", e.target.value)}
+									/>
+								</div>
+							</div>
+							<div className={styles.formRow}>
+								<div className={styles.formGroup}>
+									<label>出發地 (DEP)</label>
+									<input
+										className={styles.input}
+										type="text"
+										value={extraFields.departure}
+										onChange={(e) => setExtraField("departure", e.target.value)}
+									/>
+								</div>
+								<div className={styles.formGroup}>
+									<label>目的地 (ARR)</label>
+									<input
+										className={styles.input}
+										type="text"
+										value={extraFields.arrival}
+										onChange={(e) => setExtraField("arrival", e.target.value)}
+									/>
+								</div>
+							</div>
+							<div className={styles.formGroup}>
+								<label>地點 (Location)</label>
+								<input
+									className={styles.input}
+									type="text"
+									value={extraFields.location}
+									onChange={(e) => setExtraField("location", e.target.value)}
+								/>
+							</div>
+						</CollapsibleSection>
+
+						<CollapsibleSection title="事件內容補充 (Event Supplement)">
+							<div className={styles.formGroup}>
+								<label>潛在後果 (Potential Consequence)</label>
+								<textarea
+									className={styles.textarea}
+									value={extraFields.potential_consequence}
+									onChange={(e) => setExtraField("potential_consequence", e.target.value)}
+									rows={2}
+								/>
+							</div>
+							<div className={styles.formRow}>
+								<div className={styles.formGroup}>
+									<label>通報人 (Reporter)</label>
+									<input
+										className={styles.input}
+										type="text"
+										value={extraFields.reporter_name}
+										onChange={(e) => setExtraField("reporter_name", e.target.value)}
+									/>
+								</div>
+								<div className={styles.formGroup}>
+									<label>登記日期 (Registered Date)</label>
+									<input
+										className={styles.input}
+										type="date"
+										value={extraFields.registered_date}
+										onChange={(e) => setExtraField("registered_date", e.target.value)}
+									/>
+								</div>
+							</div>
+						</CollapsibleSection>
+
+						<CollapsibleSection title="分類與評估 (Classification & Assessment)">
+							<div className={styles.formGroup}>
+								<label>OF分類 (Hazard Type)</label>
+								<input
+									className={styles.input}
+									type="text"
+									value={hazardType}
+									onChange={(e) => setHazardType(e.target.value)}
+									placeholder="例如：Passenger、Employee Lapse"
+								/>
+								<small style={{ color: "#6b7280", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+									來自 AQD 匯入資料的 Hazard Type，與上方 EF分類（本系統自訂分類）為不同欄位
+								</small>
+							</div>
+							<div className={styles.formRow}>
+								<div className={styles.formGroup}>
+									<label>作業分類 (Operational Category)</label>
+									<input
+										className={styles.input}
+										type="text"
+										value={extraFields.operational_category}
+										onChange={(e) => setExtraField("operational_category", e.target.value)}
+									/>
+								</div>
+								<div className={styles.formGroup}>
+									<label>評估代碼 (Assessment Code)</label>
+									<input
+										className={styles.input}
+										type="text"
+										value={extraFields.assessment_code}
+										onChange={(e) => setExtraField("assessment_code", e.target.value)}
+									/>
+								</div>
+							</div>
+							<div className={styles.formRow}>
+								<div className={styles.formGroup}>
+									<label>風險評估計算 (Risk Assessment Calculations)</label>
+									<input
+										className={styles.input}
+										type="text"
+										value={extraFields.risk_assessment_calculation}
+										onChange={(e) => setExtraField("risk_assessment_calculation", e.target.value)}
+									/>
+								</div>
+								<div className={styles.formGroup}>
+									<label>風險評估 (Risk Assessment)</label>
+									<input
+										className={styles.input}
+										type="text"
+										value={extraFields.risk_assessment}
+										onChange={(e) => setExtraField("risk_assessment", e.target.value)}
+										placeholder="例如：3D"
+									/>
+								</div>
+							</div>
+							<div className={styles.formGroup}>
+								<label>結案狀態 (Closed)</label>
+								<input
+									className={styles.input}
+									type="text"
+									value={extraFields.closed_status}
+									onChange={(e) => setExtraField("closed_status", e.target.value)}
+									placeholder="例如：CLOSED"
+								/>
+							</div>
+						</CollapsibleSection>
 					</div>
 
 					<div className={styles.modalFooter}>
@@ -345,6 +538,32 @@ export default function CrewReportModal({
 					</div>
 				</form>
 			</div>
+		</div>
+	);
+}
+
+// Collapsible group for the optional AQD-sourced fields — same ▼/▶ chevron
+// convention already used for row/section expand-collapse elsewhere in
+// this app. Local to this file since its only use is grouping form fields.
+function CollapsibleSection({
+	title,
+	children,
+}: {
+	title: string;
+	children: ReactNode;
+}) {
+	const [open, setOpen] = useState(false);
+	return (
+		<div className={styles.collapsibleSection}>
+			<button
+				type="button"
+				className={styles.collapsibleHeader}
+				onClick={() => setOpen((v) => !v)}
+			>
+				<span className={styles.collapsibleChevron}>{open ? "▼" : "▶"}</span>
+				<span>{title}</span>
+			</button>
+			{open && <div className={styles.collapsibleBody}>{children}</div>}
 		</div>
 	);
 }

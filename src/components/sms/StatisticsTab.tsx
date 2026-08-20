@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import styles from "./StatisticsTab.module.css";
 import html2canvas from "html2canvas";
 import { saveAs } from "file-saver";
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import { EF_ATTRIBUTE_CATEGORIES } from "@/lib/sms.constants";
 
 interface SRMEntry {
@@ -109,13 +109,39 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 		}
 	};
 
+	const [selectedMonthFrom, setSelectedMonthFrom] = useState<number>(1);
+	const [selectedMonthTo, setSelectedMonthTo] = useState<number>(12);
+
+	// Swap (not clamp) when the range would invert — e.g. picking 結束月
+	// "April" while 起始月 is "June" ends with 起始月=April, 結束月=June,
+	// preserving both selected values rather than collapsing them together.
+	const handleMonthFromChange = (v: number) => {
+		if (v > selectedMonthTo) {
+			setSelectedMonthFrom(selectedMonthTo);
+			setSelectedMonthTo(v);
+		} else {
+			setSelectedMonthFrom(v);
+		}
+	};
+
+	const handleMonthToChange = (v: number) => {
+		if (v < selectedMonthFrom) {
+			setSelectedMonthTo(selectedMonthFrom);
+			setSelectedMonthFrom(v);
+		} else {
+			setSelectedMonthTo(v);
+		}
+	};
+
 	const monthlyStats = useMemo(() => {
 		const stats: MonthlyStats = {};
 		entries
 			.filter((entry) => {
 				if (!entry.occurrence_month) return false;
-				const year = parseInt(entry.occurrence_month.split("-")[0]);
-				return year === selectedYear;
+				const [yearStr, monthStr] = entry.occurrence_month.split("-");
+				const year = parseInt(yearStr);
+				const month = parseInt(monthStr);
+				return year === selectedYear && month >= selectedMonthFrom && month <= selectedMonthTo;
 			})
 			.forEach((entry) => {
 				if (
@@ -140,7 +166,7 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 				});
 			});
 		return stats;
-	}, [entries, selectedYear]);
+	}, [entries, selectedYear, selectedMonthFrom, selectedMonthTo]);
 
 	const activeMonths = useMemo(() => {
 		const months = new Set<string>();
@@ -153,6 +179,99 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 	const activeCodes = useMemo(() => {
 		return Object.keys(monthlyStats).sort();
 	}, [monthlyStats]);
+
+	// ---- Shared EF/HFACS toggle for 統計表, 類別分析, and EF代碼統計圖.
+	// HFACS categories are server-computed (trend-analysis/route.ts
+	// already groups+totals them), so the pie chart reads
+	// hfacsData.categories directly rather than re-deriving a grouping
+	// scheme client-side the way EF's fixed P/E/C/I/T/O/M grouping does. ----
+	const [dataType, setDataType] = useState<"ef" | "hfacs">("ef");
+	const [hfacsData, setHfacsData] = useState<{
+		codes: { code: string; description: string; total: number }[];
+		categories: { category: string; total: number }[];
+		trendByCode: Record<string, Record<string, { srm: number; self: number }>>;
+	} | null>(null);
+	const [hfacsLoading, setHfacsLoading] = useState(false);
+
+	// Fetches eagerly (not just when dataType==="hfacs") — the summary row
+	// shows both EF種類 and HFACS種類 counts regardless of which toggle
+	// is active, so HFACS data needs to be available either way.
+	useEffect(() => {
+		let cancelled = false;
+
+		async function loadHfacs() {
+			setHfacsLoading(true);
+			try {
+				const token = localStorage.getItem("token");
+				const params = new URLSearchParams({
+					years: String(selectedYear),
+					month_from: String(selectedMonthFrom),
+					month_to: String(selectedMonthTo),
+					type: "hfacs",
+				});
+				const res = await fetch(`/api/sms/trend-analysis?${params}`, {
+					headers: { Authorization: `Bearer ${token}` },
+				});
+				if (!res.ok) throw new Error("HFACS 資料載入失敗");
+				const data = await res.json();
+				if (!cancelled) setHfacsData(data);
+			} catch (error) {
+				console.error("Error loading HFACS data:", error);
+				if (!cancelled) setHfacsData(null);
+			} finally {
+				if (!cancelled) setHfacsLoading(false);
+			}
+		}
+
+		loadHfacs();
+		return () => {
+			cancelled = true;
+		};
+	}, [selectedYear, selectedMonthFrom, selectedMonthTo]);
+
+	// Reshaped into the exact same { code: { month: { count, sources } } }
+	// shape monthlyStats already uses, so the table's existing render
+	// logic works unchanged regardless of which mode is active. self is
+	// always 0 now (trend-analysis/route.ts is SRM-only), so count is
+	// effectively just srm, and sources is a constant ["SRM"].
+	const hfacsMonthlyStats = useMemo((): MonthlyStats => {
+		if (!hfacsData) return {};
+		const stats: MonthlyStats = {};
+		Object.entries(hfacsData.trendByCode).forEach(([code, months]) => {
+			stats[code] = {};
+			Object.entries(months).forEach(([month, counts]) => {
+				const total = counts.srm + counts.self;
+				if (total === 0) return;
+				stats[code][month] = { count: total, sources: new Set(["SRM"]) };
+			});
+		});
+		return stats;
+	}, [hfacsData]);
+
+	const hfacsCodeDescriptions = useMemo(() => {
+		const map: { [code: string]: string } = {};
+		(hfacsData?.codes ?? []).forEach((c) => {
+			map[c.code] = c.description;
+		});
+		return map;
+	}, [hfacsData]);
+
+	const tableMonthlyStats = dataType === "hfacs" ? hfacsMonthlyStats : monthlyStats;
+	const tableCodeDescriptions = dataType === "hfacs" ? hfacsCodeDescriptions : efCodeDescriptions;
+	const tableActiveCodes = useMemo(() => {
+		return Object.keys(tableMonthlyStats).sort((a, b) => {
+			const totalA = Object.values(tableMonthlyStats[a]).reduce((s, d) => s + d.count, 0);
+			const totalB = Object.values(tableMonthlyStats[b]).reduce((s, d) => s + d.count, 0);
+			return totalB - totalA;
+		});
+	}, [tableMonthlyStats]);
+	const tableActiveMonths = useMemo(() => {
+		const months = new Set<string>();
+		Object.values(tableMonthlyStats).forEach((codeStats) => {
+			Object.keys(codeStats).forEach((month) => months.add(month));
+		});
+		return Array.from(months).sort();
+	}, [tableMonthlyStats]);
 
 	const yearlyTotals = useMemo(() => {
 		const totals: YearlyStats = {};
@@ -177,12 +296,97 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 
 	const pieChartData = useMemo(() => {
 		const colors = ["#4a9eff", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#ec4899", "#6366f1"];
-		return Object.values(EF_CATEGORIES).map((name, index) => ({
+		return Object.entries(EF_CATEGORIES).map(([code, name], index) => ({
+			code,
 			name,
 			value: categoryBreakdown[name] || 0,
 			color: colors[index % colors.length],
 		}));
 	}, [categoryBreakdown, EF_CATEGORIES]);
+
+	// 類別分析 (pie) — EF uses the fixed P/E/C/I/T/O/M palette computed
+	// client-side (code.charAt(0)); HFACS categories are open-ended and
+	// already grouped+totaled server-side in hfacsData.categories, so
+	// that's used directly rather than re-deriving a grouping scheme here.
+	const PIE_COLORS = ["#4a9eff", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#ec4899", "#6366f1", "#fb923c", "#1baf7a", "#e87ba4"];
+	const hfacsPieChartData = useMemo(() => {
+		if (!hfacsData) return [];
+		return hfacsData.categories.map((c, index) => ({
+			code: c.category, // HFACS categories have no separate short-code distinct from their name — label logic below skips the "(code)" suffix when code === name
+			name: c.category,
+			value: c.total,
+			color: PIE_COLORS[index % PIE_COLORS.length],
+		}));
+	}, [hfacsData]);
+	const activePieChartData = (dataType === "hfacs" ? hfacsPieChartData : pieChartData).filter(
+		(d) => d.value > 0
+	);
+	const pieTotalCases = activePieChartData.reduce((sum, d) => sum + d.value, 0);
+
+	// EF代碼統計圖 (bar) — unified shape for both modes so the bar chart's
+	// JSX doesn't need mode-specific branching, just one sorted array.
+	const barChartCodes = useMemo(() => {
+		if (dataType === "hfacs") {
+			return [...(hfacsData?.codes ?? [])].sort((a, b) => b.total - a.total);
+		}
+		return Object.entries(yearlyTotals)
+			.map(([code, count]) => ({ code, description: efCodeDescriptions[code] || code, total: count }))
+			.sort((a, b) => b.total - a.total);
+	}, [dataType, hfacsData, yearlyTotals, efCodeDescriptions]);
+
+	// ---- 代碼組成分析 — ported from TrendAnalysisTab.tsx, simplified.
+	// The original showed a stacked srm/self bar per code; that split is
+	// now structurally dead everywhere on this page (self is always 0,
+	// see trend-analysis/route.ts), so porting the two-color stack as-is
+	// would show a visual that no longer means anything. Single-color bar
+	// instead, same search/top-10-expand behavior. Click-to-show-趨勢分析
+	// intentionally NOT wired yet — that needs the line-chart section
+	// ported too, and a row that looks clickable but does nothing would
+	// be worse than a plain list in the meantime. ----
+	const [compositionSearch, setCompositionSearch] = useState("");
+	const [showAllComposition, setShowAllComposition] = useState(false);
+
+	const filteredComposition = useMemo(() => {
+		if (!compositionSearch.trim()) {
+			return showAllComposition ? barChartCodes : barChartCodes.slice(0, 10);
+		}
+		const term = compositionSearch.toLowerCase();
+		return barChartCodes.filter(
+			(c) => c.code.toLowerCase().includes(term) || c.description.toLowerCase().includes(term)
+		);
+	}, [barChartCodes, compositionSearch, showAllComposition]);
+
+	// ---- 趨勢分析 (single-code trend graph), shown on click from a
+	// 代碼組成分析 row. Ported in scope — TrendAnalysisTab.tsx's version
+	// spans a fromYear/toYear multi-year range with month/quarter/half-
+	// year/year granularity rollup; StatisticsTab is scoped to one
+	// selectedYear + a month range within it, so this shows the plain
+	// monthly series across that range without a granularity toggle.
+	// Reuses data already fetched for the table/pie/bar — no new fetch. ----
+	const [selectedTrendCode, setSelectedTrendCode] = useState<string | null>(null);
+
+	const trendCodeSeries = useMemo(() => {
+		if (!selectedTrendCode) return [];
+		const monthCounts: Record<string, number> =
+			dataType === "hfacs"
+				? Object.fromEntries(
+						Object.entries(hfacsData?.trendByCode?.[selectedTrendCode] ?? {}).map(
+							([month, counts]) => [month, counts.srm + counts.self]
+						)
+				  )
+				: Object.fromEntries(
+						Object.entries(monthlyStats[selectedTrendCode] ?? {}).map(([month, d]) => [
+							month,
+							d.count,
+						])
+				  );
+		return Object.entries(monthCounts)
+			.sort(([a], [b]) => a.localeCompare(b))
+			.map(([period, count]) => ({ period, count }));
+	}, [selectedTrendCode, dataType, hfacsData, monthlyStats]);
+
+	const selectedTrendDescription =
+		barChartCodes.find((c) => c.code === selectedTrendCode)?.description ?? "";
 
 	const comparisonData = useMemo(() => {
 		const year1Data: YearlyStats = {};
@@ -302,21 +506,53 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 		<div className={styles.statisticsTab} ref={containerRef}>
 			<div className={styles.header}>
 				<div className={styles.controls}>
-					<div className={styles.controlGroup}>
-						<label>選擇年份:</label>
-						<select
-							value={selectedYear}
-							onChange={(e) =>
-								setSelectedYear(parseInt(e.target.value))
-							}
-							className={styles.select}
-						>
-							{availableYears.map((year) => (
-								<option key={year} value={year}>
-									{year}年
-								</option>
-							))}
-						</select>
+					<div className={styles.filterGroup}>
+						<div className={styles.controlGroup}>
+							<label>選擇年份:</label>
+							<select
+								value={selectedYear}
+								onChange={(e) =>
+									setSelectedYear(parseInt(e.target.value))
+								}
+								className={styles.select}
+							>
+								{availableYears.map((year) => (
+									<option key={year} value={year}>
+										{year}年
+									</option>
+								))}
+							</select>
+						</div>
+
+						<div className={styles.controlGroup}>
+							<label>起始月:</label>
+							<select
+								value={selectedMonthFrom}
+								onChange={(e) => handleMonthFromChange(parseInt(e.target.value))}
+								className={styles.select}
+							>
+								{Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+									<option key={m} value={m}>
+										{m}月
+									</option>
+								))}
+							</select>
+						</div>
+
+						<div className={styles.controlGroup}>
+							<label>結束月:</label>
+							<select
+								value={selectedMonthTo}
+								onChange={(e) => handleMonthToChange(parseInt(e.target.value))}
+								className={styles.select}
+							>
+								{Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+									<option key={m} value={m}>
+										{m}月
+									</option>
+								))}
+							</select>
+						</div>
 					</div>
 
 					<div className={styles.buttonGroup}>
@@ -344,21 +580,40 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 					<span className={styles.summaryItem}>
 						EF代碼種類: <strong>{activeCodes.length}</strong>
 					</span>
+					<span className={styles.summaryItem}>
+						HFACS種類:{" "}
+						<strong>{hfacsLoading ? "..." : hfacsData?.codes.length ?? 0}</strong>
+					</span>
 				</div>
 			</div>
 
-			<div className={styles.topChartsGrid}>
-				<div className={styles.section}>
-					<h3>📅 {selectedYear}年 月度統計表</h3>
-					<div className={styles.tableContainer}>
+			<div className={styles.section}>
+				<div className={styles.tableSectionHeader}>
+					<h3>📅 {selectedYear}年 統計表{hfacsLoading ? "（載入中...）" : ""}</h3>
+					<div className={styles.toggleGroup}>
+						<button
+							className={dataType === "ef" ? styles.toggleActive : styles.toggleButton}
+							onClick={() => setDataType("ef")}
+						>
+							EF代碼
+						</button>
+						<button
+							className={dataType === "hfacs" ? styles.toggleActive : styles.toggleButton}
+							onClick={() => setDataType("hfacs")}
+						>
+							HFACS代碼
+						</button>
+					</div>
+				</div>
+				<div className={styles.tableContainer}>
 						<table className={styles.statsTable}>
 							<thead>
 								<tr>
-									<th>EF代碼</th>
+									<th>{dataType === "hfacs" ? "HFACS代碼" : "EF代碼"}</th>
 									<th className={styles.descriptionColumn}>
 										內容
 									</th>
-									{activeMonths.map((month) => {
+									{tableActiveMonths.map((month) => {
 										const [, monthNum] = month.split("-");
 										return (
 											<th key={month}>
@@ -370,9 +625,9 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 								</tr>
 							</thead>
 							<tbody>
-								{activeCodes.map((code) => {
+								{tableActiveCodes.map((code) => {
 									const total = Object.values(
-										monthlyStats[code]
+										tableMonthlyStats[code]
 									).reduce(
 										(sum, data) => sum + data.count,
 										0
@@ -387,12 +642,12 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 													styles.descriptionCell
 												}
 											>
-												{efCodeDescriptions[code] ||
+												{tableCodeDescriptions[code] ||
 													code}
 											</td>
-											{activeMonths.map((month) => {
+											{tableActiveMonths.map((month) => {
 												const data =
-													monthlyStats[code][month];
+													tableMonthlyStats[code][month];
 												const count = data?.count || 0;
 												const sources = data?.sources
 													? Array.from(data.sources)
@@ -459,11 +714,11 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 									<td className={styles.descriptionCell}>
 										-
 									</td>
-									{activeMonths.map((month) => {
-										const monthTotal = activeCodes.reduce(
+									{tableActiveMonths.map((month) => {
+										const monthTotal = tableActiveCodes.reduce(
 											(sum, code) =>
 												sum +
-												(monthlyStats[code][month]
+												(tableMonthlyStats[code][month]
 													?.count || 0),
 											0
 										);
@@ -477,7 +732,15 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 										);
 									})}
 									<td className={styles.totalCell}>
-										{totalCases}
+										{tableActiveCodes.reduce(
+											(sum, code) =>
+												sum +
+												Object.values(tableMonthlyStats[code]).reduce(
+													(s, d) => s + d.count,
+													0
+												),
+											0
+										)}
 									</td>
 								</tr>
 							</tbody>
@@ -486,23 +749,25 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 				</div>
 
 				<div className={styles.section}>
-					<h3>🗃️ {selectedYear}年 類別分析</h3>
+					<h3>🗃️ {selectedYear}年 類別分析{dataType === "hfacs" ? "（HFACS）" : "（EF）"}</h3>
 					<div className={styles.pieChartContainer}>
 						<ResponsiveContainer width="100%" height={460}>
 							<PieChart margin={{ top: 50, right: 30, bottom: 30, left: 30 }}>
 								<Pie
-									data={pieChartData}
+									data={activePieChartData}
 									dataKey="value"
 									nameKey="name"
 									cx="50%"
 									cy="48%"
 									outerRadius={120}
-									label={({ name, percent }) =>
-										`${name} ${((percent ?? 0) * 100).toFixed(1)}%`
-									}
+									label={({ name, value, percent, payload }) => {
+										const code = payload?.code;
+										const suffix = code && code !== name ? `(${code})` : "";
+										return `${name}${suffix} -${value}筆 (${((percent ?? 0) * 100).toFixed(1)}%)`;
+									}}
 								>
-									{pieChartData.map((entry) => (
-										<Cell key={entry.name} fill={entry.color} />
+									{activePieChartData.map((entry) => (
+										<Cell key={entry.code} fill={entry.color} />
 									))}
 								</Pie>
 								<Tooltip
@@ -513,7 +778,12 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 									}}
 									itemStyle={{ color: "#e8e9ed" }}
 									labelStyle={{ color: "#e8e9ed" }}
-									formatter={(value: number) => [`${value} 件`, "件數"]}
+									formatter={(value: number, name: string, item: any) => {
+										const pct = pieTotalCases ? ((value / pieTotalCases) * 100).toFixed(1) : "0.0";
+										const code = item?.payload?.code;
+										const label = code && code !== name ? `${name}(${code})` : name;
+										return [`${value} 件 (${pct}%)`, label];
+									}}
 								/>
 								<Legend
 									wrapperStyle={{ paddingTop: 24 }}
@@ -525,20 +795,125 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 						</ResponsiveContainer>
 					</div>
 				</div>
+
+			<div className={styles.section}>
+				<div className={styles.sectionHeader}>
+					<h3>📊 代碼組成分析{dataType === "hfacs" ? "（HFACS）" : "（EF）"}</h3>
+					<input
+						type="text"
+						className={styles.searchInput}
+						placeholder="搜尋代碼或描述..."
+						value={compositionSearch}
+						onChange={(e) => setCompositionSearch(e.target.value)}
+					/>
+				</div>
+
+				{filteredComposition.length === 0 ? (
+					<div className={styles.emptyState}>
+						<p>{compositionSearch ? "找不到符合的代碼" : "本期間尚無資料"}</p>
+					</div>
+				) : (
+					<div className={styles.compositionList}>
+						{filteredComposition.map((c) => {
+							const isSelected = selectedTrendCode === c.code;
+							return (
+								<button
+									key={c.code}
+									className={`${styles.compositionRow} ${isSelected ? styles.compositionRowActive : ""}`}
+									onClick={() => setSelectedTrendCode(isSelected ? null : c.code)}
+								>
+									<div className={styles.compositionRowHeader}>
+										<span className={styles.compositionCode}>
+											{c.code}
+											<span className={styles.compositionDesc}>{c.description}</span>
+										</span>
+										<span className={styles.compositionTotal}>{c.total} 件</span>
+									</div>
+									<div className={styles.compositionBar}>
+										<div
+											className={styles.compositionSegment}
+											style={{ width: "100%", background: "#4a9eff" }}
+										>
+											{c.total} 件
+										</div>
+									</div>
+								</button>
+							);
+						})}
+					</div>
+				)}
+
+				{!compositionSearch && barChartCodes.length > 10 && (
+					<button
+						className={styles.showAllButton}
+						onClick={() => setShowAllComposition((v) => !v)}
+					>
+						{showAllComposition ? "只顯示前 10 項" : `顯示全部 (${barChartCodes.length})`}
+					</button>
+				)}
+
+				{selectedTrendCode && (
+					<div className={styles.trendPanel}>
+						<div className={styles.trendPanelHeader}>
+							<h4>
+								📈 {selectedTrendCode}
+								{selectedTrendDescription && (
+									<span className={styles.compositionDesc}>{selectedTrendDescription}</span>
+								)}
+								{" "}趨勢
+							</h4>
+							<button
+								className={styles.closeButton}
+								onClick={() => setSelectedTrendCode(null)}
+							>
+								×
+							</button>
+						</div>
+						{trendCodeSeries.length === 0 ? (
+							<div className={styles.emptyState}>
+								<p>本期間尚無資料</p>
+							</div>
+						) : (
+							<ResponsiveContainer width="100%" height={280}>
+								<LineChart data={trendCodeSeries} margin={{ top: 20, right: 30, bottom: 10, left: 0 }}>
+									<CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+									<XAxis dataKey="period" stroke="#a0aec0" fontSize={12} />
+									<YAxis stroke="#a0aec0" fontSize={12} allowDecimals={false} />
+									<Tooltip
+										contentStyle={{
+											background: "#1a1f35",
+											border: "1px solid rgba(255,255,255,0.1)",
+											borderRadius: 8,
+										}}
+										itemStyle={{ color: "#e8e9ed" }}
+										labelStyle={{ color: "#e8e9ed" }}
+									/>
+									<Line
+										type="monotone"
+										dataKey="count"
+										name="件數"
+										stroke="#4a9eff"
+										strokeWidth={2}
+										dot={{ r: 3 }}
+									/>
+								</LineChart>
+							</ResponsiveContainer>
+						)}
+					</div>
+				)}
 			</div>
 
 			<div className={styles.section}>
-				<h3>📊 {selectedYear}年 EF代碼統計圖</h3>
+				<h3>📊 {selectedYear}年 {dataType === "hfacs" ? "HFACS代碼統計圖" : "EF代碼統計圖"}</h3>
 				<div className={styles.chartContainer}>
 					<div className={styles.barChart}>
-						{Object.entries(yearlyTotals)
-							.sort((a, b) => b[1] - a[1])
-							.map(([code, count]) => {
+						{barChartCodes.map(({ code, description, total }) => {
 								const maxCount = Math.max(
-									...Object.values(yearlyTotals)
+									...barChartCodes.map((c) => c.total),
+									1
 								);
 								const percentage =
-									maxCount > 0 ? (count / maxCount) * 100 : 0;
+									maxCount > 0 ? (total / maxCount) * 100 : 0;
 								const pixelHeight = (percentage / 100) * 280; // 380px chart - 52px info - 48px top padding
 									return (
 										<div key={code} className={styles.barItem}>
@@ -547,8 +922,7 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 													{code}
 												</div>
 												<div className={styles.barDescription}>
-													{efCodeDescriptions[code] ||
-														code}
+													{description}
 												</div>
 											</div>
 											<div className={styles.barTrack}>
@@ -562,7 +936,7 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 													<span
 														className={styles.barValue}
 													>
-														{count}
+														{total}
 													</span>
 												</div>
 											</div>

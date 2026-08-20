@@ -359,6 +359,14 @@
 	background: rgba(255, 255, 255, 0.03);
 }
 
+.mainRowExpanded td {
+	background: rgba(74, 158, 255, 0.08) !important;
+}
+
+.mainRowExpanded td:first-child {
+	box-shadow: inset 3px 0 0 0 #4a9eff;
+}
+
 .reportCode {
 	font-weight: 600;
 	color: #4a9eff;
@@ -376,7 +384,7 @@
 .actionCell,
 .table td.descCell,
 .table td.actionCell {
-	text-align: left;
+	text-align: center;
 	color: #cbd5e0;
 	line-height: 1.4;
 	white-space: pre-wrap; /* preserves line breaks entered in the textarea */
@@ -469,11 +477,49 @@
 	text-align: left;
 }
 
+.detailSection {
+	background: rgba(255, 255, 255, 0.03);
+	padding: 1rem;
+	border-radius: 8px;
+	border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.detailSection h4 {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin: 0 0 0.85rem 0;
+	color: #4a9eff;
+	font-size: 0.95rem;
+	font-weight: 600;
+	padding-bottom: 0.5rem;
+	border-bottom: 1px solid rgba(74, 158, 255, 0.2);
+}
+
+.detailSectionIcon {
+	font-size: 1rem;
+	line-height: 1;
+}
+
+/* Compact fields (dates, codes, statuses) sit in a grid instead of
+   stacking one-per-line — most of these values are short and don't need
+   full paragraph width. Long-text fields (.detailItemLong) span the full
+   row width to break out of the grid. */
+.detailGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+	gap: 0.85rem 1.25rem;
+}
+
+.detailItemLong {
+	grid-column: 1 / -1;
+}
+
 .detailItem strong {
 	display: block;
 	color: #a0aec0;
-	font-size: 0.85rem;
-	margin-bottom: 0.25rem;
+	font-size: 0.8rem;
+	margin-bottom: 0.3rem;
 	text-transform: uppercase;
 	letter-spacing: 0.5px;
 }
@@ -484,6 +530,16 @@
 	line-height: 1.6;
 	white-space: pre-wrap;
 	overflow-wrap: break-word;
+}
+
+.detailBadge {
+	display: inline-block;
+	padding: 0.25rem 0.65rem;
+	border-radius: 10px;
+	font-size: 0.8rem;
+	font-weight: 600;
+	border: 1px solid;
+	white-space: nowrap;
 }
 
 /* Pie chart modal — self-contained to this component, deliberately not part
@@ -592,6 +648,123 @@
 	background: rgba(255, 255, 255, 0.02);
 }
 
+.screenshotHint {
+	color: #a0aec0;
+	font-size: 0.85rem;
+	margin: 0 0 1rem 0;
+}
+
+.screenshotColumnList {
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+	max-height: 400px;
+	overflow-y: auto;
+}
+
+.screenshotColumnRow {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.6rem 0.85rem;
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: 8px;
+	cursor: pointer;
+	transition: background 0.2s ease;
+}
+
+.screenshotColumnRow:hover {
+	background: rgba(255, 255, 255, 0.06);
+}
+
+.screenshotColumnRow input[type="checkbox"] {
+	width: 18px;
+	height: 18px;
+	cursor: pointer;
+	flex-shrink: 0;
+}
+
+.screenshotColumnLabel {
+	flex: 1;
+	color: #e8e9ed;
+	font-size: 0.9rem;
+}
+
+.screenshotColumnOrder {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 22px;
+	height: 22px;
+	padding: 0 0.4rem;
+	background: #4a9eff;
+	color: white;
+	border-radius: 11px;
+	font-size: 0.75rem;
+	font-weight: 700;
+	flex-shrink: 0;
+}
+
+.importSummary {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.importSummaryRow {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.6rem 0.85rem;
+	background: rgba(255, 255, 255, 0.03);
+	border-radius: 8px;
+	border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.importSummaryLabel {
+	color: #a0aec0;
+	font-size: 0.9rem;
+}
+
+.importSummaryValue {
+	color: #e8e9ed;
+	font-weight: 700;
+}
+
+.importSummaryValueGood {
+	color: #6ee7b7;
+	font-weight: 700;
+	font-size: 1.05rem;
+}
+
+.importErrorText {
+	color: #fca5a5;
+	line-height: 1.6;
+}
+
+.importErrorList {
+	margin-top: 0.5rem;
+	padding: 0.85rem;
+	background: rgba(239, 68, 68, 0.08);
+	border: 1px solid rgba(239, 68, 68, 0.25);
+	border-radius: 8px;
+	color: #fca5a5;
+	font-size: 0.85rem;
+}
+
+.importErrorList ul {
+	margin: 0.4rem 0 0 0;
+	padding-left: 1.25rem;
+	max-height: 200px;
+	overflow-y: auto;
+}
+
+.importErrorList li {
+	margin-bottom: 0.3rem;
+	line-height: 1.5;
+}
+
 /* Mobile Responsive — mirrors the breakpoint pattern in
    RRSMSTab.module.css / SRMTableTab.module.css */
 @media (max-width: 768px) {
@@ -648,4 +821,76 @@
 		min-width: 44px;
 		min-height: 44px;
 	}
+}
+
+.screenshotButton {
+	background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+	box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+}
+
+.screenshotButton:hover {
+	background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(137, 94, 237, 0.4);
+}
+
+.screenshotButton:active {
+	transform: translateY(0);
+}
+
+.screenshotButton:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+	transform: none;
+}
+
+.importButton {
+	background: linear-gradient(135deg, #e98000 0%, #c76d00 100%);
+	color: white;
+	border: none;
+	padding: 0.6rem 1.2rem;
+	border-radius: 8px;
+	cursor: pointer;
+	font-weight: 600;
+	font-size: 0.85rem;
+	transition: all 0.2s;
+	box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+	white-space: nowrap;
+}
+
+.importButton:hover {
+	transform: translateY(-2px);
+	background: linear-gradient(135deg, #e98000 0%, #c76d00 100%);
+	box-shadow: 0 4px 12px rgba(214, 118, 0, 0.4);
+}
+
+.importButton:active {
+	transform: translateY(0);
+}
+
+.importButton:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+	transform: none;
+}
+
+.displayGraphButton {
+	background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+	box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.displayGraphButton:hover {
+	transform: translateY(-2px);
+	background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+	box-shadow: 0 4px 12px rgba(30, 222, 0, 0.4);
+}
+
+.displayGraphButton:active {
+	transform: translateY(0);
+}
+
+.displayGraphButton:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+	transform: none;
 }

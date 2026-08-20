@@ -163,6 +163,31 @@ export interface CrewReport {
 	hazard_type?: string | null; // OF分類 — from AQD's Hazard Type column. Distinct from EF分類 (category_ids below), which is this app's own department-defined tagging system, not an AQD import field.
 	action_taken?: string | null; // 辦理情形 — from AQD's Synopsis column
 	category_ids: string[]; // EF分類 — FK into crew_report_categories.id, multiple allowed
+
+	// 識別資訊 (Identification) — remaining fields
+	occurrence_date?: string | null; // 事件日期 — AQD Occurrence Date
+	registered_date?: string | null; // 登記日期 — AQD Registered Date
+
+	// 航班資訊 (Flight Info) — all optional, not every report is flight-specific
+	aircraft?: string | null; // 機號 — AQD A/C
+	flight_no?: string | null; // 班機編號 — AQD Flight no.
+	departure?: string | null; // 出發地 — AQD DEP
+	arrival?: string | null; // 目的地 — AQD ARR
+	location?: string | null; // 地點 — AQD Location
+
+	// 事件內容補充 (Event Supplement)
+	potential_consequence?: string | null; // 潛在後果 — AQD Potential Consequence
+	reporter_name?: string | null; // 通報人 — AQD Reporter
+
+	// 分類與評估 (Classification & Assessment)
+	operational_category?: string | null; // 作業分類 — AQD Operational Category
+	assessment_code?: string | null; // 評估代碼 — AQD Assessment Code
+	risk_assessment_calculation?: string | null; // 風險評估計算 — AQD Risk Assessment Calculations
+	risk_assessment?: string | null; // 風險評估 — AQD Risk Assessment (short code, e.g. "3D")
+	closed_status?: string | null; // 結案狀態 — AQD Closed
+
+	// 附件/評估附件 — both omitted; not captured.
+
 	created_at: string;
 	created_by?: string;
 }

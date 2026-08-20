@@ -196,14 +196,25 @@ export default function TrendAnalysisTab() {
 		}
 	}, [type, trendMode]);
 
+	// Swap (not clamp) when the range would invert — preserves both
+	// selected years rather than collapsing them together. See the same
+	// fix applied to StatisticsTab.tsx's month range.
 	const handleFromYearChange = (y: number) => {
-		setFromYear(y);
-		if (y > toYear) setToYear(y);
+		if (y > toYear) {
+			setFromYear(toYear);
+			setToYear(y);
+		} else {
+			setFromYear(y);
+		}
 	};
 
 	const handleToYearChange = (y: number) => {
-		setToYear(y);
-		if (y < fromYear) setFromYear(y);
+		if (y < fromYear) {
+			setToYear(fromYear);
+			setFromYear(y);
+		} else {
+			setToYear(y);
+		}
 	};
 
 	const fetchData = async () => {
@@ -749,11 +760,7 @@ export default function TrendAnalysisTab() {
 				)}
 			</div>
 
-			{/* Period comparison — answers "did mitigation actually reduce this",
-			    across the top 10 codes at once rather than one at a time —
-			    plus a collective overview toggle for a whole-programme view
-			    instead of drilling into individual risks. Both view modes
-			    share the same range pickers below, so they're always shown. */}
+			{/* Period comparison — answers "did mitigation actually reduce this",across the top 10 codes at once rather than one at a time — plus a collective overview toggle for a whole-programme view instead of drilling into individual risks. Both view modes share the same range pickers below, so they're always shown. */}
 			<div className={styles.section}>
 				<div className={styles.sectionHeader}>
 					<h3>⚖️ 風險緩解分析</h3>

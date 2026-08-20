@@ -40,6 +40,34 @@ export async function PUT(
 			updates.action_taken = body.action_taken || null;
 		if (body.category_ids !== undefined)
 			updates.category_ids = body.category_ids;
+		if (body.occurrence_date !== undefined)
+			updates.occurrence_date = body.occurrence_date || null;
+		if (body.registered_date !== undefined)
+			updates.registered_date = body.registered_date || null;
+		if (body.aircraft !== undefined)
+			updates.aircraft = body.aircraft || null;
+		if (body.flight_no !== undefined)
+			updates.flight_no = body.flight_no || null;
+		if (body.departure !== undefined)
+			updates.departure = body.departure || null;
+		if (body.arrival !== undefined)
+			updates.arrival = body.arrival || null;
+		if (body.location !== undefined)
+			updates.location = body.location || null;
+		if (body.potential_consequence !== undefined)
+			updates.potential_consequence = body.potential_consequence || null;
+		if (body.reporter_name !== undefined)
+			updates.reporter_name = body.reporter_name || null;
+		if (body.operational_category !== undefined)
+			updates.operational_category = body.operational_category || null;
+		if (body.assessment_code !== undefined)
+			updates.assessment_code = body.assessment_code || null;
+		if (body.risk_assessment_calculation !== undefined)
+			updates.risk_assessment_calculation = body.risk_assessment_calculation || null;
+		if (body.risk_assessment !== undefined)
+			updates.risk_assessment = body.risk_assessment || null;
+		if (body.closed_status !== undefined)
+			updates.closed_status = body.closed_status || null;
 
 		const report = await updateCrewReport(id, updates);
 
