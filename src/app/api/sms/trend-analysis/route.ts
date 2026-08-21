@@ -85,15 +85,21 @@ export async function GET(req: NextRequest) {
 	}
 
 	const { searchParams } = new URL(req.url);
-	const yearsParam = searchParams.get("years");
-	const monthFrom = Number(searchParams.get("month_from") ?? 1);
-	const monthTo = Number(searchParams.get("month_to") ?? 12);
+	const startYear = Number(searchParams.get("start_year"));
+	const startMonth = Number(searchParams.get("start_month") ?? 1);
+	const endYear = Number(searchParams.get("end_year"));
+	const endMonth = Number(searchParams.get("end_month") ?? 12);
 	const type = (searchParams.get("type") as "hfacs" | "ef") || "hfacs";
 
-	if (!yearsParam) {
-		return NextResponse.json({ error: "years is required" }, { status: 400 });
+	if (!startYear || !endYear) {
+		return NextResponse.json({ error: "start_year and end_year are required" }, { status: 400 });
 	}
-	const years = yearsParam.split(",").map(Number);
+	if (startYear > endYear) {
+		return NextResponse.json({ error: "start_year must not be after end_year" }, { status: 400 });
+	}
+
+	const years: number[] = [];
+	for (let y = startYear; y <= endYear; y++) years.push(y);
 
 	const supabase = createServiceClient();
 
@@ -115,16 +121,20 @@ export async function GET(req: NextRequest) {
 
 	const srmRows = srmResult.data ?? [];
 
-	// month_from/month_to filtering for SRM happens here in JS, not via a
-	// Supabase range filter on occurrence_month — this codebase has
-	// already documented that pattern as unreliable on nullable date
-	// columns (see src/lib/xlsxNativeCharts.ts sibling learnings / project
-	// notes). The reliable "year" column above already narrows the fetch;
-	// this just tightens to the requested month window.
+	// Genuine cross-year range filter via "YYYY-MM" string comparison —
+	// zero-padded YYYY-MM strings sort lexicographically in chronological
+	// order, so a plain string range check correctly handles a span like
+	// start=2025-01, end=2026-08 (all of 2025 plus Jan-Aug 2026), which a
+	// per-row numeric month check applied uniformly across every year
+	// could not express. Matches this codebase's own documented pattern
+	// of doing month-window filtering in JS rather than a Supabase range
+	// filter on occurrence_month (unreliable on nullable date columns).
+	const startKey = `${startYear}-${String(startMonth).padStart(2, "0")}`;
+	const endKey = `${endYear}-${String(endMonth).padStart(2, "0")}`;
 	const srmRowsInRange = srmRows.filter((r) => {
 		if (!r.occurrence_month) return false;
-		const month = parseInt(String(r.occurrence_month).split("-")[1], 10);
-		return month >= monthFrom && month <= monthTo;
+		const key = String(r.occurrence_month).slice(0, 7); // "YYYY-MM" prefix, robust to any trailing time component
+		return key >= startKey && key <= endKey;
 	});
 
 	// ---- accumulate ----

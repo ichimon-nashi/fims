@@ -228,6 +228,47 @@
 	overflow: hidden;
 }
 
+.efButton,
+.efButtonActive,
+.hfacsButton,
+.hfacsButtonActive {
+	padding: 0.5rem 1rem;
+	border: none;
+	font-size: 0.85rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	white-space: nowrap;
+}
+
+.efButton {
+	background: rgba(74, 158, 255, 0.1) !important;
+	color: #93c5fd !important;
+}
+
+.efButton:hover {
+	background: rgba(74, 158, 255, 0.2) !important;
+}
+
+.efButtonActive {
+	background: #4a9eff !important;
+	color: white !important;
+}
+
+.hfacsButton {
+	background: rgba(16, 185, 129, 0.1) !important;
+	color: #6ee7b7 !important;
+}
+
+.hfacsButton:hover {
+	background: rgba(16, 185, 129, 0.2) !important;
+}
+
+.hfacsButtonActive {
+	background: #10b981 !important;
+	color: white !important;
+}
+
 .toggleButton,
 .toggleActive {
 	padding: 0.5rem 1rem;
@@ -465,49 +506,6 @@
 	box-shadow: 0 0 0 1px rgba(74, 158, 255, 0.3);
 }
 
-.trendPanel {
-	margin-top: 1.25rem;
-	padding-top: 1.25rem;
-	border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.trendPanelHeader {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 0.75rem;
-}
-
-.trendPanelHeader h4 {
-	margin: 0;
-	color: #4a9eff;
-	font-size: 1rem;
-	font-weight: 600;
-}
-
-.closeButton {
-	background: rgba(255, 255, 255, 0.1);
-	border: 1px solid rgba(255, 255, 255, 0.2);
-	color: white;
-	width: 28px;
-	height: 28px;
-	border-radius: 50%;
-	cursor: pointer;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	font-size: 1.3rem;
-	line-height: 1;
-	padding: 0;
-	transition: all 0.2s ease;
-	flex-shrink: 0;
-}
-
-.closeButton:hover {
-	background: rgba(239, 68, 68, 0.3);
-	border-color: #ef4444;
-}
-
 .compositionRowHeader {
 	display: flex;
 	justify-content: space-between;
@@ -572,6 +570,43 @@
 
 .showAllButton:hover {
 	background: rgba(255, 255, 255, 0.1);
+}
+
+.typeToggle {
+	display: inline-flex;
+	flex-wrap: wrap;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.15);
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.typeToggle button {
+	padding: 0.5rem 1rem;
+	background: transparent;
+	border: none;
+	color: #a0aec0;
+	font-size: 0.85rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	white-space: nowrap;
+}
+
+.typeToggle button:hover {
+	color: #e8e9ed;
+}
+
+.typeToggle .typeActive {
+	background: rgba(74, 158, 255, 0.2);
+	color: #4a9eff;
+}
+
+.trendControls {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	flex-wrap: wrap;
 }
 
 .pieChartContainer {
@@ -1061,5 +1096,294 @@
 	.statsTable td {
 		padding: 0.5rem 0.4rem;
 		font-size: 0.75rem;
+	}
+}
+
+.mitigationHint {
+	color: #6b7280;
+	font-size: 0.8rem;
+	margin-bottom: 1rem;
+}
+
+.inlineControlsRow {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin-bottom: 1rem;
+}
+
+.inlineControlsSpaced {
+	margin-left: 1.5rem;
+}
+
+.trendLineActions {
+	display: flex;
+	justify-content: flex-end;
+	margin-bottom: 0.75rem;
+}
+
+.toggleAllLinesButton {
+	background: rgba(74, 158, 255, 0.08);
+	color: #4a9eff;
+	border: 1px solid rgba(74, 158, 255, 0.25);
+	border-radius: 6px;
+	padding: 0.4rem 0.9rem;
+	font-size: 0.8rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	white-space: nowrap;
+}
+
+.presetSummary {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 1rem;
+	margin-bottom: 1.5rem;
+	padding: 0.75rem;
+	background: rgba(255, 255, 255, 0.03);
+	border-radius: 8px;
+	flex-wrap: wrap;
+}
+
+.presetSummaryRange {
+	color: #4a9eff;
+	font-weight: 600;
+	font-size: 0.9rem;
+}
+
+.vsLabel {
+	color: #4a9eff;
+	font-weight: 700;
+	font-size: 1rem;
+}
+
+.compareList {
+	display: flex;
+	flex-direction: column;
+	gap: 0.85rem;
+}
+
+.compareRow {
+	background: rgba(255, 255, 255, 0.02);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 8px;
+	padding: 0.75rem 1rem;
+}
+
+.compareRowHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin-bottom: 0.6rem;
+	font-size: 0.9rem;
+}
+
+.sampleSizeTag {
+	color: #6b7280;
+	font-weight: 400;
+	font-size: 0.75rem;
+	margin-left: 0.5rem;
+}
+
+.deltaNeutral {
+	color: #a0aec0;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.deltaGood {
+	color: #10b981;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.deltaBad {
+	color: #ef4444;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.compareMiniBars {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+}
+
+.compareMiniBarRow {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+}
+
+.compareMiniBarLabel {
+	color: #6b7280;
+	font-size: 0.72rem;
+	font-weight: 600;
+	min-width: 90px;
+	flex-shrink: 0;
+	text-align: right;
+	white-space: normal;
+	overflow: visible;
+	line-height: 1.3;
+}
+
+.compareMiniBarTrack {
+	flex: 1;
+	background: rgba(255, 255, 255, 0.05);
+	border-radius: 4px;
+	overflow: hidden;
+	height: 18px;
+}
+
+.compareMiniBarFill {
+	display: flex;
+	height: 100%;
+	min-width: 2px;
+	transition: width 0.2s ease;
+}
+
+.compareBarSegment {
+	height: 100%;
+}
+
+.compareMiniBarTotal {
+	color: #e8e9ed;
+	font-size: 0.8rem;
+	font-weight: 600;
+	width: 28px;
+	text-align: right;
+	flex-shrink: 0;
+}
+
+.crossLinkRow {
+	display: flex;
+	gap: 0.5rem;
+	margin-top: 0.6rem;
+	flex-wrap: wrap;
+}
+
+.crossLinkButton {
+	border-radius: 6px;
+	padding: 0.35rem 0.7rem;
+	font-size: 0.75rem;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	white-space: nowrap;
+}
+
+.crossLinkSrm {
+	background: rgba(74, 158, 255, 0.08);
+	color: #4a9eff;
+	border: 1px solid rgba(74, 158, 255, 0.25);
+}
+
+.crossLinkRoutine {
+	background: rgba(251, 146, 60, 0.08);
+	color: #fb923c;
+	border: 1px solid rgba(251, 146, 60, 0.25);
+}
+
+.legendDesc {
+	color: #9ca3af;
+	font-size: 0.75rem;
+}
+
+.toggleAllLinesButton:hover {
+	background: rgba(74, 158, 255, 0.15);
+	border-color: rgba(74, 158, 255, 0.4);
+}
+
+.crossLinkSrm:hover {
+	background: rgba(74, 158, 255, 0.15);
+	border-color: rgba(74, 158, 255, 0.4);
+}
+
+.crossLinkRoutine:hover {
+	background: rgba(251, 146, 60, 0.15);
+	border-color: rgba(251, 146, 60, 0.4);
+}
+
+@media (max-width: 768px) {
+	.legendDesc {
+		display: none;
+	}
+
+	.inlineControlsRow {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.inlineControlsSpaced {
+		margin-left: 0;
+	}
+
+	.crossLinkRow {
+		flex-direction: column;
+	}
+
+	.crossLinkButton {
+		width: 100%;
+		min-height: 44px;
+	}
+
+	.vsLabel {
+		text-align: center;
+	}
+
+	.compareRowHeader {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.25rem;
+	}
+
+	.compareMiniBarRow {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0.2rem;
+	}
+
+	.compareMiniBarTrack {
+		width: 100%;
+		flex: none;
+		height: 18px;
+	}
+
+	.compareMiniBarLabel {
+		width: auto;
+		text-align: left;
+		white-space: normal;
+		overflow: visible;
+		text-overflow: clip;
+		font-size: 0.7rem;
+	}
+
+	.compareMiniBarTotal {
+		width: auto;
+		text-align: left;
+	}
+}
+
+/* Enough width on tablet to go back to horizontal bars instead of the
+   phone-width stacked layout, matching TrendAnalysisTab.module.css's own
+   reasoning (iPad portrait sits right at the general mobile breakpoint
+   boundary, and the mobile column-stack looked cramped there). */
+@media (min-width: 600px) and (max-width: 1024px) {
+	.vsLabel {
+		flex-shrink: 0;
+	}
+
+	.compareMiniBarRow {
+		flex-direction: row;
+		align-items: center;
+		gap: 0.6rem;
+	}
+
+	.compareMiniBarTrack {
+		width: auto;
 	}
 }

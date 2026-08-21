@@ -12,9 +12,8 @@ import RRSMSTab from '@/components/sms/RRSMSTab';
 import SRMTableTab from '@/components/sms/SRMTableTab';
 import StatisticsTab from '@/components/sms/StatisticsTab';
 import CrewReportTab from '@/components/sms/CrewReportTab';
-import TrendAnalysisTab from '@/components/sms/TrendAnalysisTab';
 
-type SMSTab = 'rr-sms' | 'srm-table' | 'statistics' | 'crew-report' | 'trend-analysis';
+type SMSTab = 'rr-sms' | 'srm-table' | 'statistics' | 'crew-report';
 
 function SMSContent() {
   const { user, token } = useAuth();
@@ -25,7 +24,7 @@ function SMSContent() {
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [yearsWithData, setYearsWithData] = useState<Set<number>>(new Set());
 
-  const VALID_TABS: SMSTab[] = ['rr-sms', 'srm-table', 'statistics', 'crew-report', 'trend-analysis'];
+  const VALID_TABS: SMSTab[] = ['rr-sms', 'srm-table', 'statistics', 'crew-report'];
 
   useEffect(() => {
     const tabParam = searchParams.get('tab');
@@ -127,14 +126,6 @@ function SMSContent() {
             OF安全報告
             <span className={styles.tabSubtitle}>OF Safety Report</span>
           </button>
-          <div className={styles.tabDivider} aria-hidden="true" />
-          <button
-            className={`${styles.tab} ${activeTab === 'trend-analysis' ? `${styles.activeTab} ${styles.trendActiveTab}` : ''}`}
-            onClick={() => setActiveTab('trend-analysis')}
-          >
-            趨勢分析
-            <span className={styles.tabSubtitle}>Risk Analysis</span>
-          </button>
         </div>
 
         <div className={styles.tabContent}>
@@ -162,7 +153,6 @@ function SMSContent() {
               isAdmin={canEdit}
             />
           )}
-          {activeTab === 'trend-analysis' && <TrendAnalysisTab />}
         </div>
       </div>
     </>

@@ -7,6 +7,146 @@ import html2canvas from "html2canvas";
 import { saveAs } from "file-saver";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import { EF_ATTRIBUTE_CATEGORIES } from "@/lib/sms.constants";
+import TrendRecordsModal from "./TrendRecordsModal";
+
+// ---- Ported from TrendAnalysisTab.tsx (rollUp + supporting types) ----
+type MonthSplit = Record<string, { srm: number; self: number }>;
+type Granularity = "month" | "quarter" | "halfYear" | "year";
+type TrendMode = "code" | "category" | "area";
+type PeriodValue = { period: string; srm: number | null; self: number | null };
+
+interface FullTrendData {
+	months: string[];
+	codes: { code: string; description: string; total: number }[];
+	categories: { category: string; total: number }[];
+	areas: { area: string; total: number }[];
+	trendByCode: Record<string, Record<string, { srm: number; self: number }>>;
+	trendByCategory: Record<string, Record<string, { srm: number; self: number }>>;
+	trendByArea: Record<string, Record<string, { srm: number; self: number }>>;
+}
+
+const SRM_COLOR = "#4a9eff";
+const SELF_COLOR = "#fb923c";
+
+function currentMonthKey(): string {
+	const now = new Date();
+	return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+// Rolls monthly "YYYY-MM" keys up into quarter/half-year/year period
+// labels, summing srm/self counts for whichever months fall in each
+// period.
+function rollUp(months: string[], split: MonthSplit, granularity: Granularity, hideFuture: boolean = false): PeriodValue[] {
+	const nowKey = currentMonthKey();
+
+	if (granularity === "month") {
+		return months.map((m) => {
+			const isFuture = hideFuture && m > nowKey;
+			return {
+				period: m,
+				srm: isFuture ? null : split[m]?.srm ?? 0,
+				self: isFuture ? null : split[m]?.self ?? 0,
+			};
+		});
+	}
+
+	const periodOf = (m: string): string => {
+		const [yStr, moStr] = m.split("-");
+		const y = parseInt(yStr, 10);
+		const mo = parseInt(moStr, 10);
+		if (granularity === "quarter") return `${y} Q${Math.ceil(mo / 3)}`;
+		if (granularity === "halfYear") return `${y} ${mo <= 6 ? "上半年" : "下半年"}`;
+		return `${y}`;
+	};
+
+	const order: string[] = [];
+	const sums: Record<string, { srm: number; self: number; minMonth: string }> = {};
+	months.forEach((m) => {
+		const p = periodOf(m);
+		if (!sums[p]) {
+			sums[p] = { srm: 0, self: 0, minMonth: m };
+			order.push(p);
+		} else if (m < sums[p].minMonth) {
+			sums[p].minMonth = m;
+		}
+		sums[p].srm += split[m]?.srm ?? 0;
+		sums[p].self += split[m]?.self ?? 0;
+	});
+
+	// A bucket only counts as "future" if its EARLIEST month hasn't
+	// happened yet — a quarter straddling past and future months still
+	// shows its real partial sum, not a gap.
+	return order.map((p) => {
+		const isFuture = hideFuture && sums[p].minMonth > nowKey;
+		return { period: p, srm: isFuture ? null : sums[p].srm, self: isFuture ? null : sums[p].self };
+	});
+}
+
+// Sums raw monthly srm/self counts across a set of month keys — used for
+// the calendar-year comparison in 風險緩解分析, which operates directly
+// on months rather than a granularity-bucketed series.
+function sumMonths(split: MonthSplit, months: string[]): { srm: number; self: number } {
+	return months.reduce(
+		(acc, m) => {
+			acc.srm += split[m]?.srm ?? 0;
+			acc.self += split[m]?.self ?? 0;
+			return acc;
+		},
+		{ srm: 0, self: 0 }
+	);
+}
+
+// Same computation as 風險緩解分析's on-screen allComparisonRows, but as a
+// plain function taking data explicitly rather than reading the
+// comparisonType-selected mitigationData — so the export can build both
+// EF and HFACS comparison tables unconditionally, not just whichever one
+// is currently toggled on screen.
+function computeComparisonRows(
+	data: FullTrendData | null,
+	year1: number,
+	year2: number
+): { code: string; description: string; year1Count: number; year2Count: number }[] {
+	if (!data || year1 === year2) return [];
+	const periodA = data.months.filter((m) => parseInt(m.slice(0, 4), 10) === year1);
+	const periodB = data.months.filter((m) => parseInt(m.slice(0, 4), 10) === year2);
+	if (periodA.length === 0 || periodB.length === 0) return [];
+	const rows = data.codes
+		.map((c) => {
+			const split = data.trendByCode[c.code] ?? {};
+			const aSum = sumMonths(split, periodA);
+			const bSum = sumMonths(split, periodB);
+			return {
+				code: c.code,
+				description: c.description,
+				year1Count: aSum.srm + aSum.self,
+				year2Count: bSum.srm + bSum.self,
+			};
+		})
+		.filter((r) => r.year1Count + r.year2Count > 0);
+	rows.sort((x, y) => y.year1Count + y.year2Count - (x.year1Count + x.year2Count));
+	return rows;
+}
+
+// Same shape as 風險緩解分析's on-screen 整體趨勢總覽 (top 10 codes'
+// counts per period), but again as a plain function so the export can
+// build both EF and HFACS trend-overview series unconditionally.
+function computeTrendOverview(
+	data: FullTrendData | null,
+	granularity: Granularity
+): { periods: string[]; series: { code: string; description: string; values: (number | null)[] }[] } {
+	if (!data) return { periods: [], series: [] };
+	const periods = rollUp(data.months, {}, granularity).map((p) => p.period);
+	const topCodes = data.codes.slice(0, 10);
+	const series = topCodes.map((c) => {
+		const rolled = rollUp(data.months, data.trendByCode[c.code] ?? {}, granularity, true);
+		const values = periods.map((period) => {
+			const entry = rolled.find((p) => p.period === period);
+			return entry && entry.srm !== null && entry.self !== null ? entry.srm + entry.self : null;
+		});
+		return { code: c.code, description: c.description, values };
+	});
+	return { periods, series };
+}
 
 interface SRMEntry {
 	id: number;
@@ -39,16 +179,89 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 	const [loading, setLoading] = useState(true);
 	const [exporting, setExporting] = useState(false);
 	const [capturing, setCapturing] = useState(false);
-	const [selectedYear, setSelectedYear] = useState<number>(
-		new Date().getFullYear()
-	);
+	const [startYear, setStartYear] = useState<number>(new Date().getFullYear());
+	const [startMonth, setStartMonth] = useState<number>(1);
+	const [endYear, setEndYear] = useState<number>(new Date().getFullYear());
+	const [endMonth, setEndMonth] = useState<number>(12);
+
+	// Collapses to a plain "{year}年" when the range is exactly one full
+	// year (the common case), otherwise shows the full span so a
+	// multi-year or partial-year selection is unambiguous in headers.
+	// Declared here (before the loading-state early return further down)
+	// rather than near where it's used — a hook placed after an early
+	// return gets skipped entirely on the render where loading=true,
+	// then included once loading=false, which is a different number of
+	// hooks between renders and a real Rules-of-Hooks violation.
+	const rangeLabel = useMemo(() => {
+		if (startYear === endYear && startMonth === 1 && endMonth === 12) {
+			return `${startYear}年`;
+		}
+		if (startYear === endYear) {
+			return `${startYear}年${startMonth}月-${endMonth}月`;
+		}
+		return `${startYear}年${startMonth}月-${endYear}年${endMonth}月`;
+	}, [startYear, startMonth, endYear, endMonth]);
+
 	const [compareYear1, setCompareYear1] = useState<number>(
-		new Date().getFullYear()
-	);
-	const [compareYear2, setCompareYear2] = useState<number>(
 		new Date().getFullYear() - 1
 	);
+	const [compareYear2, setCompareYear2] = useState<number>(
+		new Date().getFullYear()
+	);
 	const [availableYears, setAvailableYears] = useState<number[]>([]);
+
+	// Swap (not clamp) when the selection would invert — compareYear1 is
+	// always the earlier year, compareYear2 the later one, so bars/legend
+	// consistently show the earlier year first regardless of which
+	// dropdown the user actually changed.
+	const handleCompareYear1Change = (y: number) => {
+		if (y > compareYear2) {
+			setCompareYear1(compareYear2);
+			setCompareYear2(y);
+		} else {
+			setCompareYear1(y);
+		}
+	};
+	const handleCompareYear2Change = (y: number) => {
+		if (y < compareYear1) {
+			setCompareYear2(compareYear1);
+			setCompareYear1(y);
+		} else {
+			setCompareYear2(y);
+		}
+	};
+
+	// year*12+month gives a single monotonic index, so a compound
+	// year+month boundary can be swap-corrected with plain numeric
+	// comparison instead of tuple logic — e.g. picking 結束年/結束月
+	// "2025年3月" while 起始年/起始月 is "2025年6月" ends with
+	// 起始=2025年3月, 結束=2025年6月, preserving both selected values
+	// rather than collapsing them, and correctly handling cases that
+	// span a year boundary (2025年12月 vs 2026年1月).
+	const toMonthIndex = (year: number, month: number) => year * 12 + month;
+
+	const handleStartChange = (year: number, month: number) => {
+		if (toMonthIndex(year, month) > toMonthIndex(endYear, endMonth)) {
+			setStartYear(endYear);
+			setStartMonth(endMonth);
+			setEndYear(year);
+			setEndMonth(month);
+		} else {
+			setStartYear(year);
+			setStartMonth(month);
+		}
+	};
+	const handleEndChange = (year: number, month: number) => {
+		if (toMonthIndex(year, month) < toMonthIndex(startYear, startMonth)) {
+			setEndYear(startYear);
+			setEndMonth(startMonth);
+			setStartYear(year);
+			setStartMonth(month);
+		} else {
+			setEndYear(year);
+			setEndMonth(month);
+		}
+	};
 
 	const containerRef = useRef<HTMLDivElement>(null);
 
@@ -98,9 +311,12 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 			const yearsArray = Array.from(years).sort((a, b) => b - a);
 			setAvailableYears(yearsArray);
 
-			// Set selectedYear to first available year (or current year if no data)
+			// Default both boundaries to the latest available year (whole
+			// year), matching the previous single-year default — the user
+			// can widen the range from there if they want a multi-year span.
 			if (yearsArray.length > 0) {
-				setSelectedYear(yearsArray[0]);
+				setStartYear(yearsArray[0]);
+				setEndYear(yearsArray[0]);
 			}
 		} catch (error) {
 			console.error("Error fetching entries:", error);
@@ -109,39 +325,21 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 		}
 	};
 
-	const [selectedMonthFrom, setSelectedMonthFrom] = useState<number>(1);
-	const [selectedMonthTo, setSelectedMonthTo] = useState<number>(12);
-
-	// Swap (not clamp) when the range would invert — e.g. picking 結束月
-	// "April" while 起始月 is "June" ends with 起始月=April, 結束月=June,
-	// preserving both selected values rather than collapsing them together.
-	const handleMonthFromChange = (v: number) => {
-		if (v > selectedMonthTo) {
-			setSelectedMonthFrom(selectedMonthTo);
-			setSelectedMonthTo(v);
-		} else {
-			setSelectedMonthFrom(v);
-		}
-	};
-
-	const handleMonthToChange = (v: number) => {
-		if (v < selectedMonthFrom) {
-			setSelectedMonthTo(selectedMonthFrom);
-			setSelectedMonthFrom(v);
-		} else {
-			setSelectedMonthTo(v);
-		}
-	};
+	// Genuine cross-year range via "YYYY-MM" string comparison — matches
+	// the same fix applied to trend-analysis/route.ts. A per-row numeric
+	// month check applied without regard to which year the row is in
+	// (the previous approach) can't express a span like Jan 2025-Aug
+	// 2026: it would silently drop Sep-Dec 2025.
+	const rangeStartKey = `${startYear}-${String(startMonth).padStart(2, "0")}`;
+	const rangeEndKey = `${endYear}-${String(endMonth).padStart(2, "0")}`;
 
 	const monthlyStats = useMemo(() => {
 		const stats: MonthlyStats = {};
 		entries
 			.filter((entry) => {
 				if (!entry.occurrence_month) return false;
-				const [yearStr, monthStr] = entry.occurrence_month.split("-");
-				const year = parseInt(yearStr);
-				const month = parseInt(monthStr);
-				return year === selectedYear && month >= selectedMonthFrom && month <= selectedMonthTo;
+				const key = entry.occurrence_month.slice(0, 7);
+				return key >= rangeStartKey && key <= rangeEndKey;
 			})
 			.forEach((entry) => {
 				if (
@@ -166,7 +364,7 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 				});
 			});
 		return stats;
-	}, [entries, selectedYear, selectedMonthFrom, selectedMonthTo]);
+	}, [entries, rangeStartKey, rangeEndKey]);
 
 	const activeMonths = useMemo(() => {
 		const months = new Set<string>();
@@ -180,54 +378,72 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 		return Object.keys(monthlyStats).sort();
 	}, [monthlyStats]);
 
-	// ---- Shared EF/HFACS toggle for 統計表, 類別分析, and EF代碼統計圖.
-	// HFACS categories are server-computed (trend-analysis/route.ts
-	// already groups+totals them), so the pie chart reads
+	// ---- Shared EF/HFACS toggle for 統計表, 類別分析, 代碼組成分析, and
+	// 趨勢分析. HFACS categories are server-computed (trend-analysis/
+	// route.ts already groups+totals them), so the pie chart reads
 	// hfacsData.categories directly rather than re-deriving a grouping
 	// scheme client-side the way EF's fixed P/E/C/I/T/O/M grouping does. ----
 	const [dataType, setDataType] = useState<"ef" | "hfacs">("ef");
-	const [hfacsData, setHfacsData] = useState<{
-		codes: { code: string; description: string; total: number }[];
-		categories: { category: string; total: number }[];
-		trendByCode: Record<string, Record<string, { srm: number; self: number }>>;
-	} | null>(null);
+
+	const [hfacsData, setHfacsData] = useState<FullTrendData | null>(null);
+	// EF's table/pie/composition data comes from raw /api/sms/srm-entries
+	// (existing, unchanged, working) — but 趨勢分析's category/area modes
+	// need the same server-side grouping trend-analysis/route.ts provides
+	// for HFACS, which raw entries can't give. Separate fetch, used only
+	// by 趨勢分析, so the already-shipped EF table/pie/composition path
+	// isn't touched.
+	const [efFullData, setEfFullData] = useState<FullTrendData | null>(null);
 	const [hfacsLoading, setHfacsLoading] = useState(false);
 
 	// Fetches eagerly (not just when dataType==="hfacs") — the summary row
 	// shows both EF種類 and HFACS種類 counts regardless of which toggle
-	// is active, so HFACS data needs to be available either way.
+	// is active, so HFACS data needs to be available either way. Both
+	// hfacs and ef fetched together, matching TrendAnalysisTab.tsx's own
+	// dual-fetch pattern, so switching dataType doesn't need a re-fetch.
 	useEffect(() => {
 		let cancelled = false;
 
-		async function loadHfacs() {
+		async function loadTrendData() {
 			setHfacsLoading(true);
 			try {
 				const token = localStorage.getItem("token");
-				const params = new URLSearchParams({
-					years: String(selectedYear),
-					month_from: String(selectedMonthFrom),
-					month_to: String(selectedMonthTo),
-					type: "hfacs",
-				});
-				const res = await fetch(`/api/sms/trend-analysis?${params}`, {
-					headers: { Authorization: `Bearer ${token}` },
-				});
-				if (!res.ok) throw new Error("HFACS 資料載入失敗");
-				const data = await res.json();
-				if (!cancelled) setHfacsData(data);
+				const baseParams = {
+					start_year: String(startYear),
+					start_month: String(startMonth),
+					end_year: String(endYear),
+					end_month: String(endMonth),
+				};
+				const [hfacsRes, efRes] = await Promise.all([
+					fetch(`/api/sms/trend-analysis?${new URLSearchParams({ ...baseParams, type: "hfacs" })}`, {
+						headers: { Authorization: `Bearer ${token}` },
+					}),
+					fetch(`/api/sms/trend-analysis?${new URLSearchParams({ ...baseParams, type: "ef" })}`, {
+						headers: { Authorization: `Bearer ${token}` },
+					}),
+				]);
+				if (!hfacsRes.ok || !efRes.ok) throw new Error("趨勢資料載入失敗");
+				const hfacsJson = await hfacsRes.json();
+				const efJson = await efRes.json();
+				if (!cancelled) {
+					setHfacsData(hfacsJson);
+					setEfFullData(efJson);
+				}
 			} catch (error) {
-				console.error("Error loading HFACS data:", error);
-				if (!cancelled) setHfacsData(null);
+				console.error("Error loading trend data:", error);
+				if (!cancelled) {
+					setHfacsData(null);
+					setEfFullData(null);
+				}
 			} finally {
 				if (!cancelled) setHfacsLoading(false);
 			}
 		}
 
-		loadHfacs();
+		loadTrendData();
 		return () => {
 			cancelled = true;
 		};
-	}, [selectedYear, selectedMonthFrom, selectedMonthTo]);
+	}, [startYear, startMonth, endYear, endMonth]);
 
 	// Reshaped into the exact same { code: { month: { count, sources } } }
 	// shape monthlyStats already uses, so the table's existing render
@@ -356,37 +572,297 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 		);
 	}, [barChartCodes, compositionSearch, showAllComposition]);
 
-	// ---- 趨勢分析 (single-code trend graph), shown on click from a
-	// 代碼組成分析 row. Ported in scope — TrendAnalysisTab.tsx's version
-	// spans a fromYear/toYear multi-year range with month/quarter/half-
-	// year/year granularity rollup; StatisticsTab is scoped to one
-	// selectedYear + a month range within it, so this shows the plain
-	// monthly series across that range without a granularity toggle.
-	// Reuses data already fetched for the table/pie/bar — no new fetch. ----
-	const [selectedTrendCode, setSelectedTrendCode] = useState<string | null>(null);
+	// ---- 趨勢分析 — directly ported from TrendAnalysisTab.tsx per
+	// explicit request (controls, granularity toggle, dual SRM/自督
+	// lines all preserved as-is). fullData picks whichever of
+	// hfacsData/efFullData matches the current dataType toggle — both are
+	// always fetched together (see the trend-data effect above), so
+	// switching the toggle doesn't need a re-fetch. ----
+	const fullData = dataType === "hfacs" ? hfacsData : efFullData;
 
-	const trendCodeSeries = useMemo(() => {
-		if (!selectedTrendCode) return [];
-		const monthCounts: Record<string, number> =
-			dataType === "hfacs"
-				? Object.fromEntries(
-						Object.entries(hfacsData?.trendByCode?.[selectedTrendCode] ?? {}).map(
-							([month, counts]) => [month, counts.srm + counts.self]
-						)
-				  )
-				: Object.fromEntries(
-						Object.entries(monthlyStats[selectedTrendCode] ?? {}).map(([month, d]) => [
-							month,
-							d.count,
-						])
-				  );
-		return Object.entries(monthCounts)
-			.sort(([a], [b]) => a.localeCompare(b))
-			.map(([period, count]) => ({ period, count }));
-	}, [selectedTrendCode, dataType, hfacsData, monthlyStats]);
+	const [trendMode, setTrendMode] = useState<TrendMode>("code");
+	const [selectedCode, setSelectedCode] = useState<string | null>(null);
+	const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+	const [selectedArea, setSelectedArea] = useState<string | null>(null);
+	const [trendGranularity, setTrendGranularity] = useState<Granularity>("month");
 
-	const selectedTrendDescription =
-		barChartCodes.find((c) => c.code === selectedTrendCode)?.description ?? "";
+	// Defaults to the highest-risk code (barChartCodes[0], already sorted
+	// descending) whenever nothing is explicitly selected, or whenever a
+	// previous selection no longer exists in the current dataset (e.g.
+	// after switching dataType) — per explicit request that the trend
+	// graph shows the top risk by default rather than requiring a click.
+	const effectiveCode = useMemo(() => {
+		if (selectedCode && barChartCodes.some((c) => c.code === selectedCode)) return selectedCode;
+		return barChartCodes[0]?.code ?? null;
+	}, [selectedCode, barChartCodes]);
+
+	const trendSeries = useMemo(() => {
+		if (!fullData) return [];
+		if (trendMode === "code" && effectiveCode) {
+			const split = fullData.trendByCode[effectiveCode] ?? {};
+			return rollUp(fullData.months, split, trendGranularity, true);
+		}
+		if (trendMode === "category" && selectedCategory) {
+			const split = fullData.trendByCategory[selectedCategory] ?? {};
+			return rollUp(fullData.months, split, trendGranularity, true);
+		}
+		if (trendMode === "area" && selectedArea) {
+			const split = fullData.trendByArea[selectedArea] ?? {};
+			return rollUp(fullData.months, split, trendGranularity, true);
+		}
+		return [];
+	}, [fullData, trendMode, effectiveCode, selectedCategory, selectedArea, trendGranularity]);
+
+	const trendLabel = useMemo(() => {
+		if (trendMode === "code" && effectiveCode) {
+			const c = fullData?.codes.find((c) => c.code === effectiveCode);
+			return c ? `${c.code} — ${c.description}` : effectiveCode;
+		}
+		if (trendMode === "category" && selectedCategory) return selectedCategory;
+		if (trendMode === "area" && selectedArea) return selectedArea;
+		return "";
+	}, [trendMode, effectiveCode, selectedCategory, selectedArea, fullData]);
+
+	// ---- 風險緩解分析 — directly ported from TrendAnalysisTab.tsx.
+	// Independent HFACS/EF toggle, separate from the page-level dataType
+	// — this matches the original's deliberate design (its own comment:
+	// "not the trend chart's dataset"). Reuses the existing compareYear1/
+	// compareYear2 state (already on this page for the old 年度比較
+	// section this replaces) rather than fromYear/toYear naming, since
+	// this control's existing semantics are "year A vs year B" with no
+	// enforced ordering, not a continuous from-to range. Fetches only the
+	// two specific comparison years, not everything between them. ----
+	const [comparisonType, setComparisonType] = useState<"hfacs" | "ef">("ef");
+	const [mitigationView, setMitigationView] = useState<"list" | "overview">("list");
+	const [comparisonGranularity, setComparisonGranularity] = useState<Granularity>("month");
+	const [showAllComparison, setShowAllComparison] = useState(false);
+	const [showAllTrendCodes, setShowAllTrendCodes] = useState(false);
+	const [hiddenTrendLines, setHiddenTrendLines] = useState<Set<string>>(new Set());
+	const [recordsModal, setRecordsModal] = useState<{
+		code: string;
+		description: string;
+		source: "srm" | "routine";
+	} | null>(null);
+
+	const [mitigationHfacsData, setMitigationHfacsData] = useState<FullTrendData | null>(null);
+	const [mitigationEfData, setMitigationEfData] = useState<FullTrendData | null>(null);
+	const [mitigationLoading, setMitigationLoading] = useState(false);
+
+	useEffect(() => {
+		let cancelled = false;
+
+		async function loadMitigationData() {
+			setMitigationLoading(true);
+			try {
+				const token = localStorage.getItem("token");
+				const baseParams = {
+					start_year: String(compareYear1),
+					start_month: "1",
+					end_year: String(compareYear2),
+					end_month: "12",
+				};
+				const [hfacsRes, efRes] = await Promise.all([
+					fetch(`/api/sms/trend-analysis?${new URLSearchParams({ ...baseParams, type: "hfacs" })}`, {
+						headers: { Authorization: `Bearer ${token}` },
+					}),
+					fetch(`/api/sms/trend-analysis?${new URLSearchParams({ ...baseParams, type: "ef" })}`, {
+						headers: { Authorization: `Bearer ${token}` },
+					}),
+				]);
+				if (!hfacsRes.ok || !efRes.ok) throw new Error("風險緩解分析資料載入失敗");
+				const hfacsJson = await hfacsRes.json();
+				const efJson = await efRes.json();
+				if (!cancelled) {
+					setMitigationHfacsData(hfacsJson);
+					setMitigationEfData(efJson);
+				}
+			} catch (error) {
+				console.error("Error loading mitigation comparison data:", error);
+				if (!cancelled) {
+					setMitigationHfacsData(null);
+					setMitigationEfData(null);
+				}
+			} finally {
+				if (!cancelled) setMitigationLoading(false);
+			}
+		}
+
+		loadMitigationData();
+		return () => {
+			cancelled = true;
+		};
+	}, [compareYear1, compareYear2]);
+
+	const mitigationData = comparisonType === "hfacs" ? mitigationHfacsData : mitigationEfData;
+
+	const toggleTrendLine = (code: string) => {
+		setHiddenTrendLines((prev) => {
+			const next = new Set(prev);
+			if (next.has(code)) next.delete(code);
+			else next.add(code);
+			return next;
+		});
+	};
+
+	const mitigationAllPeriods = useMemo(() => {
+		if (!mitigationData) return [];
+		return rollUp(mitigationData.months, {}, comparisonGranularity).map((p) => p.period);
+	}, [mitigationData, comparisonGranularity]);
+
+	const periodARange = useMemo(() => {
+		if (!mitigationData || compareYear1 === compareYear2) return { periods: [] as string[], label: "" };
+		const periods = mitigationData.months.filter((m) => parseInt(m.slice(0, 4), 10) === compareYear1);
+		return { periods, label: `${compareYear1}年` };
+	}, [mitigationData, compareYear1, compareYear2]);
+
+	const periodBRange = useMemo(() => {
+		if (!mitigationData || compareYear1 === compareYear2) return { periods: [] as string[], label: "" };
+		const periods = mitigationData.months.filter((m) => parseInt(m.slice(0, 4), 10) === compareYear2);
+		return { periods, label: `${compareYear2}年` };
+	}, [mitigationData, compareYear1, compareYear2]);
+
+	const allComparisonRows = useMemo(() => {
+		if (!mitigationData || periodARange.periods.length === 0 || periodBRange.periods.length === 0) return [];
+		const rows = mitigationData.codes
+			.map((c) => {
+				const split = mitigationData.trendByCode[c.code] ?? {};
+				const aSum = sumMonths(split, periodARange.periods);
+				const bSum = sumMonths(split, periodBRange.periods);
+				return {
+					code: c.code,
+					description: c.description,
+					a: { period: periodARange.label, srm: aSum.srm, self: aSum.self },
+					b: { period: periodBRange.label, srm: bSum.srm, self: bSum.self },
+				};
+			})
+			.filter((r) => r.a.srm + r.a.self + r.b.srm + r.b.self > 0);
+
+		rows.sort((x, y) => {
+			const totalX = x.a.srm + x.a.self + x.b.srm + x.b.self;
+			const totalY = y.a.srm + y.a.self + y.b.srm + y.b.self;
+			return totalY - totalX;
+		});
+		return rows;
+	}, [mitigationData, periodARange, periodBRange]);
+
+	const topCodesComparison = useMemo(() => {
+		const visible = showAllComparison ? allComparisonRows : allComparisonRows.slice(0, 10);
+		return [...visible].sort((x, y) => {
+			const diffX = x.b.srm + x.b.self - (x.a.srm + x.a.self);
+			const diffY = y.b.srm + y.b.self - (y.a.srm + y.a.self);
+			return diffX - diffY;
+		});
+	}, [allComparisonRows, showAllComparison]);
+
+	const topCodesForMitigationTrend = useMemo(() => {
+		if (!mitigationData) return [];
+		const codes = showAllTrendCodes ? mitigationData.codes : mitigationData.codes.slice(0, 10);
+		return codes.map((c) => ({ code: c.code, description: c.description }));
+	}, [mitigationData, showAllTrendCodes]);
+
+	const mitigationCodeDescLookup = useMemo(() => {
+		return Object.fromEntries(topCodesForMitigationTrend.map((c) => [c.code, c.description]));
+	}, [topCodesForMitigationTrend]);
+
+	const topCodesMitigationTrendSeries = useMemo(() => {
+		if (!mitigationData) return [];
+		return mitigationAllPeriods.map((period) => {
+			const row: Record<string, string | number | null> = { period };
+			topCodesForMitigationTrend.forEach(({ code }) => {
+				const series = rollUp(mitigationData.months, mitigationData.trendByCode[code] ?? {}, comparisonGranularity, true);
+				const entry = series.find((p) => p.period === period);
+				row[code] = entry && entry.srm !== null && entry.self !== null ? entry.srm + entry.self : null;
+			});
+			return row;
+		});
+	}, [mitigationData, mitigationAllPeriods, topCodesForMitigationTrend, comparisonGranularity]);
+
+	const MITIGATION_TREND_COLORS = [
+		"#4a9eff", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6",
+		"#ec4899", "#6366f1", "#fb923c", "#1baf7a", "#e87ba4",
+	];
+
+	// ---- Export-only derived data. Sheet 1 must always include both EF
+	// and HFACS tables regardless of the dataType toggle, and the year-
+	// comparison/trend-overview sheets must exist for both types
+	// regardless of the comparisonType toggle — so all of this is
+	// computed unconditionally here rather than reusing the toggle-
+	// dependent table*/mitigationData variables used on screen. ----
+	const hfacsActiveMonths = useMemo(() => {
+		const months = new Set<string>();
+		Object.values(hfacsMonthlyStats).forEach((codeStats) => {
+			Object.keys(codeStats).forEach((month) => months.add(month));
+		});
+		return Array.from(months).sort();
+	}, [hfacsMonthlyStats]);
+
+	const hfacsActiveCodes = useMemo(() => {
+		return Object.keys(hfacsMonthlyStats).sort((a, b) => {
+			const totalA = Object.values(hfacsMonthlyStats[a]).reduce((s, d) => s + d.count, 0);
+			const totalB = Object.values(hfacsMonthlyStats[b]).reduce((s, d) => s + d.count, 0);
+			return totalB - totalA;
+		});
+	}, [hfacsMonthlyStats]);
+
+	const hfacsYearlyTotals = useMemo(() => {
+		const totals: YearlyStats = {};
+		Object.entries(hfacsMonthlyStats).forEach(([code, months]) => {
+			totals[code] = Object.values(months).reduce((sum, data) => sum + data.count, 0);
+		});
+		return totals;
+	}, [hfacsMonthlyStats]);
+
+	const hfacsTotalCases = Object.values(hfacsYearlyTotals).reduce((sum, c) => sum + c, 0);
+
+	// hfacsData.categories is already server-grouped+totaled — no need to
+	// re-derive from hfacsYearlyTotals the way the EF category breakdown
+	// re-derives from yearlyTotals (HFACS categories don't share EF's
+	// fixed single-letter-code scheme, so there's no equivalent grouping
+	// key to recompute from client-side anyway).
+	const hfacsCategoryBreakdown = useMemo(() => {
+		const breakdown: Record<string, number> = {};
+		(hfacsData?.categories ?? []).forEach((c) => {
+			breakdown[c.category] = c.total;
+		});
+		return breakdown;
+	}, [hfacsData]);
+
+	// EF's categoryBreakdown (declared below) is keyed by Chinese name;
+	// this is the same data keyed by the single-letter code instead, plus
+	// a code->name lookup — both needed so the export can show "改變管理
+	// (M)" (Chinese name + English/letter code) in both the 類別分析
+	// table and the pie chart's category labels.
+	const efCategoryBreakdownByCode = useMemo(() => {
+		const breakdown: Record<string, number> = {};
+		Object.entries(yearlyTotals).forEach(([code, count]) => {
+			const category = code.charAt(0);
+			breakdown[category] = (breakdown[category] || 0) + count;
+		});
+		return breakdown;
+	}, [yearlyTotals]);
+
+	const efComparisonRows = useMemo(
+		() => computeComparisonRows(mitigationEfData, compareYear1, compareYear2),
+		[mitigationEfData, compareYear1, compareYear2]
+	);
+	const hfacsComparisonRows = useMemo(
+		() => computeComparisonRows(mitigationHfacsData, compareYear1, compareYear2),
+		[mitigationHfacsData, compareYear1, compareYear2]
+	);
+
+	// Reuses mitigationEfData/mitigationHfacsData (both already fetched
+	// for compareYear1/compareYear2, not the page's main year-range
+	// fetch) — same source 風險緩解分析's on-screen comparison already
+	// uses, just computed for both types unconditionally instead of only
+	// whichever comparisonType is toggled.
+	const efTrendOverview = useMemo(
+		() => computeTrendOverview(mitigationEfData, comparisonGranularity),
+		[mitigationEfData, comparisonGranularity]
+	);
+	const hfacsTrendOverview = useMemo(
+		() => computeTrendOverview(mitigationHfacsData, comparisonGranularity),
+		[mitigationHfacsData, comparisonGranularity]
+	);
 
 	const comparisonData = useMemo(() => {
 		const year1Data: YearlyStats = {};
@@ -414,16 +890,20 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 		try {
 			const token = localStorage.getItem("token");
 
-			// Reshape monthlyStats from { code: { month: { count, sources } } }
-			// to { code: { month: count } } — the export route only needs
-			// counts, not the sources Set (which doesn't survive JSON anyway).
-			const monthlyStatsForExport: Record<string, Record<string, number>> = {};
-			Object.entries(monthlyStats).forEach(([code, months]) => {
-				monthlyStatsForExport[code] = {};
-				Object.entries(months).forEach(([month, data]) => {
-					monthlyStatsForExport[code][month] = data.count;
+			// Reshape both monthlyStats objects from { code: { month: { count,
+			// sources } } } to { code: { month: count } } — the export route
+			// only needs counts, not the sources Set (which doesn't survive
+			// JSON anyway).
+			const reshapeMonthlyStats = (stats: MonthlyStats): Record<string, Record<string, number>> => {
+				const out: Record<string, Record<string, number>> = {};
+				Object.entries(stats).forEach(([code, months]) => {
+					out[code] = {};
+					Object.entries(months).forEach(([month, data]) => {
+						out[code][month] = data.count;
+					});
 				});
-			});
+				return out;
+			};
 
 			const response = await fetch("/api/sms/export-statistics", {
 				method: "POST",
@@ -432,17 +912,32 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 					Authorization: `Bearer ${token}`,
 				},
 				body: JSON.stringify({
-					year: selectedYear,
-					activeMonths,
-					activeCodes,
-					efCodeDescriptions,
-					monthlyStats: monthlyStatsForExport,
-					yearlyTotals,
-					categoryBreakdown,
-					totalCases,
+					rangeLabel,
+					ef: {
+						activeMonths,
+						activeCodes,
+						codeDescriptions: efCodeDescriptions,
+						monthlyStats: reshapeMonthlyStats(monthlyStats),
+						yearlyTotals,
+						totalCases,
+						categoryBreakdown: efCategoryBreakdownByCode, // code -> count
+						categoryNames: EF_CATEGORIES, // code -> Chinese name
+					},
+					hfacs: {
+						activeMonths: hfacsActiveMonths,
+						activeCodes: hfacsActiveCodes,
+						codeDescriptions: hfacsCodeDescriptions,
+						monthlyStats: reshapeMonthlyStats(hfacsMonthlyStats),
+						yearlyTotals: hfacsYearlyTotals,
+						totalCases: hfacsTotalCases,
+						categoryBreakdown: hfacsCategoryBreakdown, // name -> count, no separate code
+					},
 					compareYear1,
 					compareYear2,
-					comparisonData,
+					efComparisonRows,
+					hfacsComparisonRows,
+					efTrendOverview,
+					hfacsTrendOverview,
 				}),
 			});
 
@@ -452,7 +947,8 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 			}
 
 			const blob = await response.blob();
-			saveAs(blob, `SRM統計報表_${selectedYear}.xlsx`);
+			const dateStamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+			saveAs(blob, `SRM統計報表_${dateStamp}.xlsx`);
 
 			alert("✅ Excel 檔案已匯出！圖表已內建，可直接編輯");
 		} catch (error) {
@@ -474,7 +970,7 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 				useCORS: true,
 			} as any);
 			const link = document.createElement("a");
-			link.download = `SRM統計_${selectedYear}_${new Date()
+			link.download = `SRM統計_${endYear}_${new Date()
 				.toISOString()
 				.slice(0, 10)}.png`;
 			link.href = canvas.toDataURL("image/png");
@@ -508,12 +1004,10 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 				<div className={styles.controls}>
 					<div className={styles.filterGroup}>
 						<div className={styles.controlGroup}>
-							<label>選擇年份:</label>
+							<label>起始年:</label>
 							<select
-								value={selectedYear}
-								onChange={(e) =>
-									setSelectedYear(parseInt(e.target.value))
-								}
+								value={startYear}
+								onChange={(e) => handleStartChange(parseInt(e.target.value), startMonth)}
 								className={styles.select}
 							>
 								{availableYears.map((year) => (
@@ -527,8 +1021,8 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 						<div className={styles.controlGroup}>
 							<label>起始月:</label>
 							<select
-								value={selectedMonthFrom}
-								onChange={(e) => handleMonthFromChange(parseInt(e.target.value))}
+								value={startMonth}
+								onChange={(e) => handleStartChange(startYear, parseInt(e.target.value))}
 								className={styles.select}
 							>
 								{Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
@@ -540,10 +1034,25 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 						</div>
 
 						<div className={styles.controlGroup}>
+							<label>結束年:</label>
+							<select
+								value={endYear}
+								onChange={(e) => handleEndChange(parseInt(e.target.value), endMonth)}
+								className={styles.select}
+							>
+								{availableYears.map((year) => (
+									<option key={year} value={year}>
+										{year}年
+									</option>
+								))}
+							</select>
+						</div>
+
+						<div className={styles.controlGroup}>
 							<label>結束月:</label>
 							<select
-								value={selectedMonthTo}
-								onChange={(e) => handleMonthToChange(parseInt(e.target.value))}
+								value={endMonth}
+								onChange={(e) => handleEndChange(endYear, parseInt(e.target.value))}
 								className={styles.select}
 							>
 								{Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
@@ -552,6 +1061,21 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 									</option>
 								))}
 							</select>
+						</div>
+
+						<div className={styles.toggleGroup}>
+							<button
+								className={dataType === "ef" ? styles.efButtonActive : styles.efButton}
+								onClick={() => setDataType("ef")}
+							>
+								EF代碼
+							</button>
+							<button
+								className={dataType === "hfacs" ? styles.hfacsButtonActive : styles.hfacsButton}
+								onClick={() => setDataType("hfacs")}
+							>
+								HFACS代碼
+							</button>
 						</div>
 					</div>
 
@@ -588,23 +1112,7 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 			</div>
 
 			<div className={styles.section}>
-				<div className={styles.tableSectionHeader}>
-					<h3>📅 {selectedYear}年 統計表{hfacsLoading ? "（載入中...）" : ""}</h3>
-					<div className={styles.toggleGroup}>
-						<button
-							className={dataType === "ef" ? styles.toggleActive : styles.toggleButton}
-							onClick={() => setDataType("ef")}
-						>
-							EF代碼
-						</button>
-						<button
-							className={dataType === "hfacs" ? styles.toggleActive : styles.toggleButton}
-							onClick={() => setDataType("hfacs")}
-						>
-							HFACS代碼
-						</button>
-					</div>
-				</div>
+				<h3>📅 {rangeLabel} 統計表{hfacsLoading ? "（載入中...）" : ""}</h3>
 				<div className={styles.tableContainer}>
 						<table className={styles.statsTable}>
 							<thead>
@@ -749,7 +1257,7 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 				</div>
 
 				<div className={styles.section}>
-					<h3>🗃️ {selectedYear}年 類別分析{dataType === "hfacs" ? "（HFACS）" : "（EF）"}</h3>
+					<h3>🗃️ {rangeLabel} 類別分析{dataType === "hfacs" ? "（HFACS）" : "（EF）"}</h3>
 					<div className={styles.pieChartContainer}>
 						<ResponsiveContainer width="100%" height={460}>
 							<PieChart margin={{ top: 50, right: 30, bottom: 30, left: 30 }}>
@@ -815,12 +1323,17 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 				) : (
 					<div className={styles.compositionList}>
 						{filteredComposition.map((c) => {
-							const isSelected = selectedTrendCode === c.code;
+							const isSelected = trendMode === "code" && effectiveCode === c.code;
+							const maxTotal = barChartCodes[0]?.total || 1;
+							const widthPct = Math.max((c.total / maxTotal) * 100, 2); // 2% floor so non-zero values stay visible/clickable
 							return (
 								<button
 									key={c.code}
 									className={`${styles.compositionRow} ${isSelected ? styles.compositionRowActive : ""}`}
-									onClick={() => setSelectedTrendCode(isSelected ? null : c.code)}
+									onClick={() => {
+										setTrendMode("code");
+										setSelectedCode(isSelected ? null : c.code);
+									}}
 								>
 									<div className={styles.compositionRowHeader}>
 										<span className={styles.compositionCode}>
@@ -832,9 +1345,9 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 									<div className={styles.compositionBar}>
 										<div
 											className={styles.compositionSegment}
-											style={{ width: "100%", background: "#4a9eff" }}
+											style={{ width: `${widthPct}%`, background: "#4a9eff" }}
 										>
-											{c.total} 件
+											{widthPct >= 15 && `${c.total} 件`}
 										</div>
 									</div>
 								</button>
@@ -852,111 +1365,187 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 					</button>
 				)}
 
-				{selectedTrendCode && (
-					<div className={styles.trendPanel}>
-						<div className={styles.trendPanelHeader}>
-							<h4>
-								📈 {selectedTrendCode}
-								{selectedTrendDescription && (
-									<span className={styles.compositionDesc}>{selectedTrendDescription}</span>
-								)}
-								{" "}趨勢
-							</h4>
+			</div>
+
+			<div className={styles.section}>
+				<div className={styles.sectionHeader}>
+					<h3>📈 趨勢分析</h3>
+					<div className={styles.trendControls}>
+						<div className={styles.typeToggle}>
 							<button
-								className={styles.closeButton}
-								onClick={() => setSelectedTrendCode(null)}
+								className={trendMode === "code" ? styles.typeActive : ""}
+								onClick={() => setTrendMode("code")}
 							>
-								×
+								個別代碼
+							</button>
+							<button
+								className={trendMode === "category" ? styles.typeActive : ""}
+								onClick={() => setTrendMode("category")}
+							>
+								分類彙總
+							</button>
+							{dataType === "hfacs" && (
+								<button
+									className={trendMode === "area" ? styles.typeActive : ""}
+									onClick={() => setTrendMode("area")}
+								>
+									領域彙總
+								</button>
+							)}
+						</div>
+
+						{trendMode === "code" && fullData && (
+							<select
+								className={styles.select}
+								value={effectiveCode ?? ""}
+								onChange={(e) => setSelectedCode(e.target.value)}
+							>
+								{fullData.codes.map((c) => (
+									<option key={c.code} value={c.code}>
+										{c.code} — {c.description}
+									</option>
+								))}
+							</select>
+						)}
+						{trendMode === "category" && fullData && (
+							<select
+								className={styles.select}
+								value={selectedCategory ?? ""}
+								onChange={(e) => setSelectedCategory(e.target.value)}
+							>
+								{fullData.categories.map((cat) => (
+									<option key={cat.category} value={cat.category}>
+										{cat.category}
+									</option>
+								))}
+							</select>
+						)}
+						{trendMode === "area" && fullData && (
+							<select
+								className={styles.select}
+								value={selectedArea ?? ""}
+								onChange={(e) => setSelectedArea(e.target.value)}
+							>
+								{fullData.areas.map((a) => (
+									<option key={a.area} value={a.area}>
+										{a.area}
+									</option>
+								))}
+							</select>
+						)}
+
+						<div className={styles.typeToggle}>
+							<button
+								className={trendGranularity === "month" ? styles.typeActive : ""}
+								onClick={() => setTrendGranularity("month")}
+							>
+								月
+							</button>
+							<button
+								className={trendGranularity === "quarter" ? styles.typeActive : ""}
+								onClick={() => setTrendGranularity("quarter")}
+							>
+								季
+							</button>
+							<button
+								className={trendGranularity === "halfYear" ? styles.typeActive : ""}
+								onClick={() => setTrendGranularity("halfYear")}
+							>
+								半年
+							</button>
+							<button
+								className={trendGranularity === "year" ? styles.typeActive : ""}
+								onClick={() => setTrendGranularity("year")}
+							>
+								年
 							</button>
 						</div>
-						{trendCodeSeries.length === 0 ? (
-							<div className={styles.emptyState}>
-								<p>本期間尚無資料</p>
-							</div>
-						) : (
-							<ResponsiveContainer width="100%" height={280}>
-								<LineChart data={trendCodeSeries} margin={{ top: 20, right: 30, bottom: 10, left: 0 }}>
-									<CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
-									<XAxis dataKey="period" stroke="#a0aec0" fontSize={12} />
-									<YAxis stroke="#a0aec0" fontSize={12} allowDecimals={false} />
-									<Tooltip
-										contentStyle={{
-											background: "#1a1f35",
-											border: "1px solid rgba(255,255,255,0.1)",
-											borderRadius: 8,
-										}}
-										itemStyle={{ color: "#e8e9ed" }}
-										labelStyle={{ color: "#e8e9ed" }}
-									/>
-									<Line
-										type="monotone"
-										dataKey="count"
-										name="件數"
-										stroke="#4a9eff"
-										strokeWidth={2}
-										dot={{ r: 3 }}
-									/>
-								</LineChart>
-							</ResponsiveContainer>
-						)}
 					</div>
+				</div>
+
+				{hfacsLoading ? (
+					<div className={styles.emptyState}>
+						<p>載入中...</p>
+					</div>
+				) : trendSeries.length === 0 ? (
+					<div className={styles.emptyState}>
+						<p>尚無資料可顯示趨勢</p>
+					</div>
+				) : (
+					<ResponsiveContainer width="100%" height={340}>
+						<LineChart data={trendSeries} margin={{ top: 20, right: 30, bottom: 10, left: 0 }}>
+							<CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+							<XAxis dataKey="period" stroke="#a0aec0" fontSize={12} />
+							<YAxis stroke="#a0aec0" fontSize={12} allowDecimals={false} />
+							<Tooltip
+								contentStyle={{
+									background: "#1a1f35",
+									border: "1px solid rgba(255,255,255,0.1)",
+									borderRadius: 8,
+								}}
+								itemStyle={{ color: "#e8e9ed" }}
+								labelStyle={{ color: "#e8e9ed" }}
+							/>
+							<Legend
+								formatter={(value) => <span style={{ color: "#e8e9ed" }}>{value}</span>}
+							/>
+							<Line type="monotone" dataKey="srm" name="SRM" stroke={SRM_COLOR} strokeWidth={2} dot={{ r: 3 }} />
+						</LineChart>
+					</ResponsiveContainer>
 				)}
 			</div>
 
-			<div className={styles.section}>
-				<h3>📊 {selectedYear}年 {dataType === "hfacs" ? "HFACS代碼統計圖" : "EF代碼統計圖"}</h3>
-				<div className={styles.chartContainer}>
-					<div className={styles.barChart}>
-						{barChartCodes.map(({ code, description, total }) => {
-								const maxCount = Math.max(
-									...barChartCodes.map((c) => c.total),
-									1
-								);
-								const percentage =
-									maxCount > 0 ? (total / maxCount) * 100 : 0;
-								const pixelHeight = (percentage / 100) * 280; // 380px chart - 52px info - 48px top padding
-									return (
-										<div key={code} className={styles.barItem}>
-											<div className={styles.barInfo}>
-												<div className={styles.barCode}>
-													{code}
-												</div>
-												<div className={styles.barDescription}>
-													{description}
-												</div>
-											</div>
-											<div className={styles.barTrack}>
-												<div
-													className={styles.barFill}
-													style={{
-														height: `${pixelHeight}px`,
-														['--percentage' as any]: `${percentage}%`,
-													}}
-												>
-													<span
-														className={styles.barValue}
-													>
-														{total}
-													</span>
-												</div>
-											</div>
-										</div>
-									);
-							})}
-					</div>
-				</div>
-			</div>
 
 			<div className={styles.section}>
-				<h3>📈 年度比較</h3>
-				<div className={styles.comparisonControls}>
+				<div className={styles.sectionHeader}>
+					<h3>⚖️ 風險緩解分析</h3>
+					<div className={styles.typeToggle}>
+						<button
+							className={mitigationView === "list" ? styles.typeActive : ""}
+							onClick={() => setMitigationView("list")}
+						>
+							個別代碼比較
+						</button>
+						<button
+							className={mitigationView === "overview" ? styles.typeActive : ""}
+							onClick={() => setMitigationView("overview")}
+						>
+							整體趨勢總覽
+						</button>
+					</div>
+				</div>
+
+				<div className={styles.mitigationHint}>
+					{mitigationView === "overview"
+						? showAllTrendCodes
+							? "顯示全部風險代碼隨時間的變化趨勢（點選圖例可單獨顯示/隱藏個別代碼）"
+							: "顯示前 10 大風險代碼隨時間的變化趨勢（點選圖例可單獨顯示/隱藏個別代碼）"
+						: compareYear1 === compareYear2
+						? "請選擇不同的年份1與年份2以進行比較"
+						: `比較 ${compareYear1}年 與 ${compareYear2}年 的風險緩解成效`}
+				</div>
+
+				<div className={styles.inlineControlsRow}>
+					<div className={styles.typeToggle}>
+						<button
+							className={comparisonType === "ef" ? styles.efButtonActive : styles.efButton}
+							onClick={() => setComparisonType("ef")}
+						>
+							EF 代碼
+						</button>
+						<button
+							className={comparisonType === "hfacs" ? styles.hfacsButtonActive : styles.hfacsButton}
+							onClick={() => setComparisonType("hfacs")}
+						>
+							HFACS 代碼
+						</button>
+					</div>
+
 					<div className={styles.controlGroup}>
 						<label>年份1:</label>
 						<select
 							value={compareYear1}
-							onChange={(e) =>
-								setCompareYear1(parseInt(e.target.value))
-							}
+							onChange={(e) => handleCompareYear1Change(parseInt(e.target.value))}
 							className={styles.select}
 						>
 							{availableYears.map((year) => (
@@ -971,9 +1560,7 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 						<label>年份2:</label>
 						<select
 							value={compareYear2}
-							onChange={(e) =>
-								setCompareYear2(parseInt(e.target.value))
-							}
+							onChange={(e) => handleCompareYear2Change(parseInt(e.target.value))}
 							className={styles.select}
 						>
 							{availableYears.map((year) => (
@@ -983,116 +1570,241 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 							))}
 						</select>
 					</div>
-				</div>
 
-				<div className={styles.comparisonChart}>
-					{Array.from(
-						new Set([
-							...Object.keys(comparisonData.year1),
-							...Object.keys(comparisonData.year2),
-						])
-					)
-						.sort()
-						.map((code) => {
-							const y1Count = comparisonData.year1[code] || 0;
-							const y2Count = comparisonData.year2[code] || 0;
-							const maxCount = Math.max(
-								...Object.values(comparisonData.year1),
-								...Object.values(comparisonData.year2)
-							);
-							return (
-								<div
-									key={code}
-									className={styles.comparisonGroup}
+					{mitigationView === "overview" && (
+						<div className={`${styles.controlGroup} ${styles.inlineControlsSpaced}`}>
+							<label>時間單位:</label>
+							<div className={styles.typeToggle}>
+								<button
+									className={comparisonGranularity === "month" ? styles.typeActive : ""}
+									onClick={() => setComparisonGranularity("month")}
 								>
-									<div className={styles.comparisonLabel}>
-										<div className={styles.comparisonCode}>
-											{code}
-										</div>
-										<div className={styles.comparisonDesc}>
-											{efCodeDescriptions[code] || code}
-										</div>
-									</div>
-									<div className={styles.comparisonBars}>
-										<div className={styles.comparisonBar}>
-											<div
-												className={
-													styles.comparisonBarFill
-												}
-												style={{
-													width:
-														maxCount > 0
-															? `${
-																	(y1Count /
-																		maxCount) *
-																	100
-															  }%`
-															: "0",
-													backgroundColor: "#4a9eff",
-												}}
-											>
-												<span
-													className={
-														styles.comparisonValue
-													}
-												>
-													{y1Count || ""}
-												</span>
-											</div>
-										</div>
-										<div className={styles.comparisonBar}>
-											<div
-												className={
-													styles.comparisonBarFill
-												}
-												style={{
-													width:
-														maxCount > 0
-															? `${
-																	(y2Count /
-																		maxCount) *
-																	100
-															  }%`
-															: "0",
-													backgroundColor: "#f59e0b",
-												}}
-											>
-												<span
-													className={
-														styles.comparisonValue
-													}
-												>
-													{y2Count || ""}
-												</span>
-											</div>
-										</div>
-									</div>
-									<div className={styles.comparisonDiff}>
-										{y1Count - y2Count > 0 ? "+" : ""}
-										{y1Count - y2Count}
-									</div>
-								</div>
-							);
-						})}
+									月
+								</button>
+								<button
+									className={comparisonGranularity === "quarter" ? styles.typeActive : ""}
+									onClick={() => setComparisonGranularity("quarter")}
+								>
+									季
+								</button>
+								<button
+									className={comparisonGranularity === "halfYear" ? styles.typeActive : ""}
+									onClick={() => setComparisonGranularity("halfYear")}
+								>
+									半年
+								</button>
+								<button
+									className={comparisonGranularity === "year" ? styles.typeActive : ""}
+									onClick={() => setComparisonGranularity("year")}
+								>
+									年
+								</button>
+							</div>
+						</div>
+					)}
 				</div>
 
-				<div className={styles.comparisonLegend}>
-					<span className={styles.legendItem}>
-						<span
-							className={styles.legendDot}
-							style={{ backgroundColor: "#4a9eff" }}
-						></span>
-						{compareYear1}年
-					</span>
-					<span className={styles.legendItem}>
-						<span
-							className={styles.legendDot}
-							style={{ backgroundColor: "#f59e0b" }}
-						></span>
-						{compareYear2}年
-					</span>
-				</div>
+				{mitigationLoading ? (
+					<div className={styles.emptyState}>
+						<p>載入中...</p>
+					</div>
+				) : mitigationView === "overview" ? (
+					topCodesMitigationTrendSeries.length === 0 ? (
+						<div className={styles.emptyState}>
+							<p>尚無資料可顯示</p>
+						</div>
+					) : (
+						<>
+							<div className={styles.trendLineActions}>
+								<button
+									className={styles.toggleAllLinesButton}
+									onClick={() => {
+										const allHidden =
+											topCodesForMitigationTrend.length > 0 &&
+											topCodesForMitigationTrend.every((c) => hiddenTrendLines.has(c.code));
+										setHiddenTrendLines(
+											allHidden ? new Set() : new Set(topCodesForMitigationTrend.map((c) => c.code))
+										);
+									}}
+								>
+									{topCodesForMitigationTrend.length > 0 && topCodesForMitigationTrend.every((c) => hiddenTrendLines.has(c.code))
+										? "全部顯示"
+										: "全部隱藏"}
+								</button>
+							</div>
+
+							<ResponsiveContainer width="100%" height={520}>
+								<LineChart data={topCodesMitigationTrendSeries} margin={{ top: 20, right: 30, bottom: 10, left: 0 }}>
+									<CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+									<XAxis dataKey="period" stroke="#a0aec0" fontSize={12} />
+									<YAxis stroke="#a0aec0" fontSize={12} allowDecimals={false} />
+									<Tooltip
+										contentStyle={{
+											background: "#1a1f35",
+											border: "1px solid rgba(255,255,255,0.1)",
+											borderRadius: 8,
+										}}
+										itemStyle={{ color: "#e8e9ed" }}
+										labelStyle={{ color: "#e8e9ed" }}
+									/>
+									<Legend
+										onClick={(e: any) => toggleTrendLine(e.dataKey)}
+										formatter={(value, entry: any) => {
+											const isHidden = hiddenTrendLines.has(entry?.dataKey ?? value);
+											return (
+												<span
+													style={{
+														color: isHidden ? "#6b7280" : "#ffffff",
+														cursor: "pointer",
+														textDecoration: isHidden ? "line-through" : "none",
+													}}
+												>
+													{value}
+													{mitigationCodeDescLookup[value] && (
+														<span className={styles.legendDesc}>
+															{" "}
+															— {mitigationCodeDescLookup[value]}
+														</span>
+													)}
+												</span>
+											);
+										}}
+									/>
+									{topCodesForMitigationTrend.map(({ code }, i) => (
+										<Line
+											key={code}
+											type="monotone"
+											dataKey={code}
+											name={code}
+											stroke={MITIGATION_TREND_COLORS[i % MITIGATION_TREND_COLORS.length]}
+											strokeWidth={2}
+											dot={{ r: 2 }}
+											connectNulls={false}
+											hide={hiddenTrendLines.has(code)}
+										/>
+									))}
+								</LineChart>
+							</ResponsiveContainer>
+
+							{mitigationData && mitigationData.codes.length > 10 && (
+								<button
+									className={styles.showAllButton}
+									onClick={() => setShowAllTrendCodes((v) => !v)}
+								>
+									{showAllTrendCodes ? "只顯示前 10 項" : `顯示全部 (${mitigationData.codes.length})`}
+								</button>
+							)}
+						</>
+					)
+				) : compareYear1 === compareYear2 ? (
+					<div className={styles.emptyState}>
+						<p>年份1與年份2相同，無法比較 — 請調整上方年份選擇</p>
+					</div>
+				) : topCodesComparison.length === 0 ? (
+					<div className={styles.emptyState}>
+						<p>本期間尚無資料</p>
+					</div>
+				) : (
+					<>
+						<div className={styles.presetSummary}>
+							<span className={styles.presetSummaryRange}>{periodARange.label}</span>
+							<span className={styles.vsLabel}>vs</span>
+							<span className={styles.presetSummaryRange}>{periodBRange.label}</span>
+						</div>
+
+						<div className={styles.compareList}>
+							{topCodesComparison.map(({ code, description, a, b }) => {
+								const totalA = a.srm + a.self;
+								const totalB = b.srm + b.self;
+								const sampleSize = totalA + totalB;
+								const diff = totalB - totalA;
+								const pct = totalA > 0 ? Math.round((diff / totalA) * 100) : null;
+								const improved = diff < 0;
+								const unchanged = diff === 0;
+								const maxTotal = Math.max(totalA, totalB, 1);
+
+								return (
+									<div key={code} className={styles.compareRow}>
+										<div className={styles.compareRowHeader}>
+											<span className={styles.compositionCode}>
+												{code}
+												<span className={styles.compositionDesc}>{description}</span>
+												<span className={styles.sampleSizeTag}>n={sampleSize}</span>
+											</span>
+											<span
+												className={
+													unchanged
+														? styles.deltaNeutral
+														: improved
+														? styles.deltaGood
+														: styles.deltaBad
+												}
+											>
+												{totalA} → {totalB}
+												{" "}
+												({diff > 0 ? "+" : ""}
+												{diff}
+												{pct !== null && `, ${diff > 0 ? "+" : ""}${pct}%`})
+												{!unchanged && (improved ? " ↓ 改善" : " ↑ 惡化")}
+											</span>
+										</div>
+
+										<div className={styles.compareMiniBars}>
+											{[
+												{ label: a.period, total: totalA, color: SRM_COLOR },
+												{ label: b.period, total: totalB, color: SELF_COLOR },
+											].map(({ label, total, color }) => (
+												<div key={label} className={styles.compareMiniBarRow}>
+													<span className={styles.compareMiniBarLabel}>{label}</span>
+													<div className={styles.compareMiniBarTrack}>
+														<div
+															className={styles.compareMiniBarFill}
+															style={{ width: `${(total / maxTotal) * 100}%`, background: color }}
+														/>
+													</div>
+													<span className={styles.compareMiniBarTotal}>{total}</span>
+												</div>
+											))}
+										</div>
+
+										<div className={styles.crossLinkRow}>
+											<button
+												className={`${styles.crossLinkButton} ${styles.crossLinkSrm}`}
+												onClick={() => setRecordsModal({ code, description, source: "srm" })}
+											>
+												🔍 查看 SRM 相關記錄
+											</button>
+										</div>
+									</div>
+								);
+							})}
+						</div>
+
+						{!showAllComparison && allComparisonRows.length > 10 && (
+							<button className={styles.showAllButton} onClick={() => setShowAllComparison(true)}>
+								顯示全部 ({allComparisonRows.length})
+							</button>
+						)}
+						{showAllComparison && allComparisonRows.length > 10 && (
+							<button className={styles.showAllButton} onClick={() => setShowAllComparison(false)}>
+								只顯示前 10 項
+							</button>
+						)}
+					</>
+				)}
 			</div>
+
+			{recordsModal && (
+				<TrendRecordsModal
+					code={recordsModal.code}
+					description={recordsModal.description}
+					type={comparisonType}
+					source={recordsModal.source}
+					yearA={compareYear1}
+					yearB={compareYear2}
+					onClose={() => setRecordsModal(null)}
+				/>
+			)}
 		</div>
 	);
 }
