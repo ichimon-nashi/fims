@@ -25,6 +25,7 @@ interface ScreenshotColumn {
 	key: string;
 	label: string;
 	getValue: (report: CrewReport, categoryMap: Map<string, CrewReportCategory>) => string;
+	wide?: boolean; // long free-text field — gets a proportional share of remaining width instead of the fixed short-column width
 }
 
 // All fields available for the screenshot export. Order here is just the
@@ -33,7 +34,7 @@ interface ScreenshotColumn {
 const SCREENSHOT_COLUMNS: ScreenshotColumn[] = [
 	{ key: "report_code", label: "編號 (AQD Code)", getValue: (r) => r.report_code || "NIL" },
 	{ key: "title", label: "標題 (Title)", getValue: (r) => r.title },
-	{ key: "description", label: "描述 (Description)", getValue: (r) => r.description },
+	{ key: "description", label: "描述 (Description)", getValue: (r) => r.description, wide: true },
 	{
 		key: "category_ids",
 		label: "EF分類",
@@ -52,6 +53,7 @@ const SCREENSHOT_COLUMNS: ScreenshotColumn[] = [
 		key: "potential_consequence",
 		label: "潛在後果 (Potential Consequence)",
 		getValue: (r) => r.potential_consequence || "",
+		wide: true,
 	},
 	{ key: "reporter_name", label: "通報人 (Reporter)", getValue: (r) => r.reporter_name || "" },
 	{
@@ -67,7 +69,7 @@ const SCREENSHOT_COLUMNS: ScreenshotColumn[] = [
 	},
 	{ key: "risk_assessment", label: "風險評估 (Risk Assessment)", getValue: (r) => r.risk_assessment || "" },
 	{ key: "closed_status", label: "結案狀態 (Closed)", getValue: (r) => r.closed_status || "" },
-	{ key: "action_taken", label: "辦理情形 (Synopsis)", getValue: (r) => r.action_taken || "" },
+	{ key: "action_taken", label: "辦理情形 (Synopsis)", getValue: (r) => r.action_taken || "", wide: true },
 ];
 
 // 結案狀態 badge color — heuristic on free text (AQD import data, not a
@@ -110,6 +112,40 @@ export default function CrewReportTab({
 	const [loading, setLoading] = useState(true);
 	const [searchTerm, setSearchTerm] = useState("");
 	const [viewMode, setViewMode] = useState<ViewMode>("date");
+	const [filterStartYear, setFilterStartYear] = useState<number>(currentYear);
+	const [filterStartMonth, setFilterStartMonth] = useState<number>(1);
+	const [filterEndYear, setFilterEndYear] = useState<number>(currentYear);
+	const [filterEndMonth, setFilterEndMonth] = useState<number>(12);
+	// Only auto-widens the range to cover all available data once, the
+	// first time report years become known — not on every reports
+	// change, since that would silently reset a filter the user had
+	// deliberately narrowed (e.g. right after adding a new report).
+	const hasAutoSetFilterRange = useRef(false);
+
+	const toFilterMonthIndex = (year: number, month: number) => year * 12 + month;
+
+	const handleFilterStartChange = (year: number, month: number) => {
+		if (toFilterMonthIndex(year, month) > toFilterMonthIndex(filterEndYear, filterEndMonth)) {
+			setFilterStartYear(filterEndYear);
+			setFilterStartMonth(filterEndMonth);
+			setFilterEndYear(year);
+			setFilterEndMonth(month);
+		} else {
+			setFilterStartYear(year);
+			setFilterStartMonth(month);
+		}
+	};
+	const handleFilterEndChange = (year: number, month: number) => {
+		if (toFilterMonthIndex(year, month) < toFilterMonthIndex(filterStartYear, filterStartMonth)) {
+			setFilterEndYear(filterStartYear);
+			setFilterEndMonth(filterStartMonth);
+			setFilterStartYear(year);
+			setFilterStartMonth(month);
+		} else {
+			setFilterEndYear(year);
+			setFilterEndMonth(month);
+		}
+	};
 
 	const [expandedYears, setExpandedYears] = useState<Set<number>>(
 		new Set([currentYear])
@@ -230,7 +266,7 @@ export default function CrewReportTab({
 			if (!target) throw new Error("找不到截圖內容");
 
 			const canvas = await html2canvas(target, {
-				backgroundColor: "#1a1f35",
+				backgroundColor: "#242b47",
 				scale: 2, // sharper output than a raw 1:1 DOM capture
 			});
 
@@ -299,16 +335,44 @@ export default function CrewReportTab({
 		[categories, categoryCounts]
 	);
 
+	const availableFilterYears = useMemo(
+		() => Array.from(new Set(reports.map((r) => r.report_year))).sort((a, b) => b - a),
+		[reports]
+	);
+
+	// Widens the filter range to cover every year that actually has data,
+	// once, the first time reports load — matches the previous "all"
+	// default's behavior (show everything) without needing a separate
+	// all/specific mode in the range UI itself.
+	useEffect(() => {
+		if (hasAutoSetFilterRange.current || availableFilterYears.length === 0) return;
+		hasAutoSetFilterRange.current = true;
+		const minYear = Math.min(...availableFilterYears);
+		const maxYear = Math.max(...availableFilterYears);
+		setFilterStartYear(minYear);
+		setFilterStartMonth(1);
+		setFilterEndYear(maxYear);
+		setFilterEndMonth(12);
+	}, [availableFilterYears]);
+
 	const filteredReports = useMemo(() => {
-		if (!searchTerm.trim()) return reports;
-		const term = searchTerm.toLowerCase();
-		return reports.filter(
-			(r) =>
-				r.description.toLowerCase().includes(term) ||
-				r.action_taken?.toLowerCase().includes(term) ||
-				r.report_code?.toLowerCase().includes(term)
-		);
-	}, [reports, searchTerm]);
+		const startIdx = toFilterMonthIndex(filterStartYear, filterStartMonth);
+		const endIdx = toFilterMonthIndex(filterEndYear, filterEndMonth);
+		let result = reports.filter((r) => {
+			const idx = toFilterMonthIndex(r.report_year, r.report_month);
+			return idx >= startIdx && idx <= endIdx;
+		});
+		if (searchTerm.trim()) {
+			const term = searchTerm.toLowerCase();
+			result = result.filter(
+				(r) =>
+					r.description.toLowerCase().includes(term) ||
+					r.action_taken?.toLowerCase().includes(term) ||
+					r.report_code?.toLowerCase().includes(term)
+			);
+		}
+		return result;
+	}, [reports, searchTerm, filterStartYear, filterStartMonth, filterEndYear, filterEndMonth]);
 
 	// Group filtered reports by year -> month for date view
 	const dateGroups = useMemo(() => {
@@ -607,6 +671,56 @@ export default function CrewReportTab({
 						onChange={(e) => setSearchTerm(e.target.value)}
 						className={styles.searchInput}
 					/>
+					<div className={styles.filterRangeGroup}>
+						<label className={styles.filterLabel}>起始年:</label>
+						<select
+							className={styles.filterSelect}
+							value={filterStartYear}
+							onChange={(e) => handleFilterStartChange(parseInt(e.target.value), filterStartMonth)}
+						>
+							{availableFilterYears.map((year) => (
+								<option key={year} value={year}>
+									{year}年
+								</option>
+							))}
+						</select>
+						<label className={styles.filterLabel}>起始月:</label>
+						<select
+							className={styles.filterSelect}
+							value={filterStartMonth}
+							onChange={(e) => handleFilterStartChange(filterStartYear, parseInt(e.target.value))}
+						>
+							{Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+								<option key={m} value={m}>
+									{m}月
+								</option>
+							))}
+						</select>
+						<label className={styles.filterLabel}>結束年:</label>
+						<select
+							className={styles.filterSelect}
+							value={filterEndYear}
+							onChange={(e) => handleFilterEndChange(parseInt(e.target.value), filterEndMonth)}
+						>
+							{availableFilterYears.map((year) => (
+								<option key={year} value={year}>
+									{year}年
+								</option>
+							))}
+						</select>
+						<label className={styles.filterLabel}>結束月:</label>
+						<select
+							className={styles.filterSelect}
+							value={filterEndMonth}
+							onChange={(e) => handleFilterEndChange(filterEndYear, parseInt(e.target.value))}
+						>
+							{Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+								<option key={m} value={m}>
+									{m}月
+								</option>
+							))}
+						</select>
+					</div>
 					<div className={styles.viewToggle}>
 						<button
 							className={viewMode === "date" ? styles.active : ""}
@@ -1139,26 +1253,93 @@ function ScreenshotTable({
 
 	if (columns.length === 0) return null;
 
+
+	// table-layout:auto (the original default) doesn't reliably respect a
+	// maxWidth hint on cells when stretching to fill a wider table — it
+	// tends toward an even split between columns regardless of actual
+	// content length. table-layout:fixed + explicit per-column widths
+	// fixes that: short (code/date/status) columns get a fixed width,
+	// wide (long free-text) columns split a generous target width.
+	//
+	// The container is sized to exactly fit the resulting table plus
+	// padding — not forced to a fixed minimum regardless of how few
+	// columns are selected, which was leaving most of the image as empty
+	// background for a small selection. "Desktop regardless of device"
+	// is satisfied by the table's own fixed, non-responsive column
+	// layout (columns always sit side by side, never stack vertically
+	// like a mobile view) — not by forcing an oversized canvas around
+	// however little content is actually selected. TARGET_WIDE_TOTAL is
+	// only a reference for how generously to size wide columns when some
+	// are selected — it doesn't constrain the final container size.
+	const PADDING_PX = 64; // 2rem each side
+	const SHORT_COLUMN_WIDTH = 180;
+	const MIN_WIDE_WIDTH = 250;
+	const TARGET_WIDE_TOTAL = 1600 - PADDING_PX;
+	const wideCols = columns.filter((c) => c.wide);
+	const shortCols = columns.filter((c) => !c.wide);
+
+	const colWidths: Record<string, number> = {};
+	if (wideCols.length === 0) {
+		// No wide columns selected — every column gets its fixed short
+		// width rather than an even split of some larger reference width.
+		columns.forEach((c) => (colWidths[c.key] = SHORT_COLUMN_WIDTH));
+	} else {
+		const remainingForWide = TARGET_WIDE_TOTAL - shortCols.length * SHORT_COLUMN_WIDTH;
+		const widePerCol = Math.max(remainingForWide / wideCols.length, MIN_WIDE_WIDTH);
+		shortCols.forEach((c) => (colWidths[c.key] = SHORT_COLUMN_WIDTH));
+		wideCols.forEach((c) => (colWidths[c.key] = widePerCol));
+	}
+
+	const tableWidth = Object.values(colWidths).reduce((sum, w) => sum + w, 0);
+	const containerWidth = tableWidth + PADDING_PX;
+
+	// Splits "中文 (English)" into two parts for a 2-line header — each
+	// line only needs to fit its own text instead of the whole
+	// concatenated string, which is what was causing headers to overflow
+	// and get cut off with more than 2-3 columns selected. Falls back to
+	// a single line for labels with no English parenthetical (e.g. EF分類).
+	const splitLabel = (label: string): { zh: string; en: string | null } => {
+		const match = label.match(/^(.+?)\s*\(([^)]+)\)$/);
+		return match ? { zh: match[1], en: match[2] } : { zh: label, en: null };
+	};
+
 	return (
-		<div style={{ width: "1600px", background: "#1a1f35", padding: "2rem", fontFamily: "sans-serif" }}>
-			<table style={{ width: "100%", borderCollapse: "collapse" }}>
+		<div
+			style={{
+				width: `${containerWidth}px`,
+				background: "#242b47",
+				padding: "2rem",
+				fontFamily: "sans-serif",
+			}}
+		>
+			<table style={{ width: `${tableWidth}px`, borderCollapse: "collapse", tableLayout: "fixed" }}>
 				<thead>
 					<tr>
-						{columns.map((col) => (
-							<th
-								key={col.key}
-								style={{
-									padding: "0.75rem 1rem",
-									textAlign: "left",
-									color: "#4a9eff",
-									borderBottom: "2px solid rgba(74,158,255,0.4)",
-									fontSize: "14px",
-									whiteSpace: "nowrap",
-								}}
-							>
-								{col.label}
-							</th>
-						))}
+						{columns.map((col) => {
+							const { zh, en } = splitLabel(col.label);
+							return (
+								<th
+									key={col.key}
+									style={{
+										width: `${colWidths[col.key]}px`,
+										padding: "0.75rem 1rem",
+										textAlign: "left",
+										color: "#4a9eff",
+										borderBottom: "2px solid rgba(74,158,255,0.4)",
+										fontSize: "14px",
+										whiteSpace: "normal",
+										wordWrap: "break-word",
+									}}
+								>
+									<div>{zh}</div>
+									{en && (
+										<div style={{ fontSize: "11px", fontWeight: 400, opacity: 0.75, marginTop: "2px" }}>
+											({en})
+										</div>
+									)}
+								</th>
+							);
+						})}
 					</tr>
 				</thead>
 				<tbody>
@@ -1168,12 +1349,14 @@ function ScreenshotTable({
 								<td
 									key={col.key}
 									style={{
+										width: `${colWidths[col.key]}px`,
 										padding: "0.75rem 1rem",
 										color: "#e8e9ed",
 										borderBottom: "1px solid rgba(255,255,255,0.08)",
 										fontSize: "13px",
-										maxWidth: "320px",
 										verticalAlign: "top",
+										wordWrap: "break-word",
+										overflowWrap: "break-word",
 									}}
 								>
 									{col.getValue(report, categoryMap)}

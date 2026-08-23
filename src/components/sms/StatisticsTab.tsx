@@ -1068,13 +1068,13 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 								className={dataType === "ef" ? styles.efButtonActive : styles.efButton}
 								onClick={() => setDataType("ef")}
 							>
-								EF代碼
+								EF 代碼
 							</button>
 							<button
 								className={dataType === "hfacs" ? styles.hfacsButtonActive : styles.hfacsButton}
 								onClick={() => setDataType("hfacs")}
 							>
-								HFACS代碼
+								HFACS 代碼
 							</button>
 						</div>
 					</div>
