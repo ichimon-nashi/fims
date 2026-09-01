@@ -1,0 +1,152 @@
+/* src/components/audit/routine/AttachmentPicker.module.css */
+
+.wrap {
+	padding: 14px 16px;
+	border-bottom: 1px solid rgba(232, 233, 237, 0.08);
+}
+
+.title {
+	margin: 0 0 10px;
+	font-size: 0.8125rem;
+	font-weight: 500;
+	color: #e8e9ed;
+}
+
+.cardRequired,
+.cardOptional,
+.cardError {
+	border-radius: 8px;
+	padding: 10px 12px;
+	margin-bottom: 8px;
+}
+
+.cardRequired {
+	background: rgba(74, 158, 255, 0.06);
+	border: 1px solid rgba(74, 158, 255, 0.3);
+}
+
+.cardOptional {
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid rgba(232, 233, 237, 0.12);
+}
+
+.cardError {
+	background: rgba(227, 73, 72, 0.06);
+	border: 1px solid #e34948;
+}
+
+.subjectLabelError {
+	margin: 0 0 6px;
+	font-size: 0.6875rem;
+	color: #e34948;
+	font-weight: 600;
+}
+
+.cardHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 8px;
+}
+
+.cardName {
+	font-size: 0.75rem;
+	font-weight: 500;
+	color: #4a9eff;
+}
+
+.cardNameSuggested {
+	font-size: 0.75rem;
+	font-weight: 500;
+	color: #fb923c;
+}
+
+.badgeRequired {
+	background: rgba(74, 158, 255, 0.15);
+	color: #4a9eff;
+	border-radius: 4px;
+	padding: 1px 7px;
+	font-size: 0.625rem;
+}
+
+.badgeSuggested {
+	background: rgba(251, 146, 60, 0.15);
+	color: #fb923c;
+	border-radius: 4px;
+	padding: 1px 7px;
+	font-size: 0.625rem;
+}
+
+.removeBtn {
+	background: none;
+	border: none;
+	color: #e34948;
+	font-size: 0.6875rem;
+	cursor: pointer;
+}
+
+.subjectLabel {
+	margin: 0 0 6px;
+	font-size: 0.6875rem;
+	color: rgba(232, 233, 237, 0.5);
+}
+
+.crewChips {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+.crewChip,
+.crewChipActive {
+	background: #2d3651;
+	border: 1px solid rgba(232, 233, 237, 0.15);
+	color: rgba(232, 233, 237, 0.5);
+	border-radius: 6px;
+	padding: 6px 10px;
+	font-size: 0.6875rem;
+	cursor: pointer;
+}
+
+.crewChipActive {
+	background: rgba(74, 158, 255, 0.18);
+	border-color: #4a9eff;
+	color: #4a9eff;
+	font-weight: 600;
+}
+
+.cardHeaderRight {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.moreBtn {
+	width: 100%;
+	margin-top: 4px;
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px dashed rgba(232, 233, 237, 0.25);
+	color: rgba(232, 233, 237, 0.6);
+	border-radius: 8px;
+	padding: 8px;
+	font-size: 0.6875rem;
+	cursor: pointer;
+}
+
+.optionsList {
+	margin-top: 6px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.optionRow {
+	background: #2d3651;
+	border: 1px solid rgba(232, 233, 237, 0.15);
+	color: #e8e9ed;
+	border-radius: 6px;
+	padding: 8px 10px;
+	font-size: 0.75rem;
+	text-align: left;
+	cursor: pointer;
+}

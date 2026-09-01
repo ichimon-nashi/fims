@@ -16,6 +16,44 @@
 	width: 100%;
 }
 
+.searchRow {
+	display: flex;
+	gap: 8px;
+}
+
+.searchRow .searchInput {
+	flex: 1;
+}
+
+.flagFilter,
+.flagFilterActive {
+	flex-shrink: 0;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(232, 233, 237, 0.15);
+	color: rgba(232, 233, 237, 0.6);
+	border-radius: 8px;
+	padding: 8px 14px;
+	font-size: 0.8125rem;
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.flagFilterActive {
+	background: rgba(251, 146, 60, 0.15);
+	border-color: rgba(251, 146, 60, 0.5);
+	color: #fb923c;
+	font-weight: 600;
+}
+
+.monthFlagBadge {
+	background: rgba(251, 146, 60, 0.15);
+	color: #fb923c;
+	border-radius: 10px;
+	padding: 1px 8px;
+	font-size: 0.75rem;
+	font-weight: 600;
+}
+
 .searchInput::placeholder {
 	color: rgba(232, 233, 237, 0.4);
 }
@@ -287,4 +325,28 @@
 	font-size: 0.875rem;
 	padding: 24px 0;
 	text-align: center;
+}
+
+/* ── NEW: flag toggle (classify feature removed — SAM/EF codes now set via 編輯) ── */
+
+.flagIndicator {
+	font-size: 1rem;
+	line-height: 1;
+}
+
+.flagBtn,
+.flagBtnActive {
+	background: none;
+	border: 1px solid rgba(232, 233, 237, 0.15);
+	border-radius: 6px;
+	padding: 4px 8px;
+	font-size: 0.75rem;
+	cursor: pointer;
+	opacity: 0.4;
+}
+
+.flagBtnActive {
+	opacity: 1;
+	border-color: rgba(251, 146, 60, 0.5);
+	background: rgba(251, 146, 60, 0.1);
 }

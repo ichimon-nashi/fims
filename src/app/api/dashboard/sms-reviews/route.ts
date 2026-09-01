@@ -1,6 +1,8 @@
 // src/app/api/dashboard/sms-reviews/route.ts
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { verifyToken } from "@/lib/auth";
+import { getUserById } from "@/lib/database";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,6 +14,19 @@ export async function GET(req: NextRequest) {
     const authHeader = req.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const token = authHeader.substring(7);
+    let decoded;
+    try {
+      decoded = verifyToken(token);
+    } catch {
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    }
+
+    const user = await getUserById(decoded.userId);
+    if (!user?.app_permissions?.sms?.access) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
     // ── Taiwan UTC+8 today ────────────────────────────────────────────────

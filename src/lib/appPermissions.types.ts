@@ -39,10 +39,22 @@ export interface MDAfaatPermissions {
 // ── NEW ──────────────────────────────────────────
 export type AuditTab = 'routine' | 'first_level' | 'iosa';
 
+// ── NEW ──────────────────────────────────────────
+// Granular actions within the routine audit tab specifically. Separate
+// from AuditTab (which just gates whether the tab opens at all) — this
+// gates what a user can DO once inside it.
+//   submit   — fill out and submit self-inspection forms (crew)
+//   approve  — review pending submissions, approve into routine summary
+//              or reject (supervisors)
+//   classify — assign SAM/EF codes and toggle the flagged_item review
+//              flag on entries already in routine summary (clerical)
+export type RoutineAction = 'submit' | 'approve' | 'classify';
+
 export interface AuditPermissions {
   access: boolean;
   view_only: boolean; // future-proof: false = full edit, true = read-only
   tabs?: AuditTab[]; // which audit sub-pages this user may open. Undefined = legacy/full access.
+  routine_actions?: RoutineAction[]; // ── NEW ── which routine-audit actions this user may perform. Undefined = legacy/full access, same convention as tabs.
 }
 // ─────────────────────────────────────────────────
 

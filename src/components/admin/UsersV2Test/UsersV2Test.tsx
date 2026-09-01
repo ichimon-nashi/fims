@@ -355,6 +355,17 @@ const UsersV2Test = () => {
 		});
 	};
 
+	// ── NEW ──
+	const toggleAuditRoutineAction = (action: "submit" | "approve" | "classify") => {
+		if (!editingPermissions?.app_permissions) return;
+		const all = { submit: true, approve: true, classify: true };
+		const cur = editingPermissions.app_permissions.audit_routine_actions ?? all;
+		setEditingPermissions({
+			...editingPermissions,
+			app_permissions: { ...editingPermissions.app_permissions, audit_routine_actions: { ...cur, [action]: !cur[action] } },
+		});
+	};
+
 	const savePermissions = async () => {
 		if (!editingPermissions) return;
 		setPermSaving(true);
@@ -754,6 +765,7 @@ const UsersV2Test = () => {
 									toggleMdafaatEdit,
 									toggleAuditTab,
 									toggleAuditDiscipline,
+									toggleAuditRoutineAction,
 								)}
 							</div>
 						</div>

@@ -1,0 +1,118 @@
+/* src/components/audit/routine/SelfInspectionDetailView.module.css */
+
+.panel {
+	position: fixed;
+	inset: 0;
+	background: linear-gradient(180deg, #1a1f35 0%, #2d3651 100%);
+	display: flex;
+	flex-direction: column;
+	z-index: 1100;
+}
+
+.header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 14px 16px;
+	border-bottom: 1px solid rgba(232, 233, 237, 0.12);
+	flex-shrink: 0;
+}
+
+.title {
+	font-size: 0.9375rem;
+	font-weight: 500;
+	color: #e8e9ed;
+}
+
+.closeBtn {
+	background: rgba(227, 73, 72, 0.1);
+	border: 1px solid rgba(227, 73, 72, 0.3);
+	color: #e34948;
+	border-radius: 6px;
+	width: 30px;
+	height: 30px;
+	font-size: 1rem;
+	cursor: pointer;
+}
+
+.body {
+	flex: 1;
+	overflow-y: auto;
+}
+
+.loading,
+.error {
+	padding: 24px 16px;
+	text-align: center;
+	font-size: 0.875rem;
+	color: rgba(232, 233, 237, 0.5);
+}
+
+.error {
+	color: #e34948;
+}
+
+.infoBar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	padding: 14px 16px;
+	font-size: 0.8125rem;
+	color: rgba(232, 233, 237, 0.8);
+	border-bottom: 1px solid rgba(232, 233, 237, 0.08);
+}
+
+.dot {
+	color: rgba(232, 233, 237, 0.3);
+}
+
+.crewList {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+	padding: 10px 16px;
+	border-bottom: 1px solid rgba(232, 233, 237, 0.08);
+}
+
+.crewChip {
+	background: rgba(255, 255, 255, 0.05);
+	border-radius: 4px;
+	padding: 3px 8px;
+	font-size: 0.75rem;
+	color: rgba(232, 233, 237, 0.7);
+}
+
+.attachmentBlock {
+	margin-top: 8px;
+	border-top: 2px solid rgba(184, 146, 255, 0.3);
+}
+
+.attachmentTitle {
+	margin: 0;
+	padding: 12px 16px;
+	font-size: 0.8125rem;
+	font-weight: 600;
+	color: #b892ff;
+	background: rgba(184, 146, 255, 0.06);
+}
+
+.commentSection {
+	margin: 14px 16px 20px;
+}
+
+.commentLabel {
+	margin: 0 0 6px;
+	font-size: 0.75rem;
+	color: rgba(232, 233, 237, 0.6);
+}
+
+.commentText {
+	margin: 0;
+	font-size: 0.8125rem;
+	color: #e8e9ed;
+	line-height: 1.5;
+	background: rgba(255, 255, 255, 0.03);
+	border-radius: 6px;
+	padding: 10px;
+}

@@ -1,7 +1,7 @@
 // src/lib/permissionHelpers.ts
 // Helper functions for working with app permissions
 
-import { AppPermissions, AppName, OralTestPage, AuditTab, PermissionCheckResult } from './appPermissions.types';
+import { AppPermissions, AppName, OralTestPage, AuditTab, RoutineAction, PermissionCheckResult } from './appPermissions.types';
 import { User } from './types';
 
 /**
@@ -160,6 +160,60 @@ export const hasAuditTabAccess = (
   }
 
   return { granted: false, reason: `Access denied to audit tab: ${tab}` };
+};
+// ─────────────────────────────────────────────────────────────────────
+
+// ── NEW ──────────────────────────────────────────────────────────────
+/**
+ * Check if user may perform a specific action within the routine audit
+ * tab (submit / approve / classify). Layered under hasAuditTabAccess —
+ * a user must already have routine tab access before an action-level
+ * check is meaningful.
+ *
+ * view_only: true is treated as a hard override that blocks all three
+ * actions regardless of routine_actions, since submit/approve/classify
+ * are all write operations. This makes an otherwise-unenforced field
+ * (view_only was declared but never checked anywhere before this)
+ * actually mean something — flagged for confirmation since it changes
+ * behavior for any account that has both view_only: true and a
+ * populated routine_actions array today (should be none, since nothing
+ * previously read routine_actions, but worth a one-time check).
+ */
+export const hasRoutineAction = (
+  user: User | null,
+  action: RoutineAction
+): PermissionCheckResult => {
+  if (!user) {
+    return { granted: false, reason: 'User not authenticated' };
+  }
+
+  const tabAccess = hasAuditTabAccess(user, 'routine');
+  if (!tabAccess.granted) {
+    return tabAccess;
+  }
+
+  const isSpecialAdmin =
+    user.employee_id === 'admin' || user.employee_id === '51892';
+  if (isSpecialAdmin) {
+    return { granted: true };
+  }
+
+  if (user.app_permissions?.audit?.view_only === true) {
+    return { granted: false, reason: 'Account is restricted to view-only access' };
+  }
+
+  const routineActions = user.app_permissions?.audit?.routine_actions;
+
+  // No routine_actions array stored → legacy/full access, same convention as tabs
+  if (!routineActions) {
+    return { granted: true };
+  }
+
+  if (routineActions.includes(action)) {
+    return { granted: true };
+  }
+
+  return { granted: false, reason: `Access denied to routine action: ${action}` };
 };
 // ─────────────────────────────────────────────────────────────────────
 

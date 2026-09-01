@@ -6,6 +6,7 @@ import {
   hasAppAccess, 
   hasOralTestPageAccess,
   hasAuditTabAccess,
+  hasRoutineAction,
   canEditSMS,
   canCreateTasks,
   canEditOthersSchedules,
@@ -13,7 +14,7 @@ import {
   canAccessControlPanel,
   getAccessibleOralTestPages
 } from '@/lib/permissionHelpers';
-import { AppName, OralTestPage, AuditTab } from '@/lib/appPermissions.types';
+import { AppName, OralTestPage, AuditTab, RoutineAction } from '@/lib/appPermissions.types';
 
 /**
  * Custom hook for checking user permissions
@@ -47,6 +48,11 @@ export const usePermissions = () => {
     // Audit tab access (routine / first_level / iosa)
     hasAuditTabAccess: (tab: AuditTab) => {
       return hasAuditTabAccess(user, tab).granted;
+    },
+
+    // Routine audit action access (submit / approve / classify)
+    hasRoutineAction: (action: RoutineAction) => {
+      return hasRoutineAction(user, action).granted;
     },
 
     // SMS permissions

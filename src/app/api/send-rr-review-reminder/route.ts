@@ -399,7 +399,7 @@ function buildEmailText(dueItems: DueItem[], dateStr: string): string {
 	text += `${dateStr}\n`;
 	text += `${'='.repeat(50)}\n\n`;
 	
-	text += `今日有 ${dueItems.length} 項Risk/Barrier需要審查：\n\n`;
+	text += `今日有 ${dueItems.length} 項Risk/Barrier需要檢視：\n\n`;
 	
 	dueItems.forEach((item, index) => {
 		text += `${index + 1}. ${item.reviewType}\n`;

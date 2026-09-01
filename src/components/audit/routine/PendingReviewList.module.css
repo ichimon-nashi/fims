@@ -1,0 +1,246 @@
+/* src/components/audit/routine/PendingReviewList.module.css */
+
+.list {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	width: 100%;
+}
+
+@media (min-width: 900px) {
+	.card {
+		font-size: 1.0625rem;
+	}
+	.cardHeader,
+	.cardBody {
+		padding-left: 24px;
+		padding-right: 24px;
+	}
+	.cardHeader {
+		padding-top: 14px;
+		padding-bottom: 14px;
+	}
+	.cardBody {
+		padding-top: 16px;
+		padding-bottom: 16px;
+	}
+}
+
+.status {
+	color: rgba(232, 233, 237, 0.5);
+	font-size: 0.875rem;
+	padding: 24px 0;
+	text-align: center;
+}
+
+.error {
+	color: #e34948;
+	font-size: 0.875rem;
+	padding: 24px 0;
+	text-align: center;
+}
+
+.card {
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid rgba(251, 146, 60, 0.35);
+	border-radius: 10px;
+	overflow: hidden;
+}
+
+.cardHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 16px;
+	background: rgba(251, 146, 60, 0.06);
+	border-bottom: 1px solid rgba(232, 233, 237, 0.08);
+	flex-wrap: wrap;
+}
+
+.cardHeaderMain {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	flex-wrap: wrap;
+	font-size: 0.8125rem;
+	color: rgba(232, 233, 237, 0.8);
+}
+
+.headerDate {
+	color: rgba(232, 233, 237, 0.6);
+}
+
+.submitterBadge {
+	background: rgba(208, 173, 167, 0.12);
+	color: #d0ada7;
+	border-radius: 4px;
+	padding: 1px 8px;
+	font-size: 0.75rem;
+}
+
+.tailBadge {
+	color: rgba(232, 233, 237, 0.8);
+}
+
+.flightBadge {
+	background: rgba(78, 205, 196, 0.12);
+	color: #4ECDC4;
+	border-radius: 4px;
+	padding: 1px 8px;
+	font-size: 0.75rem;
+	font-weight: 500;
+}
+
+.pendingBadge {
+	background: rgba(251, 146, 60, 0.15);
+	color: #fb923c;
+	border-radius: 4px;
+	padding: 2px 10px;
+	font-size: 0.75rem;
+	font-weight: 600;
+}
+
+.cardBody {
+	padding: 12px 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.attachmentTags {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+.attachmentTag {
+	background: rgba(74, 158, 255, 0.1);
+	color: #4a9eff;
+	border-radius: 4px;
+	padding: 2px 8px;
+	font-size: 0.6875rem;
+}
+
+.commentLabel {
+	margin: 0 0 4px;
+	font-size: 0.75rem;
+	color: rgba(232, 233, 237, 0.45);
+}
+
+.commentText {
+	margin: 0;
+	font-size: 0.8125rem;
+	color: #e8e9ed;
+	line-height: 1.5;
+}
+
+.actions {
+	display: flex;
+	gap: 8px;
+	margin-top: 2px;
+}
+
+.viewBtn {
+	background: rgba(74, 158, 255, 0.1);
+	border: 1px solid rgba(74, 158, 255, 0.4);
+	color: #4a9eff;
+	border-radius: 6px;
+	padding: 6px 14px;
+	font-size: 0.75rem;
+	cursor: pointer;
+}
+
+.viewBtn:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+.exportBtn {
+	margin-left: auto;
+	background: rgba(27, 175, 122, 0.1);
+	border: 1px solid rgba(27, 175, 122, 0.4);
+	color: #1baf7a;
+	border-radius: 6px;
+	padding: 6px 14px;
+	font-size: 0.75rem;
+	cursor: pointer;
+}
+
+.exportBtn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.approveBtn {
+	background: #4a9eff;
+	color: #ffffff;
+	border: none;
+	border-radius: 6px;
+	padding: 6px 14px;
+	font-size: 0.75rem;
+	cursor: pointer;
+}
+
+.rejectBtn {
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(232, 233, 237, 0.15);
+	color: #e8e9ed;
+	border-radius: 6px;
+	padding: 6px 14px;
+	font-size: 0.75rem;
+	cursor: pointer;
+}
+
+.approveBtn:disabled,
+.rejectBtn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.approveConfirm {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+	background: rgba(255, 255, 255, 0.03);
+	border-radius: 8px;
+	padding: 10px 12px;
+}
+
+.approveConfirmLabel {
+	font-size: 0.8125rem;
+	color: rgba(232, 233, 237, 0.7);
+}
+
+.radioLabel {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 0.8125rem;
+	color: #e8e9ed;
+	cursor: pointer;
+}
+
+.confirmBtn {
+	background: #4a9eff;
+	color: #ffffff;
+	border: none;
+	border-radius: 6px;
+	padding: 6px 14px;
+	font-size: 0.75rem;
+	cursor: pointer;
+}
+
+.confirmBtn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.cancelBtn {
+	background: none;
+	border: none;
+	color: rgba(232, 233, 237, 0.5);
+	font-size: 0.75rem;
+	cursor: pointer;
+}

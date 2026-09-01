@@ -3,6 +3,8 @@
 // AccessControlPanel is on a retirement path; when it's removed, this becomes
 // the only copy. Until then, changes to permission structure must be applied
 // to both files.
+// ── NEW ── routine_actions (submit/approve/classify) added below — the
+// same addition still needs to be made to AccessControlPanel.tsx separately.
 "use client";
 
 import Image from "next/image";
@@ -33,6 +35,14 @@ interface MDAfaatPermissionsUI {
 	view_only: boolean;
 }
 
+// ── NEW ──────────────────────────────────────────
+export interface RoutineActionsUI {
+	submit: boolean;
+	approve: boolean;
+	classify: boolean;
+}
+// ─────────────────────────────────────────────────
+
 export interface AppPermissions {
 	roster: boolean;
 	tasks: boolean;
@@ -48,6 +58,7 @@ export interface AppPermissions {
 	audit: boolean;
 	audit_tabs?: { routine: boolean; first_level: boolean; iosa: boolean };
 	audit_iosa_disciplines?: { CAB: boolean; FLT: boolean; DSP: boolean; MNT: boolean; SEC: boolean; CGO: boolean; ORG: boolean; GRH: boolean };
+	audit_routine_actions?: RoutineActionsUI; // ── NEW ──
 	roulette: boolean;
 }
 
@@ -66,6 +77,7 @@ export const getDefaultPermissions = (): AppPermissions => ({
 	audit: false,
 	audit_tabs: { routine: true, first_level: true, iosa: true },
 	audit_iosa_disciplines: { CAB: true, FLT: true, DSP: true, MNT: true, SEC: true, CGO: true, ORG: true, GRH: true },
+	audit_routine_actions: { submit: true, approve: true, classify: true }, // ── NEW ── matches "undefined = legacy/full access" convention
 	roulette: false,
 });
 
@@ -110,6 +122,13 @@ export const transformPermissionsFromDatabase = (dbPermissions: any): AppPermiss
 			ORG: (dbPermissions.audit?.iosa_edit_disciplines ?? ["CAB","FLT","DSP","MNT","SEC","CGO","ORG","GRH"]).includes("ORG"),
 			GRH: (dbPermissions.audit?.iosa_edit_disciplines ?? ["CAB","FLT","DSP","MNT","SEC","CGO","ORG","GRH"]).includes("GRH"),
 		},
+		// ── NEW ── undefined routine_actions in DB = legacy/full access,
+		// same convention as tabs/disciplines above
+		audit_routine_actions: {
+			submit:   (dbPermissions.audit?.routine_actions ?? ["submit","approve","classify"]).includes("submit"),
+			approve:  (dbPermissions.audit?.routine_actions ?? ["submit","approve","classify"]).includes("approve"),
+			classify: (dbPermissions.audit?.routine_actions ?? ["submit","approve","classify"]).includes("classify"),
+		},
 		roulette: dbPermissions.roulette?.access ?? false,
 	};
 };
@@ -135,6 +154,8 @@ export const transformPermissionsForDatabase = (permissions: AppPermissions | un
 			access: permissions.audit ?? false,
 			tabs: Object.entries(permissions.audit_tabs ?? { routine: true, first_level: true, iosa: true }).filter(([, v]) => v).map(([k]) => k),
 			iosa_edit_disciplines: Object.entries(permissions.audit_iosa_disciplines ?? { CAB:true,FLT:true,DSP:true,MNT:true,SEC:true,CGO:true,ORG:true,GRH:true }).filter(([, v]) => v).map(([k]) => k),
+			// ── NEW ──
+			routine_actions: Object.entries(permissions.audit_routine_actions ?? { submit: true, approve: true, classify: true }).filter(([, v]) => v).map(([k]) => k),
 		},
 		roulette: { access: permissions.roulette ?? false },
 	};
@@ -149,6 +170,7 @@ export const renderPermissionsEditor = (
 	mdafaatEditToggle?: () => void,
 	auditTabToggle?: (tab: "routine" | "first_level" | "iosa") => void,
 	auditDiscToggle?: (disc: keyof NonNullable<AppPermissions["audit_iosa_disciplines"]>) => void,
+	auditRoutineActionToggle?: (action: keyof RoutineActionsUI) => void, // ── NEW ──
 ) => (
 	<div className={styles.appPermissionsGrid}>
 		{/* Roster */}
@@ -268,6 +290,25 @@ export const renderPermissionsEditor = (
 							))}
 						</div>
 					</div>
+					{/* ── NEW ── Routine Actions — only relevant if the 例行性 tab itself is enabled */}
+					{(perms.audit_tabs?.routine ?? true) && (
+						<div className={styles.auditSubGroup}>
+							<div className={styles.auditSubGroupLabel}>Routine Actions (例行性查核 操作權限)</div>
+							<div className={styles.auditSubGroupItems}>
+								{(["submit", "approve", "classify"] as const).map((action) => (
+									<label key={action} className={styles.subPermissionLabel}>
+										<input type="checkbox" className={styles.appCheckbox}
+											checked={perms.audit_routine_actions?.[action] ?? true}
+											onChange={() => auditRoutineActionToggle?.(action)}
+										/>
+										<span className={styles.appName}>
+											{action === "submit" ? "提交查核 (Submit)" : action === "approve" ? "審核/核准 (Approve)" : "分類 SAM/EF (Classify)"}
+										</span>
+									</label>
+								))}
+							</div>
+						</div>
+					)}
 					{(perms.audit_tabs?.iosa ?? true) && (
 						<div className={styles.auditSubGroup}>
 							<div className={styles.auditSubGroupLabel}>IOSA Edit Access (disciplines)</div>

@@ -1,11 +1,13 @@
 // src/components/audit/routine/RoutineEntriesTable.tsx
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import styles from "./RoutineEntriesTable.module.css";
 import { RoutineAuditEntry } from "@/lib/routineAudit.types";
 import { isB738 } from "@/utils/routineAuditHelpers";
 import { SAM_CODE_MAP, EF_CODE_MAP } from "@/lib/routineAudit.constants";
+import { usePermissions } from "@/hooks/usePermissions"; // ── NEW ──
+import { useAuth } from "@/context/AuthContext"; // ── NEW ──
 
 interface Props {
 	entries: RoutineAuditEntry[];
@@ -38,6 +40,54 @@ export default function RoutineEntriesTable({
 	onDefaultSection,
 }: Props) {
 	const [search, setSearch] = useState("");
+	const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
+
+	// ── NEW ── flag toggle — no longer paired with classify (that feature
+	// was removed; SAM/EF codes are now set via 編輯, the existing full-record
+	// edit modal, not a separate inline classify control here)
+	const permissions = usePermissions();
+	const canView = permissions.hasAuditTabAccess("routine"); // broad — anyone who can see this page at all can flag, since it's a communication signal, not a restricted action
+	const { token } = useAuth();
+	const [flagBusyEntryNo, setFlagBusyEntryNo] = useState<string | null>(null);
+	const [localOverrides, setLocalOverrides] = useState<Record<string, Partial<RoutineAuditEntry>>>({});
+
+	async function patchEntry(id: string, patch: Record<string, unknown>) {
+		if (!token) return;
+		const res = await fetch(`/api/audit/routine/entries/${id}/classify`, {
+			method: "PATCH",
+			headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+			body: JSON.stringify(patch),
+		});
+		if (res.ok) {
+			setLocalOverrides((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+		}
+		return res.ok;
+	}
+
+	function getFlag(entry: RoutineAuditEntry): boolean {
+		return Boolean(localOverrides[entry.id]?.flagged_item ?? (entry as any).flagged_item);
+	}
+
+	// flags/unflags every finding sharing one entry_no at once — the flag is
+	// stored per finding row, but the concept being communicated is "this
+	// whole audit visit needs another look," not "this specific finding" —
+	// per-finding granularity was the wrong UX for a broad review signal
+	async function toggleGroupFlag(entryNo: string, findings: RoutineAuditEntry[]) {
+		const currentlyFlagged = findings.some((f) => getFlag(f));
+		const next = !currentlyFlagged;
+		setFlagBusyEntryNo(entryNo);
+		try {
+			await Promise.all(findings.map((f) => patchEntry(f.id, { flagged_item: next })));
+			// decoupled event instead of a prop threaded through RoutineSummary.tsx —
+			// I don't actually have that file's source (only its CSS module was
+			// ever given to me; an earlier message claiming otherwise for a
+			// different file was wrong), so this avoids guessing at its structure
+			window.dispatchEvent(new Event("routine-flagged-count-changed"));
+		} finally {
+			setFlagBusyEntryNo(null);
+		}
+	}
+	// ── END NEW ──
 
 	// group by entry_no — one audit visit, multiple findings, shown as one
 	// card instead of N indistinguishable rows. Sort primarily by
@@ -68,8 +118,12 @@ export default function RoutineEntriesTable({
 	// text, SAM/EF labels
 	const filteredGroups = useMemo(() => {
 		const q = search.trim().toLowerCase();
-		if (!q) return groups;
-		return groups.filter((g) => {
+		let result = groups;
+		if (showFlaggedOnly) {
+			result = result.filter((g) => g.findings.some((f) => getFlag(f)));
+		}
+		if (!q) return result;
+		return result.filter((g) => {
 			const headerText = [
 				g.entryNo,
 				g.header.audit_date,
@@ -89,7 +143,7 @@ export default function RoutineEntriesTable({
 				return findingText.includes(q);
 			});
 		});
-	}, [groups, search]);
+	}, [groups, search, showFlaggedOnly, localOverrides]);
 
 	// bucket into month sections for the accordion
 	const sections = useMemo(() => {
@@ -105,20 +159,15 @@ export default function RoutineEntriesTable({
 		}
 		return order.map((key) => {
 			const [year, month] = key.split("-").map(Number);
-			return { key, year, month, groups: byMonth.get(key)! };
+			const monthGroups = byMonth.get(key)!;
+			const flaggedCount = monthGroups.filter((g) => g.findings.some((f) => getFlag(f))).length;
+			return { key, year, month, groups: monthGroups, flaggedCount };
 		});
-	}, [filteredGroups]);
+	}, [filteredGroups, localOverrides]);
 
-	// state now lives in the parent (RoutineSummary) so it survives this
-	// component unmounting when the innerTab switches away and back — this
-	// component only seeds the initial "latest month open" default, once,
-	// and only if the parent hasn't already got something recorded
-	const hasSeeded = useRef(false);
-	useEffect(() => {
-		if (hasSeeded.current || openSections.size > 0 || sections.length === 0) return;
-		hasSeeded.current = true;
-		onDefaultSection(sections[sections.length - 1].key);
-	}, [sections, openSections, onDefaultSection]);
+	// previously auto-opened the latest month on first load — removed per
+	// instruction; every month now starts collapsed until the user
+	// explicitly clicks a divider (or search/flag-filter force-opens matches)
 
 	if (loading) {
 		return <p className={styles.status}>載入中...</p>;
@@ -130,28 +179,40 @@ export default function RoutineEntriesTable({
 
 	return (
 		<div className={styles.cardList}>
-			<input
-				className={styles.searchInput}
-				placeholder="🔍 搜尋編號、日期、查核員、機號、記錄內容..."
-				value={search}
-				onChange={(e) => setSearch(e.target.value)}
-			/>
+			<div className={styles.searchRow}>
+				<input
+					className={styles.searchInput}
+					placeholder="🔍 搜尋編號、日期、查核員、機號、記錄內容..."
+					value={search}
+					onChange={(e) => setSearch(e.target.value)}
+				/>
+				<button
+					className={showFlaggedOnly ? styles.flagFilterActive : styles.flagFilter}
+					onClick={() => setShowFlaggedOnly((v) => !v)}
+					title="只顯示待複核項目"
+				>
+					🚩 待複核
+				</button>
+			</div>
 
-			{search.trim() && filteredGroups.length === 0 && (
+			{(search.trim() || showFlaggedOnly) && filteredGroups.length === 0 && (
 				<p className={styles.status}>查無符合的紀錄</p>
 			)}
 
-			{sections.map(({ key, year, month, groups: monthGroups }) => {
-				// searching force-opens any section with a match, without
-				// touching openSections — clearing the search reverts to
-				// whatever you'd manually expanded/collapsed before
-				const isOpen = search.trim() ? true : openSections.has(key);
+			{sections.map(({ key, year, month, groups: monthGroups, flaggedCount }) => {
+				// searching or filtering by flag force-opens any section with a
+				// match, without touching openSections — clearing either
+				// reverts to whatever you'd manually expanded/collapsed before
+				const isOpen = search.trim() || showFlaggedOnly ? true : openSections.has(key);
 				return (
 					<div key={key} className={styles.monthSection}>
 						<button className={styles.monthDivider} onClick={() => onToggleSection(key)}>
 							<span className={styles.monthChevron}>{isOpen ? "▾" : "▸"}</span>
 							<span>{year}年{month}月</span>
 							<span className={styles.monthDividerCount}>{monthGroups.length}筆</span>
+							{flaggedCount > 0 && (
+								<span className={styles.monthFlagBadge}>🚩 {flaggedCount}</span>
+							)}
 						</button>
 
 						{isOpen && (
@@ -160,6 +221,9 @@ export default function RoutineEntriesTable({
 									<div key={entryNo} className={styles.card}>
 										<div className={styles.cardHeader}>
 											<div className={styles.cardHeaderMain}>
+												{findings.some((f) => getFlag(f)) && (
+													<span className={styles.flagIndicator}>🚩</span>
+												)}
 												<span className={entryNo.startsWith("GA") ? styles.entryNoGA : styles.entryNo}>{entryNo}</span>
 												<span className={styles.headerDate}>{header.audit_date}</span>
 												<span className={styles.auditorBadge}>👤 {header.auditor_name}</span>
@@ -177,6 +241,16 @@ export default function RoutineEntriesTable({
 												))}
 											</div>
 											<div className={styles.cardHeaderActions}>
+												{canView && (
+													<button
+														className={findings.some((f) => getFlag(f)) ? styles.flagBtnActive : styles.flagBtn}
+														disabled={flagBusyEntryNo === entryNo}
+														onClick={() => toggleGroupFlag(entryNo, findings)}
+														title="標記/取消標記此筆待複核 — 讓其他人知道需要再次確認"
+													>
+														🚩
+													</button>
+												)}
 												<button className={styles.iconBtn} onClick={() => onEdit(findings)}>編輯</button>
 												<button className={styles.iconBtnDanger} onClick={() => onDelete(findings)}>刪除</button>
 											</div>

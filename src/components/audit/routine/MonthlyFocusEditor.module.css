@@ -1,0 +1,209 @@
+/* src/components/audit/routine/MonthlyFocusEditor.module.css */
+
+.panel {
+	position: fixed;
+	inset: 0;
+	background: linear-gradient(180deg, #1a1f35 0%, #2d3651 100%);
+	display: flex;
+	flex-direction: column;
+	z-index: 1000;
+}
+
+@media (min-width: 900px) {
+	.panel {
+		top: 24px;
+		bottom: 24px;
+		left: 50%;
+		right: auto;
+		width: 640px;
+		transform: translateX(-50%);
+		border-radius: 16px;
+		box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+	}
+}
+
+.header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 14px 16px;
+	border-bottom: 1px solid rgba(232, 233, 237, 0.12);
+	flex-shrink: 0;
+}
+
+.title {
+	font-size: 0.9375rem;
+	font-weight: 500;
+	color: #e8e9ed;
+}
+
+.closeBtn {
+	background: rgba(227, 73, 72, 0.1);
+	border: 1px solid rgba(227, 73, 72, 0.3);
+	color: #e34948;
+	border-radius: 6px;
+	width: 30px;
+	height: 30px;
+	font-size: 1rem;
+	cursor: pointer;
+}
+
+.body {
+	flex: 1;
+	overflow-y: auto;
+	padding: 16px;
+}
+
+.monthSelect {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 16px;
+}
+
+.monthSelect select {
+	background: #2d3651;
+	border: 1px solid rgba(232, 233, 237, 0.15);
+	border-radius: 6px;
+	color: #e8e9ed;
+	padding: 8px 10px;
+	font-size: 0.875rem;
+}
+
+.monthHint {
+	font-size: 0.75rem;
+	color: rgba(232, 233, 237, 0.5);
+}
+
+.status {
+	color: rgba(232, 233, 237, 0.5);
+	font-size: 0.875rem;
+	padding: 24px 0;
+	text-align: center;
+}
+
+.itemList {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.itemRow {
+	display: flex;
+	gap: 10px;
+	align-items: flex-start;
+	background: rgba(255, 255, 255, 0.03);
+	border-radius: 8px;
+	padding: 10px;
+}
+
+.itemMoveCol {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+	flex-shrink: 0;
+	padding-top: 2px;
+}
+
+.moveBtn {
+	background: none;
+	border: none;
+	color: rgba(232, 233, 237, 0.5);
+	font-size: 0.625rem;
+	cursor: pointer;
+	padding: 2px;
+}
+
+.moveBtn:disabled {
+	opacity: 0.2;
+	cursor: not-allowed;
+}
+
+.itemNo {
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: #4a9eff;
+}
+
+.itemFields {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.itemTextInput {
+	width: 100%;
+	box-sizing: border-box;
+	background: #2d3651;
+	border: 1px solid rgba(232, 233, 237, 0.15);
+	border-radius: 6px;
+	color: #e8e9ed;
+	padding: 8px 10px;
+	font-size: 0.8125rem;
+	font-family: inherit;
+	resize: vertical;
+}
+
+.attachmentSelect {
+	background: #2d3651;
+	border: 1px solid rgba(232, 233, 237, 0.15);
+	border-radius: 6px;
+	color: rgba(232, 233, 237, 0.7);
+	padding: 6px 8px;
+	font-size: 0.75rem;
+}
+
+.removeBtn {
+	flex-shrink: 0;
+	background: rgba(227, 73, 72, 0.1);
+	border: 1px solid rgba(227, 73, 72, 0.3);
+	color: #e34948;
+	border-radius: 6px;
+	width: 28px;
+	height: 28px;
+	font-size: 0.75rem;
+	cursor: pointer;
+}
+
+.addBtn {
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px dashed rgba(232, 233, 237, 0.25);
+	color: #e8e9ed;
+	border-radius: 8px;
+	padding: 10px;
+	font-size: 0.8125rem;
+	cursor: pointer;
+}
+
+.error {
+	color: #e34948;
+	font-size: 0.8125rem;
+	padding: 0 16px 8px;
+	text-align: center;
+}
+
+.footer {
+	padding: 14px 16px;
+	border-top: 1px solid rgba(232, 233, 237, 0.12);
+	flex-shrink: 0;
+}
+
+.saveBtn {
+	width: 100%;
+	background: #4a9eff;
+	color: #ffffff;
+	border: none;
+	border-radius: 8px;
+	padding: 12px 0;
+	font-size: 0.875rem;
+	font-weight: 500;
+	cursor: pointer;
+}
+
+.saveBtn:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}

@@ -12,9 +12,28 @@
 
 .tabBar {
 	display: flex;
+	flex-wrap: wrap;
+	row-gap: 8px;
 	gap: 4px;
 	border-bottom: 1px solid rgba(232, 233, 237, 0.12);
 	margin-bottom: 24px;
+}
+
+@media (max-width: 480px) {
+	.content {
+		padding: 12px;
+	}
+	.tab,
+	.tabActive,
+	.tabDisabled {
+		padding: 8px 12px;
+		font-size: 0.8125rem;
+	}
+	.focusEditorLink {
+		margin-left: 0;
+		width: 100%;
+		justify-content: center;
+	}
 }
 
 .tab,
@@ -42,6 +61,31 @@
 .tabDisabled {
 	cursor: not-allowed;
 	color: rgba(232, 233, 237, 0.3);
+}
+
+.focusEditorLink {
+	margin-left: auto;
+	align-self: center;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	background: #4a9eff;
+	border: none;
+	border-radius: 6px;
+	padding: 8px 16px;
+	font-size: 0.875rem;
+	font-weight: 500;
+	color: #ffffff;
+	cursor: pointer;
+}
+
+.focusEditorLink::before {
+	content: "🗓";
+	font-size: 0.9375rem;
+}
+
+.focusEditorLink:hover {
+	background: #6bb0ff;
 }
 
 /* ── Top-level audit nav (copied verbatim from firstlevel/iosa's topbar) ── */

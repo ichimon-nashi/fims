@@ -1,0 +1,158 @@
+/* src/components/audit/routine/SelfInspectionForm.module.css */
+
+.panel {
+	background: linear-gradient(180deg, #1a1f35 0%, #2d3651 100%);
+	border-radius: 12px;
+	display: flex;
+	flex-direction: column;
+	min-height: 60vh;
+}
+
+.header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 14px 16px;
+	border-bottom: 1px solid rgba(232, 233, 237, 0.12);
+	flex-shrink: 0;
+}
+
+.title {
+	font-size: 0.9375rem;
+	font-weight: 500;
+	color: #e8e9ed;
+}
+
+.closeBtn {
+	background: rgba(227, 73, 72, 0.1);
+	border: 1px solid rgba(227, 73, 72, 0.3);
+	color: #e34948;
+	border-radius: 6px;
+	width: 30px;
+	height: 30px;
+	font-size: 1rem;
+	cursor: pointer;
+}
+
+.body {
+	flex: 1;
+	padding-bottom: 76px;
+}
+
+.draftBanner {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	background: rgba(74, 158, 255, 0.1);
+	border-bottom: 1px solid rgba(74, 158, 255, 0.3);
+	padding: 10px 16px;
+	font-size: 0.8125rem;
+	color: #e8e9ed;
+}
+
+.draftBannerActions {
+	display: flex;
+	gap: 8px;
+}
+
+.draftBannerActions button {
+	background: rgba(74, 158, 255, 0.15);
+	border: 1px solid rgba(74, 158, 255, 0.4);
+	color: #4a9eff;
+	border-radius: 6px;
+	padding: 5px 12px;
+	font-size: 0.75rem;
+	cursor: pointer;
+}
+
+.draftBannerActions button:last-child {
+	background: none;
+	border-color: rgba(232, 233, 237, 0.2);
+	color: rgba(232, 233, 237, 0.6);
+}
+
+.commentSection {
+	margin: 14px 16px;
+}
+
+.commentLabel {
+	margin: 0 0 6px;
+	font-size: 0.75rem;
+	color: rgba(232, 233, 237, 0.6);
+}
+
+.commentInput {
+	width: 100%;
+	box-sizing: border-box;
+	background: #2d3651;
+	border: 1px solid rgba(232, 233, 237, 0.15);
+	border-radius: 6px;
+	color: #e8e9ed;
+	padding: 10px;
+	font-size: 0.8125rem;
+	font-family: inherit;
+	resize: vertical;
+}
+
+.commentInputError {
+	width: 100%;
+	box-sizing: border-box;
+	background: #2d3651;
+	border: 1px solid #e34948;
+	border-radius: 6px;
+	color: #e8e9ed;
+	padding: 10px;
+	font-size: 0.8125rem;
+	font-family: inherit;
+	resize: vertical;
+}
+
+.error {
+	color: #e34948;
+	font-size: 0.8125rem;
+	padding: 0 16px 8px;
+	text-align: center;
+}
+
+.footer {
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: #1a1f35;
+	padding: 14px 16px;
+	border-top: 1px solid rgba(232, 233, 237, 0.12);
+	box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.3);
+	display: flex;
+	gap: 8px;
+	z-index: 50;
+}
+
+.draftBtn {
+	flex: 1;
+	background: rgba(251, 146, 60, 0.12);
+	border: 1px solid rgba(251, 146, 60, 0.4);
+	color: #fb923c;
+	border-radius: 8px;
+	padding: 12px 0;
+	font-size: 0.8125rem;
+	font-weight: 500;
+	cursor: pointer;
+}
+
+.submitBtn {
+	flex: 1;
+	background: #4a9eff;
+	color: #ffffff;
+	border: none;
+	border-radius: 8px;
+	padding: 12px 0;
+	font-size: 0.875rem;
+	font-weight: 500;
+	cursor: pointer;
+}
+
+.submitBtn:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
