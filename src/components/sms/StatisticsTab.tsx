@@ -213,7 +213,7 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 		return `${startYear}年${startMonth}月-${endYear}年${endMonth}月`;
 	}, [startYear, startMonth, endYear, endMonth]);
 
-	// ---- 區間比較 (rangeCompareMode) — compares two independently-chosen
+	// ---- 期間比較 (rangeCompareMode) — compares two independently-chosen
 	// custom month windows, e.g. 2025年1-6月 vs 2026年3-9月. Deliberately
 	// separate from compareYear1/compareYear2 below, which drives 風險緩解
 	//分析's full-calendar-year-only comparison — that one always spans a
@@ -657,7 +657,7 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 	);
 	const pieTotalCases = activePieChartData.reduce((sum, d) => sum + d.value, 0);
 
-	// ---- 區間比較用類別分析 pie data. Both EF and HFACS trend-analysis
+	// ---- 期間比較用類別分析 pie data. Both EF and HFACS trend-analysis
 	// responses already carry a `categories` array (the existing 分類彙總
 	// trend-mode dropdown at line ~1416 already reads fullData.categories
 	// for EF too, not just HFACS), so this reuses that same server-grouped
@@ -701,8 +701,35 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 	const periodBPieData = useMemo(() => buildComparePieData(comparePeriodBData), [comparePeriodBData, dataType, compareCategoryColorMap]);
 	const periodATotalCases = periodAPieData.reduce((sum, d) => sum + d.value, 0);
 	const periodBTotalCases = periodBPieData.reduce((sum, d) => sum + d.value, 0);
-	const periodTotalDiff = periodBTotalCases - periodATotalCases;
-	const periodTotalPct = periodATotalCases > 0 ? Math.round((periodTotalDiff / periodATotalCases) * 100) : null;
+
+	// Per-category A->B deltas, replacing the earlier single combined-total
+	// delta (which masked opposite-direction moves cancelling out). Built
+	// from the raw categories arrays, not periodAPieData/periodBPieData —
+	// those are filtered to value > 0 for pie slices, but a category that
+	// dropped to 0 or newly appeared is exactly the kind of move this
+	// visual should surface, not hide. Sorted by |diff| descending so the
+	// biggest movers are the first thing seen, not buried alphabetically.
+	const categoryDeltaRows = useMemo(() => {
+		const names = new Set<string>();
+		(comparePeriodAData?.categories ?? []).forEach((c) => names.add(c.category));
+		(comparePeriodBData?.categories ?? []).forEach((c) => names.add(c.category));
+		const aMap = new Map((comparePeriodAData?.categories ?? []).map((c) => [c.category, c.total]));
+		const bMap = new Map((comparePeriodBData?.categories ?? []).map((c) => [c.category, c.total]));
+		return Array.from(names)
+			.map((code) => {
+				const a = aMap.get(code) ?? 0;
+				const b = bMap.get(code) ?? 0;
+				return {
+					code,
+					name: dataType === "hfacs" ? code : EF_CATEGORIES[code] || code,
+					color: compareCategoryColorMap[code] ?? "#6b7280",
+					a,
+					b,
+					diff: b - a,
+				};
+			})
+			.sort((x, y) => Math.abs(y.diff) - Math.abs(x.diff));
+	}, [comparePeriodAData, comparePeriodBData, compareCategoryColorMap, dataType]);
 
 	// EF代碼統計圖 (bar) — unified shape for both modes so the bar chart's
 	// JSX doesn't need mode-specific branching, just one sorted array.
@@ -1551,13 +1578,13 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 								className={!rangeCompareMode ? styles.typeActive : ""}
 								onClick={() => setRangeCompareMode(false)}
 							>
-								單一期間
+								單一區間
 							</button>
 							<button
 								className={rangeCompareMode ? styles.typeActive : ""}
 								onClick={() => setRangeCompareMode(true)}
 							>
-								比較兩期間
+								比較兩區間
 							</button>
 						</div>
 					</div>
@@ -1569,7 +1596,7 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 							</div>
 							<div className={styles.inlineControlsRow}>
 								<div className={styles.controlGroup}>
-									<label>期間A 年:</label>
+									<label>區間A 年:</label>
 									<select
 										className={styles.select}
 										value={periodA.year}
@@ -1614,7 +1641,7 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 								<span className={styles.vs}>VS</span>
 
 								<div className={styles.controlGroup}>
-									<label>期間B 年:</label>
+									<label>區間B 年:</label>
 									<select
 										className={styles.select}
 										value={periodB.year}
@@ -1681,16 +1708,26 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 									<span className={styles.presetSummaryRange}>
 										{periodBLabel} 總案件數：{periodBTotalCases}
 									</span>
-									<span className={styles.deltaNeutral}>
-										({periodTotalDiff > 0 ? "+" : ""}
-										{periodTotalDiff}
-										{periodTotalPct !== null && `, ${periodTotalDiff > 0 ? "+" : ""}${periodTotalPct}%`}
-										{" 總案件數淨變化"})
-									</span>
 								</div>
 
-								<div className={styles.mitigationHint}>
-									總數是各分類加總後的淨變化，不代表每個分類都同向移動 — 個別分類漲跌請見下方 pie 圖或趨勢分析
+								<div className={styles.categoryDeltaGrid}>
+									{categoryDeltaRows.map((row) => (
+										<div key={row.code} className={styles.categoryDeltaChip}>
+											<span className={styles.categoryDeltaDot} style={{ background: row.color }} />
+											<span className={styles.categoryDeltaName}>{row.name}</span>
+											<span className={styles.categoryDeltaCounts}>
+												{row.a} → {row.b}
+											</span>
+											<span
+												className={
+													row.diff === 0 ? styles.deltaNeutral : row.diff > 0 ? styles.deltaBad : styles.deltaGood
+												}
+											>
+												{row.diff > 0 ? "▲" : row.diff < 0 ? "▼" : "—"} {row.diff > 0 ? "+" : ""}
+												{row.diff}
+											</span>
+										</div>
+									))}
 								</div>
 
 								<div className={styles.comparePieGrid}>
@@ -1896,13 +1933,13 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 
 				{rangeCompareMode && trendMode === "category" && (
 					<div className={styles.mitigationHint}>
-						區間比較的分類彙總趨勢固定以「月」為單位顯示，不支援季/半年/年彙總（兩個期間長度可能不同，彙總後對照意義不大）
+						區間比較的分類彙總趨勢固定以「月」為單位顯示，不支援季/半年/年彙總（兩個區間長度可能不同，彙總後對照意義不大）
 					</div>
 				)}
 
 				{rangeCompareMode && trendMode !== "category" && (
 					<div className={styles.mitigationHint}>
-						比較模式僅套用於「分類彙總」，個別代碼/領域彙總圖表目前顯示單一期間（{rangeLabel}）
+						比較模式僅套用於「分類彙總」，個別代碼/領域彙總圖表目前顯示單一區間（{rangeLabel}）
 					</div>
 				)}
 
