@@ -203,6 +203,20 @@ export async function GET(req: NextRequest) {
 
 		// data rows, grouped by entry_no with shared fields merged
 		let monthSeq = 1;
+
+		// ================================================================
+		// TEMPORARY TRANSITION — cell merging disabled.
+		// Merging shared fields (entry_no, date, auditor, tail, flight,
+		// route, special_remarks) across a multi-finding audit visit made
+		// Excel's native filter/sort treat those rows as having blank
+		// cells for every finding after the first, which broke filtering
+		// and sorting on those columns. The ORIGINAL merged-cell version
+		// is preserved below, commented out — to restore it, uncomment
+		// the ORIGINAL block and comment out (or delete) the CURRENT
+		// block directly beneath it.
+		// ================================================================
+
+		/* ---- ORIGINAL (merged cells) — uncomment to restore ----
 		for (const [, findings] of byMonthGroups.get(month)!) {
 			const groupStartRow = currentRow;
 			const isB738Tail = isB738(findings[0].aircraft_tail);
@@ -237,6 +251,34 @@ export async function GET(req: NextRequest) {
 					dataSheet.mergeCells(groupStartRow, col, groupEndRow, col);
 				}
 			}
+		}
+		---- END ORIGINAL ---- */
+
+		// ---- CURRENT (no merging) — every cell gets its own value on every
+		// row, including repeated shared fields, so Excel's built-in filter
+		// and sort work correctly on every column, not just the ones that
+		// happened to be the first row of a merged group ----
+		for (const [, findings] of byMonthGroups.get(month)!) {
+			const isB738Tail = isB738(findings[0].aircraft_tail);
+			for (const f of findings) {
+				const values = [
+					monthSeq, f.entry_no, f.audit_date, f.auditor_name, f.aircraft_tail, f.flight_no ?? "", f.route ?? "",
+					f.finding, f.corrective_action ?? "", f.sam_code ?? "", f.ef_code ?? "",
+					f.is_non_flight_safety ? "v" : "", (f.special_remarks ?? []).join(", "),
+				];
+				values.forEach((v, i) => {
+					const col = i + 1;
+					const cell = dataSheet.getCell(currentRow, col);
+					cell.value = v; // always written — no merge, no skip
+					cell.border = CELL_BORDER;
+					cell.alignment = (MERGE_COLS.includes(col) || CENTER_ALIGN_COLS.includes(col)) ? CENTER : MIDDLE_LEFT;
+					if (GRAY_IF_EMPTY_COLS.includes(col) && !v) cell.fill = EMPTY_FILL;
+					if (col === TAIL_COL && isB738Tail) cell.fill = B738_FILL;
+				});
+				currentRow++;
+			}
+			monthSeq++;
+			// no mergeCells call — each finding row stays fully independent
 		}
 		currentRow++; // blank spacer row between months
 	}

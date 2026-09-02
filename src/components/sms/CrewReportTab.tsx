@@ -310,17 +310,35 @@ export default function CrewReportTab({
 		[categories]
 	);
 
-	// Category counts + percentages computed from ALL reports (not search-filtered) —
-	// the overview chips/pie chart represent the whole dataset, not the current search.
+	// Date range only (no search term) — declared before categoryCounts
+	// since it now depends on this. Search intentionally stays excluded:
+	// the overview chips/pie chart should still reflect "everything in
+	// the selected period" regardless of an in-progress text search, but
+	// the date range itself is a real change of "which reports are we
+	// looking at" and must be reflected, unlike a transient search filter.
+	const rangeFilteredReports = useMemo(() => {
+		const startIdx = toFilterMonthIndex(filterStartYear, filterStartMonth);
+		const endIdx = toFilterMonthIndex(filterEndYear, filterEndMonth);
+		return reports.filter((r) => {
+			const idx = toFilterMonthIndex(r.report_year, r.report_month);
+			return idx >= startIdx && idx <= endIdx;
+		});
+	}, [reports, filterStartYear, filterStartMonth, filterEndYear, filterEndMonth]);
+
+	// Category counts + percentages computed from the date-range-filtered
+	// reports (not search-filtered) — the overview chips/pie chart should
+	// track the selected 起始/結束 period, e.g. total 18 filtered down to
+	// 7 must show 7, but still represent the whole period regardless of
+	// the current search box content.
 	const categoryCounts = useMemo(() => {
 		const counts: Record<string, number> = {};
-		reports.forEach((r) => {
+		rangeFilteredReports.forEach((r) => {
 			r.category_ids.forEach((id) => {
 				counts[id] = (counts[id] || 0) + 1;
 			});
 		});
 		return counts;
-	}, [reports]);
+	}, [rangeFilteredReports]);
 
 	const totalTagCount = useMemo(
 		() => Object.values(categoryCounts).reduce((sum, n) => sum + n, 0),

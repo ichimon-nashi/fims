@@ -1387,3 +1387,35 @@
 		width: auto;
 	}
 }
+/* ---- 期間比較 (rangeCompareMode): side-by-side pies in 類別分析 ---- */
+.comparePieGrid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 1rem;
+	width: 100%;
+}
+
+.comparePieColumn {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	min-width: 0;
+	background: rgba(255, 255, 255, 0.02);
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: 10px;
+	padding: 0.5rem;
+}
+
+.comparePieColumnLabel {
+	color: #4a9eff;
+	font-weight: 600;
+	font-size: 0.95rem;
+	text-align: center;
+	padding: 0.4rem 0;
+}
+
+@media (max-width: 768px) {
+	.comparePieGrid {
+		grid-template-columns: 1fr;
+	}
+}

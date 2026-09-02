@@ -96,6 +96,17 @@ function sumMonths(split: MonthSplit, months: string[]): { srm: number; self: nu
 	);
 }
 
+// Builds "YYYY-MM" keys for every month in a custom [startMonth,endMonth]
+// window within a single year — used by the independent period-A-vs-
+// period-B comparison (rangeCompareMode), which unlike compareYear1/
+// compareYear2's full-calendar-year sumMonths use needs an arbitrary
+// partial-year month list per side.
+function monthsInPeriod(year: number, startMonth: number, endMonth: number): string[] {
+	const out: string[] = [];
+	for (let m = startMonth; m <= endMonth; m++) out.push(`${year}-${String(m).padStart(2, "0")}`);
+	return out;
+}
+
 // Same computation as 風險緩解分析's on-screen allComparisonRows, but as a
 // plain function taking data explicitly rather than reading the
 // comparisonType-selected mitigationData — so the export can build both
@@ -201,6 +212,49 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 		}
 		return `${startYear}年${startMonth}月-${endYear}年${endMonth}月`;
 	}, [startYear, startMonth, endYear, endMonth]);
+
+	// ---- 區間比較 (rangeCompareMode) — compares two independently-chosen
+	// custom month windows, e.g. 2025年1-6月 vs 2026年3-9月. Deliberately
+	// separate from compareYear1/compareYear2 below, which drives 風險緩解
+	//分析's full-calendar-year-only comparison — that one always spans a
+	// whole Jan-Dec year on both sides, this one needs arbitrary partial
+	// ranges independently per side. Powers 類別分析's side-by-side pies,
+	// 趨勢分析's 分類彙總 dual-line, and a combined-total stat. Off by
+	// default; nothing below fetches or renders differently until enabled. ----
+	type ComparePeriod = { year: number; startMonth: number; endMonth: number };
+	const [rangeCompareMode, setRangeCompareMode] = useState<boolean>(false);
+	const [periodA, setPeriodA] = useState<ComparePeriod>({
+		year: new Date().getFullYear() - 1,
+		startMonth: 1,
+		endMonth: 6,
+	});
+	const [periodB, setPeriodB] = useState<ComparePeriod>({
+		year: new Date().getFullYear(),
+		startMonth: 1,
+		endMonth: 6,
+	});
+
+	// Each period corrects its own start<=end independently — unlike
+	// startYear/startMonth vs endYear/endMonth, periodA and periodB don't
+	// share a single timeline, so there's no cross-period swap, only a
+	// within-period guard.
+	const makePeriodMonthHandlers = (setPeriod: (updater: (p: ComparePeriod) => ComparePeriod) => void) => ({
+		setYear: (y: number) => setPeriod((p) => ({ ...p, year: y })),
+		setStart: (m: number) =>
+			setPeriod((p) => (m > p.endMonth ? { ...p, startMonth: p.endMonth, endMonth: m } : { ...p, startMonth: m })),
+		setEnd: (m: number) =>
+			setPeriod((p) => (m < p.startMonth ? { ...p, startMonth: m, endMonth: p.startMonth } : { ...p, endMonth: m })),
+	});
+	const periodAHandlers = makePeriodMonthHandlers(setPeriodA);
+	const periodBHandlers = makePeriodMonthHandlers(setPeriodB);
+	const periodALabel = `${periodA.year}年${periodA.startMonth}-${periodA.endMonth}月`;
+	const periodBLabel = `${periodB.year}年${periodB.startMonth}-${periodB.endMonth}月`;
+
+	const [comparePeriodAHfacs, setComparePeriodAHfacs] = useState<FullTrendData | null>(null);
+	const [comparePeriodAEf, setComparePeriodAEf] = useState<FullTrendData | null>(null);
+	const [comparePeriodBHfacs, setComparePeriodBHfacs] = useState<FullTrendData | null>(null);
+	const [comparePeriodBEf, setComparePeriodBEf] = useState<FullTrendData | null>(null);
+	const [compareLoading, setCompareLoading] = useState(false);
 
 	const [compareYear1, setCompareYear1] = useState<number>(
 		new Date().getFullYear() - 1
@@ -445,6 +499,70 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 		};
 	}, [startYear, startMonth, endYear, endMonth]);
 
+	// Fetches both EF and HFACS for both periods (same dual-fetch pattern
+	// as the main range effect above), so toggling dataType while in
+	// compare mode doesn't need a re-fetch. Only runs while
+	// rangeCompareMode is on — leaving it off costs nothing extra.
+	useEffect(() => {
+		if (!rangeCompareMode) return;
+		let cancelled = false;
+
+		async function loadCompareData() {
+			setCompareLoading(true);
+			try {
+				const token = localStorage.getItem("token");
+				const paramsFor = (p: ComparePeriod) => ({
+					start_year: String(p.year),
+					start_month: String(p.startMonth),
+					end_year: String(p.year),
+					end_month: String(p.endMonth),
+				});
+				const [aHfacsRes, aEfRes, bHfacsRes, bEfRes] = await Promise.all([
+					fetch(`/api/sms/trend-analysis?${new URLSearchParams({ ...paramsFor(periodA), type: "hfacs" })}`, {
+						headers: { Authorization: `Bearer ${token}` },
+					}),
+					fetch(`/api/sms/trend-analysis?${new URLSearchParams({ ...paramsFor(periodA), type: "ef" })}`, {
+						headers: { Authorization: `Bearer ${token}` },
+					}),
+					fetch(`/api/sms/trend-analysis?${new URLSearchParams({ ...paramsFor(periodB), type: "hfacs" })}`, {
+						headers: { Authorization: `Bearer ${token}` },
+					}),
+					fetch(`/api/sms/trend-analysis?${new URLSearchParams({ ...paramsFor(periodB), type: "ef" })}`, {
+						headers: { Authorization: `Bearer ${token}` },
+					}),
+				]);
+				if (!aHfacsRes.ok || !aEfRes.ok || !bHfacsRes.ok || !bEfRes.ok) throw new Error("區間比較資料載入失敗");
+				const [aHfacsJson, aEfJson, bHfacsJson, bEfJson] = await Promise.all([
+					aHfacsRes.json(),
+					aEfRes.json(),
+					bHfacsRes.json(),
+					bEfRes.json(),
+				]);
+				if (!cancelled) {
+					setComparePeriodAHfacs(aHfacsJson);
+					setComparePeriodAEf(aEfJson);
+					setComparePeriodBHfacs(bHfacsJson);
+					setComparePeriodBEf(bEfJson);
+				}
+			} catch (error) {
+				console.error("Error loading period comparison data:", error);
+				if (!cancelled) {
+					setComparePeriodAHfacs(null);
+					setComparePeriodAEf(null);
+					setComparePeriodBHfacs(null);
+					setComparePeriodBEf(null);
+				}
+			} finally {
+				if (!cancelled) setCompareLoading(false);
+			}
+		}
+
+		loadCompareData();
+		return () => {
+			cancelled = true;
+		};
+	}, [rangeCompareMode, periodA, periodB]);
+
 	// Reshaped into the exact same { code: { month: { count, sources } } }
 	// shape monthlyStats already uses, so the table's existing render
 	// logic works unchanged regardless of which mode is active. self is
@@ -539,6 +657,53 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 	);
 	const pieTotalCases = activePieChartData.reduce((sum, d) => sum + d.value, 0);
 
+	// ---- 區間比較用類別分析 pie data. Both EF and HFACS trend-analysis
+	// responses already carry a `categories` array (the existing 分類彙總
+	// trend-mode dropdown at line ~1416 already reads fullData.categories
+	// for EF too, not just HFACS), so this reuses that same server-grouped
+	// field rather than re-deriving EF's P/E/C/I/T/O/M breakdown from raw
+	// entries the way the single-range pieChartData above does. ----
+	const comparePeriodAData = dataType === "hfacs" ? comparePeriodAHfacs : comparePeriodAEf;
+	const comparePeriodBData = dataType === "hfacs" ? comparePeriodBHfacs : comparePeriodBEf;
+
+	// Colors must be assigned by category identity, not by position in
+	// each period's own categories array — that array is sorted by total
+	// descending independently per period (server-side), so the same
+	// category can sit at a different index (and thus get a different
+	// color) in period A vs period B. Building one shared map from the
+	// union of both periods, in a fixed (alphabetical) order that doesn't
+	// depend on either period's totals, keeps a category's color stable
+	// regardless of which side has more cases.
+	const compareCategoryColorMap = useMemo(() => {
+		const names = new Set<string>();
+		(comparePeriodAData?.categories ?? []).forEach((c) => names.add(c.category));
+		(comparePeriodBData?.categories ?? []).forEach((c) => names.add(c.category));
+		const sorted = Array.from(names).sort();
+		const map: Record<string, string> = {};
+		sorted.forEach((name, i) => {
+			map[name] = PIE_COLORS[i % PIE_COLORS.length];
+		});
+		return map;
+	}, [comparePeriodAData, comparePeriodBData]);
+
+	const buildComparePieData = (data: FullTrendData | null) => {
+		if (!data) return [] as { code: string; name: string; value: number; color: string }[];
+		return data.categories
+			.map((c) => ({
+				code: c.category,
+				name: dataType === "hfacs" ? c.category : EF_CATEGORIES[c.category] || c.category,
+				value: c.total,
+				color: compareCategoryColorMap[c.category] ?? "#6b7280",
+			}))
+			.filter((d) => d.value > 0);
+	};
+	const periodAPieData = useMemo(() => buildComparePieData(comparePeriodAData), [comparePeriodAData, dataType, compareCategoryColorMap]);
+	const periodBPieData = useMemo(() => buildComparePieData(comparePeriodBData), [comparePeriodBData, dataType, compareCategoryColorMap]);
+	const periodATotalCases = periodAPieData.reduce((sum, d) => sum + d.value, 0);
+	const periodBTotalCases = periodBPieData.reduce((sum, d) => sum + d.value, 0);
+	const periodTotalDiff = periodBTotalCases - periodATotalCases;
+	const periodTotalPct = periodATotalCases > 0 ? Math.round((periodTotalDiff / periodATotalCases) * 100) : null;
+
 	// EF代碼統計圖 (bar) — unified shape for both modes so the bar chart's
 	// JSX doesn't need mode-specific branching, just one sorted array.
 	const barChartCodes = useMemo(() => {
@@ -622,6 +787,65 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 		if (trendMode === "area" && selectedArea) return selectedArea;
 		return "";
 	}, [trendMode, effectiveCode, selectedCategory, selectedArea, fullData]);
+
+	// ---- 趨勢分析 分類彙總 period comparison. Only category mode gets the
+	// dual-line treatment (per explicit request) — 個別代碼/領域彙總 keep
+	// using trendSeries/fullData above unchanged. Aligned by relative
+	// month position (1st month selected, 2nd, ...) rather than calendar
+	// month, since periodA and periodB are independently-sized/-timed
+	// windows (e.g. 2025 Jan-Jun vs 2026 Mar-Sep) with no shared calendar
+	// axis to join on; each point's real calendar month is still carried
+	// in aLabel/bLabel for the tooltip so nothing is misrepresented. Fixed
+	// at month granularity — periods here are usually short (partial-year)
+	// spans where quarter/half-year rollups would flatten the comparison
+	// down to 1-2 points anyway. selectedCategory doubles as the "全部"
+	// sentinel (ALL_CATEGORIES) — summing every category's trendByCategory
+	// entry for a month gives the same combined total the pie section's
+	// periodA/BTotalCases already show, just broken out by month instead
+	// of collapsed to one number. ----
+	const ALL_CATEGORIES = "__ALL__";
+	const sumAllCategoriesForMonth = (data: FullTrendData | null, month: string | undefined): number => {
+		if (!data || !month) return 0;
+		return Object.values(data.trendByCategory).reduce((sum, split) => {
+			const entry = split[month];
+			return sum + (entry ? entry.srm + entry.self : 0);
+		}, 0);
+	};
+	const categoryCompareTrendSeries = useMemo(() => {
+		if (!rangeCompareMode || trendMode !== "category" || !selectedCategory) return [];
+		const monthsA = monthsInPeriod(periodA.year, periodA.startMonth, periodA.endMonth);
+		const monthsB = monthsInPeriod(periodB.year, periodB.startMonth, periodB.endMonth);
+		const isAll = selectedCategory === ALL_CATEGORIES;
+		const splitA = isAll ? null : comparePeriodAData?.trendByCategory[selectedCategory] ?? {};
+		const splitB = isAll ? null : comparePeriodBData?.trendByCategory[selectedCategory] ?? {};
+		const len = Math.max(monthsA.length, monthsB.length);
+		return Array.from({ length: len }, (_, i) => {
+			const mA = monthsA[i];
+			const mB = monthsB[i];
+			const aVal = isAll
+				? mA
+					? sumAllCategoriesForMonth(comparePeriodAData, mA)
+					: null
+				: mA
+				? (splitA![mA]?.srm ?? 0) + (splitA![mA]?.self ?? 0)
+				: null;
+			const bVal = isAll
+				? mB
+					? sumAllCategoriesForMonth(comparePeriodBData, mB)
+					: null
+				: mB
+				? (splitB![mB]?.srm ?? 0) + (splitB![mB]?.self ?? 0)
+				: null;
+			return {
+				idx: `第${i + 1}月`,
+				aLabel: mA ?? "",
+				bLabel: mB ?? "",
+				a: aVal,
+				b: bVal,
+			};
+		});
+	}, [rangeCompareMode, trendMode, selectedCategory, periodA, periodB, comparePeriodAData, comparePeriodBData]);
+
 
 	// ---- 風險緩解分析 — directly ported from TrendAnalysisTab.tsx.
 	// Independent HFACS/EF toggle, separate from the page-level dataType
@@ -1256,54 +1480,6 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 					</div>
 				</div>
 
-				<div className={styles.section}>
-					<h3>🗃️ {rangeLabel} 類別分析{dataType === "hfacs" ? "（HFACS）" : "（EF）"}</h3>
-					<div className={styles.pieChartContainer}>
-						<ResponsiveContainer width="100%" height={460}>
-							<PieChart margin={{ top: 50, right: 30, bottom: 30, left: 30 }}>
-								<Pie
-									data={activePieChartData}
-									dataKey="value"
-									nameKey="name"
-									cx="50%"
-									cy="48%"
-									outerRadius={120}
-									label={({ name, value, percent, payload }) => {
-										const code = payload?.code;
-										const suffix = code && code !== name ? `(${code})` : "";
-										return `${name}${suffix} -${value}筆 (${((percent ?? 0) * 100).toFixed(1)}%)`;
-									}}
-								>
-									{activePieChartData.map((entry) => (
-										<Cell key={entry.code} fill={entry.color} />
-									))}
-								</Pie>
-								<Tooltip
-									contentStyle={{
-										background: "#1a1f35",
-										border: "1px solid rgba(255,255,255,0.1)",
-										borderRadius: 8,
-									}}
-									itemStyle={{ color: "#e8e9ed" }}
-									labelStyle={{ color: "#e8e9ed" }}
-									formatter={(value: number, name: string, item: any) => {
-										const pct = pieTotalCases ? ((value / pieTotalCases) * 100).toFixed(1) : "0.0";
-										const code = item?.payload?.code;
-										const label = code && code !== name ? `${name}(${code})` : name;
-										return [`${value} 件 (${pct}%)`, label];
-									}}
-								/>
-								<Legend
-									wrapperStyle={{ paddingTop: 24 }}
-									formatter={(value) => (
-										<span style={{ color: "#e8e9ed" }}>{value}</span>
-									)}
-								/>
-							</PieChart>
-						</ResponsiveContainer>
-					</div>
-				</div>
-
 			<div className={styles.section}>
 				<div className={styles.sectionHeader}>
 					<h3>📊 代碼組成分析{dataType === "hfacs" ? "（HFACS）" : "（EF）"}</h3>
@@ -1367,6 +1543,258 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 
 			</div>
 
+				<div className={styles.section}>
+					<div className={styles.sectionHeader}>
+						<h3>🆚 區間比較</h3>
+						<div className={styles.typeToggle}>
+							<button
+								className={!rangeCompareMode ? styles.typeActive : ""}
+								onClick={() => setRangeCompareMode(false)}
+							>
+								單一期間
+							</button>
+							<button
+								className={rangeCompareMode ? styles.typeActive : ""}
+								onClick={() => setRangeCompareMode(true)}
+							>
+								比較兩期間
+							</button>
+						</div>
+					</div>
+
+					{rangeCompareMode && (
+						<>
+							<div className={styles.mitigationHint}>
+								{compareLoading ? "載入中..." : `比較 ${periodALabel} 與 ${periodBLabel}（套用於下方類別分析與趨勢分析）`}
+							</div>
+							<div className={styles.inlineControlsRow}>
+								<div className={styles.controlGroup}>
+									<label>期間A 年:</label>
+									<select
+										className={styles.select}
+										value={periodA.year}
+										onChange={(e) => periodAHandlers.setYear(parseInt(e.target.value))}
+									>
+										{availableYears.map((y) => (
+											<option key={y} value={y}>
+												{y}年
+											</option>
+										))}
+									</select>
+								</div>
+								<div className={styles.controlGroup}>
+									<label>起始月:</label>
+									<select
+										className={styles.select}
+										value={periodA.startMonth}
+										onChange={(e) => periodAHandlers.setStart(parseInt(e.target.value))}
+									>
+										{Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+											<option key={m} value={m}>
+												{m}月
+											</option>
+										))}
+									</select>
+								</div>
+								<div className={styles.controlGroup}>
+									<label>結束月:</label>
+									<select
+										className={styles.select}
+										value={periodA.endMonth}
+										onChange={(e) => periodAHandlers.setEnd(parseInt(e.target.value))}
+									>
+										{Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+											<option key={m} value={m}>
+												{m}月
+											</option>
+										))}
+									</select>
+								</div>
+
+								<span className={styles.vs}>VS</span>
+
+								<div className={styles.controlGroup}>
+									<label>期間B 年:</label>
+									<select
+										className={styles.select}
+										value={periodB.year}
+										onChange={(e) => periodBHandlers.setYear(parseInt(e.target.value))}
+									>
+										{availableYears.map((y) => (
+											<option key={y} value={y}>
+												{y}年
+											</option>
+										))}
+									</select>
+								</div>
+								<div className={styles.controlGroup}>
+									<label>起始月:</label>
+									<select
+										className={styles.select}
+										value={periodB.startMonth}
+										onChange={(e) => periodBHandlers.setStart(parseInt(e.target.value))}
+									>
+										{Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+											<option key={m} value={m}>
+												{m}月
+											</option>
+										))}
+									</select>
+								</div>
+								<div className={styles.controlGroup}>
+									<label>結束月:</label>
+									<select
+										className={styles.select}
+										value={periodB.endMonth}
+										onChange={(e) => periodBHandlers.setEnd(parseInt(e.target.value))}
+									>
+										{Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+											<option key={m} value={m}>
+												{m}月
+											</option>
+										))}
+									</select>
+								</div>
+							</div>
+						</>
+					)}
+				</div>
+
+				<div className={styles.section}>
+					<h3>
+						🗃️ {rangeCompareMode ? `${periodALabel} vs ${periodBLabel}` : rangeLabel} 類別分析
+						{dataType === "hfacs" ? "（HFACS）" : "（EF）"}
+					</h3>
+
+					{rangeCompareMode ? (
+						compareLoading ? (
+							<div className={styles.emptyState}>
+								<p>載入中...</p>
+							</div>
+						) : (
+							<>
+								<div className={styles.presetSummary}>
+									<span className={styles.presetSummaryRange}>
+										{periodALabel} 總案件數：{periodATotalCases}
+									</span>
+									<span className={styles.vsLabel}>vs</span>
+									<span className={styles.presetSummaryRange}>
+										{periodBLabel} 總案件數：{periodBTotalCases}
+									</span>
+									<span className={styles.deltaNeutral}>
+										({periodTotalDiff > 0 ? "+" : ""}
+										{periodTotalDiff}
+										{periodTotalPct !== null && `, ${periodTotalDiff > 0 ? "+" : ""}${periodTotalPct}%`}
+										{" 總案件數淨變化"})
+									</span>
+								</div>
+
+								<div className={styles.mitigationHint}>
+									總數是各分類加總後的淨變化，不代表每個分類都同向移動 — 個別分類漲跌請見下方 pie 圖或趨勢分析
+								</div>
+
+								<div className={styles.comparePieGrid}>
+									{[
+										{ label: periodALabel, data: periodAPieData, total: periodATotalCases },
+										{ label: periodBLabel, data: periodBPieData, total: periodBTotalCases },
+									].map(({ label, data, total }) => (
+										<div key={label} className={styles.comparePieColumn}>
+											<div className={styles.comparePieColumnLabel}>{label}</div>
+											<ResponsiveContainer width="100%" height={380}>
+												<PieChart margin={{ top: 30, right: 10, bottom: 20, left: 10 }}>
+													<Pie
+														data={data}
+														dataKey="value"
+														nameKey="name"
+														cx="50%"
+														cy="48%"
+														outerRadius={100}
+														label={({ name, value, percent, payload }) => {
+															const code = payload?.code;
+															const suffix = code && code !== name ? `(${code})` : "";
+															return `${name}${suffix} -${value}筆 (${((percent ?? 0) * 100).toFixed(1)}%)`;
+														}}
+													>
+														{data.map((entry) => (
+															<Cell key={entry.code} fill={entry.color} />
+														))}
+													</Pie>
+													<Tooltip
+														contentStyle={{
+															background: "#1a1f35",
+															border: "1px solid rgba(255,255,255,0.1)",
+															borderRadius: 8,
+														}}
+														itemStyle={{ color: "#e8e9ed" }}
+														labelStyle={{ color: "#e8e9ed" }}
+														formatter={(value: number, name: string, item: any) => {
+															const pct = total ? ((value / total) * 100).toFixed(1) : "0.0";
+															const code = item?.payload?.code;
+															const itemLabel = code && code !== name ? `${name}(${code})` : name;
+															return [`${value} 件 (${pct}%)`, itemLabel];
+														}}
+													/>
+													<Legend
+														wrapperStyle={{ paddingTop: 16, fontSize: "0.8rem" }}
+														formatter={(value) => (
+															<span style={{ color: "#e8e9ed" }}>{value}</span>
+														)}
+													/>
+												</PieChart>
+											</ResponsiveContainer>
+										</div>
+									))}
+								</div>
+							</>
+						)
+					) : (
+						<div className={styles.pieChartContainer}>
+							<ResponsiveContainer width="100%" height={460}>
+								<PieChart margin={{ top: 50, right: 30, bottom: 30, left: 30 }}>
+									<Pie
+										data={activePieChartData}
+										dataKey="value"
+										nameKey="name"
+										cx="50%"
+										cy="48%"
+										outerRadius={120}
+										label={({ name, value, percent, payload }) => {
+											const code = payload?.code;
+											const suffix = code && code !== name ? `(${code})` : "";
+											return `${name}${suffix} -${value}筆 (${((percent ?? 0) * 100).toFixed(1)}%)`;
+										}}
+									>
+										{activePieChartData.map((entry) => (
+											<Cell key={entry.code} fill={entry.color} />
+										))}
+									</Pie>
+									<Tooltip
+										contentStyle={{
+											background: "#1a1f35",
+											border: "1px solid rgba(255,255,255,0.1)",
+											borderRadius: 8,
+										}}
+										itemStyle={{ color: "#e8e9ed" }}
+										labelStyle={{ color: "#e8e9ed" }}
+										formatter={(value: number, name: string, item: any) => {
+											const pct = pieTotalCases ? ((value / pieTotalCases) * 100).toFixed(1) : "0.0";
+											const code = item?.payload?.code;
+											const label = code && code !== name ? `${name}(${code})` : name;
+											return [`${value} 件 (${pct}%)`, label];
+										}}
+									/>
+									<Legend
+										wrapperStyle={{ paddingTop: 24 }}
+										formatter={(value) => (
+											<span style={{ color: "#e8e9ed" }}>{value}</span>
+										)}
+									/>
+								</PieChart>
+							</ResponsiveContainer>
+						</div>
+					)}
+				</div>
+
 			<div className={styles.section}>
 				<div className={styles.sectionHeader}>
 					<h3>📈 趨勢分析</h3>
@@ -1413,6 +1841,7 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 								value={selectedCategory ?? ""}
 								onChange={(e) => setSelectedCategory(e.target.value)}
 							>
+								{rangeCompareMode && <option value={ALL_CATEGORIES}>全部（總計）</option>}
 								{fullData.categories.map((cat) => (
 									<option key={cat.category} value={cat.category}>
 										{cat.category}
@@ -1434,36 +1863,103 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 							</select>
 						)}
 
-						<div className={styles.typeToggle}>
-							<button
-								className={trendGranularity === "month" ? styles.typeActive : ""}
-								onClick={() => setTrendGranularity("month")}
-							>
-								月
-							</button>
-							<button
-								className={trendGranularity === "quarter" ? styles.typeActive : ""}
-								onClick={() => setTrendGranularity("quarter")}
-							>
-								季
-							</button>
-							<button
-								className={trendGranularity === "halfYear" ? styles.typeActive : ""}
-								onClick={() => setTrendGranularity("halfYear")}
-							>
-								半年
-							</button>
-							<button
-								className={trendGranularity === "year" ? styles.typeActive : ""}
-								onClick={() => setTrendGranularity("year")}
-							>
-								年
-							</button>
-						</div>
+						{!(rangeCompareMode && trendMode === "category") && (
+							<div className={styles.typeToggle}>
+								<button
+									className={trendGranularity === "month" ? styles.typeActive : ""}
+									onClick={() => setTrendGranularity("month")}
+								>
+									月
+								</button>
+								<button
+									className={trendGranularity === "quarter" ? styles.typeActive : ""}
+									onClick={() => setTrendGranularity("quarter")}
+								>
+									季
+								</button>
+								<button
+									className={trendGranularity === "halfYear" ? styles.typeActive : ""}
+									onClick={() => setTrendGranularity("halfYear")}
+								>
+									半年
+								</button>
+								<button
+									className={trendGranularity === "year" ? styles.typeActive : ""}
+									onClick={() => setTrendGranularity("year")}
+								>
+									年
+								</button>
+							</div>
+						)}
 					</div>
 				</div>
 
-				{hfacsLoading ? (
+				{rangeCompareMode && trendMode === "category" && (
+					<div className={styles.mitigationHint}>
+						區間比較的分類彙總趨勢固定以「月」為單位顯示，不支援季/半年/年彙總（兩個期間長度可能不同，彙總後對照意義不大）
+					</div>
+				)}
+
+				{rangeCompareMode && trendMode !== "category" && (
+					<div className={styles.mitigationHint}>
+						比較模式僅套用於「分類彙總」，個別代碼/領域彙總圖表目前顯示單一期間（{rangeLabel}）
+					</div>
+				)}
+
+				{rangeCompareMode && trendMode === "category" ? (
+					compareLoading ? (
+						<div className={styles.emptyState}>
+							<p>載入中...</p>
+						</div>
+					) : categoryCompareTrendSeries.length === 0 ? (
+						<div className={styles.emptyState}>
+							<p>{selectedCategory ? "尚無資料可顯示趨勢" : "請先選擇分類"}</p>
+						</div>
+					) : (
+						<ResponsiveContainer width="100%" height={340}>
+							<LineChart data={categoryCompareTrendSeries} margin={{ top: 20, right: 30, bottom: 10, left: 0 }}>
+								<CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+								<XAxis dataKey="idx" stroke="#a0aec0" fontSize={12} />
+								<YAxis stroke="#a0aec0" fontSize={12} allowDecimals={false} />
+								<Tooltip
+									contentStyle={{
+										background: "#1a1f35",
+										border: "1px solid rgba(255,255,255,0.1)",
+										borderRadius: 8,
+									}}
+									itemStyle={{ color: "#e8e9ed" }}
+									labelStyle={{ color: "#e8e9ed" }}
+									formatter={(value: number | null, name: string, item: any) => {
+										const realMonth = name === periodALabel ? item?.payload?.aLabel : item?.payload?.bLabel;
+										const label = realMonth ? `${name} (${realMonth})` : name;
+										return [value === null ? "-" : `${value} 件`, label];
+									}}
+								/>
+								<Legend
+									formatter={(value) => <span style={{ color: "#e8e9ed" }}>{value}</span>}
+								/>
+								<Line
+									type="monotone"
+									dataKey="a"
+									name={periodALabel}
+									stroke={SRM_COLOR}
+									strokeWidth={2}
+									dot={{ r: 3 }}
+									connectNulls={false}
+								/>
+								<Line
+									type="monotone"
+									dataKey="b"
+									name={periodBLabel}
+									stroke={SELF_COLOR}
+									strokeWidth={2}
+									dot={{ r: 3 }}
+									connectNulls={false}
+								/>
+							</LineChart>
+						</ResponsiveContainer>
+					)
+				) : hfacsLoading ? (
 					<div className={styles.emptyState}>
 						<p>載入中...</p>
 					</div>
