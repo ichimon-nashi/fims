@@ -193,9 +193,9 @@ export default function RoutineEntriesTable({
 				<button
 					className={showFlaggedOnly ? styles.flagFilterActive : styles.flagFilter}
 					onClick={() => setShowFlaggedOnly((v) => !v)}
-					title="只顯示待複核項目"
+					title="只顯示待複查項目"
 				>
-					🚩 待複核
+					🚩 待複查
 				</button>
 				<button
 					className={showSafetyOnly ? styles.flagFilterActive : styles.flagFilter}
@@ -257,7 +257,7 @@ export default function RoutineEntriesTable({
 														className={findings.some((f) => getFlag(f)) ? styles.flagBtnActive : styles.flagBtn}
 														disabled={flagBusyEntryNo === entryNo}
 														onClick={() => toggleGroupFlag(entryNo, findings)}
-														title="標記/取消標記此筆待複核 — 讓其他人知道需要再次確認"
+														title="標記/取消複查標記 — 讓其他人知道需要再次確認"
 													>
 														🚩
 													</button>
