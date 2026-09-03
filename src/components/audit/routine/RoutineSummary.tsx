@@ -172,6 +172,19 @@ export default function RoutineSummary() {
 	);
 
 	useEffect(fetchSummary, [fetchSummary]);
+
+	// auto-correct the filter bar itself, not just the computed display
+	// order — the moment periodB is chronologically earlier than periodA,
+	// swap them so the dropdowns visually reflect the correct order too.
+	// Safe to do unconditionally: after one swap the invariant (A <= B)
+	// holds, so this effect's own condition goes false and it doesn't
+	// re-trigger — no loop risk.
+	useEffect(() => {
+		if (periodB && periodIndex(periodB) < periodIndex(periodA)) {
+			setPeriodA(periodB);
+			setPeriodB(periodA);
+		}
+	}, [periodA, periodB]);
 	useEffect(fetchEntries, [fetchEntries]);
 
 	// comparison period gets its own entries fetch, with its OWN month
@@ -186,88 +199,107 @@ export default function RoutineSummary() {
 		fetchEntriesFor(periodB, setCompareEntries, setCompareEntriesLoading);
 	}, [periodB, fetchEntriesFor]);
 
+	// ── FIX: charts must always compare earlier-period-first, regardless
+	// of which one the user happened to set as "primary" (periodA) vs
+	// "comparison" (periodB) in the filter bar. Without this, picking
+	// 2026 as periodA and adding 2025 as periodB would compute deltas as
+	// "2025 minus 2026" — backwards relative to actual time, so a real
+	// improvement over time could show as a red "worse" arrow. The filter
+	// bar's own controls stay bound to raw periodA/periodB (unswapped) so
+	// editing them doesn't jump between fields mid-interaction — only the
+	// derived values below, used for display/calculation, get reordered.
+	const swapped = periodB !== null && periodIndex(periodB) < periodIndex(periodA);
+	const chronoPeriodA = swapped ? periodB! : periodA;
+	const chronoPeriodB = swapped ? periodA : periodB;
+	const chronoSummaryA = swapped ? summaryB : summaryA;
+	const chronoSummaryB = swapped ? summaryA : summaryB;
+	const chronoEntriesA = swapped ? compareEntries : entries;
+	const chronoEntriesB = swapped ? entries : compareEntries;
+	const chronoEntriesALoading = swapped ? compareEntriesLoading : entriesLoading;
+	const chronoEntriesBLoading = swapped ? entriesLoading : compareEntriesLoading;
+
 	// ── single-period chart data — flat Record<label, count> now, no
 	// year-keying needed since summaryA/summaryB are each already scoped
 	// to one period
 	const categoryData = useMemo(() => {
-		if (!summaryA) return [];
-		const source = (pieLevel === "code" ? summaryA.byCode : summaryA.byCategory) ?? {};
+		if (!chronoSummaryA) return [];
+		const source = (pieLevel === "code" ? chronoSummaryA.byCode : chronoSummaryA.byCategory) ?? {};
 		return Object.entries(source).map(([label, count]) => ({ label, count }));
-	}, [summaryA, pieLevel]);
+	}, [chronoSummaryA, pieLevel]);
 
 	const efCodeData = useMemo(() => {
-		if (!summaryA) return [];
-		const source = (pieLevel === "code" ? summaryA.byEfCode : summaryA.byEfMiddle) ?? {};
+		if (!chronoSummaryA) return [];
+		const source = (pieLevel === "code" ? chronoSummaryA.byEfCode : chronoSummaryA.byEfMiddle) ?? {};
 		return Object.entries(source).map(([label, count]) => ({ label, count }));
-	}, [summaryA, pieLevel]);
+	}, [chronoSummaryA, pieLevel]);
 
 	// ── NEW: periodB's own single-period data, for the twin-pie
 	// comparison view (which needs two separate CountItem[] arrays, not
 	// the combined CompareItem[] shape categoryCompareData/efCompareData
 	// build for the bar/radar charts below)
 	const categoryDataB = useMemo(() => {
-		if (!summaryB) return [];
-		const source = (pieLevel === "code" ? summaryB.byCode : summaryB.byCategory) ?? {};
+		if (!chronoSummaryB) return [];
+		const source = (pieLevel === "code" ? chronoSummaryB.byCode : chronoSummaryB.byCategory) ?? {};
 		return Object.entries(source).map(([label, count]) => ({ label, count }));
-	}, [summaryB, pieLevel]);
+	}, [chronoSummaryB, pieLevel]);
 
 	const efCodeDataB = useMemo(() => {
-		if (!summaryB) return [];
-		const source = (pieLevel === "code" ? summaryB.byEfCode : summaryB.byEfMiddle) ?? {};
+		if (!chronoSummaryB) return [];
+		const source = (pieLevel === "code" ? chronoSummaryB.byEfCode : chronoSummaryB.byEfMiddle) ?? {};
 		return Object.entries(source).map(([label, count]) => ({ label, count }));
-	}, [summaryB, pieLevel]);
+	}, [chronoSummaryB, pieLevel]);
 
 	// ── comparison data — combines the two independent single-period
 	// responses into the CompareItem[] shape RoutineCharts expects.
 	const categoryCompareData = useMemo(() => {
-		if (!summaryA || !summaryB) return [];
-		const sourceA = (pieLevel === "code" ? summaryA.byCode : summaryA.byArea) ?? {};
-		const sourceB = (pieLevel === "code" ? summaryB.byCode : summaryB.byArea) ?? {};
+		if (!chronoSummaryA || !chronoSummaryB) return [];
+		const sourceA = (pieLevel === "code" ? chronoSummaryA.byCode : chronoSummaryA.byArea) ?? {};
+		const sourceB = (pieLevel === "code" ? chronoSummaryB.byCode : chronoSummaryB.byArea) ?? {};
 		const labels = new Set([...Object.keys(sourceA), ...Object.keys(sourceB)]);
 		return Array.from(labels).map((label) => ({
 			label,
 			values: [sourceA[label] ?? 0, sourceB[label] ?? 0],
 		}));
-	}, [summaryA, summaryB, pieLevel]);
+	}, [chronoSummaryA, chronoSummaryB, pieLevel]);
 
 	const efCompareData = useMemo(() => {
-		if (!summaryA || !summaryB) return [];
-		const sourceA = (pieLevel === "code" ? summaryA.byEfCode : summaryA.byEfMiddle) ?? {};
-		const sourceB = (pieLevel === "code" ? summaryB.byEfCode : summaryB.byEfMiddle) ?? {};
+		if (!chronoSummaryA || !chronoSummaryB) return [];
+		const sourceA = (pieLevel === "code" ? chronoSummaryA.byEfCode : chronoSummaryA.byEfMiddle) ?? {};
+		const sourceB = (pieLevel === "code" ? chronoSummaryB.byEfCode : chronoSummaryB.byEfMiddle) ?? {};
 		const labels = new Set([...Object.keys(sourceA), ...Object.keys(sourceB)]);
 		return Array.from(labels).map((label) => ({
 			label,
 			values: [sourceA[label] ?? 0, sourceB[label] ?? 0],
 		}));
-	}, [summaryA, summaryB, pieLevel]);
+	}, [chronoSummaryA, chronoSummaryB, pieLevel]);
 
 	// trend chart's x-axis window is the UNION of both periods' month
 	// ranges, so a comparison between differently-sized windows still
 	// shows every relevant month on one axis
 	const trendWindow = useMemo(() => {
-		const starts = [periodA.startMonth, ...(periodB ? [periodB.startMonth] : [])];
-		const ends = [periodA.endMonth, ...(periodB ? [periodB.endMonth] : [])];
+		const starts = [chronoPeriodA.startMonth, ...(chronoPeriodB ? [chronoPeriodB.startMonth] : [])];
+		const ends = [chronoPeriodA.endMonth, ...(chronoPeriodB ? [chronoPeriodB.endMonth] : [])];
 		return { from: Math.min(...starts), to: Math.max(...ends) };
-	}, [periodA, periodB]);
+	}, [chronoPeriodA, chronoPeriodB]);
 
 	const trendSeries = useMemo(() => {
-		if (!summaryA) return [];
+		if (!chronoSummaryA) return [];
 		const series = [
 			{
-				label: periodLabel(periodA),
+				label: periodLabel(chronoPeriodA),
 				color: TREND_COLORS[0],
-				values: Array.from({ length: 12 }, (_, m) => summaryA.byMonth[m + 1] ?? 0),
+				values: Array.from({ length: 12 }, (_, m) => chronoSummaryA.byMonth[m + 1] ?? 0),
 			},
 		];
-		if (periodB && summaryB) {
+		if (chronoPeriodB && chronoSummaryB) {
 			series.push({
-				label: periodLabel(periodB),
+				label: periodLabel(chronoPeriodB!),
 				color: TREND_COLORS[1],
-				values: Array.from({ length: 12 }, (_, m) => summaryB.byMonth[m + 1] ?? 0),
+				values: Array.from({ length: 12 }, (_, m) => chronoSummaryB.byMonth[m + 1] ?? 0),
 			});
 		}
 		return series;
-	}, [summaryA, summaryB, periodA, periodB]);
+	}, [chronoSummaryA, chronoSummaryB, chronoPeriodA, chronoPeriodB]);
 
 	const totalFindings = categoryData.reduce((sum, c) => sum + c.count, 0);
 
@@ -370,9 +402,8 @@ export default function RoutineSummary() {
 		}
 	}
 
-	// display order for the two-column table view — earlier period on the
-	// left, regardless of which one is "A" or "B"
-	const aIsEarlier = periodB ? periodIndex(periodA) <= periodIndex(periodB) : true;
+	// display order for the two-column table view now comes from `swapped`
+	// (computed above, shared with the chart calculations)
 
 	return (
 		<div className={styles.container}>
@@ -630,15 +661,15 @@ export default function RoutineSummary() {
 												<RoutineSamCategoryComparePies
 													dataA={categoryData}
 													dataB={categoryDataB}
-													labelA={periodLabel(periodA)}
-													labelB={periodLabel(periodB)}
+													labelA={periodLabel(chronoPeriodA)}
+													labelB={periodLabel(chronoPeriodB!)}
 												/>
 											) : (
 												<RoutineEfCategoryComparePies
 													dataA={efCodeData}
 													dataB={efCodeDataB}
-													labelA={periodLabel(periodA)}
-													labelB={periodLabel(periodB)}
+													labelA={periodLabel(chronoPeriodA)}
+													labelB={periodLabel(chronoPeriodB!)}
 												/>
 											)}
 										</>
@@ -646,7 +677,7 @@ export default function RoutineSummary() {
 										<div className={styles.chartRow}>
 											<RoutineEfCompareChart
 												data={efCompareData}
-												periods={[periodLabel(periodA), periodLabel(periodB)]}
+												periods={[periodLabel(chronoPeriodA), periodLabel(chronoPeriodB!)]}
 												level={pieLevel}
 												chartStyle={chartMode === "radar" ? "radar" : "bar"}
 												descriptions={efCodeDescriptions}
@@ -658,7 +689,7 @@ export default function RoutineSummary() {
 											/>
 											<RoutineSamCompareChart
 												data={categoryCompareData}
-												periods={[periodLabel(periodA), periodLabel(periodB)]}
+												periods={[periodLabel(chronoPeriodA), periodLabel(chronoPeriodB!)]}
 												level={pieLevel}
 												chartStyle={chartMode === "radar" ? "radar" : "bar"}
 												descriptions={samCodeDescriptions}
@@ -696,61 +727,30 @@ export default function RoutineSummary() {
 							/>
 						) : (
 							<div className={styles.compareTables}>
-								{aIsEarlier ? (
-									<>
-										<div className={styles.compareTableCol}>
-											<p className={styles.compareTableHeader}>{periodLabel(periodA)}</p>
-											<RoutineEntriesTable
-												entries={entries}
-												loading={entriesLoading}
-												onEdit={handleEdit}
-												onDelete={handleDelete}
-												openSections={getOpenSections("primary")}
-												onToggleSection={(key) => handleToggleSection("primary", key)}
-												onDefaultSection={(key) => handleDefaultSection("primary", key)}
-											/>
-										</div>
-										<div className={styles.compareTableCol}>
-											<p className={styles.compareTableHeader}>{periodLabel(periodB)}</p>
-											<RoutineEntriesTable
-												entries={compareEntries}
-												loading={compareEntriesLoading}
-												onEdit={handleEdit}
-												onDelete={handleDelete}
-												openSections={getOpenSections("compare")}
-												onToggleSection={(key) => handleToggleSection("compare", key)}
-												onDefaultSection={(key) => handleDefaultSection("compare", key)}
-											/>
-										</div>
-									</>
-								) : (
-									<>
-										<div className={styles.compareTableCol}>
-											<p className={styles.compareTableHeader}>{periodLabel(periodB)}</p>
-											<RoutineEntriesTable
-												entries={compareEntries}
-												loading={compareEntriesLoading}
-												onEdit={handleEdit}
-												onDelete={handleDelete}
-												openSections={getOpenSections("compare")}
-												onToggleSection={(key) => handleToggleSection("compare", key)}
-												onDefaultSection={(key) => handleDefaultSection("compare", key)}
-											/>
-										</div>
-										<div className={styles.compareTableCol}>
-											<p className={styles.compareTableHeader}>{periodLabel(periodA)}</p>
-											<RoutineEntriesTable
-												entries={entries}
-												loading={entriesLoading}
-												onEdit={handleEdit}
-												onDelete={handleDelete}
-												openSections={getOpenSections("primary")}
-												onToggleSection={(key) => handleToggleSection("primary", key)}
-												onDefaultSection={(key) => handleDefaultSection("primary", key)}
-											/>
-										</div>
-									</>
-								)}
+								<div className={styles.compareTableCol}>
+									<p className={styles.compareTableHeader}>{periodLabel(chronoPeriodA)}</p>
+									<RoutineEntriesTable
+										entries={chronoEntriesA}
+										loading={chronoEntriesALoading}
+										onEdit={handleEdit}
+										onDelete={handleDelete}
+										openSections={getOpenSections(swapped ? "compare" : "primary")}
+										onToggleSection={(key) => handleToggleSection(swapped ? "compare" : "primary", key)}
+										onDefaultSection={(key) => handleDefaultSection(swapped ? "compare" : "primary", key)}
+									/>
+								</div>
+								<div className={styles.compareTableCol}>
+									<p className={styles.compareTableHeader}>{periodLabel(chronoPeriodB!)}</p>
+									<RoutineEntriesTable
+										entries={chronoEntriesB}
+										loading={chronoEntriesBLoading}
+										onEdit={handleEdit}
+										onDelete={handleDelete}
+										openSections={getOpenSections(swapped ? "primary" : "compare")}
+										onToggleSection={(key) => handleToggleSection(swapped ? "primary" : "compare", key)}
+										onDefaultSection={(key) => handleDefaultSection(swapped ? "primary" : "compare", key)}
+									/>
+								</div>
 							</div>
 						)
 					)}
