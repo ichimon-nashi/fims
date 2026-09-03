@@ -51,10 +51,10 @@ const MIDDLE: Partial<ExcelJS.Alignment> = { vertical: "middle" };
 const EMPTY_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF0F0F0" } };
 const B738_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF3B8" } };
 
-const DATA_HEADER = ["序", "編號", "日期", "查核員", "機號", "班次", "航段", "記錄", "處置", "SAM代碼", "EF代碼", "非安全相關", "特殊標記"];
+const DATA_HEADER = ["序", "編號", "日期", "查核員", "機號", "班次", "航段", "記錄", "處置", "SAM代碼", "EF代碼", "安全相關", "特殊標記"];
 const MERGE_COLS = [1, 2, 3, 4, 5, 6, 7, 13]; // shared per-audit fields (incl. 序) — merged vertically across a multi-finding group
-const GRAY_IF_EMPTY_COLS = [10, 11, 12, 13]; // SAM代碼, EF代碼, 非安全相關, 特殊標記
-const CENTER_ALIGN_COLS = [10, 11, 12]; // SAM代碼, EF代碼, 非安全相關 — 特殊標記(13) is already centered via MERGE_COLS
+const GRAY_IF_EMPTY_COLS = [10, 11, 12, 13]; // SAM代碼, EF代碼, 安全相關, 特殊標記
+const CENTER_ALIGN_COLS = [10, 11, 12]; // SAM代碼, EF代碼, 安全相關 — 特殊標記(13) is already centered via MERGE_COLS
 const TAIL_COL = 5; // 機號
 const COL_WIDTHS = [6, 10, 12, 10, 10, 10, 12, 40, 28, 12, 12, 11, 16];
 
@@ -224,7 +224,7 @@ export async function GET(req: NextRequest) {
 				const values = [
 					monthSeq, f.entry_no, f.audit_date, f.auditor_name, f.aircraft_tail, f.flight_no ?? "", f.route ?? "",
 					f.finding, f.corrective_action ?? "", f.sam_code ?? "", f.ef_code ?? "",
-					f.is_non_flight_safety ? "v" : "", (f.special_remarks ?? []).join(", "),
+					!f.is_non_flight_safety ? "v" : "", (f.special_remarks ?? []).join(", "),
 				];
 				values.forEach((v, i) => {
 					const col = i + 1;
@@ -254,22 +254,23 @@ export async function GET(req: NextRequest) {
 		}
 		---- END ORIGINAL ---- */
 
-		// ---- CURRENT (no merging) — every cell gets its own value on every
-		// row, including repeated shared fields, so Excel's built-in filter
-		// and sort work correctly on every column, not just the ones that
-		// happened to be the first row of a merged group ----
+		/* ---- ALTERNATE (full repeat on every row) — uncomment to restore.
+		   This was the immediately-prior version: every cell written on
+		   every row, including repeated shared fields. Filterable/sortable
+		   like the version below, but repeating the same audit info across
+		   every finding row read as confusing/cluttered in practice. ----
 		for (const [, findings] of byMonthGroups.get(month)!) {
 			const isB738Tail = isB738(findings[0].aircraft_tail);
 			for (const f of findings) {
 				const values = [
 					monthSeq, f.entry_no, f.audit_date, f.auditor_name, f.aircraft_tail, f.flight_no ?? "", f.route ?? "",
 					f.finding, f.corrective_action ?? "", f.sam_code ?? "", f.ef_code ?? "",
-					f.is_non_flight_safety ? "v" : "", (f.special_remarks ?? []).join(", "),
+					!f.is_non_flight_safety ? "v" : "", (f.special_remarks ?? []).join(", "),
 				];
 				values.forEach((v, i) => {
 					const col = i + 1;
 					const cell = dataSheet.getCell(currentRow, col);
-					cell.value = v; // always written — no merge, no skip
+					cell.value = v;
 					cell.border = CELL_BORDER;
 					cell.alignment = (MERGE_COLS.includes(col) || CENTER_ALIGN_COLS.includes(col)) ? CENTER : MIDDLE_LEFT;
 					if (GRAY_IF_EMPTY_COLS.includes(col) && !v) cell.fill = EMPTY_FILL;
@@ -278,7 +279,50 @@ export async function GET(req: NextRequest) {
 				currentRow++;
 			}
 			monthSeq++;
-			// no mergeCells call — each finding row stays fully independent
+		}
+		---- END ALTERNATE ---- */
+
+		// ---- CURRENT — shared fields written once on the group's first
+		// row, left blank (not repeated, not merged) on subsequent finding
+		// rows. Every cell is still independently addressable (Excel's
+		// filter/sort still work — a blank cell filters/sorts fine, unlike
+		// a merged one), but the same audit info no longer prints
+		// redundantly on every row. Users can merge the blank runs
+		// themselves in Excel afterward if they want that visual grouping.
+		for (const [, findings] of byMonthGroups.get(month)!) {
+			const groupStartRow = currentRow;
+			const isB738Tail = isB738(findings[0].aircraft_tail);
+			for (const f of findings) {
+				const values = [
+					monthSeq, f.entry_no, f.audit_date, f.auditor_name, f.aircraft_tail, f.flight_no ?? "", f.route ?? "",
+					f.finding, f.corrective_action ?? "", f.sam_code ?? "", f.ef_code ?? "",
+					!f.is_non_flight_safety ? "v" : "", (f.special_remarks ?? []).join(", "),
+				];
+				values.forEach((v, i) => {
+					const col = i + 1;
+					const cell = dataSheet.getCell(currentRow, col);
+					// shared fields: blank after the group's first row —
+					// still an independent, addressable cell (not merged),
+					// just empty, so filter/sort keep working correctly.
+					// Gray fill applied here too when the column calls for
+					// it — a blank cell should look the same whether it's
+					// blank because the value is genuinely empty or because
+					// it's a shared field skipped past the group's first row
+					if (MERGE_COLS.includes(col) && currentRow !== groupStartRow) {
+						cell.border = CELL_BORDER;
+						if (GRAY_IF_EMPTY_COLS.includes(col)) cell.fill = EMPTY_FILL;
+						return;
+					}
+					cell.value = v;
+					cell.border = CELL_BORDER;
+					cell.alignment = (MERGE_COLS.includes(col) || CENTER_ALIGN_COLS.includes(col)) ? CENTER : MIDDLE_LEFT;
+					if (GRAY_IF_EMPTY_COLS.includes(col) && !v) cell.fill = EMPTY_FILL;
+					if (col === TAIL_COL && isB738Tail) cell.fill = B738_FILL;
+				});
+				currentRow++;
+			}
+			monthSeq++;
+			// no mergeCells call — blank cells stay independent, not merged
 		}
 		currentRow++; // blank spacer row between months
 	}

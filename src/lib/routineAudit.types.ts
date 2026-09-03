@@ -51,17 +51,29 @@ export interface CreateEntryPayload {
 
 export type UpdateEntryPayload = Partial<Omit<CreateEntryPayload, "existing_entry_no">>;
 
+// ── CHANGED ──────────────────────────────────────
+// Was Record<string, Record<number, number>> (label -> year -> count),
+// built for a single request covering multiple years with one shared
+// month range. The summary route now returns exactly one period per
+// call (year + month_from + month_to all fixed for that response) — the
+// caller fetches twice and combines client-side for comparison, matching
+// the same pattern /api/sms/trend-analysis already uses. Flat
+// Record<label, count> replaces the year-keyed nesting. byArea added —
+// the route always computed this, the type just never declared it.
 export interface RoutineSummaryResponse {
-	byCode: Record<string, Record<number, number>>;      // SAM code -> year -> count
-	byCategory: Record<string, Record<number, number>>; // category -> year -> count
-	byEfCode: Record<string, Record<number, number>>;    // EF code -> year -> count
-	byEfMiddle: Record<string, Record<number, number>>;  // EF middle category (attribute) -> year -> count
-	byMonth: Record<number, Record<number, number>>;     // year -> month -> count
+	year: number;
+	monthFrom: number;
+	monthTo: number;
+	byCode: Record<string, number>;      // SAM code -> count
+	byCategory: Record<string, number>;  // SAM category -> count
+	byArea: Record<string, number>;      // SAM area / HFACS top tier -> count
+	byEfCode: Record<string, number>;    // EF code -> count
+	byEfMiddle: Record<string, number>;  // EF middle category (attribute) -> count
+	byMonth: Record<number, number>;     // month -> count
 }
+// ─────────────────────────────────────────────────
 
 export type PieGroupLevel = "code" | "category";
 
-// ── NEW ──────────────────────────────────────────
 // Chart style for the year-over-year category comparison view
 export type ChartStyle = "bar" | "radar";
-// ─────────────────────────────────────────────────

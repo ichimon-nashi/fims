@@ -41,6 +41,7 @@ export default function RoutineEntriesTable({
 }: Props) {
 	const [search, setSearch] = useState("");
 	const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
+	const [showSafetyOnly, setShowSafetyOnly] = useState(false);
 
 	// ── NEW ── flag toggle — no longer paired with classify (that feature
 	// was removed; SAM/EF codes are now set via 編輯, the existing full-record
@@ -122,6 +123,9 @@ export default function RoutineEntriesTable({
 		if (showFlaggedOnly) {
 			result = result.filter((g) => g.findings.some((f) => getFlag(f)));
 		}
+		if (showSafetyOnly) {
+			result = result.filter((g) => g.findings.some((f) => !f.is_non_flight_safety));
+		}
 		if (!q) return result;
 		return result.filter((g) => {
 			const headerText = [
@@ -143,7 +147,7 @@ export default function RoutineEntriesTable({
 				return findingText.includes(q);
 			});
 		});
-	}, [groups, search, showFlaggedOnly, localOverrides]);
+	}, [groups, search, showFlaggedOnly, showSafetyOnly, localOverrides]);
 
 	// bucket into month sections for the accordion
 	const sections = useMemo(() => {
@@ -193,9 +197,16 @@ export default function RoutineEntriesTable({
 				>
 					🚩 待複核
 				</button>
+				<button
+					className={showSafetyOnly ? styles.flagFilterActive : styles.flagFilter}
+					onClick={() => setShowSafetyOnly((v) => !v)}
+					title="只顯示安全相關項目"
+				>
+					⚠️ 安全相關
+				</button>
 			</div>
 
-			{(search.trim() || showFlaggedOnly) && filteredGroups.length === 0 && (
+			{(search.trim() || showFlaggedOnly || showSafetyOnly) && filteredGroups.length === 0 && (
 				<p className={styles.status}>查無符合的紀錄</p>
 			)}
 
@@ -203,7 +214,7 @@ export default function RoutineEntriesTable({
 				// searching or filtering by flag force-opens any section with a
 				// match, without touching openSections — clearing either
 				// reverts to whatever you'd manually expanded/collapsed before
-				const isOpen = search.trim() || showFlaggedOnly ? true : openSections.has(key);
+				const isOpen = search.trim() || showFlaggedOnly || showSafetyOnly ? true : openSections.has(key);
 				return (
 					<div key={key} className={styles.monthSection}>
 						<button className={styles.monthDivider} onClick={() => onToggleSection(key)}>
@@ -272,8 +283,8 @@ export default function RoutineEntriesTable({
 																<div className={styles.findingTags}>
 																	{sam && <span className={styles.samTag}>{sam}</span>}
 																	{ef && <span className={styles.efTag}>{ef}</span>}
-																	{entry.is_non_flight_safety && (
-																		<span className={styles.nonSafetyTag}>非安全相關</span>
+																	{!entry.is_non_flight_safety && (
+																		<span className={styles.safetyTag}>安全相關</span>
 																	)}
 																</div>
 															)}

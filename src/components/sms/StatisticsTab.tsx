@@ -778,6 +778,11 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 	const [selectedArea, setSelectedArea] = useState<string | null>(null);
 	const [trendGranularity, setTrendGranularity] = useState<Granularity>("month");
 
+	// selectedCategory doubles as the "全部" sentinel in compare mode — see
+	// its useMemo below for why. Declared here (rather than alongside that
+	// useMemo further down) since effectiveCategory needs it above that.
+	const ALL_CATEGORIES = "__ALL__";
+
 	// Defaults to the highest-risk code (barChartCodes[0], already sorted
 	// descending) whenever nothing is explicitly selected, or whenever a
 	// previous selection no longer exists in the current dataset (e.g.
@@ -788,14 +793,35 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 		return barChartCodes[0]?.code ?? null;
 	}, [selectedCode, barChartCodes]);
 
+	// Same fallback pattern as effectiveCode above, applied to category
+	// mode — without this, clicking 分類彙總 left selectedCategory at its
+	// initial null until the user manually reopened the dropdown and
+	// re-picked something, even though the <select> itself visually shows
+	// its first listed option (browser default-selection behavior, not
+	// real state) — making it look selected while nothing was plotted.
+	// In compare mode that first option is 全部（總計）, so the dropdown
+	// appeared to default to "all" while actually selecting nothing.
+	const effectiveCategory = useMemo(() => {
+		if (rangeCompareMode) {
+			if (selectedCategory === ALL_CATEGORIES) return ALL_CATEGORIES;
+			const existsInEither =
+				selectedCategory &&
+				((comparePeriodAData?.categories.some((c) => c.category === selectedCategory) ?? false) ||
+					(comparePeriodBData?.categories.some((c) => c.category === selectedCategory) ?? false));
+			return existsInEither ? selectedCategory! : ALL_CATEGORIES;
+		}
+		if (selectedCategory && fullData?.categories.some((c) => c.category === selectedCategory)) return selectedCategory;
+		return fullData?.categories[0]?.category ?? null;
+	}, [selectedCategory, rangeCompareMode, fullData, comparePeriodAData, comparePeriodBData]);
+
 	const trendSeries = useMemo(() => {
 		if (!fullData) return [];
 		if (trendMode === "code" && effectiveCode) {
 			const split = fullData.trendByCode[effectiveCode] ?? {};
 			return rollUp(fullData.months, split, trendGranularity, true);
 		}
-		if (trendMode === "category" && selectedCategory) {
-			const split = fullData.trendByCategory[selectedCategory] ?? {};
+		if (trendMode === "category" && effectiveCategory) {
+			const split = fullData.trendByCategory[effectiveCategory] ?? {};
 			return rollUp(fullData.months, split, trendGranularity, true);
 		}
 		if (trendMode === "area" && selectedArea) {
@@ -803,17 +829,17 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 			return rollUp(fullData.months, split, trendGranularity, true);
 		}
 		return [];
-	}, [fullData, trendMode, effectiveCode, selectedCategory, selectedArea, trendGranularity]);
+	}, [fullData, trendMode, effectiveCode, effectiveCategory, selectedArea, trendGranularity]);
 
 	const trendLabel = useMemo(() => {
 		if (trendMode === "code" && effectiveCode) {
 			const c = fullData?.codes.find((c) => c.code === effectiveCode);
 			return c ? `${c.code} — ${c.description}` : effectiveCode;
 		}
-		if (trendMode === "category" && selectedCategory) return selectedCategory;
+		if (trendMode === "category" && effectiveCategory) return effectiveCategory;
 		if (trendMode === "area" && selectedArea) return selectedArea;
 		return "";
-	}, [trendMode, effectiveCode, selectedCategory, selectedArea, fullData]);
+	}, [trendMode, effectiveCode, effectiveCategory, selectedArea, fullData]);
 
 	// ---- 趨勢分析 分類彙總 period comparison. Only category mode gets the
 	// dual-line treatment (per explicit request) — 個別代碼/領域彙總 keep
@@ -825,12 +851,11 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 	// in aLabel/bLabel for the tooltip so nothing is misrepresented. Fixed
 	// at month granularity — periods here are usually short (partial-year)
 	// spans where quarter/half-year rollups would flatten the comparison
-	// down to 1-2 points anyway. selectedCategory doubles as the "全部"
+	// down to 1-2 points anyway. effectiveCategory doubles as the "全部"
 	// sentinel (ALL_CATEGORIES) — summing every category's trendByCategory
 	// entry for a month gives the same combined total the pie section's
 	// periodA/BTotalCases already show, just broken out by month instead
 	// of collapsed to one number. ----
-	const ALL_CATEGORIES = "__ALL__";
 	const sumAllCategoriesForMonth = (data: FullTrendData | null, month: string | undefined): number => {
 		if (!data || !month) return 0;
 		return Object.values(data.trendByCategory).reduce((sum, split) => {
@@ -839,12 +864,12 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 		}, 0);
 	};
 	const categoryCompareTrendSeries = useMemo(() => {
-		if (!rangeCompareMode || trendMode !== "category" || !selectedCategory) return [];
+		if (!rangeCompareMode || trendMode !== "category" || !effectiveCategory) return [];
 		const monthsA = monthsInPeriod(periodA.year, periodA.startMonth, periodA.endMonth);
 		const monthsB = monthsInPeriod(periodB.year, periodB.startMonth, periodB.endMonth);
-		const isAll = selectedCategory === ALL_CATEGORIES;
-		const splitA = isAll ? null : comparePeriodAData?.trendByCategory[selectedCategory] ?? {};
-		const splitB = isAll ? null : comparePeriodBData?.trendByCategory[selectedCategory] ?? {};
+		const isAll = effectiveCategory === ALL_CATEGORIES;
+		const splitA = isAll ? null : comparePeriodAData?.trendByCategory[effectiveCategory] ?? {};
+		const splitB = isAll ? null : comparePeriodBData?.trendByCategory[effectiveCategory] ?? {};
 		const len = Math.max(monthsA.length, monthsB.length);
 		return Array.from({ length: len }, (_, i) => {
 			const mA = monthsA[i];
@@ -871,7 +896,7 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 				b: bVal,
 			};
 		});
-	}, [rangeCompareMode, trendMode, selectedCategory, periodA, periodB, comparePeriodAData, comparePeriodBData]);
+	}, [rangeCompareMode, trendMode, effectiveCategory, periodA, periodB, comparePeriodAData, comparePeriodBData]);
 
 
 	// ---- 風險緩解分析 — directly ported from TrendAnalysisTab.tsx.
@@ -1875,7 +1900,7 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 						{trendMode === "category" && fullData && (
 							<select
 								className={styles.select}
-								value={selectedCategory ?? ""}
+								value={effectiveCategory ?? ""}
 								onChange={(e) => setSelectedCategory(e.target.value)}
 							>
 								{rangeCompareMode && <option value={ALL_CATEGORIES}>全部（總計）</option>}
@@ -1950,7 +1975,7 @@ export default function StatisticsTab({ isAdmin }: StatisticsTabProps) {
 						</div>
 					) : categoryCompareTrendSeries.length === 0 ? (
 						<div className={styles.emptyState}>
-							<p>{selectedCategory ? "尚無資料可顯示趨勢" : "請先選擇分類"}</p>
+							<p>{effectiveCategory ? "尚無資料可顯示趨勢" : "請先選擇分類"}</p>
 						</div>
 					) : (
 						<ResponsiveContainer width="100%" height={340}>

@@ -54,7 +54,7 @@ const emptyFinding: FindingDraft = {
 	result: "OK",
 	sam_code: null,
 	ef_code: null,
-	is_non_flight_safety: false,
+	is_non_flight_safety: true, // default: non-safety (now the majority case) — zero clicks needed; only the minority safety-related case requires checking the box
 };
 
 // known recurring markers — add a new label here when one surfaces; no
@@ -1255,8 +1255,8 @@ export default function RoutineEntryModal({
 								/>
 								<textarea rows={2} placeholder="處置作為" value={f.corrective_action} onChange={(e) => updateFinding(idx, "corrective_action", stripExcelQuote(e.target.value))} />
 								<label className={styles.checkboxLabel}>
-									<input type="checkbox" checked={f.is_non_flight_safety} onChange={(e) => updateFinding(idx, "is_non_flight_safety", e.target.checked)} />
-									非安全相關
+									<input type="checkbox" checked={!f.is_non_flight_safety} onChange={(e) => updateFinding(idx, "is_non_flight_safety", !e.target.checked)} />
+									安全相關
 								</label>
 								<div className={styles.row}>
 									<div className={styles.field}>

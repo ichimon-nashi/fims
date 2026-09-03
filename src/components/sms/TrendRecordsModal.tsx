@@ -14,6 +14,10 @@ interface TrendRecordsModalProps {
 	source: Source;
 	yearA: number;
 	yearB: number;
+	monthFromA?: number; // routine only — defaults to 1 (full year), matches prior SRM-only behavior
+	monthToA?: number;   // defaults to 12
+	monthFromB?: number;
+	monthToB?: number;
 	onClose: () => void;
 }
 
@@ -46,6 +50,7 @@ interface RoutineEntryRow {
 	finding: string;
 	sam_code: string | null;
 	ef_code: string | null;
+	is_non_flight_safety: boolean; // the summary route (bar graph counts) excludes these — this modal must too, or its totals won't match what was clicked
 }
 
 export default function TrendRecordsModal({
@@ -55,6 +60,10 @@ export default function TrendRecordsModal({
 	source,
 	yearA,
 	yearB,
+	monthFromA = 1,
+	monthToA = 12,
+	monthFromB = 1,
+	monthToB = 12,
 	onClose,
 }: TrendRecordsModalProps) {
 	const [loading, setLoading] = useState(true);
@@ -81,10 +90,16 @@ export default function TrendRecordsModal({
 					if (!res.ok) throw new Error("SRM 記錄載入失敗");
 					const all: SrmEntryRow[] = await res.json();
 
+					// normalize BOTH sides before comparing — comparing a
+					// normalized entry code against a possibly-unnormalized
+					// `code` prop silently fails whenever the caller's stored
+					// code format doesn't already match normalizeHfacsCode's
+					// output exactly
+					const normalizedCode = normalizeHfacsCode(code);
 					const matches = all.filter((e) => {
 						const codes = type === "hfacs" ? e.human_factors_codes ?? [] : e.ef_attribute_codes ?? [];
 						return type === "hfacs"
-							? codes.some((c) => normalizeHfacsCode(c) === code)
+							? codes.some((c) => normalizeHfacsCode(c) === normalizedCode)
 							: codes.includes(code);
 					});
 
@@ -108,16 +123,16 @@ export default function TrendRecordsModal({
 						fetch(
 							`/api/audit/routine/entries?${new URLSearchParams({
 								year: String(yearA),
-								month_from: "1",
-								month_to: "12",
+								month_from: String(monthFromA),
+								month_to: String(monthToA),
 							})}`,
 							{ headers: { Authorization: `Bearer ${token}` } }
 						),
 						fetch(
 							`/api/audit/routine/entries?${new URLSearchParams({
 								year: String(yearB),
-								month_from: "1",
-								month_to: "12",
+								month_from: String(monthFromB),
+								month_to: String(monthToB),
 							})}`,
 							{ headers: { Authorization: `Bearer ${token}` } }
 						),
@@ -126,10 +141,12 @@ export default function TrendRecordsModal({
 					const dataA = await resA.json();
 					const dataB = await resB.json();
 
+					const normalizedCode = normalizeHfacsCode(code);
 					const filterFn = (rows: RoutineEntryRow[]) =>
-						rows.filter((r) =>
-							type === "hfacs" ? r.sam_code && normalizeHfacsCode(r.sam_code) === code : r.ef_code === code
-						);
+						rows.filter((r) => {
+							if (r.is_non_flight_safety) return false; // matches the summary route's own exclusion
+							return type === "hfacs" ? r.sam_code && normalizeHfacsCode(r.sam_code) === normalizedCode : r.ef_code === code;
+						});
 
 					if (!cancelled) {
 						setEntriesA(filterFn(dataA.records ?? []));
@@ -147,7 +164,7 @@ export default function TrendRecordsModal({
 		return () => {
 			cancelled = true;
 		};
-	}, [code, type, source, yearA, yearB]);
+	}, [code, type, source, yearA, yearB, monthFromA, monthToA, monthFromB, monthToB]);
 
 	const isSrm = source === "srm";
 

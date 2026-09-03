@@ -58,24 +58,23 @@
 	font-size: 0.6875rem;
 	color: rgba(232, 233, 237, 0.45);
 	margin: 0;
-	margin-left: 108px; /* lines up under the track: 100px label column + 8px gap */
 	line-height: 1.3;
+}
+
+/* two-row layout: label on its own full-width line (was a fixed 100px
+   grid column, which truncated any label longer than a few characters —
+   e.g. "安全程序/訓練 (Procedure/Training)" never fit), bar+count below */
+.barLabelRow {
+	font-size: 0.75rem;
+	color: rgba(232, 233, 237, 0.7);
+	margin-bottom: 3px;
 }
 
 .barRow {
 	display: grid;
-	grid-template-columns: 100px 1fr 32px;
+	grid-template-columns: 1fr 32px;
 	align-items: center;
 	gap: 8px;
-}
-
-.barLabel {
-	font-size: 0.75rem;
-	color: rgba(232, 233, 237, 0.7);
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	text-align: right;
 }
 
 .barTrack {
@@ -221,4 +220,135 @@
 	.trendTableCol {
 		width: 100%;
 	}
+}
+
+/* ---- category comparison: twin pies + delta badges (values copied
+   from StatisticsTab.module.css for visual consistency with SMS) ---- */
+
+.presetSummary {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 1rem;
+	margin-bottom: 1.5rem;
+	padding: 0.75rem;
+	background: rgba(255, 255, 255, 0.03);
+	border-radius: 8px;
+	flex-wrap: wrap;
+}
+
+.presetSummaryRange {
+	color: #4a9eff;
+	font-weight: 600;
+	font-size: 0.9rem;
+}
+
+.vsLabel {
+	color: #4a9eff;
+	font-weight: 700;
+	font-size: 1rem;
+}
+
+.categoryDeltaGrid {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 0.6rem;
+	margin-bottom: 1.25rem;
+}
+
+.categoryDeltaChip {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 20px;
+	padding: 0.4rem 0.85rem;
+	font-size: 0.82rem;
+}
+
+.categoryDeltaDot {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+
+.categoryDeltaName {
+	color: #e8e9ed;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.categoryDeltaCounts {
+	color: #6b7280;
+	white-space: nowrap;
+}
+
+.deltaNeutral {
+	color: #a0aec0;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.deltaGood {
+	color: #10b981;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.deltaBad {
+	color: #ef4444;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.comparePieGrid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 1rem;
+	width: 100%;
+}
+
+.comparePieColumn {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	min-width: 0;
+	background: rgba(255, 255, 255, 0.02);
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: 10px;
+	padding: 0.5rem;
+}
+
+.comparePieColumnLabel {
+	color: #4a9eff;
+	font-weight: 600;
+	font-size: 0.95rem;
+	text-align: center;
+	padding: 0.4rem 0;
+}
+
+@media (max-width: 768px) {
+	.comparePieGrid {
+		grid-template-columns: 1fr;
+	}
+}
+.viewRecordsBtn {
+	align-self: flex-start;
+	margin-top: 2px;
+	background: rgba(74, 158, 255, 0.1);
+	border: 1px solid rgba(74, 158, 255, 0.35);
+	color: #4a9eff;
+	border-radius: 6px;
+	padding: 4px 10px;
+	font-size: 0.6875rem;
+	cursor: pointer;
+}
+
+.svgComparePie {
+	width: 100%;
+	height: auto;
+	max-height: 480px;
 }

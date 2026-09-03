@@ -9,13 +9,15 @@ import {
 	RoutineTrendChart,
 	RoutineSamCompareChart,
 	RoutineEfCompareChart,
+	RoutineSamCategoryComparePies,
+	RoutineEfCategoryComparePies,
 } from "./RoutineCharts";
 import RoutineEntriesTable from "./RoutineEntriesTable";
 import RoutineEntryModal from "./RoutineEntryModal";
+import TrendRecordsModal from "../../sms/TrendRecordsModal";
 import { SAM_CODE_MAP, EF_CODE_MAP } from "@/lib/routineAudit.constants";
 import {
 	PieGroupLevel,
-	ChartStyle,
 	RoutineSummaryResponse,
 	RoutineAuditEntry,
 } from "@/lib/routineAudit.types";
@@ -24,21 +26,46 @@ const AVAILABLE_YEARS = [2025, 2026]; // TODO: derive from distinct report_year 
 const TREND_COLORS = ["#4a9eff", "#fb923c"];
 const MONTHS = ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
 
+// ── NEW: independent per-side period, replacing primaryYear/compareYear +
+// one shared monthFrom/monthTo. Matches StatisticsTab.tsx's ComparePeriod
+// pattern exactly (year, startMonth, endMonth per side).
+interface Period {
+	year: number;
+	startMonth: number;
+	endMonth: number;
+}
+
+function periodLabel(p: Period): string {
+	return p.startMonth === 1 && p.endMonth === 12 ? `${p.year}年` : `${p.year}年${p.startMonth}-${p.endMonth}月`;
+}
+
+// year*12+month gives a single monotonic index for ordering two periods —
+// same technique StatisticsTab.tsx uses for its start/end swap-correction
+function periodIndex(p: Period): number {
+	return p.year * 12 + p.startMonth;
+}
+
 type ModalState =
 	| { open: false }
 	| { open: true; mode: "create" }
 	| { open: true; mode: "edit"; entries: RoutineAuditEntry[] };
 
 export default function RoutineSummary() {
-	const [primaryYear, setPrimaryYear] = useState<number>(2026);
-	const [compareYear, setCompareYear] = useState<number | null>(null);
+	const [periodA, setPeriodA] = useState<Period>({ year: 2026, startMonth: 1, endMonth: 12 });
+	const [periodB, setPeriodB] = useState<Period | null>(null);
 	const [comparePicking, setComparePicking] = useState(false);
-	const [monthFrom, setMonthFrom] = useState<number>(1);
-	const [monthTo, setMonthTo] = useState<number>(12);
 	const [pieLevel, setPieLevel] = useState<PieGroupLevel>("category");
-	const [chartStyle, setChartStyle] = useState<ChartStyle>("bar");
+	// local 3-way toggle: bar | pie | radar — pie is new (item comparison
+	// view), bar/radar map straight through to the existing ChartStyle type
+	// when calling RoutineSamCompareChart/RoutineEfCompareChart
+	const [chartMode, setChartMode] = useState<"bar" | "pie" | "radar">("bar");
 
-	const [summary, setSummary] = useState<RoutineSummaryResponse | null>(null);
+	const [compareCode, setCompareCode] = useState<"sam" | "ef">("sam");
+	// which bar row's records modal is open, if any
+	const [recordsModal, setRecordsModal] = useState<{ label: string; type: "sam" | "ef" } | null>(null);
+
+	const [summaryA, setSummaryA] = useState<RoutineSummaryResponse | null>(null);
+	const [summaryB, setSummaryB] = useState<RoutineSummaryResponse | null>(null);
 	const [entries, setEntries] = useState<RoutineAuditEntry[]>([]);
 	const [compareEntries, setCompareEntries] = useState<RoutineAuditEntry[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -82,42 +109,48 @@ export default function RoutineSummary() {
 		[]
 	);
 
-	const years = useMemo(
-		() => (compareYear ? [primaryYear, compareYear].sort((a, b) => a - b) : [primaryYear]),
-		[primaryYear, compareYear]
-	);
-
-	const fetchSummary = useCallback(() => {
+	// ── NEW: single-period fetch, called once for periodA and once more
+	// for periodB when comparing — mirrors StatisticsTab.tsx's
+	// loadCompareData calling its single-period endpoint twice rather
+	// than one combined multi-range request.
+	const fetchSummaryFor = useCallback((p: Period, setter: (r: RoutineSummaryResponse | null) => void) => {
 		const token = localStorage.getItem("token");
 		if (!token) return;
-		setLoading(true);
-		setError(null);
 		const params = new URLSearchParams({
-			years: years.join(","),
-			month_from: String(monthFrom),
-			month_to: String(monthTo),
+			year: String(p.year),
+			month_from: String(p.startMonth),
+			month_to: String(p.endMonth),
 		});
-		fetch(`/api/audit/routine/summary?${params}`, {
+		return fetch(`/api/audit/routine/summary?${params}`, {
 			headers: { Authorization: `Bearer ${token}` },
 		})
 			.then((res) => {
 				if (!res.ok) throw new Error("彙整資料載入失敗");
 				return res.json();
 			})
-			.then(setSummary)
+			.then(setter);
+	}, []);
+
+	const fetchSummary = useCallback(() => {
+		setLoading(true);
+		setError(null);
+		const calls = [fetchSummaryFor(periodA, setSummaryA)];
+		if (periodB) calls.push(fetchSummaryFor(periodB, setSummaryB));
+		else setSummaryB(null);
+		Promise.all(calls)
 			.catch((err) => setError(err.message))
 			.finally(() => setLoading(false));
-	}, [years, monthFrom, monthTo]);
+	}, [periodA, periodB, fetchSummaryFor]);
 
 	const fetchEntriesFor = useCallback(
-		(year: number, setter: (rows: RoutineAuditEntry[]) => void, setLoadingFn: (v: boolean) => void) => {
+		(p: Period, setter: (rows: RoutineAuditEntry[]) => void, setLoadingFn: (v: boolean) => void) => {
 			const token = localStorage.getItem("token");
 			if (!token) return;
 			setLoadingFn(true);
 			const params = new URLSearchParams({
-				year: String(year),
-				month_from: String(monthFrom),
-				month_to: String(monthTo),
+				year: String(p.year),
+				month_from: String(p.startMonth),
+				month_to: String(p.endMonth),
 			});
 			fetch(`/api/audit/routine/entries?${params}`, {
 				headers: { Authorization: `Bearer ${token}` },
@@ -130,82 +163,118 @@ export default function RoutineSummary() {
 				.catch(() => setter([]))
 				.finally(() => setLoadingFn(false));
 		},
-		[monthFrom, monthTo]
+		[]
 	);
 
 	const fetchEntries = useCallback(
-		() => fetchEntriesFor(primaryYear, setEntries, setEntriesLoading),
-		[fetchEntriesFor, primaryYear]
+		() => fetchEntriesFor(periodA, setEntries, setEntriesLoading),
+		[fetchEntriesFor, periodA]
 	);
 
 	useEffect(fetchSummary, [fetchSummary]);
 	useEffect(fetchEntries, [fetchEntries]);
 
-	// comparison year gets its own entries fetch, only when actually set
+	// comparison period gets its own entries fetch, with its OWN month
+	// range — this was the actual bug being fixed: previously both sides
+	// shared one monthFrom/monthTo, so a comparison could never use
+	// different windows per side
 	useEffect(() => {
-		if (compareYear === null) {
+		if (periodB === null) {
 			setCompareEntries([]);
 			return;
 		}
-		fetchEntriesFor(compareYear, setCompareEntries, setCompareEntriesLoading);
-	}, [compareYear, fetchEntriesFor]);
+		fetchEntriesFor(periodB, setCompareEntries, setCompareEntriesLoading);
+	}, [periodB, fetchEntriesFor]);
 
+	// ── single-period chart data — flat Record<label, count> now, no
+	// year-keying needed since summaryA/summaryB are each already scoped
+	// to one period
 	const categoryData = useMemo(() => {
-		if (!summary) return [];
-		const source = (pieLevel === "code" ? summary.byCode : summary.byCategory) ?? {};
-		return Object.entries(source).map(([label, byYear]) => ({
-			label,
-			count: byYear[primaryYear] ?? 0,
-		}));
-	}, [summary, primaryYear, pieLevel]);
+		if (!summaryA) return [];
+		const source = (pieLevel === "code" ? summaryA.byCode : summaryA.byCategory) ?? {};
+		return Object.entries(source).map(([label, count]) => ({ label, count }));
+	}, [summaryA, pieLevel]);
 
 	const efCodeData = useMemo(() => {
-		if (!summary) return [];
-		const source = (pieLevel === "code" ? summary.byEfCode : summary.byEfMiddle) ?? {};
-		return Object.entries(source).map(([label, byYear]) => ({
-			label,
-			count: byYear[primaryYear] ?? 0,
-		}));
-	}, [summary, primaryYear, pieLevel]);
+		if (!summaryA) return [];
+		const source = (pieLevel === "code" ? summaryA.byEfCode : summaryA.byEfMiddle) ?? {};
+		return Object.entries(source).map(([label, count]) => ({ label, count }));
+	}, [summaryA, pieLevel]);
 
-	// ── year-over-year comparison data, only meaningful once a compare
-	// year is picked. SAM's category-level comparison reads from byArea
-	// (HFACS top tier, e.g. "組織影響") rather than byCategory (e.g.
-	// "Resource Management") — a deliberate tier bump for the comparison
-	// view only; the single-year pie above stays at the category tier. ──
+	// ── NEW: periodB's own single-period data, for the twin-pie
+	// comparison view (which needs two separate CountItem[] arrays, not
+	// the combined CompareItem[] shape categoryCompareData/efCompareData
+	// build for the bar/radar charts below)
+	const categoryDataB = useMemo(() => {
+		if (!summaryB) return [];
+		const source = (pieLevel === "code" ? summaryB.byCode : summaryB.byCategory) ?? {};
+		return Object.entries(source).map(([label, count]) => ({ label, count }));
+	}, [summaryB, pieLevel]);
+
+	const efCodeDataB = useMemo(() => {
+		if (!summaryB) return [];
+		const source = (pieLevel === "code" ? summaryB.byEfCode : summaryB.byEfMiddle) ?? {};
+		return Object.entries(source).map(([label, count]) => ({ label, count }));
+	}, [summaryB, pieLevel]);
+
+	// ── comparison data — combines the two independent single-period
+	// responses into the CompareItem[] shape RoutineCharts expects.
 	const categoryCompareData = useMemo(() => {
-		if (!summary || compareYear === null) return [];
-		const source = (pieLevel === "code" ? summary.byCode : summary.byArea) ?? {};
-		return Object.entries(source).map(([label, byYear]) => ({
+		if (!summaryA || !summaryB) return [];
+		const sourceA = (pieLevel === "code" ? summaryA.byCode : summaryA.byArea) ?? {};
+		const sourceB = (pieLevel === "code" ? summaryB.byCode : summaryB.byArea) ?? {};
+		const labels = new Set([...Object.keys(sourceA), ...Object.keys(sourceB)]);
+		return Array.from(labels).map((label) => ({
 			label,
-			values: years.map((y) => byYear[y] ?? 0),
+			values: [sourceA[label] ?? 0, sourceB[label] ?? 0],
 		}));
-	}, [summary, years, compareYear, pieLevel]);
+	}, [summaryA, summaryB, pieLevel]);
 
 	const efCompareData = useMemo(() => {
-		if (!summary || compareYear === null) return [];
-		const source = (pieLevel === "code" ? summary.byEfCode : summary.byEfMiddle) ?? {};
-		return Object.entries(source).map(([label, byYear]) => ({
+		if (!summaryA || !summaryB) return [];
+		const sourceA = (pieLevel === "code" ? summaryA.byEfCode : summaryA.byEfMiddle) ?? {};
+		const sourceB = (pieLevel === "code" ? summaryB.byEfCode : summaryB.byEfMiddle) ?? {};
+		const labels = new Set([...Object.keys(sourceA), ...Object.keys(sourceB)]);
+		return Array.from(labels).map((label) => ({
 			label,
-			values: years.map((y) => byYear[y] ?? 0),
+			values: [sourceA[label] ?? 0, sourceB[label] ?? 0],
 		}));
-	}, [summary, years, compareYear, pieLevel]);
+	}, [summaryA, summaryB, pieLevel]);
+
+	// trend chart's x-axis window is the UNION of both periods' month
+	// ranges, so a comparison between differently-sized windows still
+	// shows every relevant month on one axis
+	const trendWindow = useMemo(() => {
+		const starts = [periodA.startMonth, ...(periodB ? [periodB.startMonth] : [])];
+		const ends = [periodA.endMonth, ...(periodB ? [periodB.endMonth] : [])];
+		return { from: Math.min(...starts), to: Math.max(...ends) };
+	}, [periodA, periodB]);
 
 	const trendSeries = useMemo(() => {
-		if (!summary) return [];
-		return years.map((year, i) => ({
-			year,
-			color: TREND_COLORS[i],
-			values: Array.from({ length: 12 }, (_, m) => summary.byMonth[year]?.[m + 1] ?? 0),
-		}));
-	}, [summary, years]);
+		if (!summaryA) return [];
+		const series = [
+			{
+				label: periodLabel(periodA),
+				color: TREND_COLORS[0],
+				values: Array.from({ length: 12 }, (_, m) => summaryA.byMonth[m + 1] ?? 0),
+			},
+		];
+		if (periodB && summaryB) {
+			series.push({
+				label: periodLabel(periodB),
+				color: TREND_COLORS[1],
+				values: Array.from({ length: 12 }, (_, m) => summaryB.byMonth[m + 1] ?? 0),
+			});
+		}
+		return series;
+	}, [summaryA, summaryB, periodA, periodB]);
 
 	const totalFindings = categoryData.reduce((sum, c) => sum + c.count, 0);
 
 	function refetchAll() {
 		fetchSummary();
 		fetchEntries();
-		if (compareYear !== null) fetchEntriesFor(compareYear, setCompareEntries, setCompareEntriesLoading);
+		if (periodB !== null) fetchEntriesFor(periodB, setCompareEntries, setCompareEntriesLoading);
 	}
 
 	function handleAddEntry() {
@@ -231,14 +300,19 @@ export default function RoutineSummary() {
 		else alert("部分刪除失敗，請重新整理確認結果");
 	}
 
+	// NOTE: export still only accepts one shared month range across all
+	// requested years — that route hasn't been reworked in this pass.
+	// While periodB is active with a DIFFERENT month range than periodA,
+	// exporting will apply periodA's window to both years' data.
 	async function handleExport() {
 		setExporting(true);
 		try {
 			const token = localStorage.getItem("token");
+			const years = periodB ? [periodA.year, periodB.year].sort((a, b) => a - b) : [periodA.year];
 			const params = new URLSearchParams({
 				years: years.join(","),
-				month_from: String(monthFrom),
-				month_to: String(monthTo),
+				month_from: String(periodA.startMonth),
+				month_to: String(periodA.endMonth),
 			});
 			const res = await fetch(`/api/audit/routine/export?${params}`, {
 				headers: { Authorization: `Bearer ${token}` },
@@ -296,16 +370,20 @@ export default function RoutineSummary() {
 		}
 	}
 
+	// display order for the two-column table view — earlier period on the
+	// left, regardless of which one is "A" or "B"
+	const aIsEarlier = periodB ? periodIndex(periodA) <= periodIndex(periodB) : true;
+
 	return (
 		<div className={styles.container}>
-			{/* ---- filter bar (merged in from the former RoutineFilters.tsx) ---- */}
+			{/* ---- filter bar ---- */}
 			<div className={styles.filterBar}>
 				<div className={styles.field}>
 					<label className={styles.label}>年度</label>
 					<select
 						className={styles.select}
-						value={primaryYear}
-						onChange={(e) => setPrimaryYear(Number(e.target.value))}
+						value={periodA.year}
+						onChange={(e) => setPeriodA((p) => ({ ...p, year: Number(e.target.value) }))}
 					>
 						{AVAILABLE_YEARS.map((y) => (
 							<option key={y} value={y}>{y}</option>
@@ -313,47 +391,13 @@ export default function RoutineSummary() {
 					</select>
 				</div>
 
-				{/* compare-year control lives here, in the persistent filter bar,
-				    so it's reachable from both 紀錄列表 and 圖表 — it used to be
-				    inside the trend chart's own header, which only rendered when
-				    圖表 was the active tab */}
-				<div className={styles.field}>
-					<label className={styles.label}>比較年度</label>
-					{compareYear === null ? (
-						comparePicking ? (
-							<select
-								autoFocus
-								className={styles.select}
-								onChange={(e) => {
-									setCompareYear(Number(e.target.value));
-									setComparePicking(false);
-								}}
-								onBlur={() => setComparePicking(false)}
-							>
-								<option value="">選擇年度...</option>
-								{AVAILABLE_YEARS.filter((y) => y !== primaryYear).map((y) => (
-									<option key={y} value={y}>{y}</option>
-								))}
-							</select>
-						) : (
-							<button className={styles.compareChip} onClick={() => setComparePicking(true)}>
-								+ 比較年度
-							</button>
-						)
-					) : (
-						<button className={styles.compareChipActive} onClick={() => setCompareYear(null)}>
-							vs {compareYear} ×
-						</button>
-					)}
-				</div>
-
 				<div className={styles.field}>
 					<label className={styles.label}>月份區間</label>
 					<div className={styles.monthRange}>
 						<select
 							className={styles.select}
-							value={monthFrom}
-							onChange={(e) => setMonthFrom(Number(e.target.value))}
+							value={periodA.startMonth}
+							onChange={(e) => setPeriodA((p) => ({ ...p, startMonth: Number(e.target.value) }))}
 						>
 							{MONTHS.map((m, i) => (
 								<option key={i} value={i + 1}>{m}</option>
@@ -362,14 +406,81 @@ export default function RoutineSummary() {
 						<span className={styles.to}>至</span>
 						<select
 							className={styles.select}
-							value={monthTo}
-							onChange={(e) => setMonthTo(Number(e.target.value))}
+							value={periodA.endMonth}
+							onChange={(e) => setPeriodA((p) => ({ ...p, endMonth: Number(e.target.value) }))}
 						>
 							{MONTHS.map((m, i) => (
 								<option key={i} value={i + 1}>{m}</option>
 							))}
 						</select>
 					</div>
+				</div>
+
+				{/* ── NEW: comparison period now has its OWN year + month range ── */}
+				<div className={styles.field}>
+					<label className={styles.label}>比較區間</label>
+					{periodB === null ? (
+						comparePicking ? (
+							<div className={styles.monthRange}>
+								<select
+									autoFocus
+									className={styles.select}
+									onChange={(e) =>
+										setPeriodB({ year: Number(e.target.value), startMonth: periodA.startMonth, endMonth: periodA.endMonth })
+									}
+								>
+									<option value="">選擇年度...</option>
+									{AVAILABLE_YEARS.map((y) => (
+										<option key={y} value={y}>{y}</option>
+									))}
+								</select>
+							</div>
+						) : (
+							<button className={styles.compareChip} onClick={() => setComparePicking(true)}>
+								+ 比較區間
+							</button>
+						)
+					) : (
+						<div className={styles.monthRange}>
+							<select
+								className={styles.select}
+								value={periodB.year}
+								onChange={(e) => setPeriodB((p) => (p ? { ...p, year: Number(e.target.value) } : p))}
+							>
+								{AVAILABLE_YEARS.map((y) => (
+									<option key={y} value={y}>{y}</option>
+								))}
+							</select>
+							<select
+								className={styles.select}
+								value={periodB.startMonth}
+								onChange={(e) => setPeriodB((p) => (p ? { ...p, startMonth: Number(e.target.value) } : p))}
+							>
+								{MONTHS.map((m, i) => (
+									<option key={i} value={i + 1}>{m}</option>
+								))}
+							</select>
+							<span className={styles.to}>至</span>
+							<select
+								className={styles.select}
+								value={periodB.endMonth}
+								onChange={(e) => setPeriodB((p) => (p ? { ...p, endMonth: Number(e.target.value) } : p))}
+							>
+								{MONTHS.map((m, i) => (
+									<option key={i} value={i + 1}>{m}</option>
+								))}
+							</select>
+							<button
+								className={styles.compareChipActive}
+								onClick={() => {
+									setPeriodB(null);
+									setComparePicking(false);
+								}}
+							>
+								×
+							</button>
+						</div>
+					)}
 				</div>
 
 				<div className={styles.actions}>
@@ -455,72 +566,125 @@ export default function RoutineSummary() {
 								</div>
 							</div>
 
+							{pieLevel === "category" && (
+								<div className={styles.chartRow}>
+									<RoutineEfChart data={efCodeData} year={periodA.year} level={pieLevel} descriptions={efCodeDescriptions} forceBar />
+									<RoutineSamChart data={categoryData} year={periodA.year} level={pieLevel} descriptions={samCodeDescriptions} forceBar />
+								</div>
+							)}
 							<div className={styles.chartRow}>
 								<RoutineEfChart
 									data={efCodeData}
-									year={primaryYear}
+									year={periodA.year}
 									level={pieLevel}
 									descriptions={efCodeDescriptions}
 								/>
 								<RoutineSamChart
 									data={categoryData}
-									year={primaryYear}
+									year={periodA.year}
 									level={pieLevel}
 									descriptions={samCodeDescriptions}
 								/>
 							</div>
 
-							{/* ── year-over-year comparison charts, only once a compare
-							    year is picked — mirrors the trend chart's own
-							    years-aware rendering just above it in layout order. ── */}
-							{compareYear !== null && (
+							{/* ── comparison charts, only once periodB is set. Unified
+							    長條圖/圓餅圖/雷達圖 toggle — pie sits between bar and
+							    radar as a peer option, not level-gated like before. ── */}
+							{periodB !== null && (
 								<>
 									<div className={styles.chartControls}>
 										<span className={styles.label}>比較圖表</span>
 										<div className={styles.levelToggle}>
-											{(["bar", "radar"] as const).map((style) => (
+											{(["bar", "pie", "radar"] as const).map((mode) => (
 												<button
-													key={style}
-													className={chartStyle === style ? styles.levelBtnActive : styles.levelBtn}
-													onClick={() => setChartStyle(style)}
+													key={mode}
+													className={chartMode === mode ? styles.levelBtnActive : styles.levelBtn}
+													onClick={() => setChartMode(mode)}
 												>
-													{style === "bar" ? "長條圖" : "雷達圖"}
+													{mode === "bar" ? "長條圖" : mode === "pie" ? "圓餅圖" : "雷達圖"}
 												</button>
 											))}
 										</div>
 									</div>
 
-									<div className={styles.chartRow}>
-										<RoutineEfCompareChart
-											data={efCompareData}
-											years={years}
-											level={pieLevel}
-											chartStyle={chartStyle}
-											descriptions={pieLevel === "code" ? efCodeDescriptions : undefined}
-										/>
-										<RoutineSamCompareChart
-											data={categoryCompareData}
-											years={years}
-											level={pieLevel}
-											chartStyle={chartStyle}
-											descriptions={pieLevel === "code" ? samCodeDescriptions : undefined}
-										/>
-									</div>
+									{chartMode === "pie" ? (
+										<>
+											<div className={styles.chartControls}>
+												<span className={styles.label}>比較類別</span>
+												<div className={styles.levelToggle}>
+													<button
+														className={compareCode === "sam" ? styles.levelBtnActive : styles.levelBtn}
+														onClick={() => setCompareCode("sam")}
+													>
+														SAM
+													</button>
+													<button
+														className={compareCode === "ef" ? styles.levelBtnActive : styles.levelBtn}
+														onClick={() => setCompareCode("ef")}
+													>
+														EF
+													</button>
+												</div>
+											</div>
+											{compareCode === "sam" ? (
+												<RoutineSamCategoryComparePies
+													dataA={categoryData}
+													dataB={categoryDataB}
+													labelA={periodLabel(periodA)}
+													labelB={periodLabel(periodB)}
+												/>
+											) : (
+												<RoutineEfCategoryComparePies
+													dataA={efCodeData}
+													dataB={efCodeDataB}
+													labelA={periodLabel(periodA)}
+													labelB={periodLabel(periodB)}
+												/>
+											)}
+										</>
+									) : (
+										<div className={styles.chartRow}>
+											<RoutineEfCompareChart
+												data={efCompareData}
+												periods={[periodLabel(periodA), periodLabel(periodB)]}
+												level={pieLevel}
+												chartStyle={chartMode === "radar" ? "radar" : "bar"}
+												descriptions={efCodeDescriptions}
+												onViewRecords={
+													chartMode === "bar" && pieLevel === "code"
+														? (label) => setRecordsModal({ label, type: "ef" })
+														: undefined
+												}
+											/>
+											<RoutineSamCompareChart
+												data={categoryCompareData}
+												periods={[periodLabel(periodA), periodLabel(periodB)]}
+												level={pieLevel}
+												chartStyle={chartMode === "radar" ? "radar" : "bar"}
+												descriptions={samCodeDescriptions}
+												onViewRecords={
+													chartMode === "bar" && pieLevel === "code"
+														? (label) => setRecordsModal({ label, type: "sam" })
+														: undefined
+												}
+											/>
+										</div>
+									)}
 								</>
 							)}
 
 							<div className={styles.trendRow}>
 								<RoutineTrendChart
 									series={trendSeries}
-									monthFrom={monthFrom}
-									monthTo={monthTo}
+									monthFrom={trendWindow.from}
+									monthTo={trendWindow.to}
 								/>
 							</div>
 						</>
 					)}
 
 					{innerTab === "table" && (
-						compareYear === null ? (
+						periodB === null ? (
 							<RoutineEntriesTable
 								entries={entries}
 								loading={entriesLoading}
@@ -532,22 +696,10 @@ export default function RoutineSummary() {
 							/>
 						) : (
 							<div className={styles.compareTables}>
-								{compareYear < primaryYear ? (
+								{aIsEarlier ? (
 									<>
 										<div className={styles.compareTableCol}>
-											<p className={styles.compareTableHeader}>{compareYear}</p>
-											<RoutineEntriesTable
-												entries={compareEntries}
-												loading={compareEntriesLoading}
-												onEdit={handleEdit}
-												onDelete={handleDelete}
-												openSections={getOpenSections("compare")}
-												onToggleSection={(key) => handleToggleSection("compare", key)}
-												onDefaultSection={(key) => handleDefaultSection("compare", key)}
-											/>
-										</div>
-										<div className={styles.compareTableCol}>
-											<p className={styles.compareTableHeader}>{primaryYear}</p>
+											<p className={styles.compareTableHeader}>{periodLabel(periodA)}</p>
 											<RoutineEntriesTable
 												entries={entries}
 												loading={entriesLoading}
@@ -556,25 +708,25 @@ export default function RoutineSummary() {
 												openSections={getOpenSections("primary")}
 												onToggleSection={(key) => handleToggleSection("primary", key)}
 												onDefaultSection={(key) => handleDefaultSection("primary", key)}
+											/>
+										</div>
+										<div className={styles.compareTableCol}>
+											<p className={styles.compareTableHeader}>{periodLabel(periodB)}</p>
+											<RoutineEntriesTable
+												entries={compareEntries}
+												loading={compareEntriesLoading}
+												onEdit={handleEdit}
+												onDelete={handleDelete}
+												openSections={getOpenSections("compare")}
+												onToggleSection={(key) => handleToggleSection("compare", key)}
+												onDefaultSection={(key) => handleDefaultSection("compare", key)}
 											/>
 										</div>
 									</>
 								) : (
 									<>
 										<div className={styles.compareTableCol}>
-											<p className={styles.compareTableHeader}>{primaryYear}</p>
-											<RoutineEntriesTable
-												entries={entries}
-												loading={entriesLoading}
-												onEdit={handleEdit}
-												onDelete={handleDelete}
-												openSections={getOpenSections("primary")}
-												onToggleSection={(key) => handleToggleSection("primary", key)}
-												onDefaultSection={(key) => handleDefaultSection("primary", key)}
-											/>
-										</div>
-										<div className={styles.compareTableCol}>
-											<p className={styles.compareTableHeader}>{compareYear}</p>
+											<p className={styles.compareTableHeader}>{periodLabel(periodB)}</p>
 											<RoutineEntriesTable
 												entries={compareEntries}
 												loading={compareEntriesLoading}
@@ -583,6 +735,18 @@ export default function RoutineSummary() {
 												openSections={getOpenSections("compare")}
 												onToggleSection={(key) => handleToggleSection("compare", key)}
 												onDefaultSection={(key) => handleDefaultSection("compare", key)}
+											/>
+										</div>
+										<div className={styles.compareTableCol}>
+											<p className={styles.compareTableHeader}>{periodLabel(periodA)}</p>
+											<RoutineEntriesTable
+												entries={entries}
+												loading={entriesLoading}
+												onEdit={handleEdit}
+												onDelete={handleDelete}
+												openSections={getOpenSections("primary")}
+												onToggleSection={(key) => handleToggleSection("primary", key)}
+												onDefaultSection={(key) => handleDefaultSection("primary", key)}
 											/>
 										</div>
 									</>
@@ -600,6 +764,24 @@ export default function RoutineSummary() {
 				onClose={() => setModal({ open: false })}
 				onSaved={refetchAll}
 			/>
+
+			{recordsModal && periodB && (
+				<TrendRecordsModal
+					code={recordsModal.label}
+					description={
+						(recordsModal.type === "sam" ? samCodeDescriptions : efCodeDescriptions)[recordsModal.label] ?? ""
+					}
+					type={recordsModal.type === "sam" ? "hfacs" : "ef"}
+					source="routine"
+					yearA={periodA.year}
+					yearB={periodB.year}
+					monthFromA={periodA.startMonth}
+					monthToA={periodA.endMonth}
+					monthFromB={periodB.startMonth}
+					monthToB={periodB.endMonth}
+					onClose={() => setRecordsModal(null)}
+				/>
+			)}
 		</div>
 	);
 }
