@@ -11,19 +11,24 @@ import { USER_FILTER_CATEGORIES } from "@/lib/constants";
 // Not symmetric between genders (some job names only exist for one gender), so each gender
 // has its own list rather than a shared job-name set.
 const FEMALE_AVATAR_JOBS = [
-	"ahriman","archer","blackmage","bomb","calculator","chemist","chocobo","dancer","darkknight",
-	"dark_behemoth","dragon","dragoner","geomancer","ghoul","goblin","hellknight","holyknight",
-	"juravis","knight","lancer","mediator","mimic","monk","monster","morbol","ninja","onionknight",
-	"oracle","red_panther","samurai","skeleton","squire","summoner","templeknight","thief","tiamat",
-	"timemage","whitemage","wildbow","woodman",
+	"ahriman","alma","archer","assassin1","assassin2","assassin3","behemoth","blackmage","bomb",
+	"byblos","calculator","chemist","chocobo","darkknight","demon","divineknight","dragon1","dragon2",
+	"dragonkin","geomancer","ghoul","girl","goblin","holyknight","juravis","knight","lancer","malboro",
+	"mediator","mimic","monk","ninja","oldman","oldwidow","onionknight","oracle","panther","piscodemon",
+	"princess","samurai","skeleton","skyseer","squire","summoner","teenager","thief","tiamat","tietra",
+	"timemage","treant","uribo","whitemage","widow","witch","woman",
 ];
 const MALE_AVATAR_JOBS = [
-	"ahriman","archer","bard","blackmage","bomb","calculator","chemist","chocobo","darkknight",
-	"dark_behemoth","engineer","geomancer","ghoul","goblin","hellknight","holyknight","hunter",
-	"juravis","knight","lancer","mediator","mimic","monk","monster","morbol","ninja","onionknight",
-	"oracle","pirate","pisco_demon","ramza1","ramza2","ramza3","red_panther","robot","samurai",
-	"skeleton","soldier","squire","summoner","templeknight","thief","tiamat","timemage","whitemage",
-	"wildbow","woodman",
+	"adrammelech","ahriman","algus","archer","arkknight1","arkknight2","astrologer","bard","behemoth",
+	"belias","blackmage","bomb","boy","byblos","calculator","cardinal","celebrant","chemist","chocobo",
+	"darkknight","delita1","delita2","delita3","demon","divineknight1","divineknight2","divineknight3",
+	"divineknight4","dragon1","dragon2","duke1","duke2","duke3","elder","fellknight","funeralpriest",
+	"geomancer","ghoul","goblin","hashmal","highpriest","hunter","juravis","knight","lancer","machinist1",
+	"machinist2","malboro","man","mediator","mimic","minotaur","monk","netherseer","ninja","oldman",
+	"oldwidow","onionknight","oracle","panther","pirate","piscodemon","queklain","ramza1","ramza2","ramza3",
+	"robot","runeknight","samurai","serpentarius","skeleton","soldier","squire","summoner","swordsaint",
+	"teenager","templar","thief","tiamat","timemage","uribo","viscount","whitemage","widow","wiegraf1",
+	"wiegraf2","zalera",
 ];
 import {
 	AppPermissions,
