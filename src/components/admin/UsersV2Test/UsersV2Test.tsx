@@ -14,7 +14,7 @@ const FEMALE_AVATAR_JOBS = [
 	"ahriman","alma","archer","assassin1","assassin2","assassin3","behemoth","blackmage","bomb",
 	"byblos","calculator","chemist","chocobo","darkknight","demon","divineknight","dragon1","dragon2",
 	"dragonkin","geomancer","ghoul","girl","goblin","holyknight","juravis","knight","lancer","malboro",
-	"mediator","mimic","monk","ninja","oldman","oldwidow","onionknight","oracle","panther","piscodemon",
+	"mediator","mimic","monk","ninja","oldwoman","oldwidow","onionknight","oracle","panther","piscodemon",
 	"princess","samurai","skeleton","skyseer","squire","summoner","teenager","thief","tiamat","tietra",
 	"timemage","treant","uribo","whitemage","widow","witch","woman",
 ];
