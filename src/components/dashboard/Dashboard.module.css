@@ -35,6 +35,16 @@
 	gap: var(--gap);
 }
 
+/* Pre-animation hidden state: must exist at first paint, before useDashboardMotion's
+   JS ever runs, or the intro's `utils.set(anims, { opacity: 0 })` causes a visible
+   flash (content shows at opacity 1, then snaps to 0, then fades back in).
+   If JS never runs (error, reduced-motion path skips this fine on its own,
+   see hook), this page is 100% client-fetched data anyway — nothing renders
+   without JS regardless — so there's no "stuck invisible" regression risk. */
+.dashboard [data-anim] {
+	opacity: 0;
+}
+
 /* ── Welcome bar ── */
 .welcomeSection {
 	composes: glass glass-lg from global;

@@ -18,6 +18,17 @@
 	min-height: 300px;
 }
 
+.loadingStack {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1rem;
+}
+
+.loadingImage {
+	display: block;
+}
+
 .spinner {
 	width: 32px;
 	height: 32px;

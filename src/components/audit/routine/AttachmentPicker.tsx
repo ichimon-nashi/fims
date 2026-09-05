@@ -34,6 +34,16 @@ interface Props {
 	showErrors?: boolean; // true after a failed submit attempt — validates each attachment's own items too
 }
 
+// distinct accent color per attachment type, so fatigue/C-EFB/future
+// attachment types are visually distinguishable at a glance
+const TEMPLATE_ACCENT_COLORS: Record<string, string> = {
+	fatigue: "#4a9eff",
+	c_efb: "#1baf7a",
+};
+function templateAccentColor(code: string): string {
+	return TEMPLATE_ACCENT_COLORS[code] ?? "#fb923c";
+}
+
 export default function AttachmentPicker({ templates, cabinCrewOptions, suggestedTemplateId, value, onChange, showErrors }: Props) {
 	const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -49,13 +59,30 @@ export default function AttachmentPicker({ templates, cabinCrewOptions, suggeste
 		);
 		const missing = shouldAutoAdd.filter((t) => !value.some((v) => v.template_id === t.template.id));
 		if (missing.length > 0) {
-			onChange([...value, ...missing.map((t) => ({ template_id: t.template.id, subject_crew_name: "", answers: {} }))]);
+			onChange([
+				...value,
+				...missing.map((t) => ({
+					template_id: t.template.id,
+					// C-EFB applies to the whole crew, not one selected person —
+					// auto-filled so it's never blocked by the missing-subject check
+					subject_crew_name: t.template.code === "c_efb" ? "全體組員" : "",
+					answers: {},
+				})),
+			]);
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [templates, suggestedTemplateId]);
 
 	function addAttachment(templateId: string) {
-		onChange([...value, { template_id: templateId, subject_crew_name: "", answers: {} }]);
+		const t = templates.find((x) => x.template.id === templateId);
+		onChange([
+			...value,
+			{
+				template_id: templateId,
+				subject_crew_name: t?.template.code === "c_efb" ? "全體組員" : "",
+				answers: {},
+			},
+		]);
 		setPickerOpen(false);
 	}
 
@@ -97,6 +124,7 @@ export default function AttachmentPicker({ templates, cabinCrewOptions, suggeste
 									? styles.cardRequired
 									: styles.cardOptional
 						}
+						style={{ borderLeft: `4px solid ${templateAccentColor(template.code)}` }}
 					>
 						<div className={styles.cardHeader}>
 							<span className={styles.cardName}>{template.name}</span>
@@ -114,23 +142,29 @@ export default function AttachmentPicker({ templates, cabinCrewOptions, suggeste
 							)}
 						</div>
 
-						<p className={missingSubject ? styles.subjectLabelError : styles.subjectLabel}>
-							受檢人員{missingSubject && " — 尚未選擇"}
-						</p>
-						<div className={styles.crewChips}>
-							{cabinCrewOptions.map((c, i) => (
-								<button
-									key={i}
-									className={instance.subject_crew_name === c.name ? styles.crewChipActive : styles.crewChip}
-									onClick={() =>
-										updateInstance(template.id, { subject_crew_name: c.name, subject_employee_id: c.employee_id })
-									}
-								>
-									{c.employee_id ? `${c.employee_id}/` : ""}
-									{c.name}
-								</button>
-							))}
-						</div>
+						{template.code === "c_efb" ? (
+							<p className={styles.subjectLabel}>受檢人員：全體客艙組員</p>
+						) : (
+							<>
+								<p className={missingSubject ? styles.subjectLabelError : styles.subjectLabel}>
+									受檢人員{missingSubject && " — 尚未選擇"}
+								</p>
+								<div className={styles.crewChips}>
+									{cabinCrewOptions.map((c, i) => (
+										<button
+											key={i}
+											className={instance.subject_crew_name === c.name ? styles.crewChipActive : styles.crewChip}
+											onClick={() =>
+												updateInstance(template.id, { subject_crew_name: c.name, subject_employee_id: c.employee_id })
+											}
+										>
+											{c.employee_id ? `${c.employee_id}/` : ""}
+											{c.name}
+										</button>
+									))}
+								</div>
+							</>
+						)}
 
 						{instance.subject_crew_name && (
 							<ChecklistItemList

@@ -207,3 +207,166 @@
 	opacity: 0.6;
 	cursor: not-allowed;
 }
+
+.backBtn {
+	background: none;
+	border: none;
+	color: rgba(232, 233, 237, 0.6);
+	font-size: 0.8125rem;
+	cursor: pointer;
+	padding: 0;
+	white-space: nowrap;
+}
+
+.backBtn:hover {
+	color: #4a9eff;
+}
+
+.newMonthRow {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 16px;
+	padding-bottom: 16px;
+	border-bottom: 1px solid rgba(232, 233, 237, 0.12);
+}
+
+.newMonthRow select {
+	background: #2d3651;
+	border: 1px solid rgba(232, 233, 237, 0.15);
+	border-radius: 6px;
+	color: #e8e9ed;
+	padding: 6px 10px;
+	font-size: 0.875rem;
+}
+
+.yearGroup {
+	margin-bottom: 20px;
+}
+
+.yearGroupLabel {
+	font-size: 0.9375rem;
+	font-weight: 600;
+	color: #4a9eff;
+	margin: 0 0 8px;
+}
+
+.monthGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+	gap: 8px;
+}
+
+.monthCard {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid rgba(232, 233, 237, 0.12);
+	border-radius: 8px;
+	padding: 10px 8px;
+	cursor: pointer;
+	color: #e8e9ed;
+}
+
+.monthCard:hover {
+	background: rgba(74, 158, 255, 0.1);
+	border-color: rgba(74, 158, 255, 0.4);
+}
+
+.monthCardMonth {
+	font-size: 0.9375rem;
+	font-weight: 600;
+}
+
+.monthCardCount {
+	font-size: 0.75rem;
+	color: rgba(232, 233, 237, 0.5);
+}
+
+.copyBar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	background: rgba(74, 158, 255, 0.1);
+	border: 1px solid rgba(74, 158, 255, 0.35);
+	border-radius: 8px;
+	padding: 10px 12px;
+	margin-bottom: 16px;
+	position: sticky;
+	top: 0;
+	z-index: 5;
+}
+
+.copyBarLabel {
+	font-size: 0.8125rem;
+	color: #4a9eff;
+	font-weight: 500;
+}
+
+.copyBar select {
+	background: #2d3651;
+	border: 1px solid rgba(232, 233, 237, 0.15);
+	border-radius: 6px;
+	color: #e8e9ed;
+	padding: 5px 8px;
+	font-size: 0.8125rem;
+}
+
+.monthBlock {
+	margin-bottom: 12px;
+	border: 1px solid rgba(232, 233, 237, 0.1);
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.monthBlockHeader {
+	width: 100%;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	background: rgba(255, 255, 255, 0.03);
+	border: none;
+	padding: 8px 12px;
+	cursor: pointer;
+	color: #e8e9ed;
+	font-size: 0.875rem;
+	text-align: left;
+}
+
+.monthBlockHeader:hover {
+	background: rgba(74, 158, 255, 0.08);
+}
+
+.monthBlockTitle {
+	font-weight: 600;
+}
+
+.monthBlockCount {
+	font-size: 0.75rem;
+	color: rgba(232, 233, 237, 0.5);
+}
+
+.monthItemList {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 6px 12px 10px;
+}
+
+.monthItemRow {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	font-size: 0.8125rem;
+	color: rgba(232, 233, 237, 0.8);
+	padding: 3px 0;
+	cursor: pointer;
+}
+
+.monthItemRow input {
+	margin-top: 3px;
+	flex-shrink: 0;
+}

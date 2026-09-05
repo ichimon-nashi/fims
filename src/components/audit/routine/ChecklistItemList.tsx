@@ -1,6 +1,7 @@
 // src/components/audit/routine/ChecklistItemList.tsx
 "use client";
 
+import { useState } from "react";
 import styles from "./ChecklistItemList.module.css";
 import ChecklistItemRow, { ItemResult } from "./ChecklistItemRow";
 
@@ -28,6 +29,13 @@ interface Props {
 export default function ChecklistItemList({ items, answers, onAnswerChange, title, showErrors, readOnly }: Props) {
 	const completed = items.filter((i) => answers[i.item_no]?.result).length;
 
+	// ── NEW: the whole section is now collapsible via its own header —
+	// defaults open. This replaces relying on a separate wrapper
+	// component for top-level collapsibility, since this header already
+	// shows the title AND the completion count; a second wrapper around
+	// it would either duplicate the title or lose the count.
+	const [sectionOpen, setSectionOpen] = useState(true);
+
 	// group by category if any item has one; otherwise render as a single flat list
 	const hasCategories = items.some((i) => i.category);
 	const groups = hasCategories
@@ -38,37 +46,69 @@ export default function ChecklistItemList({ items, answers, onAnswerChange, titl
 			}, {})
 		: { "": items };
 
+	// ── NEW: each category is now its own collapsible mini-section, with
+	// its own completion count visible even while collapsed. Defaults
+	// open (same visible-by-default experience as before) — collapsing is
+	// opt-in per category, not forced. Un-categorized lists (monthly
+	// focus items, which have no .category at all) are unaffected: no
+	// toggle renders for them, same flat layout as before.
+	const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+	function toggleCategory(category: string) {
+		setCollapsedCategories((prev) => {
+			const next = new Set(prev);
+			if (next.has(category)) next.delete(category);
+			else next.add(category);
+			return next;
+		});
+	}
+
 	return (
 		<div className={styles.section}>
 			{title && (
-				<div className={styles.sectionHeader}>
-					<span className={styles.sectionTitle}>{title}</span>
+				<button type="button" className={styles.sectionHeader} onClick={() => setSectionOpen((v) => !v)}>
+					<span className={styles.sectionHeaderLeft}>
+						<span className={styles.sectionChevron}>{sectionOpen ? "▾" : "▸"}</span>
+						<span className={styles.sectionTitle}>{title}</span>
+					</span>
 					<span className={styles.sectionCount}>
 						{completed} / {items.length} 已完成
 					</span>
-				</div>
+				</button>
 			)}
-			{Object.entries(groups).map(([category, groupItems]) => (
-				<div key={category}>
-					{category && <p className={styles.categoryLabel}>{category}</p>}
-					{groupItems.map((item) => {
-						const answer = answers[item.item_no] ?? { result: null, remark: "" };
-						return (
-							<ChecklistItemRow
-								key={item.item_no}
-								itemNo={item.item_no}
-								itemText={item.item_text}
-								ccomRef={item.ccom_ref}
-								result={answer.result}
-								remark={answer.remark}
-								onChange={(result, remark) => onAnswerChange?.(item.item_no, result, remark)}
-								showError={showErrors}
-								readOnly={readOnly}
-							/>
-						);
-					})}
-				</div>
-			))}
+			{(!title || sectionOpen) && Object.entries(groups).map(([category, groupItems]) => {
+				const categoryCompleted = groupItems.filter((i) => answers[i.item_no]?.result).length;
+				const isCollapsed = collapsedCategories.has(category);
+				return (
+					<div key={category}>
+						{category && (
+							<button type="button" className={styles.categoryToggle} onClick={() => toggleCategory(category)}>
+								<span className={styles.categoryChevron}>{isCollapsed ? "▸" : "▾"}</span>
+								<span className={styles.categoryToggleLabel}>{category}</span>
+								<span className={styles.categoryToggleCount}>
+									{categoryCompleted} / {groupItems.length}
+								</span>
+							</button>
+						)}
+						{!isCollapsed &&
+							groupItems.map((item) => {
+								const answer = answers[item.item_no] ?? { result: null, remark: "" };
+								return (
+									<ChecklistItemRow
+										key={item.item_no}
+										itemNo={item.item_no}
+										itemText={item.item_text}
+										ccomRef={item.ccom_ref}
+										result={answer.result}
+										remark={answer.remark}
+										onChange={(result, remark) => onAnswerChange?.(item.item_no, result, remark)}
+										showError={showErrors}
+										readOnly={readOnly}
+									/>
+								);
+							})}
+					</div>
+				);
+			})}
 		</div>
 	);
 }

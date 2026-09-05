@@ -9,6 +9,23 @@ import ChecklistItemList, { ChecklistItem, ItemAnswer } from "./ChecklistItemLis
 import AttachmentPicker, { AttachmentInstance, TemplateWithItems } from "./AttachmentPicker";
 import { queueSubmission, listQueuedSubmissions, removeQueuedSubmission, saveDraft, loadDraft, clearDraft } from "@/lib/offlineStore";
 
+// lightweight collapsible wrapper — deliberately doesn't touch
+// ChecklistItemList/CrewRosterFields' own internals, just wraps around
+// whatever's passed as children. Defaults open (same visible-by-default
+// experience as before); collapsing is opt-in per section, not forced.
+function Section({ title, defaultOpen = true, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
+	const [open, setOpen] = useState(defaultOpen);
+	return (
+		<div className={styles.section}>
+			<button type="button" className={styles.sectionToggle} onClick={() => setOpen((v) => !v)}>
+				<span className={styles.sectionChevron}>{open ? "▾" : "▸"}</span>
+				<span className={styles.sectionTitle}>{title}</span>
+			</button>
+			{open && <div className={styles.sectionBody}>{children}</div>}
+		</div>
+	);
+}
+
 const emptyHeader: RosterHeaderData = {
 	audit_date: new Date().toISOString().slice(0, 10),
 	aircraft_tail: "",
@@ -344,18 +361,32 @@ export default function SelfInspectionForm({ onClose, onSubmitted, existingFormI
 					</div>
 				)}
 				{loadError && <p className={styles.error}>{loadError}</p>}
-				<CrewRosterFields value={header} onChange={setHeader} showErrors={attemptedSubmit} />
+
+				<Section title="基本資料">
+					<CrewRosterFields value={header} onChange={setHeader} showErrors={attemptedSubmit} />
+				</Section>
 
 				{mainTemplate && (
-					<ChecklistItemList
-						items={mainTemplate.items}
-						answers={mainAnswers}
-						onAnswerChange={(itemNo, result, remark) =>
-							setMainAnswers((prev) => ({ ...prev, [itemNo]: { result, remark } }))
-						}
-						title="一、安全 / 二、服務"
-						showErrors={attemptedSubmit}
-					/>
+					<>
+						<ChecklistItemList
+							items={mainTemplate.items.filter((i) => i.category === "一、安全").map((i) => ({ ...i, category: null }))}
+							answers={mainAnswers}
+							onAnswerChange={(itemNo, result, remark) =>
+								setMainAnswers((prev) => ({ ...prev, [itemNo]: { result, remark } }))
+							}
+							title="一、安全"
+							showErrors={attemptedSubmit}
+						/>
+						<ChecklistItemList
+							items={mainTemplate.items.filter((i) => i.category === "二、服務").map((i) => ({ ...i, category: null }))}
+							answers={mainAnswers}
+							onAnswerChange={(itemNo, result, remark) =>
+								setMainAnswers((prev) => ({ ...prev, [itemNo]: { result, remark } }))
+							}
+							title="二、服務"
+							showErrors={attemptedSubmit}
+						/>
+					</>
 				)}
 
 				{focusLoadError && <p className={styles.error}>{focusLoadError}</p>}
@@ -372,14 +403,16 @@ export default function SelfInspectionForm({ onClose, onSubmitted, existingFormI
 					/>
 				)}
 
-				<AttachmentPicker
-					templates={attachmentTemplates}
-					cabinCrewOptions={cabinCrewOptions}
-					suggestedTemplateId={suggestedAttachmentId}
-					value={attachments}
-					onChange={setAttachments}
-					showErrors={attemptedSubmit}
-				/>
+				<Section title="附加查核">
+					<AttachmentPicker
+						templates={attachmentTemplates}
+						cabinCrewOptions={cabinCrewOptions}
+						suggestedTemplateId={suggestedAttachmentId}
+						value={attachments}
+						onChange={setAttachments}
+						showErrors={attemptedSubmit}
+					/>
+				</Section>
 
 				<div className={styles.commentSection}>
 					<p className={styles.commentLabel}>查核結果及建議 *</p>

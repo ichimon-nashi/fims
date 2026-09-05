@@ -244,3 +244,15 @@
 	font-size: 0.75rem;
 	cursor: pointer;
 }
+
+.approveRemarkInput {
+	width: 100%;
+	background: #2d3651;
+	border: 1px solid rgba(232, 233, 237, 0.15);
+	border-radius: 6px;
+	color: #e8e9ed;
+	padding: 8px 10px;
+	font-size: 0.8125rem;
+	font-family: inherit;
+	resize: vertical;
+}

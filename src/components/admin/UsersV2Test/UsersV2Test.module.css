@@ -93,15 +93,48 @@
 
 /* ── Group headers (new, matching editSectionLabel convention) ── */
 .baseGroupHeader {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
 	font-size: 0.95rem;
 	font-weight: 700;
 	color: #4a9eff;
 	margin: 28px 0 10px;
-	padding-bottom: 6px;
+	padding: 0 0 6px;
+	border: none;
 	border-bottom: 1px solid rgba(74, 158, 255, 0.25);
+	background: transparent;
+	cursor: pointer;
+	text-align: left;
+	font-family: inherit;
 }
 
 .baseGroupHeader:first-child { margin-top: 0; }
+
+.baseGroupArrow {
+	display: inline-block;
+	font-size: 0.7rem;
+	transition: transform 0.15s ease;
+	transform: rotate(0deg);
+}
+
+.baseGroupArrowExpanded {
+	transform: rotate(90deg);
+}
+
+.baseGroupLabel {
+	flex: 1;
+}
+
+.baseGroupCount {
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: #a0aec0;
+	background: rgba(255, 255, 255, 0.06);
+	border-radius: 10px;
+	padding: 2px 9px;
+}
 
 .rankGroupHeader {
 	font-size: 0.75rem;

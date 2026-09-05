@@ -3,6 +3,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
+import Image from "next/image";
 import styles from "./IOSADashboard.module.css";
 
 // ── Types ────────────────────────────────────────────────────
@@ -640,6 +641,7 @@ export default function IOSADashboard({
 		linkedAlerts: [],
 	});
 	const [loading, setLoading] = useState(true);
+	const [cyclesChecked, setCyclesChecked] = useState(false);
 	const [showCreateModal, setShowCreateModal] = useState(false);
 	const [activeDiscipline, setActiveDiscipline] = useState("CAB");
 	const [activeFlag, setActiveFlag] = useState<"prep" | "finding">("prep");
@@ -697,6 +699,8 @@ export default function IOSADashboard({
 			}
 		} catch {
 			/* handled below */
+		} finally {
+			setCyclesChecked(true);
 		}
 	}, [token, activeCycle]);
 
@@ -730,9 +734,9 @@ export default function IOSADashboard({
 	}, [token]);
 	useEffect(() => {
 		if (activeCycle) fetchDashboard(activeCycle.id);
-		else setLoading(false);
+		else if (cyclesChecked) setLoading(false);
 		onCycleChange?.(activeCycle);
-	}, [activeCycle]);
+	}, [activeCycle, cyclesChecked]);
 
 	const handleCycleCreated = (cycle: AuditCycle) => {
 		setShowCreateModal(false);
@@ -874,7 +878,17 @@ export default function IOSADashboard({
 	if (loading) {
 		return (
 			<div className={styles.loadingCenter}>
-				<div className={styles.spinner} />
+				<div className={styles.loadingStack}>
+					<Image
+						src="/K-dogmatic.png"
+						alt="Loading"
+						width={300}
+						height={240}
+						className={styles.loadingImage}
+						priority
+					/>
+					<div className={styles.spinner} />
+				</div>
 			</div>
 		);
 	}

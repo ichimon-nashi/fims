@@ -46,7 +46,7 @@ interface UserRow {
 	rank: string;
 	base: string;
 	is_inactive?: boolean;
-	handicap_level?: number;
+	handicap_level?: number;	
 	filter?: string[];
 	app_permissions?: AppPermissions;
 	gender?: "m" | "f";
@@ -112,6 +112,7 @@ const UsersV2Test = () => {
 	const [editingUser, setEditingUser] = useState<UserRow | null>(null);
 	const [editSaving, setEditSaving] = useState(false);
 	const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+	const [expandedBases, setExpandedBases] = useState<Set<string>>(new Set());
 	const [editingGeneral, setEditingGeneral] = useState<UserRow | null>(null);
 	const [generalSaving, setGeneralSaving] = useState(false);
 	const [newPassword, setNewPassword] = useState("");
@@ -481,6 +482,15 @@ const UsersV2Test = () => {
 		}
 	};
 
+	const toggleBase = (base: string) => {
+		setExpandedBases((prev) => {
+			const next = new Set(prev);
+			if (next.has(base)) next.delete(base);
+			else next.add(base);
+			return next;
+		});
+	};
+
 	const searching = searchTerm.trim().length > 0;
 
 	const filteredFlat = useMemo(() => {
@@ -623,21 +633,35 @@ const UsersV2Test = () => {
 				grouped &&
 				Object.keys(grouped)
 					.sort()
-					.map((base) => (
-						<div key={base}>
-							<div className={styles.baseGroupHeader}>{base}</div>
-							{Object.keys(grouped[base])
-								.sort((a, b) => rankPriority(a) - rankPriority(b) || a.localeCompare(b))
-								.map((rank) => (
-									<div key={rank}>
-										<div className={styles.rankGroupHeader}>{rank}</div>
-										<div className={styles.userCardGrid}>
-											{grouped[base][rank].map(renderCard)}
-										</div>
-									</div>
-								))}
-						</div>
-					))
+					.map((base) => {
+						const isExpanded = expandedBases.has(base);
+						const baseUserCount = Object.values(grouped[base]).reduce((sum, list) => sum + list.length, 0);
+						return (
+							<div key={base}>
+								<button
+									type="button"
+									className={styles.baseGroupHeader}
+									onClick={() => toggleBase(base)}
+									aria-expanded={isExpanded}
+								>
+									<span className={`${styles.baseGroupArrow} ${isExpanded ? styles.baseGroupArrowExpanded : ""}`}>▶</span>
+									<span className={styles.baseGroupLabel}>{base}</span>
+									<span className={styles.baseGroupCount}>{baseUserCount}</span>
+								</button>
+								{isExpanded &&
+									Object.keys(grouped[base])
+										.sort((a, b) => rankPriority(a) - rankPriority(b) || a.localeCompare(b))
+										.map((rank) => (
+											<div key={rank}>
+												<div className={styles.rankGroupHeader}>{rank}</div>
+												<div className={styles.userCardGrid}>
+													{grouped[base][rank].map(renderCard)}
+												</div>
+											</div>
+										))}
+							</div>
+						);
+					})
 			)}
 
 			{addingUser && (

@@ -34,6 +34,7 @@ export default function PendingReviewList({ onChanged }: { onChanged?: () => voi
 	// which card has its approve-confirmation (result picker) open
 	const [approvingId, setApprovingId] = useState<string | null>(null);
 	const [pendingResult, setPendingResult] = useState<"OK" | "NG">("OK");
+	const [approveRemark, setApproveRemark] = useState(""); // becomes corrective_action (處置) on the created entry
 	const [busyId, setBusyId] = useState<string | null>(null);
 	const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -67,12 +68,13 @@ export default function PendingReviewList({ onChanged }: { onChanged?: () => voi
 			const res = await fetch(`/api/audit/routine/self-inspection/${formId}/approve`, {
 				method: "POST",
 				headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-				body: JSON.stringify({ result: pendingResult }),
+				body: JSON.stringify({ result: pendingResult, corrective_action: approveRemark.trim() || undefined }),
 			});
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error ?? "核准失敗");
 			setForms((prev) => prev.filter((f) => f.id !== formId));
 			setApprovingId(null);
+			setApproveRemark("");
 			onChanged?.();
 		} catch (e: any) {
 			setError(e.message ?? "核准失敗");
@@ -212,6 +214,13 @@ export default function PendingReviewList({ onChanged }: { onChanged?: () => voi
 									/>
 									NG（記錄缺失）
 								</label>
+								<textarea
+									className={styles.approveRemarkInput}
+									placeholder="處置作為（選填）— 轉入彙整分析後會顯示於「處置」欄位"
+									value={approveRemark}
+									onChange={(e) => setApproveRemark(e.target.value)}
+									rows={2}
+								/>
 								<button
 									className={styles.confirmBtn}
 									disabled={busyId === form.id}
@@ -219,7 +228,13 @@ export default function PendingReviewList({ onChanged }: { onChanged?: () => voi
 								>
 									{busyId === form.id ? "處理中..." : "確認核准"}
 								</button>
-								<button className={styles.cancelBtn} onClick={() => setApprovingId(null)}>
+								<button
+									className={styles.cancelBtn}
+									onClick={() => {
+										setApprovingId(null);
+										setApproveRemark("");
+									}}
+								>
 									取消
 								</button>
 							</div>
@@ -233,6 +248,7 @@ export default function PendingReviewList({ onChanged }: { onChanged?: () => voi
 									disabled={busyId === form.id}
 									onClick={() => {
 										setPendingResult("OK");
+										setApproveRemark("");
 										setApprovingId(form.id);
 									}}
 								>

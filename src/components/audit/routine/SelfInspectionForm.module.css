@@ -156,3 +156,39 @@
 	opacity: 0.6;
 	cursor: not-allowed;
 }
+
+.section {
+	border: 1px solid rgba(232, 233, 237, 0.1);
+	border-radius: 8px;
+}
+
+.sectionToggle {
+	width: 100%;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	background: rgba(255, 255, 255, 0.03);
+	border: none;
+	border-top-left-radius: 8px;
+	border-top-right-radius: 8px;
+	padding: 10px 14px;
+	font-size: 0.875rem;
+	font-weight: 500;
+	color: #e8e9ed;
+	cursor: pointer;
+	text-align: left;
+}
+
+.sectionChevron {
+	font-size: 0.75rem;
+	color: rgba(232, 233, 237, 0.5);
+	width: 12px;
+}
+
+.sectionTitle {
+	flex: 1;
+}
+
+.sectionBody {
+	padding: 14px;
+}
