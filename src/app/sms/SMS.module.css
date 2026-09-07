@@ -3,7 +3,7 @@
 .smsContainer {
 	padding: 2rem;
 	min-height: 100vh;
-	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+	background: linear-gradient(135deg, var(--page-bg-a) 0%, var(--page-bg-b) 100%);
 	color: #e8e9ed;
 	width: 100%;
 	max-width: 100vw;
@@ -16,7 +16,7 @@
 	align-items: center;
 	justify-content: center;
 	min-height: 100vh;
-	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+	background: linear-gradient(135deg, var(--page-bg-a) 0%, var(--page-bg-b) 100%);
 	color: #e8e9ed;
 }
 
@@ -42,7 +42,7 @@
 	align-items: center;
 	justify-content: center;
 	min-height: 100vh;
-	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+	background: linear-gradient(135deg, var(--page-bg-a) 0%, var(--page-bg-b) 100%);
 	color: #e8e9ed;
 	text-align: center;
 	padding: 2rem;
@@ -117,7 +117,7 @@
 }
 
 .yearSelect option {
-	background: #1a1f35;
+	background: var(--page-bg-a);
 	color: #e8e9ed;
 	padding: 0.5rem;
 }

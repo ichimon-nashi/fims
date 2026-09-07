@@ -2,7 +2,7 @@
 
 .pageShell {
 	min-height: 100vh;
-	background: linear-gradient(180deg, #1a1f35 0%, #2d3651 100%);
+	background: linear-gradient(180deg, var(--page-bg-a) 0%, var(--page-bg-b) 100%);
 	color: #e8e9ed;
 }
 
@@ -90,7 +90,7 @@
 
 /* ── Top-level audit nav (copied verbatim from firstlevel/iosa's topbar) ── */
 .topbar {
-	background: #2d3651;
+	background: var(--page-bg-b);
 	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 	padding: 0 1rem;
 	display: flex;

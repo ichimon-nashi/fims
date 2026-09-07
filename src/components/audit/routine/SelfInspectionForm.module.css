@@ -1,7 +1,7 @@
 /* src/components/audit/routine/SelfInspectionForm.module.css */
 
 .panel {
-	background: linear-gradient(180deg, #1a1f35 0%, #2d3651 100%);
+	background: linear-gradient(180deg, var(--page-bg-a) 0%, var(--page-bg-b) 100%);
 	border-radius: 12px;
 	display: flex;
 	flex-direction: column;
@@ -84,7 +84,7 @@
 .commentInput {
 	width: 100%;
 	box-sizing: border-box;
-	background: #2d3651;
+	background: var(--page-bg-b);
 	border: 1px solid rgba(232, 233, 237, 0.15);
 	border-radius: 6px;
 	color: #e8e9ed;
@@ -97,7 +97,7 @@
 .commentInputError {
 	width: 100%;
 	box-sizing: border-box;
-	background: #2d3651;
+	background: var(--page-bg-b);
 	border: 1px solid #e34948;
 	border-radius: 6px;
 	color: #e8e9ed;
@@ -119,7 +119,7 @@
 	left: 0;
 	right: 0;
 	bottom: 0;
-	background: #1a1f35;
+	background: var(--page-bg-a);
 	padding: 14px 16px;
 	border-top: 1px solid rgba(232, 233, 237, 0.12);
 	box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.3);

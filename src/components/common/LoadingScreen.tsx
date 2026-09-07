@@ -13,7 +13,7 @@ export default function LoadingScreen({ message = '載入中...' }: Props) {
 			flexDirection: 'column',
 			alignItems: 'center',
 			justifyContent: 'center',
-			background: 'linear-gradient(135deg, #1a1f35 0%, #2d3651 100%)',
+			background: 'linear-gradient(135deg, var(--page-bg-a) 0%, var(--page-bg-b) 100%)',
 		}}>
 			<div style={{
 				marginBottom: '2rem',

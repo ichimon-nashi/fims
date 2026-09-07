@@ -220,7 +220,7 @@
 	position: absolute;
 	top: calc(100% + 6px);
 	right: 0;
-	background: #2d3651;
+	background: var(--page-bg-b);
 	border: 1px solid rgba(255, 255, 255, 0.1);
 	border-radius: 8px;
 	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
@@ -610,7 +610,7 @@
 }
 
 .modal {
-	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+	background: linear-gradient(135deg, var(--page-bg-a) 0%, var(--page-bg-b) 100%);
 	border: 1px solid rgba(255, 255, 255, 0.1);
 	border-radius: 12px;
 	width: 100%;
@@ -831,7 +831,7 @@
 	position: absolute;
 	top: calc(100% + 5px);
 	left: 0;
-	background: #2d3651;
+	background: var(--page-bg-b);
 	border: 1px solid rgba(255, 255, 255, 0.1);
 	border-radius: 8px;
 	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
@@ -952,4 +952,368 @@
 .importBtn:hover {
 	background: rgba(255, 140, 0, 0.25);
 	border-color: rgba(255, 140, 0, 0.8);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   LAYOUT REDESIGN OVERRIDES — IOSADashboard
+   Appended block. Nothing above this line was modified, so every rule your
+   components already rely on still exists; these rules simply win on
+   cascade order. Delete this block to return to the original look.
+   Colours come from the --iosa-* tokens declared on .shell in
+   IOSAPage.module.css and inherited through the DOM.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.dashboard {
+	padding: 1.25rem 1.5rem 2.5rem;
+	gap: 1.25rem;
+}
+
+/* Export / Import move up onto the cycle bar's line visually */
+.dashActions {
+	order: 2;
+	padding: 0;
+	gap: 0.5rem;
+}
+
+.exportBtn,
+.importBtn {
+	padding: 8px 15px;
+	border-radius: var(--iosa-r-sm);
+	font-size: 0.8125rem;
+	font-weight: 600;
+}
+
+/* ── Cycle bar: the primary workflow surface ── */
+.cycleBar {
+	order: 1;
+	border-radius: var(--iosa-r-lg);
+	padding: 1rem 1.25rem;
+	background: linear-gradient(
+		160deg,
+		var(--iosa-surface-2) 0%,
+		rgba(255, 255, 255, 0.02) 100%
+	);
+	border: 1px solid var(--iosa-border);
+	row-gap: 0.875rem;
+}
+
+.cycleLeft {
+	gap: 0.75rem;
+}
+
+.cycleNameBtn {
+	font-size: 1.5rem;
+	letter-spacing: -0.02em;
+	padding: 3px 6px;
+	border-radius: 7px;
+}
+
+.cycleNameInput {
+	font-size: 1.375rem;
+	padding: 4px 10px;
+	border-radius: 8px;
+	border-color: var(--iosa-accent);
+	min-width: 220px;
+}
+
+.cycleStatusBadge,
+.cdStatus {
+	font-size: 0.75rem;
+	font-weight: 600;
+	padding: 4px 11px;
+	letter-spacing: 0.02em;
+}
+
+.cycleEdition {
+	font-size: 0.75rem;
+	padding: 4px 9px;
+	border-radius: 6px;
+	font-variant-numeric: tabular-nums;
+}
+
+.btnNewCycle,
+.btnCycleSwitch {
+	padding: 8px 14px;
+	border-radius: var(--iosa-r-sm);
+	font-size: 0.8125rem;
+	font-weight: 500;
+	background: rgba(255, 255, 255, 0.045);
+}
+
+.btnNewCycle:hover,
+.btnCycleSwitch:hover {
+	border-color: var(--iosa-border-hi);
+	background: rgba(255, 255, 255, 0.08);
+}
+
+.btnDelete {
+	width: 34px;
+	height: 34px;
+	padding: 0;
+	border-radius: var(--iosa-r-sm);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.cycleDropdown,
+.statusDropdown {
+	top: calc(100% + 8px);
+	background: var(--iosa-surface-2);
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	border-radius: var(--iosa-r-md);
+	box-shadow: 0 26px 52px -20px rgba(0, 0, 0, 0.92);
+	padding: 5px;
+	min-width: 236px;
+}
+
+.cycleDropdownItem,
+.statusDropdownItem {
+	border-bottom: none;
+	border-radius: var(--iosa-r-sm);
+	padding: 9px 11px;
+}
+
+/* ── Section headings ── */
+.sectionLabel {
+	font-size: 0.625rem;
+	letter-spacing: 0.2em;
+	font-weight: 600;
+	color: var(--iosa-faint);
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.sectionLabel::after {
+	content: "";
+	flex: 1;
+	height: 1px;
+	background: var(--iosa-border);
+}
+
+/* ── Discipline cards: fluid instead of a rigid 4-up ── */
+.discGrid {
+	grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+	gap: 0.75rem;
+}
+
+.discCard {
+	border-radius: var(--iosa-r-md);
+	padding: 0.9375rem 1rem;
+	background: var(--iosa-surface);
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	transition:
+		border-color 0.16s,
+		transform 0.16s,
+		background 0.16s;
+}
+
+.discCard:hover {
+	transform: translateY(-2px);
+	border-color: var(--iosa-border-hi);
+}
+
+.discTop {
+	margin-bottom: 0;
+}
+
+.discCode {
+	font-size: 1.0625rem;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	font-variant-numeric: tabular-nums;
+}
+
+.discScope {
+	font-size: 0.625rem;
+	font-weight: 600;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	padding: 3px 7px;
+	border-radius: 20px;
+}
+
+.discPct {
+	font-size: 2rem;
+	letter-spacing: -0.03em;
+	font-variant-numeric: tabular-nums;
+}
+
+.discSub {
+	font-size: 0.75rem;
+	margin-top: 0;
+	font-variant-numeric: tabular-nums;
+}
+
+.discBarTrack,
+.discBarFill {
+	height: 4px;
+	border-radius: 20px;
+}
+
+.discBarTrack {
+	margin-top: 2px;
+}
+
+.discBarFill {
+	background: linear-gradient(90deg, #3d6ef0, #7fd8ff);
+}
+
+/* ── Stats strip ── */
+.statsRow {
+	grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+	gap: 0.75rem;
+}
+
+.statBox {
+	border-radius: var(--iosa-r-md);
+	padding: 0.9375rem 1rem;
+	background: var(--iosa-surface);
+}
+
+.statVal {
+	font-size: 1.875rem;
+	letter-spacing: -0.03em;
+	font-variant-numeric: tabular-nums;
+}
+
+.statLbl {
+	font-size: 0.6875rem;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	margin-top: 6px;
+}
+
+/* ── Flagged panel as a table ── */
+.flaggedPanel {
+	border-radius: var(--iosa-r-md);
+	padding: 0;
+	overflow: hidden;
+	background: var(--iosa-surface);
+}
+
+.flagTabs {
+	margin-bottom: 0;
+	padding: 0.75rem 1rem;
+	border-bottom: 1px solid var(--iosa-border);
+}
+
+.flagTab {
+	font-size: 0.8125rem;
+	padding: 6px 12px;
+}
+
+.flagItem {
+	padding: 0.6875rem 1rem;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+	transition: background 0.12s;
+}
+
+.flagItem:hover {
+	background: rgba(255, 255, 255, 0.025);
+}
+
+.flagCode {
+	font-size: 0.875rem;
+	min-width: 88px;
+	font-variant-numeric: tabular-nums;
+}
+
+.flagReason {
+	font-size: 0.875rem;
+	text-wrap: pretty;
+}
+
+.ftag {
+	font-size: 0.625rem;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	padding: 3px 8px;
+	border-radius: 20px;
+}
+
+.noFlags {
+	padding: 2rem 0;
+	font-size: 0.875rem;
+}
+
+/* ── Modals ── */
+.modal {
+	background: linear-gradient(180deg, var(--iosa-surface-2), #0f1424);
+	border-radius: var(--iosa-r-lg);
+	max-width: 470px;
+	box-shadow: 0 40px 80px -24px rgba(0, 0, 0, 0.95);
+}
+
+.modalClose {
+	border-radius: var(--iosa-r-sm);
+	width: 28px;
+	height: 28px;
+}
+
+.disciplineGrid {
+	grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+}
+
+.disciplineToggle {
+	border-radius: var(--iosa-r-sm);
+}
+
+.fieldInput {
+	border-radius: var(--iosa-r-sm);
+	padding: 0.5625rem 0.75rem;
+}
+
+.btnPrimary {
+	border-radius: var(--iosa-r-sm);
+	background: linear-gradient(180deg, #3d6ef0, #2c55cc);
+	box-shadow: 0 8px 22px -10px rgba(61, 110, 240, 0.9);
+}
+
+.btnGhost,
+.btnDanger {
+	border-radius: var(--iosa-r-sm);
+}
+
+/* ── Empty / loading ── */
+.noCycle {
+	gap: 0.75rem;
+}
+
+.noCycleTitle {
+	font-size: 1.375rem;
+	letter-spacing: -0.02em;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+	.discGrid,
+	.statsRow {
+		grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+	}
+}
+
+@media (max-width: 640px) {
+	.dashboard {
+		padding: 1rem 0.875rem 2rem;
+	}
+	.discGrid,
+	.statsRow {
+		grid-template-columns: repeat(2, 1fr);
+	}
+	.cycleNameBtn {
+		font-size: 1.25rem;
+	}
+	.flagItem {
+		flex-wrap: wrap;
+		row-gap: 0.25rem;
+	}
+	.flagReason {
+		flex: 1 1 100%;
+		order: 3;
+	}
 }

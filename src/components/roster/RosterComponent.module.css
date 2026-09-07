@@ -2,7 +2,7 @@
 
 .container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+  background: linear-gradient(135deg, var(--page-bg-a) 0%, var(--page-bg-b) 100%);
   padding: 0;
 }
 
@@ -14,7 +14,7 @@
 
 .loading {
   min-height: 100vh;
-  background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+  background: linear-gradient(135deg, var(--page-bg-a) 0%, var(--page-bg-b) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -272,7 +272,7 @@
 .instructorCell:nth-child(1) {
   left: 0;
   z-index: 17;
-  background: #2d3651 !important; /* Solid dark background */
+  background: var(--page-bg-b) !important; /* Solid dark background */
 }
 
 .instructorCell:nth-child(2) {

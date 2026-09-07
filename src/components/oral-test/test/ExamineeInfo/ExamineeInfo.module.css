@@ -111,7 +111,7 @@
 }
 
 .trainingTypeSelect option {
-	background: #2d3651;
+	background: var(--page-bg-b);
 	color: #e8e9ed;
 }
 

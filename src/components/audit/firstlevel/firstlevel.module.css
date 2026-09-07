@@ -3,7 +3,7 @@
 /* ── Shell ─────────────────────────────────────────────────────── */
 .shell {
 	height: calc(100vh - 60px);
-	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+	background: linear-gradient(135deg, var(--page-bg-a) 0%, var(--page-bg-b) 100%);
 	display: flex;
 	flex-direction: column;
 	color: #e8e9ed;
@@ -13,7 +13,7 @@
 
 /* ── Top bar (mirrors IOSAPage) ────────────────────────────────── */
 .topbar {
-	background: #2d3651;
+	background: var(--page-bg-b);
 	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 	padding: 0 1rem;
 	display: flex;
@@ -273,7 +273,7 @@
 }
 
 .fieldSelect option {
-	background: #2d3651;
+	background: var(--page-bg-b);
 	color: #e8e9ed;
 }
 
@@ -734,7 +734,7 @@
 }
 
 .filterSelect option {
-	background: #2d3651;
+	background: var(--page-bg-b);
 }
 
 .filterSelect:focus {
@@ -964,7 +964,7 @@
 }
 
 .recoSectionSelect option {
-	background: #2d3651;
+	background: var(--page-bg-b);
 }
 
 .recoTextInput {
@@ -1018,7 +1018,7 @@
 	top: calc(100% + 4px);
 	left: 0;
 	right: 0;
-	background: #2d3651;
+	background: var(--page-bg-b);
 	border: 1px solid rgba(255, 255, 255, 0.12);
 	border-radius: 8px;
 	z-index: 100;

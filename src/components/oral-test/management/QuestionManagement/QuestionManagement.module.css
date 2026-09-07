@@ -362,7 +362,7 @@
 }
 
 .formGroup select option {
-	background: #2d3651;
+	background: var(--page-bg-b);
 	color: #e8e9ed;
 }
 
@@ -559,7 +559,7 @@
 	left: 0;
 	right: 0;
 	bottom: 0;
-	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+	background: linear-gradient(135deg, var(--page-bg-a) 0%, var(--page-bg-b) 100%);
 	display: flex;
 	align-items: center;
 	justify-content: center;

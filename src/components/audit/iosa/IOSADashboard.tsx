@@ -65,6 +65,19 @@ const DISCIPLINE_ORDER = [
 	"SEC",
 ];
 
+// Fixed IATA/ISM discipline names — static reference nomenclature, not
+// per-cycle data, safe to hardcode same as DISCIPLINE_ORDER/FALLBACK above.
+const DISCIPLINE_NAMES: Record<string, string> = {
+	CAB: "Cabin Operations",
+	FLT: "Flight Operations",
+	DSP: "Flight Dispatch",
+	MNT: "Maintenance",
+	GRH: "Ground Handling",
+	ORG: "Organization & Management",
+	CGO: "Cargo",
+	SEC: "Security",
+};
+
 const STATUS_LABELS: Record<string, string> = {
 	prep: "準備中",
 	active: "進行中",
@@ -340,6 +353,30 @@ function DeleteCycleModal({
 	);
 }
 
+const STATUS_STYLE: Record<
+	string,
+	{ bg: string; fg: string; border: string; dot: string }
+> = {
+	prep: {
+		bg: "rgba(239,178,92,.12)",
+		fg: "#EFB25C",
+		border: "rgba(239,178,92,.3)",
+		dot: "#EFB25C",
+	},
+	active: {
+		bg: "rgba(52,217,192,.12)",
+		fg: "#34D9C0",
+		border: "rgba(52,217,192,.3)",
+		dot: "#34D9C0",
+	},
+	completed: {
+		bg: "rgba(91,140,255,.12)",
+		fg: "#7FA8FF",
+		border: "rgba(91,140,255,.3)",
+		dot: "#7FA8FF",
+	},
+};
+
 // ── Cycle Selector ────────────────────────────────────────────
 interface CycleSelectorProps {
 	cycles: AuditCycle[];
@@ -406,152 +443,242 @@ function CycleSelector({
 		setShowDiscEdit(false);
 	};
 
+	const st = STATUS_STYLE[activeCycle.status];
+
 	return (
 		<>
-			<div className={styles.cycleBar}>
+			<div
+				style={{
+					display: "flex",
+					alignItems: "flex-end",
+					justifyContent: "space-between",
+					gap: 20,
+					flexWrap: "wrap",
+					marginBottom: 20,
+				}}
+			>
 				{/* Left: name + status badge (clickable dropdown) + edition */}
-				<div className={styles.cycleLeft}>
-					{editing ? (
-						<input
-							ref={inputRef}
-							className={styles.cycleNameInput}
-							value={editName}
-							onChange={(e) => setEditName(e.target.value)}
-							onBlur={saveRename}
-							onKeyDown={(e) => {
-								if (e.key === "Enter") saveRename();
-								if (e.key === "Escape") {
-									setEditName(activeCycle.name);
-									setEditing(false);
-								}
-							}}
-						/>
-					) : (
-						<button
-							className={styles.cycleNameBtn}
-							onClick={() => setEditing(true)}
-							title="點擊重命名"
-						>
-							{activeCycle.name}
-							<span className={styles.editHint}>✎</span>
-						</button>
-					)}
-
-					{/* Status — clickable badge dropdown */}
-					<div className={styles.statusDropdownWrap}>
-						<button
-							className={`${styles.cycleStatusBadge} ${styles[`status_${activeCycle.status}`]}`}
-							onClick={() => setStatusOpen((o) => !o)}
-							title="點擊更改狀態"
-						>
-							{STATUS_LABELS[activeCycle.status]} ▾
-						</button>
-						{statusOpen && (
-							<div className={styles.statusDropdown}>
-								{(
-									Object.entries(STATUS_LABELS) as [
-										string,
-										string,
-									][]
-								).map(([key, label]) => (
-									<button
-										key={key}
-										className={`${styles.statusDropdownItem} ${activeCycle.status === key ? styles.statusDropdownItemActive : ""}`}
-										onClick={() => {
-											onStatusChange(activeCycle.id, key);
-											setStatusOpen(false);
-										}}
-									>
-										<span
-											className={`${styles.statusDot} ${styles[`statusDot_${key}`]}`}
-										/>
-										{label}
-									</button>
-								))}
-							</div>
+				<div style={{ display: "flex", flexDirection: "column", gap: 7, minWidth: 0 }}>
+					<div style={{ display: "flex", alignItems: "center", gap: 11, flexWrap: "wrap" }}>
+						{editing ? (
+							<input
+								ref={inputRef}
+								value={editName}
+								onChange={(e) => setEditName(e.target.value)}
+								onBlur={saveRename}
+								onKeyDown={(e) => {
+									if (e.key === "Enter") saveRename();
+									if (e.key === "Escape") {
+										setEditName(activeCycle.name);
+										setEditing(false);
+									}
+								}}
+								style={{
+									padding: "6px 11px",
+									borderRadius: 9,
+									border: "1px solid #3D6EF0",
+									background: "#0C111A",
+									color: "#E9EDF5",
+									fontSize: 22,
+									fontWeight: 600,
+									letterSpacing: "-.02em",
+									outline: "none",
+									width: 230,
+								}}
+							/>
+						) : (
+							<button
+								onClick={() => setEditing(true)}
+								title="點擊重命名"
+								style={{
+									display: "flex",
+									alignItems: "center",
+									gap: 8,
+									border: "none",
+									background: "transparent",
+									cursor: "pointer",
+									padding: 0,
+								}}
+							>
+								<h1 style={{ margin: 0, fontSize: 27, fontWeight: 600, letterSpacing: "-.025em", color: "#E9EDF5" }}>
+									{activeCycle.name}
+								</h1>
+								<span style={{ fontSize: 12, color: "#7FA8FF" }}>✎</span>
+							</button>
 						)}
-					</div>
 
-					<span className={styles.cycleEdition}>
-						{activeCycle.ism_edition}
-					</span>
+						{/* Status — clickable badge dropdown */}
+						<div style={{ position: "relative" }}>
+							<button
+								onClick={() => setStatusOpen((o) => !o)}
+								title="點擊更改狀態"
+								style={{
+									fontSize: 11.5,
+									fontWeight: 600,
+									padding: "5px 11px",
+									borderRadius: 99,
+									cursor: "pointer",
+									background: st.bg,
+									color: st.fg,
+									border: `1px solid ${st.border}`,
+								}}
+							>
+								{STATUS_LABELS[activeCycle.status]} ▾
+							</button>
+							{statusOpen && (
+								<div
+									style={{
+										position: "absolute",
+										top: 32,
+										left: 0,
+										zIndex: 40,
+										minWidth: 158,
+										padding: 5,
+										borderRadius: 11,
+										background: "#0E131D",
+										border: "1px solid #232D3F",
+										boxShadow: "0 22px 44px -18px rgba(0,0,0,.9)",
+										display: "flex",
+										flexDirection: "column",
+										gap: 2,
+									}}
+								>
+									{(Object.entries(STATUS_LABELS) as [string, string][]).map(([key, label]) => (
+										<button
+											key={key}
+											onClick={() => {
+												onStatusChange(activeCycle.id, key);
+												setStatusOpen(false);
+											}}
+											style={{
+												display: "flex",
+												alignItems: "center",
+												gap: 9,
+												padding: "8px 10px",
+												border: "none",
+												borderRadius: 8,
+												textAlign: "left",
+												fontSize: 12.5,
+												cursor: "pointer",
+												background: activeCycle.status === key ? "#141B29" : "transparent",
+												color: activeCycle.status === key ? "#E9EDF5" : "#8E9AAD",
+											}}
+										>
+											<span style={{ width: 7, height: 7, borderRadius: "50%", background: STATUS_STYLE[key].dot }} />
+											{label}
+										</button>
+									))}
+								</div>
+							)}
+						</div>
+
+						<span
+							style={{
+								fontSize: 11.5,
+								color: "#8E9AAD",
+								padding: "4px 9px",
+								borderRadius: 6,
+								background: "#0F1421",
+								border: "1px solid #1A2130",
+							}}
+						>
+							{activeCycle.ism_edition}
+						</span>
+					</div>
 				</div>
 
 				{/* Right: actions */}
-				<div className={styles.cycleRight}>
+				<div style={{ display: "flex", gap: 9, flexWrap: "wrap", alignItems: "center" }}>
 					{/* Edit disciplines */}
-					<div className={styles.cycleDropdownWrap}>
+					<div style={{ position: "relative" }}>
 						<button
-							className={styles.btnNewCycle}
 							onClick={() => setShowDiscEdit((o) => !o)}
 							title="Edit in-scope disciplines"
+							style={{
+								padding: "9px 14px",
+								borderRadius: 9,
+								border: "1px solid #212B3C",
+								background: "#0E131D",
+								color: "#C3CCDB",
+								fontSize: 12.5,
+								fontWeight: 500,
+								cursor: "pointer",
+							}}
 						>
 							✎ Scope
 						</button>
 						{showDiscEdit && (
 							<div
-								className={styles.cycleDropdown}
-								style={{ minWidth: 240, padding: "0.75rem" }}
+								style={{
+									position: "absolute",
+									top: 44,
+									right: 0,
+									zIndex: 40,
+									width: 260,
+									padding: 14,
+									borderRadius: 13,
+									background: "#0E131D",
+									border: "1px solid #232D3F",
+									boxShadow: "0 26px 52px -20px rgba(0,0,0,.92)",
+									display: "flex",
+									flexDirection: "column",
+									gap: 11,
+								}}
 							>
-								<div
-									style={{
-										fontSize: "0.6875rem",
-										color: "#a0aec0",
-										marginBottom: "0.5rem",
-										letterSpacing: "0.5px",
-									}}
-								>
+								<div style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: ".18em", color: "#8791A3" }}>
 									IN-SCOPE DISCIPLINES
 								</div>
-								<div
-									style={{
-										display: "grid",
-										gridTemplateColumns: "repeat(4,1fr)",
-										gap: "0.375rem",
-										marginBottom: "0.625rem",
-									}}
-								>
-									{DISCIPLINE_ORDER.map((d) => (
-										<button
-											key={d}
-											className={`${styles.disciplineToggle} ${editDiscs.includes(d) ? styles.disciplineToggleOn : ""}`}
-											onClick={() => toggleEditDisc(d)}
-											type="button"
-										>
-											<span
-												className={
-													styles.disciplineCode
-												}
+								<div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6 }}>
+									{DISCIPLINE_ORDER.map((d) => {
+										const on = editDiscs.includes(d);
+										return (
+											<button
+												key={d}
+												type="button"
+												onClick={() => toggleEditDisc(d)}
+												style={{
+													padding: "7px 0",
+													borderRadius: 8,
+													fontSize: 11,
+													fontWeight: 600,
+													cursor: "pointer",
+													border: `1px solid ${on ? "rgba(122,164,255,.45)" : "#1C2432"}`,
+													background: on ? "rgba(91,140,255,.16)" : "#0C111A",
+													color: on ? "#7FA8FF" : "#8791A3",
+												}}
 											>
 												{d}
-											</span>
-										</button>
-									))}
+											</button>
+										);
+									})}
 								</div>
-								<div
-									style={{
-										display: "flex",
-										gap: "0.375rem",
-										justifyContent: "flex-end",
-									}}
-								>
+								<div style={{ display: "flex", gap: 7, justifyContent: "flex-end" }}>
 									<button
-										className={styles.btnGhost}
-										style={{
-											fontSize: "0.6875rem",
-											padding: "3px 8px",
-										}}
 										onClick={() => setShowDiscEdit(false)}
+										style={{
+											padding: "6px 12px",
+											borderRadius: 7,
+											border: "1px solid #212B3C",
+											background: "transparent",
+											color: "#8E9AAD",
+											fontSize: 12,
+											cursor: "pointer",
+										}}
 									>
 										Cancel
 									</button>
 									<button
-										className={styles.btnPrimary}
-										style={{
-											fontSize: "0.6875rem",
-											padding: "3px 8px",
-										}}
 										onClick={saveDiscs}
+										style={{
+											padding: "6px 14px",
+											borderRadius: 7,
+											border: "1px solid rgba(122,164,255,.4)",
+											background: "#2C55CC",
+											color: "#fff",
+											fontSize: 12,
+											fontWeight: 600,
+											cursor: "pointer",
+										}}
 									>
 										Save
 									</button>
@@ -560,35 +687,92 @@ function CycleSelector({
 						)}
 					</div>
 
-					<button className={styles.btnNewCycle} onClick={onNewCycle}>
+					<button
+						onClick={onNewCycle}
+						style={{
+							padding: "9px 14px",
+							borderRadius: 9,
+							border: "1px solid #2A3348",
+							background: "#131A28",
+							color: "#E9EDF5",
+							fontSize: 12.5,
+							fontWeight: 600,
+							cursor: "pointer",
+						}}
+					>
 						+ 新週期
 					</button>
 
 					{/* History dropdown */}
 					{cycles.length > 1 && (
-						<div className={styles.cycleDropdownWrap}>
+						<div style={{ position: "relative" }}>
 							<button
-								className={styles.btnCycleSwitch}
 								onClick={() => setHistoryOpen((o) => !o)}
+								style={{
+									padding: "9px 14px",
+									borderRadius: 9,
+									border: "1px solid #212B3C",
+									background: "#0E131D",
+									color: "#C3CCDB",
+									fontSize: 12.5,
+									fontWeight: 500,
+									cursor: "pointer",
+								}}
 							>
 								歷史週期 ({cycles.length}) ▾
 							</button>
 							{historyOpen && (
-								<div className={styles.cycleDropdown}>
+								<div
+									style={{
+										position: "absolute",
+										top: 44,
+										right: 0,
+										zIndex: 40,
+										minWidth: 236,
+										padding: 5,
+										borderRadius: 12,
+										background: "#0E131D",
+										border: "1px solid #232D3F",
+										boxShadow: "0 26px 52px -20px rgba(0,0,0,.92)",
+										display: "flex",
+										flexDirection: "column",
+										gap: 2,
+										maxHeight: 320,
+										overflow: "auto",
+									}}
+								>
 									{cycles.map((c) => (
 										<button
 											key={c.id}
-											className={`${styles.cycleDropdownItem} ${c.id === activeCycle.id ? styles.cycleDropdownItemActive : ""}`}
 											onClick={() => {
 												onSelect(c);
 												setHistoryOpen(false);
 											}}
+											style={{
+												display: "flex",
+												alignItems: "center",
+												justifyContent: "space-between",
+												gap: 12,
+												padding: "9px 11px",
+												border: "none",
+												borderRadius: 8,
+												fontSize: 12.5,
+												cursor: "pointer",
+												textAlign: "left",
+												background: c.id === activeCycle.id ? "#141B29" : "transparent",
+												color: "#C3CCDB",
+											}}
 										>
-											<span className={styles.cdName}>
-												{c.name}
-											</span>
+											<span>{c.name}</span>
 											<span
-												className={`${styles.cdStatus} ${styles[`status_${c.status}`]}`}
+												style={{
+													fontSize: 10.5,
+													fontWeight: 600,
+													padding: "2px 7px",
+													borderRadius: 99,
+													background: STATUS_STYLE[c.status].bg,
+													color: STATUS_STYLE[c.status].fg,
+												}}
 											>
 												{STATUS_LABELS[c.status]}
 											</span>
@@ -602,9 +786,18 @@ function CycleSelector({
 					{/* Delete — admin/51892 only */}
 					{isPrivileged && (
 						<button
-							className={styles.btnDelete}
 							onClick={() => setShowDeleteModal(true)}
 							title="刪除此查核週期"
+							style={{
+								width: 36,
+								height: 36,
+								borderRadius: 9,
+								border: "1px solid #2E1F24",
+								background: "#160F12",
+								color: "#F0655C",
+								fontSize: 13,
+								cursor: "pointer",
+							}}
 						>
 							🗑
 						</button>
@@ -849,6 +1042,23 @@ export default function IOSADashboard({
 	const auditFlags = data.flaggedISARPs.filter((f) => f.flag_type !== "prep");
 	const visibleFlags = activeFlag === "prep" ? prepFlags : auditFlags;
 
+	// ── Cycle-wide aggregates, in-scope disciplines only ──
+	// Everything here is summed from disciplineCards / data above — no new
+	// fetches, no invented numbers. "readiness" is prep_ready/total during
+	// prep, audit_completed/total during/after audit — same basis the
+	// per-discipline cards already use, just rolled up.
+	const inScopeCards = disciplineCards.filter((c) => c.inScope);
+	const totalIsarps = inScopeCards.reduce((a, c) => a + c.total, 0);
+	const totalCompleted = inScopeCards.reduce((a, c) => a + c.completed, 0);
+	const totalFindings = inScopeCards.reduce((a, c) => a + c.findings, 0);
+	const totalObservations = inScopeCards.reduce((a, c) => a + c.observations, 0);
+	// "Conformity" = completed minus findings/observations. Note this also
+	// folds in any N/A-status records, since the backend's audit_completed
+	// doesn't separate N/A from true conformity — an approximation, not exact.
+	const totalConformity = Math.max(0, totalCompleted - totalFindings - totalObservations);
+	const readinessPct = totalIsarps > 0 ? Math.round((totalCompleted / totalIsarps) * 100) : 0;
+	const outstandingCount = totalIsarps - totalCompleted;
+
 	// ── No cycle ──
 	if (!loading && allCycles.length === 0) {
 		return (
@@ -893,23 +1103,72 @@ export default function IOSADashboard({
 		);
 	}
 
+	const barBg = (pct: number) => {
+		if (pct >= 100) return "#45D483";
+		if (pct >= 70) return "linear-gradient(90deg,#3D6EF0,#7FD8FF)";
+		if (pct >= 30) return "#EFB25C";
+		return "#3D4658";
+	};
+
 	return (
-		<div className={styles.dashboard}>
+		<div
+			style={{
+				padding: "22px 26px 40px",
+				display: "flex",
+				flexDirection: "column",
+				gap: 20,
+				color: "#e8e9ed",
+			}}
+		>
 			{/* ── Action buttons ── */}
-			<div className={styles.dashActions}>
+			<div style={{ display: "flex", gap: 9, justifyContent: "flex-end", flexWrap: "wrap" }}>
 				<button
-					className={styles.exportBtn}
 					onClick={handleExportCR}
 					disabled={!activeCycle || exporting}
+					style={{
+						padding: "9px 17px",
+						borderRadius: 9,
+						border: "1px solid rgba(122,164,255,.4)",
+						background: "linear-gradient(180deg,#3D6EF0,#2C55CC)",
+						color: "#fff",
+						fontSize: 12.5,
+						fontWeight: 600,
+						cursor: !activeCycle || exporting ? "default" : "pointer",
+						opacity: !activeCycle || exporting ? 0.5 : 1,
+						boxShadow: "0 8px 22px -10px rgba(61,110,240,.9)",
+					}}
 				>
 					{exporting ? "Exporting…" : "↓ Export CR"}
 				</button>
-				<button className={styles.importBtn} onClick={onImport}>
+				<button
+					onClick={onImport}
+					style={{
+						padding: "9px 14px",
+						borderRadius: 9,
+						border: "1px solid #212B3C",
+						background: "#0E131D",
+						color: "#C3CCDB",
+						fontSize: 12.5,
+						fontWeight: 500,
+						cursor: "pointer",
+					}}
+				>
 					↑ Import ISARPs
 				</button>
 			</div>
 			{exportError && (
-				<div className={styles.errorMsg}>{exportError}</div>
+				<div
+					style={{
+						padding: "10px 14px",
+						borderRadius: 9,
+						background: "rgba(240,101,92,.1)",
+						border: "1px solid rgba(240,101,92,.3)",
+						color: "#F0655C",
+						fontSize: 12.5,
+					}}
+				>
+					{exportError}
+				</div>
 			)}
 
 			{/* ── Cycle bar ── */}
@@ -927,97 +1186,304 @@ export default function IOSADashboard({
 				/>
 			)}
 
+			{/* ── Readiness + live stream ──
+			    Readiness ring uses the same completed/total basis as the
+			    discipline cards below, just summed across in-scope disciplines —
+			    real numbers, not a separate metric. The live-stream panel has no
+			    backing data source (no activity-log table exists), so it shows
+			    an honest empty state instead of invented entries. */}
+			<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 16 }}>
+				<div
+					style={{
+						position: "relative",
+						overflow: "hidden",
+						padding: 24,
+						borderRadius: 16,
+						background: "radial-gradient(120% 130% at 0% 0%,#16203A 0%,#0C1119 55%)",
+						border: "1px solid #1D2637",
+						display: "flex",
+						alignItems: "center",
+						gap: 26,
+						flexWrap: "wrap",
+						minWidth: 0,
+					}}
+				>
+					<div
+						style={{
+							position: "relative",
+							width: 158,
+							height: 158,
+							flexShrink: 0,
+							borderRadius: "50%",
+							background: `conic-gradient(from 180deg, #5B8CFF 0%, #7FD8FF ${readinessPct}%, #141B29 ${readinessPct}%)`,
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							boxShadow: "0 0 44px -12px rgba(91,140,255,.55)",
+						}}
+					>
+						<div
+							style={{
+								width: 126,
+								height: 126,
+								borderRadius: "50%",
+								background: "#0B1018",
+								border: "1px solid #1B2434",
+								display: "flex",
+								flexDirection: "column",
+								alignItems: "center",
+								justifyContent: "center",
+								gap: 2,
+							}}
+						>
+							<span
+								style={{
+									fontSize: 38,
+									fontWeight: 600,
+									letterSpacing: "-.04em",
+									fontVariantNumeric: "tabular-nums",
+									lineHeight: 1,
+								}}
+							>
+								{readinessPct}
+								<span style={{ fontSize: 16, color: "#7E8899" }}>%</span>
+							</span>
+							<span style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: ".16em", color: "#8791A3" }}>
+								{isAuditPhase ? "AUDITED" : "READY"}
+							</span>
+						</div>
+					</div>
+					<div style={{ flex: 1, minWidth: 196, display: "flex", flexDirection: "column", gap: 14 }}>
+						<div>
+							<div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-.01em", marginBottom: 4 }}>
+								{isAuditPhase ? "Audit progress" : "Audit readiness"}
+							</div>
+							<div style={{ fontSize: 12.5, lineHeight: 1.55, color: "#7E8899" }}>
+								{isAuditPhase
+									? "Conformance status recorded across all in-scope disciplines."
+									: "Documentation references and auditor-action evidence recorded across all in-scope disciplines."}
+							</div>
+						</div>
+						<div style={{ display: "flex", gap: 22, flexWrap: "wrap" }}>
+							{[
+								[String(totalCompleted), isAuditPhase ? "AUDITED" : "PREP READY", "#E9EDF5"],
+								[String(outstandingCount), "OUTSTANDING", "#EFB25C"],
+								[String(prepFlags.length), "FLAGGED", "#F0655C"],
+							].map(([n, label, c]) => (
+								<div key={label} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+									<span style={{ fontSize: 19, fontWeight: 600, color: c }}>
+										{n}
+									</span>
+									<span style={{ fontSize: 10.5, color: "#8791A3", letterSpacing: ".05em" }}>{label}</span>
+								</div>
+							))}
+						</div>
+					</div>
+				</div>
+
+				<div
+					style={{
+						display: "flex",
+						flexDirection: "column",
+						borderRadius: 16,
+						background: "#0B0F17",
+						border: "1px solid #1A2130",
+						overflow: "hidden",
+					}}
+				>
+					<div
+						style={{
+							display: "flex",
+							alignItems: "center",
+							gap: 8,
+							padding: "13px 16px",
+							borderBottom: "1px solid #151C28",
+						}}
+					>
+						<span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34D9C0" }} />
+						<span style={{ fontSize: 12, fontWeight: 600, letterSpacing: ".04em" }}>Live conformance stream</span>
+					</div>
+					<div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+						<div style={{ fontSize: 12, color: "#8791A3", textAlign: "center" }}>
+							No activity log yet.
+							<br />
+							<span style={{ fontSize: 11 }}>This needs a real activity/audit-log table to show anything true.</span>
+						</div>
+					</div>
+				</div>
+			</div>
+
 			{/* ── Discipline cards ── */}
-			<div className={styles.section}>
-				<div className={styles.sectionLabel}>All disciplines</div>
-				<div className={styles.discGrid}>
-					{disciplineCards.map(
-						({ disc, inScope, total, completed, pct }) => (
+			<div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+				<div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+					<span style={{ fontSize: 10, fontWeight: 600, letterSpacing: ".2em", color: "#8791A3" }}>
+						ALL DISCIPLINES
+					</span>
+					<span style={{ flex: 1, height: 1, background: "#151C28" }} />
+				</div>
+				<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(196px,1fr))", gap: 11 }}>
+					{disciplineCards.map(({ disc, inScope, total, completed, pct }) => {
+						const shownPct = inScope ? pct : 0;
+						const full = inScope && pct === 100;
+						const active = activeDiscipline === disc;
+						return (
 							<div
 								key={disc}
-								className={`${styles.discCard} ${inScope ? styles.discCardInScope : ""} ${activeDiscipline === disc ? styles.discCardActive : ""}`}
 								onClick={() => setActiveDiscipline(disc)}
+								style={{
+									position: "relative",
+									overflow: "hidden",
+									padding: 15,
+									borderRadius: 13,
+									background: "#0B0F17",
+									border: `1px solid ${active ? "#3D6EF0" : "#1A2130"}`,
+									opacity: inScope ? 1 : 0.5,
+									cursor: "pointer",
+									display: "flex",
+									flexDirection: "column",
+									gap: 11,
+								}}
 							>
-								<div className={styles.discTop}>
-									<span className={styles.discCode}>
+								<div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+									<span
+										style={{
+											fontSize: 15,
+											fontWeight: 600,
+											letterSpacing: ".04em",
+											color: full ? "#45D483" : "#E9EDF5",
+										}}
+									>
 										{disc}
 									</span>
 									<span
-										className={`${styles.discScope} ${!inScope ? styles.discScopeOut : ""}`}
+										style={{
+											fontSize: 9.5,
+											fontWeight: 600,
+											letterSpacing: ".1em",
+											padding: "3px 7px",
+											borderRadius: 99,
+											background: !inScope
+												? "rgba(255,255,255,.05)"
+												: full
+													? "rgba(69,212,131,.1)"
+													: "rgba(91,140,255,.1)",
+											color: !inScope ? "#8791A3" : full ? "#45D483" : "#7FA8FF",
+										}}
 									>
 										{inScope ? "In scope" : "Pending"}
 									</span>
 								</div>
-								<div
-									className={`${styles.discPct} ${!inScope ? styles.discPctDim : ""}`}
-								>
-									{inScope ? pct : 0}
-									<span className={styles.discPctUnit}>
-										%
+								<div style={{ fontSize: 11, color: "#8791A3", letterSpacing: ".02em" }}>
+									{DISCIPLINE_NAMES[disc] ?? disc}
+								</div>
+								<div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+									<span
+										style={{
+											fontSize: 24,
+											fontWeight: 600,
+											letterSpacing: "-.03em",
+											fontVariantNumeric: "tabular-nums",
+											color: !inScope ? "#8791A3" : full ? "#45D483" : "#E9EDF5",
+										}}
+									>
+										{shownPct}
+										<span style={{ fontSize: 12, color: "#8791A3" }}>%</span>
+									</span>
+									<span style={{ fontSize: 11, color: "#8791A3" }}>
+										{inScope ? `${completed} / ${total}` : `0 / ${total}`} ISARPs
 									</span>
 								</div>
-								<div
-									className={`${styles.discSub} ${!inScope ? styles.discSubDim : ""}`}
-								>
-									{inScope
-										? `${completed} / ${total}`
-										: `0 / ${total}`}{" "}
-									ISARPs
-								</div>
-								<div className={styles.discBarTrack}>
+								<div style={{ height: 4, borderRadius: 99, background: "#141B29", overflow: "hidden" }}>
 									<div
-										className={`${styles.discBarFill} ${!inScope ? styles.discBarInactive : ""}`}
 										style={{
-											width: `${inScope ? pct : 0}%`,
+											height: "100%",
+											borderRadius: 99,
+											background: inScope ? barBg(shownPct) : "#3D4658",
+											width: `${shownPct}%`,
+											transition: "width .5s",
 										}}
 									/>
 								</div>
 							</div>
-						),
-					)}
+						);
+					})}
 				</div>
 			</div>
 
+			{/* ── Cycle-wide totals ── */}
+			<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 11 }}>
+				{[
+					{ label: "Total ISARPs", val: totalIsarps, color: "#E9EDF5" },
+					{ label: "Conformity", val: totalConformity, color: "#45D483" },
+					{ label: "Findings", val: totalFindings, color: "#F0655C" },
+					{ label: "Observations", val: totalObservations, color: "#EFB25C" },
+				].map(({ label, val, color }) => (
+					<div
+						key={label}
+						style={{
+							padding: 15,
+							borderRadius: 13,
+							background: "#0B0F17",
+							border: "1px solid #1A2130",
+							display: "flex",
+							flexDirection: "column",
+							gap: 6,
+						}}
+					>
+						<span style={{ fontSize: 23, fontWeight: 600, color }}>
+							{val}
+						</span>
+						<span style={{ fontSize: 10.5, letterSpacing: ".08em", color: "#8791A3" }}>{label}</span>
+					</div>
+				))}
+			</div>
+
 			{/* ── Stats strip ── */}
-			<div className={styles.section}>
-				<div className={styles.sectionLabel}>
-					{activeDiscipline} — ISARP statistics
+			<div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+				<div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+					<span style={{ fontSize: 10, fontWeight: 600, letterSpacing: ".2em", color: "#8791A3" }}>
+						{activeDiscipline} — ISARP STATISTICS
+					</span>
+					<span style={{ flex: 1, height: 1, background: "#151C28" }} />
 				</div>
-				<div className={styles.statsRow}>
+				<div
+					style={{
+						display: "grid",
+						gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))",
+						gap: 11,
+					}}
+				>
 					{[
-						{
-							label: "Total ISARPs",
-							val: activeStats?.total ?? 0,
-							cls: "",
-						},
+						{ label: "Total ISARPs", val: activeStats?.total ?? 0, color: "#E9EDF5" },
 						{
 							label: isAuditPhase ? "Audited" : "Prep Ready",
 							val: activeStats?.completed ?? 0,
-							cls: styles.green,
+							color: "#45D483",
 						},
 						{
 							label: "Remaining",
-							val:
-								(activeStats?.total ?? 0) -
-								(activeStats?.completed ?? 0),
-							cls: styles.accent,
+							val: (activeStats?.total ?? 0) - (activeStats?.completed ?? 0),
+							color: "#7FA8FF",
 						},
-						{
-							label: "Findings",
-							val: activeStats?.findings ?? 0,
-							cls: styles.red,
-						},
-						{
-							label: "Observations",
-							val: activeStats?.observations ?? 0,
-							cls: styles.amber,
-						},
-					].map(({ label, val, cls }) => (
-						<div key={label} className={styles.statBox}>
-							<div className={`${styles.statVal} ${cls}`}>
+						{ label: "Findings", val: activeStats?.findings ?? 0, color: "#F0655C" },
+						{ label: "Observations", val: activeStats?.observations ?? 0, color: "#EFB25C" },
+					].map(({ label, val, color }) => (
+						<div
+							key={label}
+							style={{
+								padding: 15,
+								borderRadius: 13,
+								background: "#0B0F17",
+								border: "1px solid #1A2130",
+								display: "flex",
+								flexDirection: "column",
+								gap: 6,
+							}}
+						>
+							<span style={{ fontSize: 23, fontWeight: 600, color }}>
 								{val}
-							</div>
-							<div className={styles.statLbl}>{label}</div>
+							</span>
+							<span style={{ fontSize: 10.5, letterSpacing: ".08em", color: "#8791A3" }}>{label}</span>
 						</div>
 					))}
 				</div>
@@ -1025,64 +1491,143 @@ export default function IOSADashboard({
 
 			{/* ── Linked alert ── */}
 			{data.linkedAlerts.length > 0 && (
-				<div className={styles.linkedNotice}>
+				<div
+					style={{
+						padding: "10px 14px",
+						borderRadius: 9,
+						background: "rgba(91,140,255,.1)",
+						border: "1px solid rgba(91,140,255,.25)",
+						color: "#7FA8FF",
+						fontSize: 12.5,
+					}}
+				>
 					🔗 <span>{data.linkedAlerts[0]}</span>
 				</div>
 			)}
 
 			{/* ── Flagged ISARPs ── */}
-			<div className={styles.section}>
-				<div className={styles.sectionLabel}>Flagged ISARPs</div>
-				<div className={styles.flaggedPanel}>
-					<div className={styles.flagTabs}>
+			<div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+				<div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+					<span style={{ fontSize: 10, fontWeight: 600, letterSpacing: ".2em", color: "#8791A3" }}>
+						FLAGGED ISARPS
+					</span>
+					<span style={{ flex: 1, height: 1, background: "#151C28" }} />
+				</div>
+				<div style={{ borderRadius: 14, background: "#0B0F17", border: "1px solid #1A2130", overflow: "hidden" }}>
+					<div
+						style={{
+							display: "flex",
+							gap: 2,
+							padding: 3,
+							margin: 12,
+							background: "#0E1420",
+							border: "1px solid #1A2130",
+							borderRadius: 8,
+							width: "fit-content",
+						}}
+					>
 						<button
-							className={`${styles.flagTab} ${activeFlag === "prep" ? styles.flagTabActive : ""}`}
 							onClick={() => setActiveFlag("prep")}
+							style={{
+								padding: "6px 12px",
+								border: "none",
+								borderRadius: 5,
+								background: activeFlag === "prep" ? "#1B2434" : "transparent",
+								color: activeFlag === "prep" ? "#E9EDF5" : "#7E8899",
+								fontSize: 11.5,
+								fontWeight: activeFlag === "prep" ? 600 : 500,
+								cursor: "pointer",
+							}}
 						>
 							Prep flags{" "}
-							<span className={styles.flagCount}>
+							<span
+								style={{
+									fontSize: 10.5,
+									color: "#8791A3",
+									marginLeft: 4,
+								}}
+							>
 								{prepFlags.length}
 							</span>
 						</button>
 						<button
-							className={`${styles.flagTab} ${activeFlag === "finding" ? styles.flagTabActive : ""}`}
 							onClick={() => setActiveFlag("finding")}
+							style={{
+								padding: "6px 12px",
+								border: "none",
+								borderRadius: 5,
+								background: activeFlag === "finding" ? "#1B2434" : "transparent",
+								color: activeFlag === "finding" ? "#E9EDF5" : "#7E8899",
+								fontSize: 11.5,
+								fontWeight: activeFlag === "finding" ? 600 : 500,
+								cursor: "pointer",
+							}}
 						>
 							Audit flags{" "}
 							<span
-								className={`${styles.flagCount} ${styles.flagCountRed}`}
+								style={{
+									fontSize: 10.5,
+									color: "#F0655C",
+									marginLeft: 4,
+								}}
 							>
 								{auditFlags.length}
 							</span>
 						</button>
 					</div>
 					{visibleFlags.length === 0 ? (
-						<div className={styles.noFlags}>
-							{activeFlag === "prep"
-								? "目前沒有 Prep 旗標"
-								: "目前沒有 Audit 旗標"}
+						<div style={{ padding: "20px 16px", fontSize: 12, color: "#8791A3", textAlign: "center" }}>
+							{activeFlag === "prep" ? "目前沒有 Prep 旗標" : "目前沒有 Audit 旗標"}
 						</div>
 					) : (
 						visibleFlags.map((f, i) => (
-							<div key={i} className={styles.flagItem}>
-								<div className={styles.flagCode}>
-									{f.isarp_code}
-								</div>
-								<div className={styles.flagReason}>
-									{f.reason}
-								</div>
-								<div className={styles.flagDept}>
-									{f.discipline}
-								</div>
-								<div
-									className={`${styles.ftag} ${styles[`ftag_${f.flag_type}`]}`}
+							<div
+								key={i}
+								style={{
+									display: "flex",
+									alignItems: "center",
+									gap: 12,
+									padding: "11px 16px",
+									borderTop: "1px solid #10161F",
+								}}
+							>
+								<span
+									style={{
+										fontSize: 12,
+										fontWeight: 500,
+										color: "#7FA8FF",
+										width: 76,
+										flexShrink: 0,
+									}}
 								>
-									{f.flag_type === "prep"
-										? "Prep"
-										: f.flag_type === "finding"
-											? "Finding"
-											: "Obs"}
-								</div>
+									{f.isarp_code}
+								</span>
+								<span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: "#8E9AAD" }}>{f.reason}</span>
+								<span style={{ fontSize: 11, color: "#8791A3", flexShrink: 0 }}>{f.discipline}</span>
+								<span
+									style={{
+										fontSize: 10,
+										fontWeight: 600,
+										letterSpacing: ".08em",
+										padding: "3px 8px",
+										borderRadius: 99,
+										flexShrink: 0,
+										background:
+											f.flag_type === "prep"
+												? "rgba(239,178,92,.1)"
+												: f.flag_type === "finding"
+													? "rgba(240,101,92,.1)"
+													: "rgba(239,178,92,.1)",
+										color:
+											f.flag_type === "prep"
+												? "#EFB25C"
+												: f.flag_type === "finding"
+													? "#F0655C"
+													: "#EFB25C",
+									}}
+								>
+									{f.flag_type === "prep" ? "Prep" : f.flag_type === "finding" ? "Finding" : "Obs"}
+								</span>
 							</div>
 						))
 					)}

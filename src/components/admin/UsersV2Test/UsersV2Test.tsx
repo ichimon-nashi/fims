@@ -102,6 +102,30 @@ const rankPriority = (rank: string): number => {
 	return idx === -1 ? RANK_ORDER.length : idx;
 };
 
+// ── Card "shininess" tier — purely cosmetic, mirrors trading-card rarity.
+// MG gets the full holo treatment, SC a single-hue foil, FI a subtle sheen,
+// everyone else keeps the plain card. Reuses getRankCode, no new rank data.
+// Final seven-tier ladder — FA/FS gets copper, unrecognized ranks get their
+// own flat onyx/charcoal tier instead of sharing copper:
+//   FA/FS       -> copper (flat, no shine)
+//   other       -> onyx (flat charcoal/light-black, no shine)
+//   LF          -> silver (flat, no shine)
+//   PR          -> gold (shine starts here)
+//   FI          -> sapphire (moderate shine)
+//   SC/MG       -> amethyst (strongest shine + glow, still hover-only)
+//   51892 + admin -> rainbow (the only idle-animated tier — pulses at rest)
+type RankTier = "copper" | "onyx" | "silver" | "gold" | "sapphire" | "amethyst" | "rainbow";
+const getRankTier = (u: Pick<UserRow, "rank" | "employee_id">): RankTier => {
+	if (u.employee_id === "admin" || u.employee_id === "51892") return "rainbow";
+	const code = getRankCode(u.rank);
+	if (code === "SC" || code === "MG") return "amethyst";
+	if (code === "FI") return "sapphire";
+	if (code === "PR") return "gold";
+	if (code === "LF") return "silver";
+	if (code === "FA" || code === "FS") return "copper";
+	return "onyx"; // truly unrecognized/blank rank
+};
+
 const UsersV2Test = () => {
 	const { token, user: currentUser, loading: authLoading } = useAuth();
 	const [users, setUsers] = useState<UserRow[]>([]);
@@ -521,7 +545,11 @@ const UsersV2Test = () => {
 	}, [users, searching]);
 
 	const renderCard = (u: UserRow) => (
-		<div key={u.id} className={`${styles.userCard} ${u.is_inactive ? styles.userCardInactive : ""}`}>
+		<div
+			key={u.id}
+			className={`${styles.userCard} ${styles[`rankTier_${getRankTier(u)}`]} ${u.is_inactive ? styles.userCardInactive : ""}`}
+			title={`${getRankCode(u.rank)} — ${getRankTier(u)}`}
+		>
 			{u.avatar_gif && (
 				<img
 					src={`/images/authentication_level_gif/${u.avatar_gif}.gif`}

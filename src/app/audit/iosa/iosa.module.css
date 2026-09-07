@@ -2,7 +2,7 @@
 
 .shell {
 	min-height: calc(100vh - 60px);
-	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+	background: linear-gradient(135deg, var(--page-bg-a) 0%, var(--page-bg-b) 100%);
 	display: flex;
 	flex-direction: column;
 	color: #e8e9ed;
@@ -11,7 +11,7 @@
 
 /* ── Top bar ── */
 .topbar {
-	background: #2d3651;
+	background: var(--page-bg-b);
 	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 	padding: 0 1rem;
 	display: flex;

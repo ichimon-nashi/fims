@@ -15,7 +15,7 @@
 	width: min(90vw, 960px);
 	max-width: 100%;
 	max-height: calc(100vh - 48px);
-	background: #1a1f35;
+	background: var(--page-bg-a);
 	color: #e8e9ed;
 	border-radius: 12px;
 	display: flex;
@@ -145,7 +145,7 @@
 .field input,
 .field select,
 .findingCard textarea {
-	background: #2d3651;
+	background: var(--page-bg-b);
 	border: 1px solid rgba(232, 233, 237, 0.15);
 	border-radius: 6px;
 	color: #e8e9ed;
@@ -166,7 +166,7 @@
 }
 
 .fieldInvalidTextarea {
-	background: #2d3651;
+	background: var(--page-bg-b);
 	border: 1px solid #e34948 !important;
 	border-radius: 6px;
 	color: #e8e9ed;
@@ -177,7 +177,7 @@
 }
 
 .field select option {
-	background: #2d3651;
+	background: var(--page-bg-b);
 	color: #e8e9ed;
 }
 
@@ -305,7 +305,7 @@
 }
 
 .auditorDropdown {
-	background: #2d3651;
+	background: var(--page-bg-b);
 	border: 1px solid rgba(232, 233, 237, 0.15);
 	border-radius: 6px;
 	overflow-y: auto;
@@ -379,7 +379,7 @@
 
 .samTrigger {
 	width: 100%;
-	background: #2d3651;
+	background: var(--page-bg-b);
 	border: 1px solid rgba(232, 233, 237, 0.15);
 	border-radius: 6px;
 	color: #e8e9ed;
@@ -434,7 +434,7 @@
 }
 
 .routeDestInput {
-	background: #2d3651;
+	background: var(--page-bg-b);
 	border: 1px solid rgba(232, 233, 237, 0.15);
 	border-radius: 6px;
 	color: #e8e9ed;
@@ -548,7 +548,7 @@
 	width: min(92vw, 1100px);
 	max-width: 100%;
 	max-height: calc(100vh - 48px);
-	background: #1a1f35;
+	background: var(--page-bg-a);
 	border-radius: 12px;
 	display: flex;
 	flex-direction: column;
@@ -726,7 +726,7 @@
 }
 
 .pasteTextarea {
-	background: #2d3651;
+	background: var(--page-bg-b);
 	border: 1px solid rgba(232, 233, 237, 0.15);
 	border-radius: 6px;
 	color: #e8e9ed;

@@ -4,7 +4,7 @@
   padding: 2rem;
   width: 100%;
   margin: 0 auto;
-  background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+  background: linear-gradient(135deg, var(--page-bg-a) 0%, var(--page-bg-b) 100%);
   min-height: 100vh;
   color: #e2e8f0;
   box-sizing: border-box;
@@ -261,7 +261,7 @@
 }
 
 .previewEmpty {
-  color: #2d3651;
+  color: var(--page-bg-b);
   font-size: 0.82rem;
 }
 

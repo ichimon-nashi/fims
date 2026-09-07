@@ -172,8 +172,8 @@ textarea {
    Every card in the app reads from these tokens. Retheme here only.
    ════════════════════════════════════════════════════════════════════ */
 :root {
-	--page-bg-a: #1a1f35;
-	--page-bg-b: #2d3651;
+	--page-bg-a: #0d1220;
+	--page-bg-b: #10162a;
 
 	--accent: #4a9eff;
 	--accent-soft: rgba(74, 158, 255, 0.12);

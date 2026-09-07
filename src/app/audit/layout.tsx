@@ -40,7 +40,7 @@ export default function AuditLayout({
 				style={{
 					minHeight: "100vh",
 					background:
-						"linear-gradient(135deg, #1a1f35 0%, #2d3651 100%)",
+						"linear-gradient(135deg, var(--page-bg-a) 0%, var(--page-bg-b) 100%)",
 					display: "flex",
 					flexDirection: "column",
 					alignItems: "center",
@@ -88,7 +88,7 @@ export default function AuditLayout({
 		<div
 			style={{
 				minHeight: "100vh",
-				background: "linear-gradient(135deg, #1a1f35 0%, #2d3651 100%)",
+				background: "linear-gradient(135deg, var(--page-bg-a) 0%, var(--page-bg-b) 100%)",
 				display: "flex",
 				flexDirection: "column",
 			}}

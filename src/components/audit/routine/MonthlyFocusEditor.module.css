@@ -3,7 +3,7 @@
 .panel {
 	position: fixed;
 	inset: 0;
-	background: linear-gradient(180deg, #1a1f35 0%, #2d3651 100%);
+	background: linear-gradient(180deg, var(--page-bg-a) 0%, var(--page-bg-b) 100%);
 	display: flex;
 	flex-direction: column;
 	z-index: 1000;
@@ -62,7 +62,7 @@
 }
 
 .monthSelect select {
-	background: #2d3651;
+	background: var(--page-bg-b);
 	border: 1px solid rgba(232, 233, 237, 0.15);
 	border-radius: 6px;
 	color: #e8e9ed;
@@ -137,7 +137,7 @@
 .itemTextInput {
 	width: 100%;
 	box-sizing: border-box;
-	background: #2d3651;
+	background: var(--page-bg-b);
 	border: 1px solid rgba(232, 233, 237, 0.15);
 	border-radius: 6px;
 	color: #e8e9ed;
@@ -148,7 +148,7 @@
 }
 
 .attachmentSelect {
-	background: #2d3651;
+	background: var(--page-bg-b);
 	border: 1px solid rgba(232, 233, 237, 0.15);
 	border-radius: 6px;
 	color: rgba(232, 233, 237, 0.7);
@@ -232,7 +232,7 @@
 }
 
 .newMonthRow select {
-	background: #2d3651;
+	background: var(--page-bg-b);
 	border: 1px solid rgba(232, 233, 237, 0.15);
 	border-radius: 6px;
 	color: #e8e9ed;
@@ -307,7 +307,7 @@
 }
 
 .copyBar select {
-	background: #2d3651;
+	background: var(--page-bg-b);
 	border: 1px solid rgba(232, 233, 237, 0.15);
 	border-radius: 6px;
 	color: #e8e9ed;

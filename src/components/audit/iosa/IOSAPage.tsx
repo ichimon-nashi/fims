@@ -1,4 +1,8 @@
 // src/components/audit/iosa/IOSAPage.tsx
+// LAYOUT: audit-type switcher (routine/first-level/IOSA) is a real top bar again,
+// per request — it no longer lives inside the rail. The IOSA lifecycle nav
+// (Dashboard/AuditPrep/Audit/Results) still uses the left rail. All state,
+// routing, handlers and child props are unchanged.
 "use client";
 
 import { useState } from "react";
@@ -27,10 +31,10 @@ const AUDIT_TABS = [
 ] as const;
 
 const IOSA_SUBTABS = [
-	{ id: "dashboard", label: "Dashboard" },
-	{ id: "auditprep", label: "AuditPrep" },
-	{ id: "audit", label: "Audit" },
-	{ id: "results", label: "Results" },
+	{ id: "dashboard", label: "Dashboard", sub: "Cycle overview" },
+	{ id: "auditprep", label: "AuditPrep", sub: "Evidence & references" },
+	{ id: "audit", label: "Audit", sub: "Auditor session" },
+	{ id: "results", label: "Results", sub: "Conformance report" },
 ] as const;
 
 export default function IOSAPage() {
@@ -67,13 +71,13 @@ export default function IOSAPage() {
 
 	return (
 		<div className={styles.shell}>
-			{/* ── Top bar ── */}
+			{/* ── Top bar: audit-type switcher (routine / first-level / IOSA) ── */}
 			<div className={styles.topbar}>
-				<div className={styles.auditTabs}>
+				<div className={styles.topbarTabs}>
 					{AUDIT_TABS.map((t) => (
 						<button
 							key={t.id}
-							className={`${styles.auditTab} ${activeAuditType === t.id ? styles.auditTabActive : ""}`}
+							className={`${styles.topbarTab} ${activeAuditType === t.id ? styles.topbarTabActive : ""}`}
 							onClick={() =>
 								handleAuditTypeChange(t.id as AuditType)
 							}
@@ -82,28 +86,56 @@ export default function IOSAPage() {
 						</button>
 					))}
 				</div>
-				<div className={styles.topbarRight}>
-					<span className={styles.ismBadge}>
-						{activeCycle?.ism_edition ?? "ISM Ed.18 Rev1"}
-					</span>
-				</div>
 			</div>
 
-			{/* ── IOSA sub-tabs ── */}
-			<div className={styles.subtabbar}>
-				{IOSA_SUBTABS.map((t) => (
-					<button
-						key={t.id}
-						className={`${styles.subtab} ${activeIOSATab === t.id ? styles.subtabActive : ""}`}
-						onClick={() => setActiveIOSATab(t.id as IOSATab)}
-					>
-						{t.label}
-					</button>
-				))}
-			</div>
+			<div className={styles.shellBody}>
+				{/* ── Left lifecycle rail ── */}
+				<aside className={styles.rail}>
+					<div className={styles.railLabel}>AUDIT LIFECYCLE</div>
 
-			{/* ── Content ── */}
-			<div className={styles.content}>{renderIOSAContent()}</div>
+					{/* IOSA lifecycle nav (was the sub-tab bar) */}
+					<nav className={styles.nav}>
+						{IOSA_SUBTABS.map((t) => (
+							<button
+								key={t.id}
+								className={`${styles.subtab} ${activeIOSATab === t.id ? styles.subtabActive : ""}`}
+								onClick={() => setActiveIOSATab(t.id as IOSATab)}
+							>
+								<span className={styles.subtabMark} />
+								<span className={styles.subtabText}>
+									<span className={styles.subtabLabel}>
+										{t.label}
+									</span>
+									<span className={styles.subtabSub}>
+										{t.sub}
+									</span>
+								</span>
+							</button>
+						))}
+					</nav>
+
+					{/* Active cycle context */}
+					<div className={styles.railFoot}>
+						<div className={styles.railFootLabel}>ACTIVE CYCLE</div>
+						<div className={styles.railFootName}>
+							{activeCycle?.name ?? "未選擇週期"}
+						</div>
+						<div className={styles.railFootMeta}>
+							<span className={styles.ismBadge}>
+								{activeCycle?.ism_edition ?? "ISM Ed.18 Rev1"}
+							</span>
+							{activeCycle?.disciplines?.length ? (
+								<span className={styles.railFootDiscs}>
+									{activeCycle.disciplines.length} disciplines
+								</span>
+							) : null}
+						</div>
+					</div>
+				</aside>
+
+				{/* ── Content ── */}
+				<div className={styles.content}>{renderIOSAContent()}</div>
+			</div>
 
 			{showImport && (
 				<IOSAImport

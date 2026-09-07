@@ -16,7 +16,7 @@
 }
 
 .modal {
-	background: linear-gradient(135deg, #1a1f35 0%, #2d3651 100%);
+	background: linear-gradient(135deg, var(--page-bg-a) 0%, var(--page-bg-b) 100%);
 	border-radius: 16px;
 	width: 100%;
 	max-width: 900px;

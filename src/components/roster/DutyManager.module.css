@@ -372,7 +372,7 @@
   border-radius: 0.25rem;
   padding: 0.25rem;
   font-size: 0.75rem;
-  color: #1a1f35;
+  color: var(--page-bg-a);
   width: 100%;
 }
 
