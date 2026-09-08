@@ -10,6 +10,7 @@ export interface ChecklistItem {
 	category?: string | null; // absent for monthly focus items — they render flat, no group header
 	item_text: string;
 	ccom_ref?: string | null;
+	standard_text?: string | null; // 檢查標準 — the criteria/guidance describing what to actually look for, distinct from item_text (the item name)
 }
 
 export interface ItemAnswer {
@@ -90,14 +91,22 @@ export default function ChecklistItemList({ items, answers, onAnswerChange, titl
 							</button>
 						)}
 						{!isCollapsed &&
-							groupItems.map((item) => {
+							groupItems.map((item, localIndex) => {
 								const answer = answers[item.item_no] ?? { result: null, remark: "" };
+								// display numbering restarts per category, matching the
+								// original paper documents' own native Word list numbering
+								// (confirmed: the exported docx already restarts correctly
+								// via the template's own formatting) — item_no itself stays
+								// global/unique for answer keying and the React key, only the
+								// DISPLAYED number changes
+								const displayNo = hasCategories ? localIndex + 1 : item.item_no;
 								return (
 									<ChecklistItemRow
 										key={item.item_no}
-										itemNo={item.item_no}
+										itemNo={displayNo}
 										itemText={item.item_text}
 										ccomRef={item.ccom_ref}
+										standardText={item.standard_text}
 										result={answer.result}
 										remark={answer.remark}
 										onChange={(result, remark) => onAnswerChange?.(item.item_no, result, remark)}

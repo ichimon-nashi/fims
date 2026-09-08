@@ -288,7 +288,7 @@ export default function MonthlyFocusEditor({ onClose }: { onClose: () => void })
 										>
 											{copying ? "處理中..." : "加入並編輯"}
 										</button>
-									</div>
+									</div>	
 								)}
 
 								{Array.from(groupedByYear.entries()).map(([y, months]) => (
@@ -298,7 +298,7 @@ export default function MonthlyFocusEditor({ onClose }: { onClose: () => void })
 											<div key={s.id} className={styles.monthBlock}>
 												<button className={styles.monthBlockHeader} onClick={() => openMonth(s.report_year, s.report_month)}>
 													<span className={styles.monthBlockTitle}>{s.report_month}月</span>
-													<span className={styles.monthBlockCount}>{s.items.length} 項 · 點擊編輯</span>
+													<span className={styles.monthBlockCount}>{s.items.length} 項 · 點選編輯</span>
 												</button>
 												{s.items.length > 0 && (
 													<div className={styles.monthItemList}>

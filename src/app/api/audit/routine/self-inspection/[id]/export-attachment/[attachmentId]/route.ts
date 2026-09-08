@@ -11,14 +11,36 @@ import path from "path";
 const W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 const FATIGUE_TEMPLATE_PATH = path.join(process.cwd(), "public/templates/audit_routine_fatigue_template.docx");
 const CEFB_TEMPLATE_PATH = path.join(process.cwd(), "public/templates/audit_routine_cefb_template.docx");
-// these three items have pre-printed hint text in their remark cell
-// (日期 / 版次 / AOR109/FOM) — appending preserves the hint instead of
-// wiping it, same reasoning as fatigue's 休時＿＿＿小時 special case
+// these four items have pre-printed hint text (日期 / 版次 / AOR109/FOM) in a
+// SINGLE run with no separate blank to fill — confirmed directly against
+// the raw XML, there is no whitespace-only run here at all. Appending is
+// correct for all four; the visual gap previously seen (版　　　次) was
+// NOT from appending itself — it was the paragraph's inherited justify
+// alignment stretching the first line once appending made it a two-line
+// paragraph. Fixed at the source in appendCellText() below (explicit
+// left-alignment override), not by avoiding append.
 const CEFB_APPEND_REMARK_ITEMS = new Set([4, 8, 9, 33]);
 
 function appendCellText(doc: Document, tc: Element, text: string) {
 	const p = tc.getElementsByTagNameNS(W_NS, "p")[0];
 	if (!p) return;
+	// Force explicit left-alignment. Confirmed via direct testing: the
+	// pre-printed hint text (e.g. "版次") renders fine on its own, but once
+	// appending turns it into the FIRST line of a two-line paragraph,
+	// LibreOffice/Word stretch that first line to fill the cell width under
+	// justify alignment (which this document's default paragraph style
+	// applies, even with no explicit <w:jc> on this specific paragraph) —
+	// producing a huge visual gap between characters ("版　　　次"). An
+	// explicit left override prevents the stretch regardless of inheritance.
+	let pPr = p.getElementsByTagNameNS(W_NS, "pPr")[0];
+	if (!pPr) {
+		pPr = doc.createElementNS(W_NS, "w:pPr");
+		p.insertBefore(pPr, p.firstChild);
+	}
+	for (const jc of Array.from(pPr.getElementsByTagNameNS(W_NS, "jc"))) pPr.removeChild(jc);
+	const jc = doc.createElementNS(W_NS, "w:jc");
+	jc.setAttribute("w:val", "left");
+	pPr.appendChild(jc);
 	// reuse an existing run's formatting so the appended text matches the
 	// pre-printed hint text's font/size instead of falling back to default
 	const existingRuns = Array.from(p.getElementsByTagNameNS(W_NS, "r"));
@@ -34,7 +56,7 @@ function appendCellText(doc: Document, tc: Element, text: string) {
 	p.appendChild(r);
 }
 
-async function buildCefbDocx(auditDate: string, flightNo: string, subjectLabel: string, items: { item_no: number; result: string | null; remark: string | null }[]) {
+async function buildCefbDocx(auditDate: string, flightNo: string, subjectLabel: string, comments: string | null, items: { item_no: number; result: string | null; remark: string | null }[]) {
 	if (!fs.existsSync(CEFB_TEMPLATE_PATH)) {
 		throw new Error(`C-EFB template not found at ${CEFB_TEMPLATE_PATH}`);
 	}
@@ -63,6 +85,45 @@ async function buildCefbDocx(auditDate: string, flightNo: string, subjectLabel: 
 				appendCellText(dom, cells[7], item.remark);
 			} else {
 				setCellText(dom, cells[7], item.remark, { forcedSize: 16 });
+			}
+		}
+	}
+
+	// 查核結果說明 — same overall form comment the main form injects into
+	// 查核結果及建議. C-EFB has no comment field of its own, so this
+	// reuses the one shared value, confirmed present in the real template
+	// as a static label followed by an explanatory footnote line.
+	if (comments) {
+		const commentParagraphs = Array.from(dom.getElementsByTagNameNS(W_NS, "p"));
+		const labelParagraph = commentParagraphs.find((p) =>
+			Array.from(p.getElementsByTagNameNS(W_NS, "t")).map((t) => t.textContent).join("").includes("查核結果說明"),
+		);
+		if (labelParagraph) {
+			const parent = labelParagraph.parentNode;
+			const p = dom.createElementNS(W_NS, "w:p");
+			// same explicit left-align fix as appendCellText — a brand-new
+			// paragraph with no pPr at all still inherits the document's default
+			// (apparently justify), which would stretch every line except the
+			// last if this comment happens to wrap to multiple lines
+			const pPr = dom.createElementNS(W_NS, "w:pPr");
+			const jc = dom.createElementNS(W_NS, "w:jc");
+			jc.setAttribute("w:val", "left");
+			pPr.appendChild(jc);
+			p.appendChild(pPr);
+			const r = dom.createElementNS(W_NS, "w:r");
+			const t = dom.createElementNS(W_NS, "w:t");
+			t.setAttribute("xml:space", "preserve");
+			t.appendChild(dom.createTextNode(comments));
+			r.appendChild(t);
+			p.appendChild(r);
+			// insert right after the footnote line (label's next sibling
+			// paragraph, e.g. "註：(*)為5月起..."), not immediately after
+			// the label itself, matching the reference file's layout
+			const footnoteParagraph = labelParagraph.nextSibling;
+			if (footnoteParagraph && footnoteParagraph.nextSibling) {
+				parent?.insertBefore(p, footnoteParagraph.nextSibling);
+			} else if (parent) {
+				parent.appendChild(p);
 			}
 		}
 	}
@@ -109,7 +170,18 @@ function forceSize(doc: Document, rPr: Element, size: number) {
 function setCellText(doc: Document, tc: Element, text: string, opts: { fallbackSize?: number; forcedSize?: number } = {}) {
 	const p = tc.getElementsByTagNameNS(W_NS, "p")[0];
 	if (!p) return;
-	const pPr = p.getElementsByTagNameNS(W_NS, "pPr")[0];
+	let pPr = p.getElementsByTagNameNS(W_NS, "pPr")[0];
+	// same explicit left-align fix as appendCellText — applied defensively
+	// here too, since any remark long enough to wrap to multiple lines
+	// could hit the identical justify-stretch issue on this template
+	if (!pPr) {
+		pPr = doc.createElementNS(W_NS, "w:pPr");
+		p.insertBefore(pPr, p.firstChild);
+	}
+	for (const jc of Array.from(pPr.getElementsByTagNameNS(W_NS, "jc"))) pPr.removeChild(jc);
+	const jc = doc.createElementNS(W_NS, "w:jc");
+	jc.setAttribute("w:val", "left");
+	pPr.appendChild(jc);
 	const defaultRPr = pPr?.getElementsByTagNameNS(W_NS, "rPr")[0];
 	const existingRuns = Array.from(p.getElementsByTagNameNS(W_NS, "r"));
 	const sourceRPr =
@@ -294,7 +366,7 @@ export async function GET(
 	}
 
 	if (code === "c_efb") {
-		const buffer = await buildCefbDocx(form.audit_date, form.flight_no ?? "", subjectLabel, items ?? []);
+		const buffer = await buildCefbDocx(form.audit_date, form.flight_no ?? "", subjectLabel, form.comments ?? null, items ?? []);
 		return new NextResponse(buffer, {
 			status: 200,
 			headers: {

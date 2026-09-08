@@ -133,6 +133,7 @@
 	font-size: 0.8125rem;
 	color: #e8e9ed;
 	line-height: 1.5;
+	white-space: pre-wrap;
 }
 
 .actions {
@@ -255,4 +256,33 @@
 	font-size: 0.8125rem;
 	font-family: inherit;
 	resize: vertical;
+}
+.adminCleanup {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	background: rgba(227, 73, 72, 0.06);
+	border: 1px solid rgba(227, 73, 72, 0.25);
+	border-radius: 8px;
+	padding: 10px 14px;
+}
+
+.cleanupBtn {
+	background: rgba(227, 73, 72, 0.1);
+	border: 1px solid rgba(227, 73, 72, 0.4);
+	color: #e34948;
+	border-radius: 6px;
+	padding: 6px 14px;
+	font-size: 0.8125rem;
+	cursor: pointer;
+}
+
+.cleanupBtn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.cleanupResult {
+	font-size: 0.8125rem;
+	color: rgba(232, 233, 237, 0.7);
 }

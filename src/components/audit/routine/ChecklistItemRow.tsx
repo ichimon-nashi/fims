@@ -10,6 +10,7 @@ interface Props {
 	itemNo: number;
 	itemText: string;
 	ccomRef?: string | null;
+	standardText?: string | null; // 檢查標準 — what to actually check for, distinct from the item name
 	result: ItemResult | null;
 	remark: string;
 	onChange?: (result: ItemResult | null, remark: string) => void;
@@ -17,7 +18,7 @@ interface Props {
 	readOnly?: boolean; // static display for reviewing an already-submitted form — no buttons, no editing
 }
 
-export default function ChecklistItemRow({ itemNo, itemText, ccomRef, result, remark, onChange, showError, readOnly }: Props) {
+export default function ChecklistItemRow({ itemNo, itemText, ccomRef, standardText, result, remark, onChange, showError, readOnly }: Props) {
 	// remark box shown if there's already text in it, or once the user
 	// explicitly asks for it via "+ 備註" — available regardless of result,
 	// not just on X, per the "all choices offer space to type remarks" decision
@@ -41,6 +42,7 @@ export default function ChecklistItemRow({ itemNo, itemText, ccomRef, result, re
 						{result ?? "—"}
 					</span>
 				</div>
+				{standardText && <p className={styles.standardText}>檢查標準：{standardText}</p>}
 				{ccomRef && <p className={styles.itemRef}>參考文件：{ccomRef}</p>}
 				{remark && <p className={styles.readOnlyRemark}>{remark}</p>}
 			</div>
@@ -53,6 +55,7 @@ export default function ChecklistItemRow({ itemNo, itemText, ccomRef, result, re
 				<span className={styles.itemNo}>{itemNo}</span>
 				<p className={styles.itemText}>{itemText}</p>
 			</div>
+			{standardText && <p className={styles.standardText}>檢查標準：{standardText}</p>}
 			{ccomRef && <p className={styles.itemRef}>參考文件：{ccomRef}</p>}
 			<div className={styles.controls}>
 				<button

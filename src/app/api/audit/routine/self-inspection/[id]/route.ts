@@ -85,6 +85,7 @@ export async function GET(
 				category: ti.category,
 				item_text: ti.item_text,
 				ccom_ref: ti.ccom_ref,
+				standard_text: ti.standard_text, // 檢查標準 — was being dropped here despite select("*") including it; this is why an existing form never showed it while a new one did
 				result: answer?.result ?? null,
 				remark: answer?.remark ?? null,
 			};

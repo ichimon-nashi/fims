@@ -27,7 +27,10 @@ interface PendingForm {
 }
 
 export default function PendingReviewList({ onChanged }: { onChanged?: () => void }) {
-	const { token } = useAuth();
+	const { token, user } = useAuth();
+	const isAdmin = user?.employee_id === "admin" || user?.employee_id === "51892";
+	const [cleaningUp, setCleaningUp] = useState(false);
+	const [cleanupResult, setCleanupResult] = useState<string | null>(null);
 	const [forms, setForms] = useState<PendingForm[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -37,6 +40,26 @@ export default function PendingReviewList({ onChanged }: { onChanged?: () => voi
 	const [approveRemark, setApproveRemark] = useState(""); // becomes corrective_action (處置) on the created entry
 	const [busyId, setBusyId] = useState<string | null>(null);
 	const [editingId, setEditingId] = useState<string | null>(null);
+
+	async function handleCleanup() {
+		if (!token) return;
+		if (!confirm("確定要刪除所有超過30天的附表上傳檔案嗎？此動作無法復原。")) return;
+		setCleaningUp(true);
+		setCleanupResult(null);
+		try {
+			const res = await fetch("/api/audit/routine/cleanup-fatigue-uploads", {
+				method: "POST",
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error ?? "清理失敗");
+			setCleanupResult(`已刪除 ${data.deleted} 個過期檔案`);
+		} catch (e: any) {
+			setCleanupResult(e.message ?? "清理失敗");
+		} finally {
+			setCleaningUp(false);
+		}
+	}
 
 	async function loadPending() {
 		if (!token) return;
@@ -127,7 +150,7 @@ export default function PendingReviewList({ onChanged }: { onChanged?: () => voi
 		try {
 			// main form, always
 			await downloadFile(`/api/audit/routine/self-inspection/${form.id}/export-docx`, "自我督察表.docx");
-			// every attachment present (fatigue is always present; c_efb only when added)
+			// every generated attachment docx present (fatigue is always present; c_efb only when added)
 			for (const att of form.audit_routine_form_attachments) {
 				// small delay between downloads — some browsers throttle/drop
 				// multiple near-simultaneous downloads triggered from one click
@@ -137,8 +160,23 @@ export default function PendingReviewList({ onChanged }: { onChanged?: () => voi
 					`${att.checklist_templates?.name ?? "attachment"}.docx`,
 				);
 			}
+			// any uploaded fatigue supporting documents (班表/到資訊摘要/飛時清單)
+			// — this is the actual point of "下載檔案" instead of "匯出docx":
+			// scattered documents that used to go by email/instant message
+			// now come down in the same single action as the generated forms
+			const uploadsRes = await fetch(`/api/audit/routine/self-inspection/${form.id}/fatigue-upload`, {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			const uploadsData = await uploadsRes.json();
+			for (const upload of uploadsData.uploads ?? []) {
+				await new Promise((r) => setTimeout(r, 400));
+				await downloadFile(
+					`/api/audit/routine/self-inspection/${form.id}/fatigue-upload/${upload.id}`,
+					upload.display_filename,
+				);
+			}
 		} catch (e: any) {
-			setError(e.message ?? "匯出失敗");
+			setError(e.message ?? "下載失敗");
 		} finally {
 			setBusyId(null);
 		}
@@ -161,10 +199,32 @@ export default function PendingReviewList({ onChanged }: { onChanged?: () => voi
 		);
 	}
 
-	if (forms.length === 0) return <p className={styles.status}>目前無待審核項目</p>;
+	if (forms.length === 0) {
+		return (
+			<div className={styles.list}>
+				{isAdmin && (
+					<div className={styles.adminCleanup}>
+						<button className={styles.cleanupBtn} disabled={cleaningUp} onClick={handleCleanup}>
+							{cleaningUp ? "清理中..." : "🗑 清理超過30天的附表檔案"}
+						</button>
+						{cleanupResult && <span className={styles.cleanupResult}>{cleanupResult}</span>}
+					</div>
+				)}
+				<p className={styles.status}>目前無待審核項目</p>
+			</div>
+		);
+	}
 
 	return (
 		<div className={styles.list}>
+			{isAdmin && (
+				<div className={styles.adminCleanup}>
+					<button className={styles.cleanupBtn} disabled={cleaningUp} onClick={handleCleanup}>
+						{cleaningUp ? "清理中..." : "🗑 清理超過30天的附表檔案"}
+					</button>
+					{cleanupResult && <span className={styles.cleanupResult}>{cleanupResult}</span>}
+				</div>
+			)}
 			{forms.map((form) => (
 				<div key={form.id} className={styles.card}>
 					<div className={styles.cardHeader}>
@@ -266,7 +326,7 @@ export default function PendingReviewList({ onChanged }: { onChanged?: () => voi
 									disabled={busyId === form.id}
 									onClick={() => handleExport(form)}
 								>
-									{busyId === form.id ? "匯出中..." : "匯出docx"}
+									{busyId === form.id ? "下載中..." : "下載檔案"}
 								</button>
 							</div>
 						)}

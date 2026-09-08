@@ -117,7 +117,7 @@ export default function SelfInspectionForm({ onClose, onSubmitted, existingFormI
 				setComments(data.form.comments ?? "");
 				setMainTemplate({
 					id: data.form.template_id,
-					items: data.main.map((i: any) => ({ item_no: i.item_no, category: i.category, item_text: i.item_text, ccom_ref: i.ccom_ref })),
+					items: data.main.map((i: any) => ({ item_no: i.item_no, category: i.category, item_text: i.item_text, ccom_ref: i.ccom_ref, standard_text: i.standard_text })),
 				});
 				const mainAns: Record<number, ItemAnswer> = {};
 				for (const i of data.main) mainAns[i.item_no] = { result: i.result, remark: i.remark ?? "" };
@@ -134,6 +134,7 @@ export default function SelfInspectionForm({ onClose, onSubmitted, existingFormI
 						const answers: Record<number, ItemAnswer> = {};
 						for (const i of att.items) answers[i.item_no] = { result: i.result, remark: i.remark ?? "" };
 						return {
+							id: att.id, // assumed present in the detail response — a real PK on a table this route already joins against
 							template_id: att.template_id,
 							subject_crew_name: att.subject_crew_name,
 							subject_employee_id: att.subject_employee_id,
@@ -353,10 +354,20 @@ export default function SelfInspectionForm({ onClose, onSubmitted, existingFormI
 			<div className={styles.body}>
 				{pendingDraft && (
 					<div className={styles.draftBanner}>
-						<span>偵測到未完成的草稿</span>
+						<div className={styles.draftBannerText}>
+							<span className={styles.draftBannerIcon}>💾</span>
+							<div>
+								<p className={styles.draftBannerTitle}>您的資料已安全儲存</p>
+								<p className={styles.draftBannerSubtitle}>偵測到上次未完成的草稿，是否要繼續填寫？</p>
+							</div>
+						</div>
 						<div className={styles.draftBannerActions}>
-							<button onClick={resumeDraft}>繼續填寫</button>
-							<button onClick={discardDraft}>捨棄</button>
+							<button className={styles.draftBannerResumeBtn} onClick={resumeDraft}>
+								繼續填寫
+							</button>
+							<button className={styles.draftBannerDiscardBtn} onClick={discardDraft}>
+								捨棄
+							</button>
 						</div>
 					</div>
 				)}
@@ -408,6 +419,7 @@ export default function SelfInspectionForm({ onClose, onSubmitted, existingFormI
 						templates={attachmentTemplates}
 						cabinCrewOptions={cabinCrewOptions}
 						suggestedTemplateId={suggestedAttachmentId}
+						formId={existingFormId}
 						value={attachments}
 						onChange={setAttachments}
 						showErrors={attemptedSubmit}

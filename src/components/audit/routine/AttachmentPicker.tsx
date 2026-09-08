@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import styles from "./AttachmentPicker.module.css";
 import ChecklistItemList, { ChecklistItem, ItemAnswer } from "./ChecklistItemList";
 import { ItemResult } from "./ChecklistItemRow";
+import { useAuth } from "@/context/AuthContext";
 
 interface Template {
 	id: string;
@@ -19,6 +20,7 @@ export interface TemplateWithItems {
 }
 
 export interface AttachmentInstance {
+	id?: string; // real audit_routine_form_attachments.id — only present once the form has been saved at least once; undefined for a brand-new, not-yet-saved attachment
 	template_id: string;
 	subject_crew_name: string;
 	subject_employee_id?: string;
@@ -29,6 +31,7 @@ interface Props {
 	templates: TemplateWithItems[]; // fetched by the parent, alongside main/focus templates
 	cabinCrewOptions: { employee_id?: string; name: string }[]; // ALL attachments are cabin-crew-only per instruction — flight crew names are record-keeping only, never audited against
 	suggestedTemplateId?: string | null; // from this month's monthly_focus_items.required_attachment_template_id
+	formId?: string; // existingFormId from the parent — undefined for a brand-new, not-yet-saved form. Upload UI needs this plus instance.id, so it only shows once both the form and its attachments have real DB rows.
 	value: AttachmentInstance[];
 	onChange: (value: AttachmentInstance[]) => void;
 	showErrors?: boolean; // true after a failed submit attempt — validates each attachment's own items too
@@ -44,7 +47,58 @@ function templateAccentColor(code: string): string {
 	return TEMPLATE_ACCENT_COLORS[code] ?? "#fb923c";
 }
 
-export default function AttachmentPicker({ templates, cabinCrewOptions, suggestedTemplateId, value, onChange, showErrors }: Props) {
+export default function AttachmentPicker({ templates, cabinCrewOptions, suggestedTemplateId, formId, value, onChange, showErrors }: Props) {
+	const { token } = useAuth();
+	const [uploadedFiles, setUploadedFiles] = useState<Record<string, { item_no: number; display_filename: string; id: string }[]>>({});
+	const [uploadingSlot, setUploadingSlot] = useState<string | null>(null); // `${attachmentId}-${itemNo}` while a slot is uploading
+	const [uploadError, setUploadError] = useState<string | null>(null);
+
+	// load already-uploaded files once we have a real form to ask about
+	useEffect(() => {
+		if (!formId || !token) return;
+		fetch(`/api/audit/routine/self-inspection/${formId}/fatigue-upload`, {
+			headers: { Authorization: `Bearer ${token}` },
+		})
+			.then((r) => r.json())
+			.then((data) => {
+				const byAttachment: Record<string, { item_no: number; display_filename: string; id: string }[]> = {};
+				for (const u of data.uploads ?? []) {
+					(byAttachment[u.attachment_id] ??= []).push({ item_no: u.item_no, display_filename: u.display_filename, id: u.id });
+				}
+				setUploadedFiles(byAttachment);
+			});
+	}, [formId, token]);
+
+	async function handleFileUpload(attachmentId: string, itemNo: number, file: File) {
+		if (!formId || !token) return;
+		const slotKey = `${attachmentId}-${itemNo}`;
+		setUploadingSlot(slotKey);
+		setUploadError(null);
+		try {
+			const formData = new FormData();
+			formData.append("file", file);
+			formData.append("attachment_id", attachmentId);
+			formData.append("item_no", String(itemNo));
+			const res = await fetch(`/api/audit/routine/self-inspection/${formId}/fatigue-upload`, {
+				method: "POST",
+				headers: { Authorization: `Bearer ${token}` },
+				body: formData,
+			});
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error ?? "上傳失敗");
+			setUploadedFiles((prev) => ({
+				...prev,
+				[attachmentId]: [
+					...(prev[attachmentId] ?? []).filter((f) => f.item_no !== itemNo),
+					{ item_no: itemNo, display_filename: data.display_filename, id: "" }, // real id not returned by POST — refetched on next load if needed for delete
+				],
+			}));
+		} catch (e: any) {
+			setUploadError(e.message ?? "上傳失敗");
+		} finally {
+			setUploadingSlot(null);
+		}
+	}
 	const [pickerOpen, setPickerOpen] = useState(false);
 
 	// always-required templates (fatigue) AND the monthly-focus-suggested
@@ -173,6 +227,48 @@ export default function AttachmentPicker({ templates, cabinCrewOptions, suggeste
 								onAnswerChange={(itemNo, result, remark) => setAnswer(template.id, itemNo, result, remark)}
 								showErrors={showErrors}
 							/>
+						)}
+
+						{template.code === "fatigue" && instance.subject_crew_name && (
+							<div className={styles.fatigueUploads}>
+								<p className={styles.fatigueUploadsTitle}>附表文件上傳</p>
+								{!instance.id || !formId ? (
+									<p className={styles.fatigueUploadsNote}>請先儲存草稿後，才能上傳附表文件</p>
+								) : (
+									[
+										{ itemNo: 12, label: "個人連續30天班表" },
+										{ itemNo: 13, label: "個人連續30天報到資訊摘要" },
+										{ itemNo: 14, label: "個人連續30天飛時清單" },
+									].map(({ itemNo, label }) => {
+										const slotKey = `${instance.id}-${itemNo}`;
+										const uploaded = uploadedFiles[instance.id!]?.find((f) => f.item_no === itemNo);
+										return (
+											<div key={itemNo} className={styles.fatigueUploadRow}>
+												<span className={styles.fatigueUploadLabel}>{label}</span>
+												{uploaded ? (
+													<span className={styles.fatigueUploadedName}>✓ {uploaded.display_filename}</span>
+												) : (
+													<span className={styles.fatigueUploadEmpty}>尚未上傳</span>
+												)}
+												<label className={styles.fatigueUploadBtn}>
+													{uploadingSlot === slotKey ? "上傳中..." : uploaded ? "重新上傳" : "選擇檔案"}
+													<input
+														type="file"
+														style={{ display: "none" }}
+														disabled={uploadingSlot === slotKey}
+														onChange={(e) => {
+															const file = e.target.files?.[0];
+															if (file) handleFileUpload(instance.id!, itemNo, file);
+															e.target.value = "";
+														}}
+													/>
+												</label>
+											</div>
+										);
+									})
+								)}
+								{uploadError && <p className={styles.fatigueUploadError}>{uploadError}</p>}
+							</div>
 						)}
 					</div>
 				);
