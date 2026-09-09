@@ -104,12 +104,30 @@ async function buildCefbDocx(auditDate: string, flightNo: string, subjectLabel: 
 	const headerRows = getRows(tables[0]);
 	setCellText(dom, getCells(headerRows[1])[0], auditDate);
 	setCellText(dom, getCells(headerRows[1])[1], flightNo);
-	setCellText(dom, getCells(headerRows[1])[2], subjectLabel);
-	// 4th header cell was never filled before — confirmed via raw XML that
-	// it exists (label was just whitespace, no visible text) but nothing
-	// ever wrote to it, leaving the auditor name missing entirely
-	setCellText(dom, getCells(headerRows[0])[3], "查核員:");
-	setCellText(dom, getCells(headerRows[1])[3], inspectorName);
+	// merge the value row's 3rd and 4th columns into one wide cell for
+	// 受檢人員 — confirmed via direct testing against the real template
+	// that this produces a clean single-line result regardless of how
+	// many crew names are joined, rather than relying on one column
+	// alone being wide enough
+	const valueRow = headerRows[1];
+	const valueCells = getCells(valueRow);
+	const subjectCell = valueCells[2];
+	const spareCell = valueCells[3];
+	const tcPr = subjectCell.getElementsByTagNameNS(W_NS, "tcPr")[0];
+	const tcW = tcPr?.getElementsByTagNameNS(W_NS, "tcW")[0];
+	const spareTcW = spareCell.getElementsByTagNameNS(W_NS, "tcPr")[0]?.getElementsByTagNameNS(W_NS, "tcW")[0];
+	if (tcPr && tcW && spareTcW) {
+		const combinedWidth = Number(tcW.getAttribute("w:w")) + Number(spareTcW.getAttribute("w:w"));
+		tcW.setAttribute("w:w", String(combinedWidth));
+		const gridSpan = dom.createElementNS(W_NS, "w:gridSpan");
+		gridSpan.setAttribute("w:val", "2");
+		tcPr.insertBefore(gridSpan, tcW);
+	}
+	valueRow.removeChild(spareCell);
+	setCellText(dom, subjectCell, subjectLabel.replace(/\n/g, "; "));
+	// 4th header cell intentionally left untouched — confirmed via your
+	// desired output that 查核員 should NOT appear in the header at all,
+	// only at the bottom (removed the earlier fill that added it here)
 
 	// bottom-of-document 查核員/查核日期 — a completely separate pair of
 	// paragraphs from the header cells above, confirmed via raw XML to

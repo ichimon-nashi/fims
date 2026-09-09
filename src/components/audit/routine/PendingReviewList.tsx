@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import styles from "./PendingReviewList.module.css";
 import { useAuth } from "@/context/AuthContext";
 import SelfInspectionForm from "./SelfInspectionForm";
+import JSZip from "jszip";
 
 interface AttachmentTag {
 	id: string;
@@ -154,10 +155,8 @@ export default function PendingReviewList({ onChanged }: { onChanged?: () => voi
 		const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
 		if (!res.ok) {
 			const data = await res.json().catch(() => ({}));
-			throw new Error(data.error ?? "匯出失敗");
+			throw new Error(data.error ?? "下載失敗");
 		}
-		// filename comes from the server's Content-Disposition header (the
-		// actual Chinese document names), not reconstructed client-side
 		const disposition = res.headers.get("Content-Disposition") ?? "";
 		const rfc5987Match = disposition.match(/filename\*=UTF-8''([^;]+)/);
 		const filename = rfc5987Match ? decodeURIComponent(rfc5987Match[1]) : fallbackName;
@@ -170,37 +169,70 @@ export default function PendingReviewList({ onChanged }: { onChanged?: () => voi
 		URL.revokeObjectURL(blobUrl);
 	}
 
+	// returns the file's bytes + real filename, without triggering a
+	// download itself — used to assemble everything into one zip instead
+	async function fetchFileBytes(url: string, fallbackName: string): Promise<{ filename: string; data: ArrayBuffer }> {
+		const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+		if (!res.ok) {
+			const data = await res.json().catch(() => ({}));
+			throw new Error(data.error ?? "匯出失敗");
+		}
+		const disposition = res.headers.get("Content-Disposition") ?? "";
+		const rfc5987Match = disposition.match(/filename\*=UTF-8''([^;]+)/);
+		const filename = rfc5987Match ? decodeURIComponent(rfc5987Match[1]) : fallbackName;
+		const data = await res.arrayBuffer();
+		return { filename, data };
+	}
+
 	async function handleExport(form: PendingForm) {
 		if (!token) return;
 		setBusyId(form.id);
 		try {
+			const files: { filename: string; data: ArrayBuffer }[] = [];
+
 			// main form, always
-			await downloadFile(`/api/audit/routine/self-inspection/${form.id}/export-docx`, "自我督察表.docx");
+			files.push(await fetchFileBytes(`/api/audit/routine/self-inspection/${form.id}/export-docx`, "自我督察表.docx"));
+
 			// every generated attachment docx present (fatigue is always present; c_efb only when added)
 			for (const att of form.audit_routine_form_attachments) {
-				// small delay between downloads — some browsers throttle/drop
-				// multiple near-simultaneous downloads triggered from one click
-				await new Promise((r) => setTimeout(r, 400));
-				await downloadFile(
-					`/api/audit/routine/self-inspection/${form.id}/export-attachment/${att.id}`,
-					`${att.checklist_templates?.name ?? "attachment"}.docx`,
+				files.push(
+					await fetchFileBytes(
+						`/api/audit/routine/self-inspection/${form.id}/export-attachment/${att.id}`,
+						`${att.checklist_templates?.name ?? "attachment"}.docx`,
+					),
 				);
 			}
+
 			// any uploaded fatigue supporting documents (班表/到資訊摘要/飛時清單)
-			// — this is the actual point of "下載檔案" instead of "匯出docx":
-			// scattered documents that used to go by email/instant message
-			// now come down in the same single action as the generated forms
 			const uploadsRes = await fetch(`/api/audit/routine/self-inspection/${form.id}/fatigue-upload`, {
 				headers: { Authorization: `Bearer ${token}` },
 			});
 			const uploadsData = await uploadsRes.json();
 			for (const upload of uploadsData.uploads ?? []) {
-				await new Promise((r) => setTimeout(r, 400));
-				await downloadFile(
-					`/api/audit/routine/self-inspection/${form.id}/fatigue-upload/${upload.id}`,
-					upload.display_filename,
+				files.push(
+					await fetchFileBytes(
+						`/api/audit/routine/self-inspection/${form.id}/fatigue-upload/${upload.id}`,
+						upload.display_filename,
+					),
 				);
 			}
+
+			// assemble into one zip — a single download instead of several
+			// separate ones, which used to get messy/easy to lose track of.
+			// A zip is the actual downloadable unit here; extracting it is
+			// what produces the "folder" the name implies.
+			const zip = new JSZip();
+			for (const f of files) zip.file(f.filename, f.data);
+			const zipBlob = await zip.generateAsync({ type: "blob" });
+
+			const dateCompact = form.audit_date.replace(/-/g, "");
+			const zipName = `${dateCompact}_${form.submitted_by_name}.zip`;
+			const blobUrl = URL.createObjectURL(zipBlob);
+			const a = document.createElement("a");
+			a.href = blobUrl;
+			a.download = zipName;
+			a.click();
+			URL.revokeObjectURL(blobUrl);
 		} catch (e: any) {
 			setError(e.message ?? "下載失敗");
 		} finally {
