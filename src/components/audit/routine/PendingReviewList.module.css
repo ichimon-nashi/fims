@@ -286,3 +286,55 @@
 	font-size: 0.8125rem;
 	color: rgba(232, 233, 237, 0.7);
 }
+
+.uploadsSection {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.uploadsToggle {
+	align-self: flex-start;
+	background: none;
+	border: none;
+	color: rgba(232, 233, 237, 0.6);
+	font-size: 0.8125rem;
+	cursor: pointer;
+	padding: 2px 0;
+}
+
+.uploadsToggle:hover {
+	color: #4a9eff;
+}
+
+.uploadsList {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 6px 0 0 4px;
+}
+
+.uploadsEmpty {
+	font-size: 0.75rem;
+	color: rgba(232, 233, 237, 0.4);
+}
+
+.uploadLink {
+	align-self: flex-start;
+	background: rgba(27, 175, 122, 0.08);
+	border: 1px solid rgba(27, 175, 122, 0.3);
+	color: #1baf7a;
+	border-radius: 6px;
+	padding: 4px 10px;
+	font-size: 0.75rem;
+	cursor: pointer;
+}
+
+.flaggedBadge {
+	background: rgba(251, 146, 60, 0.15);
+	color: #fb923c;
+	border-radius: 4px;
+	padding: 1px 8px;
+	font-size: 0.75rem;
+	font-weight: 600;
+}

@@ -31,7 +31,7 @@ export async function GET(
 
 	const { data: form, error: formError } = await supabase
 		.from("audit_routine_forms")
-		.select("*, audit_routine_form_attachments(id, subject_crew_name, subject_employee_id, checklist_templates(id, code, name))")
+		.select("*, audit_routine_form_attachments(id, subject_crew_name, subject_employee_id, comments, checklist_templates(id, code, name))")
 		.eq("id", id)
 		.single();
 
@@ -85,9 +85,10 @@ export async function GET(
 				category: ti.category,
 				item_text: ti.item_text,
 				ccom_ref: ti.ccom_ref,
-				standard_text: ti.standard_text, // 檢查標準 — was being dropped here despite select("*") including it; this is why an existing form never showed it while a new one did
+				standard_text: ti.standard_text,
 				result: answer?.result ?? null,
 				remark: answer?.remark ?? null,
+				flagged: answer?.flagged ?? false,
 			};
 		});
 	}
@@ -102,6 +103,7 @@ export async function GET(
 		template_id: att.checklist_templates?.id,
 		subject_crew_name: att.subject_crew_name,
 		subject_employee_id: att.subject_employee_id,
+		comments: att.comments,
 		template_name: att.checklist_templates?.name,
 		items: mergeAnswers(
 			(attachmentTemplateItems ?? []).filter((ti) => ti.template_id === att.checklist_templates?.id),

@@ -24,6 +24,7 @@ interface PendingForm {
 	submitted_by_name: string;
 	submitted_at: string;
 	audit_routine_form_attachments: AttachmentTag[];
+	flagged_count: number;
 }
 
 export default function PendingReviewList({ onChanged }: { onChanged?: () => void }) {
@@ -40,6 +41,12 @@ export default function PendingReviewList({ onChanged }: { onChanged?: () => voi
 	const [approveRemark, setApproveRemark] = useState(""); // becomes corrective_action (處置) on the created entry
 	const [busyId, setBusyId] = useState<string | null>(null);
 	const [editingId, setEditingId] = useState<string | null>(null);
+	// ── NEW: per-form uploaded-files list, fetched on demand when the
+	// user expands a card — not eagerly for every card on load, to avoid
+	// an N+1 request burst when there are many pending forms
+	const [expandedUploadsId, setExpandedUploadsId] = useState<string | null>(null);
+	const [uploadsByForm, setUploadsByForm] = useState<Record<string, { id: string; item_no: number; display_filename: string }[]>>({});
+	const [uploadsLoading, setUploadsLoading] = useState<string | null>(null);
 
 	async function handleCleanup() {
 		if (!token) return;
@@ -58,6 +65,25 @@ export default function PendingReviewList({ onChanged }: { onChanged?: () => voi
 			setCleanupResult(e.message ?? "清理失敗");
 		} finally {
 			setCleaningUp(false);
+		}
+	}
+
+	async function toggleUploads(formId: string) {
+		if (expandedUploadsId === formId) {
+			setExpandedUploadsId(null);
+			return;
+		}
+		setExpandedUploadsId(formId);
+		if (uploadsByForm[formId] || !token) return; // already cached
+		setUploadsLoading(formId);
+		try {
+			const res = await fetch(`/api/audit/routine/self-inspection/${formId}/fatigue-upload`, {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			const data = await res.json();
+			setUploadsByForm((prev) => ({ ...prev, [formId]: data.uploads ?? [] }));
+		} finally {
+			setUploadsLoading(null);
 		}
 	}
 
@@ -233,6 +259,7 @@ export default function PendingReviewList({ onChanged }: { onChanged?: () => voi
 							<span className={styles.submitterBadge}>提交人 {form.submitted_by_name}</span>
 							<span className={styles.tailBadge}>{form.aircraft_tail}</span>
 							{form.flight_no && <span className={styles.flightBadge}>✈ {form.flight_no}</span>}
+							{form.flagged_count > 0 && <span className={styles.flaggedBadge}>🚩 {form.flagged_count} 項待檢視</span>}
 						</div>
 						<span className={styles.pendingBadge}>待審核</span>
 					</div>
@@ -247,6 +274,36 @@ export default function PendingReviewList({ onChanged }: { onChanged?: () => voi
 								))}
 							</div>
 						)}
+
+						<div className={styles.uploadsSection}>
+							<button className={styles.uploadsToggle} onClick={() => toggleUploads(form.id)}>
+								📎 已上傳檔案{expandedUploadsId === form.id ? " ▾" : " ▸"}
+							</button>
+							{expandedUploadsId === form.id && (
+								<div className={styles.uploadsList}>
+									{uploadsLoading === form.id ? (
+										<span className={styles.uploadsEmpty}>載入中...</span>
+									) : (uploadsByForm[form.id]?.length ?? 0) === 0 ? (
+										<span className={styles.uploadsEmpty}>尚未上傳任何附表文件</span>
+									) : (
+										uploadsByForm[form.id]!.map((u) => (
+											<button
+												key={u.id}
+												className={styles.uploadLink}
+												onClick={() =>
+													downloadFile(
+														`/api/audit/routine/self-inspection/${form.id}/fatigue-upload/${u.id}`,
+														u.display_filename,
+													)
+												}
+											>
+												⬇ {u.display_filename}
+											</button>
+										))
+									)}
+								</div>
+							)}
+						</div>
 
 						{form.comments && (
 							<div>
@@ -301,7 +358,7 @@ export default function PendingReviewList({ onChanged }: { onChanged?: () => voi
 						) : (
 							<div className={styles.actions}>
 								<button className={styles.viewBtn} onClick={() => setEditingId(form.id)}>
-									檢視完整表單
+									編輯
 								</button>
 								<button
 									className={styles.approveBtn}

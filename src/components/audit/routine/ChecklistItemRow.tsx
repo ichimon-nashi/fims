@@ -13,12 +13,14 @@ interface Props {
 	standardText?: string | null; // 檢查標準 — what to actually check for, distinct from the item name
 	result: ItemResult | null;
 	remark: string;
+	flagged?: boolean; // separate from result — "need to come back to this", regardless of what's answered so far
 	onChange?: (result: ItemResult | null, remark: string) => void;
+	onFlagChange?: (flagged: boolean) => void;
 	showError?: boolean; // true after a failed submit attempt with this item unanswered
 	readOnly?: boolean; // static display for reviewing an already-submitted form — no buttons, no editing
 }
 
-export default function ChecklistItemRow({ itemNo, itemText, ccomRef, standardText, result, remark, onChange, showError, readOnly }: Props) {
+export default function ChecklistItemRow({ itemNo, itemText, ccomRef, standardText, result, remark, flagged, onChange, onFlagChange, showError, readOnly }: Props) {
 	// remark box shown if there's already text in it, or once the user
 	// explicitly asks for it via "+ 備註" — available regardless of result,
 	// not just on X, per the "all choices offer space to type remarks" decision
@@ -34,6 +36,7 @@ export default function ChecklistItemRow({ itemNo, itemText, ccomRef, standardTe
 				<div className={styles.itemHeader}>
 					<span className={styles.itemNo}>{itemNo}</span>
 					<p className={styles.itemText}>{itemText}</p>
+					{flagged && <span className={styles.flagBadge}>🚩</span>}
 					<span
 						className={
 							result === "V" ? styles.resultBadgeV : result === "X" ? styles.resultBadgeX : result === "NIL" ? styles.resultBadgeNil : styles.resultBadgeEmpty
@@ -50,7 +53,7 @@ export default function ChecklistItemRow({ itemNo, itemText, ccomRef, standardTe
 	}
 
 	return (
-		<div className={showError && !result ? styles.rowError : styles.row}>
+		<div className={showError && !result ? styles.rowError : flagged ? styles.rowFlagged : styles.row}>
 			<div className={styles.itemHeader}>
 				<span className={styles.itemNo}>{itemNo}</span>
 				<p className={styles.itemText}>{itemText}</p>
@@ -82,12 +85,31 @@ export default function ChecklistItemRow({ itemNo, itemText, ccomRef, standardTe
 				>
 					{remark ? "備註 ✓" : "+ 備註"}
 				</button>
+				{onFlagChange && (
+					<button
+						className={flagged ? styles.flagToggleActive : styles.flagToggle}
+						onClick={() => onFlagChange(!flagged)}
+						title="標記此項目，稍後需要回頭處理"
+					>
+						🚩
+					</button>
+				)}
 			</div>
 			{showRemark && (
 				<textarea
 					className={styles.remarkInput}
 					value={remark}
-					onChange={(e) => onChange?.(result, e.target.value)}
+					onChange={(e) => {
+						onChange?.(result, e.target.value);
+						e.target.style.height = "auto";
+						e.target.style.height = `${e.target.scrollHeight}px`;
+					}}
+					ref={(el) => {
+						if (el) {
+							el.style.height = "auto";
+							el.style.height = `${el.scrollHeight}px`;
+						}
+					}}
 					rows={2}
 				/>
 			)}

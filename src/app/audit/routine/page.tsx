@@ -10,8 +10,9 @@ import RoutineSummary from "@/components/audit/routine/RoutineSummary";
 import PendingReviewList from "@/components/audit/routine/PendingReviewList";
 import SelfInspectionForm from "@/components/audit/routine/SelfInspectionForm";
 import MonthlyFocusEditor from "@/components/audit/routine/MonthlyFocusEditor";
+import FatigueFileManager from "@/components/audit/routine/FatigueFileManager";
 
-type Tab = "summary" | "new" | "pending";
+type Tab = "summary" | "new" | "pending" | "files";
 
 const AUDIT_TABS = [
 	{ id: "routine", label: "例行性", href: "/audit/routine", tab: "routine" as const },
@@ -23,7 +24,8 @@ export default function RoutineAuditPage() {
 	const [tab, setTab] = useState<Tab>("summary");
 	const router = useRouter();
 	const permissions = usePermissions();
-	const { token } = useAuth();
+	const { token, user } = useAuth();
+	const isAdmin = user?.employee_id === "admin" || user?.employee_id === "51892";
 	const hasAccess = permissions.hasAuditTabAccess("routine");
 	const canSubmit = permissions.hasRoutineAction("submit");
 	const canApprove = permissions.hasRoutineAction("approve");
@@ -108,6 +110,14 @@ export default function RoutineAuditPage() {
 							待審核{pendingCount > 0 && ` (${pendingCount})`}
 						</button>
 					)}
+					{isAdmin && (
+						<button
+							className={tab === "files" ? styles.tabActive : styles.tab}
+							onClick={() => setTab("files")}
+						>
+							附件檔案管理
+						</button>
+					)}
 					{canApprove && (
 						<button className={styles.focusEditorLink} onClick={() => setShowFocusEditor(true)}>
 							編輯本月重點
@@ -116,6 +126,7 @@ export default function RoutineAuditPage() {
 				</div>
 
 				{tab === "summary" && <RoutineSummary />}
+				{tab === "files" && isAdmin && <FatigueFileManager onClose={() => setTab("summary")} />}
 				{tab === "new" && canSubmit && (
 					<SelfInspectionForm
 						onClose={() => setTab("summary")}

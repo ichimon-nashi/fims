@@ -20,10 +20,11 @@ export interface TemplateWithItems {
 }
 
 export interface AttachmentInstance {
-	id?: string; // real audit_routine_form_attachments.id — only present once the form has been saved at least once; undefined for a brand-new, not-yet-saved attachment
+	id?: string;
 	template_id: string;
 	subject_crew_name: string;
 	subject_employee_id?: string;
+	comments?: string; // independent per-attachment remark — C-EFB's own 查核結果說明, not shared with the main form's comments
 	answers: Record<number, ItemAnswer>;
 }
 
@@ -37,14 +38,32 @@ interface Props {
 	showErrors?: boolean; // true after a failed submit attempt — validates each attachment's own items too
 }
 
-// distinct accent color per attachment type, so fatigue/C-EFB/future
-// attachment types are visually distinguishable at a glance
+// distinct accent color AND icon per attachment type — icons give an
+// instant visual identity beyond just a border color
 const TEMPLATE_ACCENT_COLORS: Record<string, string> = {
 	fatigue: "#4a9eff",
 	c_efb: "#1baf7a",
 };
+const TEMPLATE_ICONS: Record<string, string> = {
+	fatigue: "😴",
+	c_efb: "📱",
+};
 function templateAccentColor(code: string): string {
 	return TEMPLATE_ACCENT_COLORS[code] ?? "#fb923c";
+}
+function templateIcon(code: string): string {
+	return TEMPLATE_ICONS[code] ?? "📎";
+}
+
+// C-EFB applies to the whole crew — this builds the actual list of
+// names (matching the reference document's format exactly, one per
+// line), not a generic "全體組員" placeholder. subject_employee_id stays
+// unset since there's no single person; the full formatted list lives
+// entirely in subject_crew_name, and the export route's existing
+// subjectLabel logic already falls through to using it as-is whenever
+// subject_employee_id is absent — no export-side change needed.
+function buildAllCrewLabel(cabinCrewOptions: { employee_id?: string; name: string }[]): string {
+	return cabinCrewOptions.map((c) => (c.employee_id ? `${c.employee_id}/${c.name}` : c.name)).join("\n");
 }
 
 export default function AttachmentPicker({ templates, cabinCrewOptions, suggestedTemplateId, formId, value, onChange, showErrors }: Props) {
@@ -119,7 +138,7 @@ export default function AttachmentPicker({ templates, cabinCrewOptions, suggeste
 					template_id: t.template.id,
 					// C-EFB applies to the whole crew, not one selected person —
 					// auto-filled so it's never blocked by the missing-subject check
-					subject_crew_name: t.template.code === "c_efb" ? "全體組員" : "",
+					subject_crew_name: t.template.code === "c_efb" ? buildAllCrewLabel(cabinCrewOptions) : "",
 					answers: {},
 				})),
 			]);
@@ -133,7 +152,7 @@ export default function AttachmentPicker({ templates, cabinCrewOptions, suggeste
 			...value,
 			{
 				template_id: templateId,
-				subject_crew_name: t?.template.code === "c_efb" ? "全體組員" : "",
+				subject_crew_name: t?.template.code === "c_efb" ? buildAllCrewLabel(cabinCrewOptions) : "",
 				answers: {},
 			},
 		]);
@@ -151,7 +170,13 @@ export default function AttachmentPicker({ templates, cabinCrewOptions, suggeste
 	function setAnswer(templateId: string, itemNo: number, result: ItemResult | null, remark: string) {
 		const instance = value.find((v) => v.template_id === templateId);
 		if (!instance) return;
-		updateInstance(templateId, { answers: { ...instance.answers, [itemNo]: { result, remark } } });
+		updateInstance(templateId, { answers: { ...instance.answers, [itemNo]: { ...instance.answers[itemNo], result, remark } } });
+	}
+
+	function setFlag(templateId: string, itemNo: number, flagged: boolean) {
+		const instance = value.find((v) => v.template_id === templateId);
+		if (!instance) return;
+		updateInstance(templateId, { answers: { ...instance.answers, [itemNo]: { ...instance.answers[itemNo], flagged } } });
 	}
 
 	const addedIds = new Set(value.map((v) => v.template_id));
@@ -178,10 +203,15 @@ export default function AttachmentPicker({ templates, cabinCrewOptions, suggeste
 									? styles.cardRequired
 									: styles.cardOptional
 						}
-						style={{ borderLeft: `4px solid ${templateAccentColor(template.code)}` }}
+						style={{
+							borderLeft: `4px solid ${templateAccentColor(template.code)}`,
+							background: missingSubject ? undefined : `${templateAccentColor(template.code)}0f`,
+						}}
 					>
 						<div className={styles.cardHeader}>
-							<span className={styles.cardName}>{template.name}</span>
+							<span className={styles.cardName}>
+								{templateIcon(template.code)} {template.name}
+							</span>
 							{template.always_required ? (
 								<span className={styles.badgeRequired}>每次必填</span>
 							) : (
@@ -197,7 +227,7 @@ export default function AttachmentPicker({ templates, cabinCrewOptions, suggeste
 						</div>
 
 						{template.code === "c_efb" ? (
-							<p className={styles.subjectLabel}>受檢人員：全體客艙組員</p>
+							<p className={styles.subjectLabel}>受檢人員：{instance.subject_crew_name.replace(/\n/g, "、")}</p>
 						) : (
 							<>
 								<p className={missingSubject ? styles.subjectLabelError : styles.subjectLabel}>
@@ -225,8 +255,21 @@ export default function AttachmentPicker({ templates, cabinCrewOptions, suggeste
 								items={items}
 								answers={instance.answers}
 								onAnswerChange={(itemNo, result, remark) => setAnswer(template.id, itemNo, result, remark)}
+								onFlagChange={(itemNo, flagged) => setFlag(template.id, itemNo, flagged)}
 								showErrors={showErrors}
 							/>
+						)}
+
+						{template.code === "c_efb" && instance.subject_crew_name && (
+							<div className={styles.cefbComments}>
+								<p className={styles.cefbCommentsLabel}>查核結果說明</p>
+								<textarea
+									className={styles.cefbCommentsInput}
+									value={instance.comments ?? ""}
+									onChange={(e) => updateInstance(template.id, { comments: e.target.value })}
+									rows={2}
+								/>
+							</div>
 						)}
 
 						{template.code === "fatigue" && instance.subject_crew_name && (

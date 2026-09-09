@@ -31,7 +31,7 @@
 }
 
 .sectionTitle {
-	font-size: 0.8125rem;
+	font-size: 1.0625rem;
 	font-weight: 600;
 	color: #e8e9ed;
 	text-transform: uppercase;
@@ -174,7 +174,7 @@
 
 .itemText {
 	margin: 0;
-	font-size: 0.8125rem;
+	font-size: 1.0625rem;
 	color: #e8e9ed;
 	flex: 1;
 }
@@ -183,16 +183,6 @@
 	margin: 0 0 8px 28px;
 	font-size: 0.6875rem;
 	color: rgba(232, 233, 237, 0.45);
-}
-
-.standardText {
-	margin: 0 0 8px 28px;
-	font-size: 0.75rem;
-	color: rgba(232, 233, 237, 0.7);
-	line-height: 1.4;
-	background: rgba(74, 158, 255, 0.05);
-	border-left: 2px solid rgba(74, 158, 255, 0.3);
-	padding: 4px 8px;
 }
 
 .controls {
@@ -261,7 +251,36 @@
 	border-radius: 6px;
 	color: #e8e9ed;
 	padding: 8px 10px;
-	font-size: 0.75rem;
+	font-size: 1.0625rem;
 	font-family: inherit;
 	resize: vertical;
+}
+.flagToggle,
+.flagToggleActive {
+	flex-shrink: 0;
+	background: none;
+	border: 1px solid rgba(232, 233, 237, 0.15);
+	border-radius: 6px;
+	padding: 8px 10px;
+	font-size: 0.875rem;
+	cursor: pointer;
+	opacity: 0.4;
+}
+
+.flagToggleActive {
+	opacity: 1;
+	border-color: rgba(251, 146, 60, 0.5);
+	background: rgba(251, 146, 60, 0.1);
+}
+
+.flagBadge {
+	flex-shrink: 0;
+	font-size: 0.875rem;
+}
+
+.rowFlagged {
+	padding: 12px 16px;
+	border-bottom: 1px solid rgba(232, 233, 237, 0.06);
+	border-left: 3px solid #fb923c;
+	background: rgba(251, 146, 60, 0.04);
 }

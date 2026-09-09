@@ -16,18 +16,20 @@ export interface ChecklistItem {
 export interface ItemAnswer {
 	result: ItemResult | null;
 	remark: string;
+	flagged?: boolean; // auditor marked this item for follow-up — separate from the V/X/NIL result
 }
 
-interface Props {
+export interface Props {
 	items: ChecklistItem[];
 	answers: Record<number, ItemAnswer>; // keyed by item_no
 	onAnswerChange?: (itemNo: number, result: ItemResult | null, remark: string) => void;
+	onFlagChange?: (itemNo: number, flagged: boolean) => void;
 	title?: string; // e.g. "一、安全 / 二、服務" or "本月加強重點檢查（2026年8月）"
 	showErrors?: boolean; // true after a failed submit attempt — highlights every unanswered item
 	readOnly?: boolean;
 }
 
-export default function ChecklistItemList({ items, answers, onAnswerChange, title, showErrors, readOnly }: Props) {
+export default function ChecklistItemList({ items, answers, onAnswerChange, onFlagChange, title, showErrors, readOnly }: Props) {
 	const completed = items.filter((i) => answers[i.item_no]?.result).length;
 
 	// ── NEW: the whole section is now collapsible via its own header —
@@ -110,6 +112,8 @@ export default function ChecklistItemList({ items, answers, onAnswerChange, titl
 										result={answer.result}
 										remark={answer.remark}
 										onChange={(result, remark) => onAnswerChange?.(item.item_no, result, remark)}
+										onFlagChange={onFlagChange ? (flagged) => onFlagChange(item.item_no, flagged) : undefined}
+										flagged={answer.flagged ?? false}
 										showError={showErrors}
 										readOnly={readOnly}
 									/>

@@ -120,24 +120,25 @@ export default function SelfInspectionForm({ onClose, onSubmitted, existingFormI
 					items: data.main.map((i: any) => ({ item_no: i.item_no, category: i.category, item_text: i.item_text, ccom_ref: i.ccom_ref, standard_text: i.standard_text })),
 				});
 				const mainAns: Record<number, ItemAnswer> = {};
-				for (const i of data.main) mainAns[i.item_no] = { result: i.result, remark: i.remark ?? "" };
+				for (const i of data.main) mainAns[i.item_no] = { result: i.result, remark: i.remark ?? "", flagged: i.flagged ?? false };
 				setMainAnswers(mainAns);
 
 				setFocusSetId(data.form.focus_set_id ?? null);
 				setFocusItems(data.focus.map((i: any) => ({ item_no: i.item_no, item_text: i.item_text })));
 				const focusAns: Record<number, ItemAnswer> = {};
-				for (const i of data.focus) focusAns[i.item_no] = { result: i.result, remark: i.remark ?? "" };
+				for (const i of data.focus) focusAns[i.item_no] = { result: i.result, remark: i.remark ?? "", flagged: i.flagged ?? false };
 				setFocusAnswers(focusAns);
 
 				setAttachments(
 					(data.attachments ?? []).map((att: any) => {
 						const answers: Record<number, ItemAnswer> = {};
-						for (const i of att.items) answers[i.item_no] = { result: i.result, remark: i.remark ?? "" };
+						for (const i of att.items) answers[i.item_no] = { result: i.result, remark: i.remark ?? "", flagged: i.flagged ?? false };
 						return {
 							id: att.id, // assumed present in the detail response — a real PK on a table this route already joins against
 							template_id: att.template_id,
 							subject_crew_name: att.subject_crew_name,
 							subject_employee_id: att.subject_employee_id,
+							comments: att.comments ?? "",
 							answers,
 						};
 					}),
@@ -285,22 +286,26 @@ export default function SelfInspectionForm({ onClose, onSubmitted, existingFormI
 					item_no: Number(itemNo),
 					result: a.result,
 					remark: a.remark || null,
+					flagged: a.flagged ?? false,
 				})),
 				...Object.entries(focusAnswers).map(([itemNo, a]) => ({
 					item_type: "focus",
 					item_no: Number(itemNo),
 					result: a.result,
 					remark: a.remark || null,
+					flagged: a.flagged ?? false,
 				})),
 			],
 			attachments: attachments.map((att) => ({
 				template_id: att.template_id,
 				subject_crew_name: att.subject_crew_name,
 				subject_employee_id: att.subject_employee_id,
+				comments: att.comments || null,
 				items: Object.entries(att.answers).map(([itemNo, a]) => ({
 					item_no: Number(itemNo),
 					result: a.result,
 					remark: a.remark || null,
+					flagged: a.flagged ?? false,
 				})),
 			})),
 		};
@@ -383,7 +388,10 @@ export default function SelfInspectionForm({ onClose, onSubmitted, existingFormI
 							items={mainTemplate.items.filter((i) => i.category === "一、安全").map((i) => ({ ...i, category: null }))}
 							answers={mainAnswers}
 							onAnswerChange={(itemNo, result, remark) =>
-								setMainAnswers((prev) => ({ ...prev, [itemNo]: { result, remark } }))
+								setMainAnswers((prev) => ({ ...prev, [itemNo]: { ...prev[itemNo], result, remark } }))
+							}
+							onFlagChange={(itemNo, flagged) =>
+								setMainAnswers((prev) => ({ ...prev, [itemNo]: { ...prev[itemNo], flagged } }))
 							}
 							title="一、安全"
 							showErrors={attemptedSubmit}
@@ -392,7 +400,10 @@ export default function SelfInspectionForm({ onClose, onSubmitted, existingFormI
 							items={mainTemplate.items.filter((i) => i.category === "二、服務").map((i) => ({ ...i, category: null }))}
 							answers={mainAnswers}
 							onAnswerChange={(itemNo, result, remark) =>
-								setMainAnswers((prev) => ({ ...prev, [itemNo]: { result, remark } }))
+								setMainAnswers((prev) => ({ ...prev, [itemNo]: { ...prev[itemNo], result, remark } }))
+							}
+							onFlagChange={(itemNo, flagged) =>
+								setMainAnswers((prev) => ({ ...prev, [itemNo]: { ...prev[itemNo], flagged } }))
 							}
 							title="二、服務"
 							showErrors={attemptedSubmit}
@@ -407,12 +418,25 @@ export default function SelfInspectionForm({ onClose, onSubmitted, existingFormI
 						items={focusItems}
 						answers={focusAnswers}
 						onAnswerChange={(itemNo, result, remark) =>
-							setFocusAnswers((prev) => ({ ...prev, [itemNo]: { result, remark } }))
+							setFocusAnswers((prev) => ({ ...prev, [itemNo]: { ...prev[itemNo], result, remark } }))
+						}
+						onFlagChange={(itemNo, flagged) =>
+							setFocusAnswers((prev) => ({ ...prev, [itemNo]: { ...prev[itemNo], flagged } }))
 						}
 						title="本月加強重點檢查"
 						showErrors={attemptedSubmit}
 					/>
 				)}
+
+				<div className={styles.commentSection}>
+					<p className={styles.commentLabel}>查核結果及建議 *</p>
+					<textarea
+						className={attemptedSubmit && !comments.trim() ? styles.commentInputError : styles.commentInput}
+						value={comments}
+						onChange={(e) => setComments(e.target.value)}
+						rows={3}
+					/>
+				</div>
 
 				<Section title="附加查核">
 					<AttachmentPicker
@@ -425,16 +449,6 @@ export default function SelfInspectionForm({ onClose, onSubmitted, existingFormI
 						showErrors={attemptedSubmit}
 					/>
 				</Section>
-
-				<div className={styles.commentSection}>
-					<p className={styles.commentLabel}>查核結果及建議 *</p>
-					<textarea
-						className={attemptedSubmit && !comments.trim() ? styles.commentInputError : styles.commentInput}
-						value={comments}
-						onChange={(e) => setComments(e.target.value)}
-						rows={3}
-					/>
-				</div>
 			</div>
 
 			{submitError && <p className={styles.error}>{submitError}</p>}

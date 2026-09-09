@@ -21,6 +21,41 @@ const CEFB_TEMPLATE_PATH = path.join(process.cwd(), "public/templates/audit_rout
 // left-alignment override), not by avoiding append.
 const CEFB_APPEND_REMARK_ITEMS = new Set([4, 8, 9, 33]);
 
+// Forces every run in the document to a given size + CJK font. Confirmed
+// via direct testing: setting w:ascii/w:hAnsi (Latin-text font) to a CJK
+// font like DFKai-SB caused LibreOffice to substitute wider metrics for
+// short Latin abbreviations ("CCOM", "NA"), making them wrap awkwardly —
+// only w:eastAsia (CJK characters) is touched, Latin font stays whatever
+// it already was.
+function applyDocumentFont(dom: Document, sizeHalfPoints: number, fontName: string) {
+	// iterate every RUN, not every existing rPr — a run with no rPr at
+	// all (confirmed: the comments-injection code creates exactly this)
+	// was previously invisible to this function, silently keeping
+	// whatever default font Word falls back to
+	const runs = Array.from(dom.getElementsByTagNameNS(W_NS, "r"));
+	for (const run of runs) {
+		let rPr = run.getElementsByTagNameNS(W_NS, "rPr")[0];
+		if (!rPr) {
+			rPr = dom.createElementNS(W_NS, "w:rPr");
+			run.insertBefore(rPr, run.firstChild);
+		}
+		let fonts = rPr.getElementsByTagNameNS(W_NS, "rFonts")[0];
+		if (!fonts) {
+			fonts = dom.createElementNS(W_NS, "w:rFonts");
+			rPr.insertBefore(fonts, rPr.firstChild);
+		}
+		fonts.setAttribute("w:eastAsia", fontName);
+		for (const tag of ["sz", "szCs"]) {
+			let el = rPr.getElementsByTagNameNS(W_NS, tag)[0];
+			if (!el) {
+				el = dom.createElementNS(W_NS, `w:${tag}`);
+				rPr.appendChild(el);
+			}
+			el.setAttribute("w:val", String(sizeHalfPoints));
+		}
+	}
+}
+
 function appendCellText(doc: Document, tc: Element, text: string) {
 	const p = tc.getElementsByTagNameNS(W_NS, "p")[0];
 	if (!p) return;
@@ -56,7 +91,7 @@ function appendCellText(doc: Document, tc: Element, text: string) {
 	p.appendChild(r);
 }
 
-async function buildCefbDocx(auditDate: string, flightNo: string, subjectLabel: string, comments: string | null, items: { item_no: number; result: string | null; remark: string | null }[]) {
+async function buildCefbDocx(auditDate: string, flightNo: string, subjectLabel: string, inspectorName: string, comments: string | null, items: { item_no: number; result: string | null; remark: string | null }[]) {
 	if (!fs.existsSync(CEFB_TEMPLATE_PATH)) {
 		throw new Error(`C-EFB template not found at ${CEFB_TEMPLATE_PATH}`);
 	}
@@ -70,6 +105,49 @@ async function buildCefbDocx(auditDate: string, flightNo: string, subjectLabel: 
 	setCellText(dom, getCells(headerRows[1])[0], auditDate);
 	setCellText(dom, getCells(headerRows[1])[1], flightNo);
 	setCellText(dom, getCells(headerRows[1])[2], subjectLabel);
+	// 4th header cell was never filled before — confirmed via raw XML that
+	// it exists (label was just whitespace, no visible text) but nothing
+	// ever wrote to it, leaving the auditor name missing entirely
+	setCellText(dom, getCells(headerRows[0])[3], "查核員:");
+	setCellText(dom, getCells(headerRows[1])[3], inspectorName);
+
+	// bottom-of-document 查核員/查核日期 — a completely separate pair of
+	// paragraphs from the header cells above, confirmed via raw XML to
+	// exist near the end of the template but never previously filled.
+	// 查核員's paragraph ends in a bare label with nothing after it, so a
+	// simple append is safe. 查核日期's last run has a literal hardcoded
+	// "2026/    /" baked into the template (confirmed via raw XML) —
+	// appending after that would produce a garbled double-date, so that
+	// run's text is replaced in place instead.
+	const allParagraphs = Array.from(dom.getElementsByTagNameNS(W_NS, "p"));
+	const dateParagraphIndex = allParagraphs.findIndex((p) => {
+		const t = Array.from(p.getElementsByTagNameNS(W_NS, "t")).map((x) => x.textContent).join("");
+		// must match BOTH the label and the hardcoded year pattern — the
+		// top header's own label paragraph ("查核日期:" with nothing after
+		// it) also matches on label alone, which was silently grabbing
+		// the wrong paragraph before this fix
+		return t.replace(/\s/g, "").includes("查核日期") && t.includes("2026/");
+	});
+	if (dateParagraphIndex >= 0) {
+		const dateParagraph = allParagraphs[dateParagraphIndex];
+		const runs = Array.from(dateParagraph.getElementsByTagNameNS(W_NS, "r"));
+		const lastRun = runs[runs.length - 1];
+		const t = lastRun?.getElementsByTagNameNS(W_NS, "t")[0];
+		if (t) {
+			while (t.firstChild) t.removeChild(t.firstChild);
+			t.appendChild(dom.createTextNode(auditDate));
+		}
+		// 查核員's paragraph sits immediately before 查核日期's in the
+		// template — targeting it positionally, not by text match, since
+		// the whitespace-tolerant text search for "查核員" was confirmed
+		// unreliable against the actual deployed template (produced a
+		// blank field even though the same inspectorName value correctly
+		// filled the header cell moments earlier)
+		const inspectorParagraph = allParagraphs[dateParagraphIndex - 1];
+		if (inspectorParagraph) {
+			appendToParagraphByLabel(dom, [inspectorParagraph], "員", inspectorName);
+		}
+	}
 
 	const rows = getRows(tables[1]);
 	for (const item of items) {
@@ -78,7 +156,7 @@ async function buildCefbDocx(auditDate: string, flightNo: string, subjectLabel: 
 		const cells = getCells(row);
 		if (item.result) {
 			const col = item.result === "V" ? 4 : item.result === "X" ? 5 : 6;
-			setCellText(dom, cells[col], "✓");
+			setCellText(dom, cells[col], "✓", { align: "center" });
 		}
 		if (item.remark) {
 			if (CEFB_APPEND_REMARK_ITEMS.has(item.item_no)) {
@@ -128,6 +206,8 @@ async function buildCefbDocx(auditDate: string, flightNo: string, subjectLabel: 
 		}
 	}
 
+	applyDocumentFont(dom, 22, "DFKai-SB"); // 11pt per instruction
+
 	const serialized = new XMLSerializer().serializeToString(dom);
 	zip.file("word/document.xml", serialized);
 	return zip.generateAsync({ type: "nodebuffer" });
@@ -167,20 +247,20 @@ function forceSize(doc: Document, rPr: Element, size: number) {
 		rPr.appendChild(el);
 	}
 }
-function setCellText(doc: Document, tc: Element, text: string, opts: { fallbackSize?: number; forcedSize?: number } = {}) {
+function setCellText(doc: Document, tc: Element, text: string, opts: { fallbackSize?: number; forcedSize?: number; align?: "left" | "center" } = {}) {
 	const p = tc.getElementsByTagNameNS(W_NS, "p")[0];
 	if (!p) return;
 	let pPr = p.getElementsByTagNameNS(W_NS, "pPr")[0];
-	// same explicit left-align fix as appendCellText — applied defensively
-	// here too, since any remark long enough to wrap to multiple lines
-	// could hit the identical justify-stretch issue on this template
+	// same explicit align fix as appendCellText — defaults to left (the
+	// justify-stretch fix), but a short single-character value like the
+	// result mark should be centered in its narrow column instead
 	if (!pPr) {
 		pPr = doc.createElementNS(W_NS, "w:pPr");
 		p.insertBefore(pPr, p.firstChild);
 	}
 	for (const jc of Array.from(pPr.getElementsByTagNameNS(W_NS, "jc"))) pPr.removeChild(jc);
 	const jc = doc.createElementNS(W_NS, "w:jc");
-	jc.setAttribute("w:val", "left");
+	jc.setAttribute("w:val", opts.align ?? "left");
 	pPr.appendChild(jc);
 	const defaultRPr = pPr?.getElementsByTagNameNS(W_NS, "rPr")[0];
 	const existingRuns = Array.from(p.getElementsByTagNameNS(W_NS, "r"));
@@ -189,16 +269,23 @@ function setCellText(doc: Document, tc: Element, text: string, opts: { fallbackS
 		defaultRPr;
 	for (const r of existingRuns) p.removeChild(r);
 	if (!text) return;
-	const r = doc.createElementNS(W_NS, "w:r");
-	const rPr = sourceRPr ? (sourceRPr.cloneNode(true) as Element) : buildFallbackRPr(doc, opts.fallbackSize ?? 20);
-	stripColor(rPr);
-	if (opts.forcedSize !== undefined) forceSize(doc, rPr, opts.forcedSize);
-	r.appendChild(rPr);
-	const t = doc.createElementNS(W_NS, "w:t");
-	t.setAttribute("xml:space", "preserve");
-	t.appendChild(doc.createTextNode(text));
-	r.appendChild(t);
-	p.appendChild(r);
+	// split on newlines and insert explicit <w:br/> between lines — a
+	// single text node with literal \n characters renders as one
+	// unbroken line in Word, it doesn't interpret \n as a line break
+	const lines = text.split("\n");
+	lines.forEach((line, i) => {
+		const r = doc.createElementNS(W_NS, "w:r");
+		const rPr = sourceRPr ? (sourceRPr.cloneNode(true) as Element) : buildFallbackRPr(doc, opts.fallbackSize ?? 20);
+		stripColor(rPr);
+		if (opts.forcedSize !== undefined) forceSize(doc, rPr, opts.forcedSize);
+		r.appendChild(rPr);
+		if (i > 0) r.appendChild(doc.createElementNS(W_NS, "w:br"));
+		const t = doc.createElementNS(W_NS, "w:t");
+		t.setAttribute("xml:space", "preserve");
+		t.appendChild(doc.createTextNode(line));
+		r.appendChild(t);
+		p.appendChild(r);
+	});
 }
 // fills the blank-space run between pre-printed label text (e.g. "休時" /
 // "小時") without disturbing the surrounding label — used only for the
@@ -222,7 +309,13 @@ function fillBlankRun(tc: Element, value: string): boolean {
 function appendToParagraphByLabel(dom: Document, paragraphs: Element[], labelSubstring: string, value: string, fallbackSize = 20): boolean {
 	for (const p of paragraphs) {
 		const text = Array.from(p.getElementsByTagNameNS(W_NS, "t")).map((t) => t.textContent).join("");
-		if (text.includes(labelSubstring)) {
+		// whitespace-tolerant match — confirmed CEFB's own template has
+		// "查 核 員： " with spaces between every character, which an exact
+		// substring match against "查核員" silently never caught. Stripping
+		// whitespace from both sides before comparing is a strict superset
+		// of the old exact match, so labels without spacing (fatigue's
+		// "檢查人員"/"檢查日期") still match exactly as before.
+		if (text.replace(/\s/g, "").includes(labelSubstring.replace(/\s/g, ""))) {
 			const runs = Array.from(p.getElementsByTagNameNS(W_NS, "r"));
 			for (let i = runs.length - 1; i >= 0; i--) {
 				const runText = Array.from(runs[i].getElementsByTagNameNS(W_NS, "t")).map((t) => t.textContent ?? "").join("");
@@ -271,7 +364,7 @@ async function buildFatigueDocx(subjectLabel: string, inspectorName: string, aud
 		const row = rows[rowIdx];
 		if (!row) continue;
 		const cells = getCells(row);
-		setCellText(dom, cells[2], item.result ?? "");
+		setCellText(dom, cells[2], item.result ?? "", { align: "center" });
 		if (item.item_no === 6 || item.item_no === 7) {
 			// preserve the pre-printed "休時＿＿＿小時" text, fill only the blank
 			if (item.remark) fillBlankRun(cells[3], item.remark);
@@ -279,6 +372,8 @@ async function buildFatigueDocx(subjectLabel: string, inspectorName: string, aud
 			setCellText(dom, cells[3], item.remark ?? "", { forcedSize: 16 });
 		}
 	}
+
+	applyDocumentFont(dom, 24, "DFKai-SB"); // 12pt per instruction
 
 	const serialized = new XMLSerializer().serializeToString(dom);
 	zip.file("word/document.xml", serialized);
@@ -342,16 +437,17 @@ export async function GET(
 		? `${attachment.subject_employee_id}/${attachment.subject_crew_name}`
 		: attachment.subject_crew_name;
 
-	if (code === "fatigue") {
-		const { data: submitter } = await supabase
-			.from("users")
-			.select("full_name")
-			.eq("employee_id", form.submitted_by)
-			.single();
+	const { data: submitter } = await supabase
+		.from("users")
+		.select("full_name")
+		.eq("employee_id", form.submitted_by)
+		.single();
+	const inspectorName = submitter?.full_name ?? form.submitted_by;
 
+	if (code === "fatigue") {
 		const buffer = await buildFatigueDocx(
 			subjectLabel,
-			submitter?.full_name ?? form.submitted_by,
+			inspectorName,
 			form.audit_date,
 			items ?? [],
 		);
@@ -366,7 +462,7 @@ export async function GET(
 	}
 
 	if (code === "c_efb") {
-		const buffer = await buildCefbDocx(form.audit_date, form.flight_no ?? "", subjectLabel, form.comments ?? null, items ?? []);
+		const buffer = await buildCefbDocx(form.audit_date, form.flight_no ?? "", subjectLabel, inspectorName, attachment.comments ?? null, items ?? []);
 		return new NextResponse(buffer, {
 			status: 200,
 			headers: {

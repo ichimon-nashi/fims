@@ -56,11 +56,24 @@ export async function GET(req: NextRequest) {
 		: { data: [] };
 	const nameMap = new Map((submitters ?? []).map((u) => [u.employee_id, u.full_name]));
 
+	// per-form flagged item count — fetched separately and tallied here
+	// rather than a GROUP BY, since the Supabase JS client doesn't do
+	// aggregate queries directly
+	const formIds = (data ?? []).map((f) => f.id);
+	const { data: flaggedRows } = formIds.length
+		? await supabase.from("audit_routine_items").select("form_id").eq("flagged", true).in("form_id", formIds)
+		: { data: [] };
+	const flaggedCountMap = new Map<string, number>();
+	for (const row of flaggedRows ?? []) {
+		flaggedCountMap.set(row.form_id, (flaggedCountMap.get(row.form_id) ?? 0) + 1);
+	}
+
 	// strip internal-only fields defensively even for the "own" scope,
 	// in case a future column addition forgets this rule
 	const records = (data ?? []).map(({ reviewed_by, ...rest }) => ({
 		...rest,
 		submitted_by_name: nameMap.get(rest.submitted_by) ?? rest.submitted_by,
+		flagged_count: flaggedCountMap.get(rest.id) ?? 0,
 	}));
 
 	return NextResponse.json({ records });
@@ -216,6 +229,7 @@ export async function POST(req: NextRequest) {
 		item_no: it.item_no,
 		result: it.result,
 		remark: it.remark ?? null,
+		flagged: it.flagged ?? false,
 	}));
 
 	if (itemRows.length > 0) {
@@ -237,6 +251,7 @@ export async function POST(req: NextRequest) {
 					template_id: att.template_id,
 					subject_crew_name: att.subject_crew_name,
 					subject_employee_id: att.subject_employee_id ?? null,
+					comments: att.comments ?? null,
 				},
 				{ onConflict: "form_id,template_id" },
 			)
@@ -253,6 +268,7 @@ export async function POST(req: NextRequest) {
 			item_no: it.item_no,
 			result: it.result,
 			remark: it.remark ?? null,
+			flagged: it.flagged ?? false,
 		}));
 
 		const { error: deleteAttItemsError } = await supabase
