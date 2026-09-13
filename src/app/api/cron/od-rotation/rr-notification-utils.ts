@@ -42,9 +42,19 @@ export interface DueItem {
 	barrierId?: string;
 	nextReviewDate: string;
 	daysRemaining: number;
+	urgency: '5-day' | '1-day';
 	hazardNumber?: string;
 	hazardDescription?: string;
 }
+
+// Days-before-deadline thresholds that trigger a notification.
+// Since this runs once/day and reads a static next_review_date, each
+// threshold fires exactly once per item (no de-dupe table needed) —
+// unless the cron misses a day, in which case that threshold is skipped
+// entirely rather than fired late. Flagging this as a known gap, not fixing
+// it silently: if missed-day catch-up matters to you, this needs a
+// "daysRemaining <= X" comparison instead, which changes behavior on reruns.
+const NOTIFY_DAYS_BEFORE = [5, 1] as const;
 
 // HARDCODED EMAIL RECIPIENTS - Edit this array to add/remove recipients
 const EMAIL_RECIPIENTS = ['ichimon.nashi@gmail.com'];
@@ -150,8 +160,7 @@ export async function findDueReviews(): Promise<DueItem[]> {
 		if (hasRisk && hasBarrier && sameNextReview) {
 			const daysRemaining = getDaysUntilReview(entry.risk_next_review);
 			
-			// Only add if due TODAY (0 days remaining)
-			if (daysRemaining === 0) {
+			if ((NOTIFY_DAYS_BEFORE as readonly number[]).includes(daysRemaining)) {
 				const riskId = entry.risk_id || extractRiskId(entry.risk_id_barrier);
 				const barrierId = entry.barrier_id || extractBarrierId(entry.risk_id_barrier);
 				
@@ -163,19 +172,19 @@ export async function findDueReviews(): Promise<DueItem[]> {
 					barrierId,
 					nextReviewDate: entry.risk_next_review,
 					daysRemaining,
+					urgency: daysRemaining === 1 ? '1-day' : '5-day',
 					hazardNumber: entry.srm_table_link?.number,
 					hazardDescription: entry.srm_table_link?.hazard_description
 				});
 				
-				console.log(`✓ Due TODAY: ${entry.rr_number} - Risk+Barrier (${riskId}, ${barrierId})`);
+				console.log(`✓ Due in ${daysRemaining} day(s): ${entry.rr_number} - Risk+Barrier (${riskId}, ${barrierId})`);
 			}
 		} else {
 			// Separate Risk review
 			if (hasRisk && entry.risk_next_review) {
 				const daysRemaining = getDaysUntilReview(entry.risk_next_review);
 				
-				// Only add if due TODAY (0 days remaining)
-				if (daysRemaining === 0) {
+				if ((NOTIFY_DAYS_BEFORE as readonly number[]).includes(daysRemaining)) {
 					const riskId = entry.risk_id || extractRiskId(entry.risk_id_barrier);
 					
 					dueItems.push({
@@ -185,11 +194,12 @@ export async function findDueReviews(): Promise<DueItem[]> {
 						riskId,
 						nextReviewDate: entry.risk_next_review,
 						daysRemaining,
+						urgency: daysRemaining === 1 ? '1-day' : '5-day',
 						hazardNumber: entry.srm_table_link?.number,
 						hazardDescription: entry.srm_table_link?.hazard_description
 					});
 					
-					console.log(`✓ Due TODAY: ${entry.rr_number} - Risk (${riskId})`);
+					console.log(`✓ Due in ${daysRemaining} day(s): ${entry.rr_number} - Risk (${riskId})`);
 				}
 			}
 			
@@ -197,8 +207,7 @@ export async function findDueReviews(): Promise<DueItem[]> {
 			if (hasBarrier && entry.barrier_next_review) {
 				const daysRemaining = getDaysUntilReview(entry.barrier_next_review);
 				
-				// Only add if due TODAY (0 days remaining)
-				if (daysRemaining === 0) {
+				if ((NOTIFY_DAYS_BEFORE as readonly number[]).includes(daysRemaining)) {
 					const riskId = entry.risk_id || extractRiskId(entry.risk_id_barrier);
 					const barrierId = entry.barrier_id || extractBarrierId(entry.risk_id_barrier);
 					
@@ -210,11 +219,12 @@ export async function findDueReviews(): Promise<DueItem[]> {
 						barrierId,
 						nextReviewDate: entry.barrier_next_review,
 						daysRemaining,
+						urgency: daysRemaining === 1 ? '1-day' : '5-day',
 						hazardNumber: entry.srm_table_link?.number,
 						hazardDescription: entry.srm_table_link?.hazard_description
 					});
 					
-					console.log(`✓ Due TODAY: ${entry.rr_number} - Barrier (${barrierId})`);
+					console.log(`✓ Due in ${daysRemaining} day(s): ${entry.rr_number} - Barrier (${barrierId})`);
 				}
 			}
 		}
