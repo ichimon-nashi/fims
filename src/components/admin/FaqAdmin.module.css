@@ -40,13 +40,18 @@
 }
 
 .select {
-	background: rgba(255, 255, 255, 0.05);
+	background: #1b2136;
 	border: 1px solid var(--glass-border);
 	color: var(--text);
 	border-radius: 8px;
 	padding: 0.5rem 0.75rem;
 	font-family: inherit;
 	font-size: 0.9rem;
+}
+
+.select option {
+	background-color: #1b2136;
+	color: var(--text);
 }
 
 .primaryBtn {
