@@ -239,6 +239,8 @@
 .navigationIcon.roulette     { background: rgba(251, 191, 36, 0.15);  color: #fbbf24; }
 /* ── NEW: user management icon ── */
 .navigationIcon.userManagement { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+/* ── NEW: FAQ admin icon ── */
+.navigationIcon.faqAdmin       { background: rgba(34, 211, 238, 0.15);  color: #22d3ee; }
 
 .navigationItem:hover .navigationIcon {
 	background: rgba(74, 158, 255, 0.2);

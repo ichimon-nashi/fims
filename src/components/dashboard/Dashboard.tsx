@@ -10,6 +10,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useWeather } from "@/hooks/useWeather";
 import Image from "next/image";
+import FaqProvider from "@/components/faq/FaqProvider";
+import HelpBadge from "@/components/faq/HelpBadge";
+import HelpUpdatesPanel from "@/components/dashboard/HelpUpdatesPanel";
+import { APP_META } from "@/lib/appConfig";
 import styles from "./Dashboard.module.css";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -162,24 +166,12 @@ const Dashboard = () => {
 		  })();
 
 	// ── Quick actions ─────────────────────────────────────────────────────────
-	const allQuickActions = [
-		{ id: "roster",          title: "教師班表",   icon: "/images/roster.png",     href: "/roster",              color: "#3b82f6" },
-		{ id: "tasks",           title: "任務管理",   icon: "/images/task.png",       href: "/tasks",               color: "#10b981" },
-		{ id: "sms",             title: "SMS",        icon: "/images/sms.png",        href: "/sms",                 color: "#ef4444" },
-		{ id: "oral_test",       title: "翻書口試",   icon: "/images/oraltest.png",   href: "/oral-test/dashboard", color: "#f59e0b" },
-		{ id: "bc_training",     title: "B/C訓練",    icon: "/images/bctraining.png", href: "/bc-training",         color: "#8b5cf6" },
-		{ id: "mdafaat",         title: "情境演練",   icon: "/images/mdafaat.png",    href: "/mdafaat",             color: "#ec4899" },
-		{ id: "ads",             title: "AdS",        icon: "/images/ads.png",        href: "/ads",                 color: "#14b8a6" },
-		{ id: "ccom_review",     title: "手冊抽問",   icon: "/images/ccomreview.png", href: "/ccom-review",         color: "#fb923c" },
-		{ id: "audit",           title: "查核",       icon: "/images/audit.png",      href: "/audit",               color: "#a78bfa" },
-		{ id: "roulette",        title: "天選之人",   icon: "/images/roulette.png",   href: "/roulette",            color: "#fbbf24" },
-		{ id: "user-management", title: "使用者管理", icon: "/images/users.png",      href: "/admin/users",         color: "#38bdf8" },
-	];
-
+	// Source of truth moved to src/config/apps.ts (APP_META) so FAQ/help
+	// content can key off the same id/title/icon/color without duplicating it.
 	const quickActions = useMemo(
 		() =>
-			allQuickActions.filter((a) => {
-				if (a.id === "user-management") {
+			APP_META.filter((a) => {
+				if (a.id === "user-management" || a.id === "faq_admin") {
 					return user?.employee_id === "admin" || user?.employee_id === "51892";
 				}
 				return permissions.hasAppAccess(a.id as any);
@@ -224,7 +216,7 @@ const Dashboard = () => {
 	if (!user || !token) return null;
 
 	return (
-		<>
+		<FaqProvider>
 			<Navbar />
 			<div className={styles.dashboard} ref={rootRef}>
 				{/* Ambient drifting glows */}
@@ -435,41 +427,46 @@ const Dashboard = () => {
 							</div>
 						</div>
 
-						{/* Right col: quick actions */}
-						<div className={styles.rightPanel} data-anim="panel">
-							<div className={styles.panelTitle}>快速功能</div>
-							<div className={styles.quickActionsGrid}>
-								{quickActions.map((action) => (
-									<a
-										key={action.id}
-										href={action.href}
-										className={styles.quickActionGridItem}
-										data-anim="tile"
-										onMouseEnter={onTileEnter}
-										onMouseLeave={onTileLeave}
-									>
-										<div
-											className={styles.quickActionGridIcon}
-											style={{ backgroundColor: `${action.color}22` }}
-											data-tile-icon
+						{/* Right col: quick actions + help/updates */}
+						<div className={styles.rightCol}>
+							<div className={styles.rightPanel} data-anim="panel">
+								<div className={styles.panelTitle}>快速功能</div>
+								<div className={styles.quickActionsGrid}>
+									{quickActions.map((action) => (
+										<a
+											key={action.id}
+											href={action.href}
+											className={styles.quickActionGridItem}
+											data-anim="tile"
+											onMouseEnter={onTileEnter}
+											onMouseLeave={onTileLeave}
 										>
-											<Image
-												src={action.icon}
-												alt={action.title}
-												width={ICON_SIZE}
-												height={ICON_SIZE}
-												style={{ objectFit: "contain" }}
-											/>
-										</div>
-										<span className={styles.quickActionGridLabel}>{action.title}</span>
-									</a>
-								))}
+											<div
+												className={styles.quickActionGridIcon}
+												style={{ backgroundColor: `${action.color}22` }}
+												data-tile-icon
+											>
+												<Image
+													src={action.icon}
+													alt={action.title}
+													width={ICON_SIZE}
+													height={ICON_SIZE}
+													style={{ objectFit: "contain" }}
+												/>
+											</div>
+											<span className={styles.quickActionGridLabel}>{action.title}</span>
+											<HelpBadge appId={action.id} label={action.title} />
+										</a>
+									))}
+								</div>
 							</div>
+
+							<HelpUpdatesPanel />
 						</div>
 					</div>
 				</div>
 			</div>
-		</>
+		</FaqProvider>
 	);
 };
 

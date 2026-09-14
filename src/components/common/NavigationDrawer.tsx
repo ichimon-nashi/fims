@@ -265,6 +265,23 @@ const navigationItems: NavigationItem[] = [
 		description: "人員資料與權限管理",
 		iconColor: "userManagement",
 	},
+	{
+		id: "faq-admin",
+		title: "FAQ管理",
+		icon: (
+			<Image
+				src="/images/faq.png"
+				alt="FAQ管理"
+				width={NAV_ICON_SIZE}
+				height={NAV_ICON_SIZE}
+				style={{ objectFit: "contain" }}
+				onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+			/>
+		),
+		path: "/admin/faq",
+		description: "使用說明與更新管理",
+		iconColor: "faqAdmin",
+	},
 ];
 
 const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
@@ -317,6 +334,9 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 		return navigationItems.filter((item) => {
 			if (item.id === "dashboard") return true;
 			if (item.id === "user-management") {
+				return user?.employee_id === "admin" || user?.employee_id === "51892";
+			}
+			if (item.id === "faq-admin") {
 				return user?.employee_id === "admin" || user?.employee_id === "51892";
 			}
 			let appKey: AppName;
@@ -445,6 +465,7 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 						const isActive =
 							pathname.startsWith(item.path) ||
 							(item.path !== "/dashboard" &&
+								!item.path.startsWith("/admin") &&
 								pathname.includes(item.path.split("/")[1]));
 						return (
 							<div
@@ -514,10 +535,10 @@ const NavigationDrawer = ({ isOpen, onClose }: NavigationDrawerProps) => {
 					</button>
 					<div className={styles.footerInfo}>
 						<div className={styles.appVersion}>
-							豪神教師管理系統 v2.5.1
+							豪神教師管理系統 v2.6.3
 						</div>
 						<div className={styles.lastUpdate}>
-							最後更新: 2026/07/29
+							最後更新: 2026/09/14
 						</div>
 					</div>
 				</div>

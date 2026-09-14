@@ -1,0 +1,30 @@
+/* src/components/faq/HelpBadge.module.css */
+
+.badge {
+	position: absolute; top: 6px; right: 6px;
+	width: 22px; height: 22px; border-radius: 50%; padding: 0;
+	display: flex; align-items: center; justify-content: center;
+	font-family: inherit; font-size: 0.75rem; font-weight: 700; line-height: 1;
+	background: rgba(255, 255, 255, 0.07);
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	color: var(--text-muted);
+	cursor: help;
+	opacity: 0.45;
+	transition: opacity 0.18s, background 0.18s, color 0.18s, border-color 0.18s;
+	z-index: 1;
+}
+
+/* revealed on tile hover — [data-anim="tile"] is the literal attribute
+   Dashboard.tsx already puts on each quick-action tile; a :global class
+   name here would need an unhashed class, which CSS Modules don't give you */
+:global([data-anim="tile"]):hover .badge { opacity: 1; }
+
+.badge:hover {
+	background: rgba(74, 158, 255, 0.22);
+	border-color: rgba(74, 158, 255, 0.5);
+	color: #cfe6ff;
+	opacity: 1;
+}
+
+/* touch devices get no hover, so keep it visible */
+@media (hover: none) { .badge { opacity: 0.8; } }

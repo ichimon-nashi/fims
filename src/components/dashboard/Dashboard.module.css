@@ -150,6 +150,14 @@
 	min-height: 0;
 }
 
+.rightCol {
+	display: grid;
+	grid-template-rows: auto auto;
+	gap: var(--gap);
+	min-width: 0;
+	align-content: start;
+}
+
 .rightPanel {
 	composes: glass from global;
 	display: flex;
@@ -360,6 +368,7 @@
 
 .quickActionGridItem {
 	composes: inset from global;
+	position: relative; /* containing block for HelpBadge's absolute "?" */
 	display: flex;
 	align-items: center;
 	gap: 0.75rem;
@@ -405,6 +414,7 @@
 	.mainGrid { grid-template-columns: 1fr; align-items: start; }
 	.leftCol { display: flex; flex-direction: column; }
 	.smsPanel, .oralPanel { min-height: 0; flex: unset; }
+	.rightCol { display: flex; flex-direction: column; }
 }
 
 @media (max-width: 820px) {
