@@ -96,6 +96,7 @@ export default function FaqAdmin() {
 	}, [entries, filterApp]);
 
 	const appTitle = (id: string) => APP_META.find((a) => a.id === id)?.title ?? id;
+	const appColor = (id: string) => APP_META.find((a) => a.id === id)?.color ?? "#4a9eff";
 
 	// ── Modal open/close ─────────────────────────────────────────────────────
 	const openNew = () => {
@@ -279,7 +280,12 @@ export default function FaqAdmin() {
 							{visibleEntries.map((entry) => (
 								<div key={entry.id} className={styles.row}>
 									<div className={styles.rowMain}>
-										<span className={styles.appTag}>{appTitle(entry.app_id)}</span>
+										<span
+										className={styles.appTag}
+										style={{ backgroundColor: `${appColor(entry.app_id)}22`, color: appColor(entry.app_id) }}
+									>
+										{appTitle(entry.app_id)}
+									</span>
 										<span className={`${styles.typeTag} ${entry.type === "更新" ? styles.typeUpdate : styles.typeGuide}`}>
 											{entry.type}
 										</span>
@@ -302,7 +308,7 @@ export default function FaqAdmin() {
 			{/* ── Edit/Create modal ── */}
 			{editing && (
 				<div className={styles.overlay} role="dialog" aria-modal="true">
-					<div className={styles.scrim} onClick={closeModal} />
+					<div className={styles.scrim} />
 					<div className={styles.modal}>
 						<div className={styles.modalHeader}>
 							<h2>{editing === "new" ? "新增項目" : "編輯項目"}</h2>

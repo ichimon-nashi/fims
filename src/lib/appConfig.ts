@@ -9,6 +9,7 @@ import type { AppMeta } from "@/lib/faq.types";
  * Adding an app = one row here + one FAQ entry in the admin editor.
  */
 export const APP_META: AppMeta[] = [
+	{ id: "dashboard",       title: "儀表板",     icon: "/images/dashboard.png",  href: "/dashboard",           color: "#fbbf24" },
 	{ id: "roster",          title: "教師班表",   icon: "/images/roster.png",     href: "/roster",              color: "#3b82f6" },
 	{ id: "tasks",           title: "任務管理",   icon: "/images/task.png",       href: "/tasks",               color: "#10b981" },
 	{ id: "sms",             title: "SMS",        icon: "/images/sms.png",        href: "/sms",                 color: "#ef4444" },

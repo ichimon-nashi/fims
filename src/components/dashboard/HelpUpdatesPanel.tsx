@@ -14,10 +14,13 @@ export default function HelpUpdatesPanel({ limit = 3 }: { limit?: number }) {
 	const permissions = usePermissions();
 	const { user } = useAuth();
 
-	const canSee = (id: string) =>
-		id === "user-management" || id === "faq_admin"
-			? user?.employee_id === "admin" || user?.employee_id === "51892"
-			: permissions.hasAppAccess(id as any);
+	const canSee = (id: string) => {
+		if (id === "user-management" || id === "faq_admin") {
+			return user?.employee_id === "admin" || user?.employee_id === "51892";
+		}
+		if (id === "dashboard") return true;
+		return permissions.hasAppAccess(id as any);
+	};
 
 	const updates = entries
 		.filter((e) => e.type === "更新" && canSee(e.app_id))

@@ -124,9 +124,40 @@
 
 /* ── Entries ── */
 .entries { display: flex; flex-direction: column; gap: 1.5rem; }
-.entry { display: flex; flex-direction: column; gap: 0.7rem; }
-.entryHead { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
-.entryTitle { font-size: 1rem; font-weight: 700; color: var(--text); }
+.entry { display: flex; flex-direction: column; gap: 0; }
+.entryHead {
+	display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+	width: 100%;
+	background: rgba(255, 255, 255, 0.035);
+	border: none;
+	border-left: 3px solid var(--accent);
+	border-radius: 0 8px 8px 0;
+	padding: 0.65rem 0.85rem;
+	margin-bottom: 0.7rem;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+	transition: background 0.15s;
+}
+.entryHead:hover { background: rgba(74, 158, 255, 0.08); }
+.entryHead:hover .entryTitle { color: var(--accent); }
+.entryTitle {
+	font-size: 0.95rem;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	color: var(--text);
+	transition: color 0.15s;
+}
+
+.entryChevron {
+	margin-left: auto;
+	color: var(--text-dim);
+	font-size: 1.1rem;
+	transform: rotate(90deg);
+	transition: transform 0.2s;
+	flex-shrink: 0;
+}
+.entryChevronOpen { transform: rotate(-90deg); }
 
 .typeTag {
 	font-size: 0.6875rem; font-weight: 600;
@@ -137,7 +168,7 @@
 .typeGuide  { background: rgba(74, 158, 255, 0.14); color: #8cc4ff; border-color: rgba(74, 158, 255, 0.3); }
 .typeUpdate { background: rgba(139, 92, 246, 0.14); color: #c4b5fd; border-color: rgba(139, 92, 246, 0.3); }
 
-.section { display: flex; gap: 0.7rem; align-items: flex-start; }
+.section { display: flex; gap: 0.7rem; align-items: flex-start; margin-bottom: 0.7rem; }
 
 .stepNum {
 	width: 22px; height: 22px; flex-shrink: 0; margin-top: 0.1rem;

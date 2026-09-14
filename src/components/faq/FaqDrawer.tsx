@@ -27,6 +27,14 @@ export default function FaqDrawer({
 	const permissions = usePermissions();
 	const { user } = useAuth();
 	const [tab, setTab] = useState<FaqType>(initialTab);
+	const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+	const toggleExpanded = (id: string) =>
+		setExpanded((prev) => {
+			const next = new Set(prev);
+			if (next.has(id)) next.delete(id); else next.add(id);
+			return next;
+		});
 
 	const scrimRef = useRef<HTMLDivElement>(null);
 	const panelRef = useRef<HTMLDivElement>(null);
@@ -68,11 +76,13 @@ export default function FaqDrawer({
 	// Apps the user can actually open — same gate as the quick-actions grid
 	const visibleApps = useMemo(
 		() =>
-			APP_META.filter((a) =>
-				a.id === "user-management" || a.id === "faq_admin"
-					? user?.employee_id === "admin" || user?.employee_id === "51892"
-					: permissions.hasAppAccess(a.id as any)
-			),
+			APP_META.filter((a) => {
+				if (a.id === "user-management" || a.id === "faq_admin") {
+					return user?.employee_id === "admin" || user?.employee_id === "51892";
+				}
+				if (a.id === "dashboard") return true; // everyone lands here; no permission gate applies
+				return permissions.hasAppAccess(a.id as any);
+			}),
 		[permissions, user]
 	);
 
@@ -167,42 +177,54 @@ export default function FaqDrawer({
 						</div>
 					) : (
 						<div className={styles.entries}>
-							{entries.map((entry) => (
-								<section key={entry.id} className={styles.entry}>
-									<div className={styles.entryHead}>
-										<span className={styles.entryTitle}>{entry.title}</span>
-										<span
-											className={`${styles.typeTag} ${
-												entry.type === "更新" ? styles.typeUpdate : styles.typeGuide
-											}`}
+							{entries.map((entry) => {
+								const isOpen = expanded.has(entry.id);
+								return (
+									<section key={entry.id} className={styles.entry}>
+										<button
+											type="button"
+											className={styles.entryHead}
+											onClick={() => toggleExpanded(entry.id)}
+											aria-expanded={isOpen}
 										>
-											{entry.type}
-										</span>
-									</div>
+											<span className={styles.entryTitle}>{entry.title}</span>
+											<span
+												className={`${styles.typeTag} ${
+													entry.type === "更新" ? styles.typeUpdate : styles.typeGuide
+												}`}
+											>
+												{entry.type}
+											</span>
+											<span className={`${styles.entryChevron} ${isOpen ? styles.entryChevronOpen : ""}`}>
+												›
+											</span>
+										</button>
 
-									{[...entry.sections]
-										.sort((a, b) => a.sort_order - b.sort_order)
-										.map((s, i) => (
-											<div key={i} className={styles.section}>
-												<div className={styles.stepNum}>{i + 1}</div>
-												<div className={styles.stepBody}>
-													<p className={styles.stepText}>{s.content}</p>
-													{s.image_url && (
-														<a
-															href={s.image_url}
-															target="_blank"
-															rel="noopener noreferrer"
-															className={styles.shotLink}
-														>
-															{/* unoptimized: images live in Supabase storage */}
-															<img src={s.image_url} alt="" className={styles.shot} loading="lazy" />
-														</a>
-													)}
-												</div>
-											</div>
-										))}
-								</section>
-							))}
+										{isOpen &&
+											[...entry.sections]
+												.sort((a, b) => a.sort_order - b.sort_order)
+												.map((s, i) => (
+													<div key={i} className={styles.section}>
+														<div className={styles.stepNum}>{i + 1}</div>
+														<div className={styles.stepBody}>
+															<p className={styles.stepText}>{s.content}</p>
+															{s.image_url && (
+																<a
+																	href={s.image_url}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className={styles.shotLink}
+																>
+																	{/* unoptimized: images live in Supabase storage */}
+																	<img src={s.image_url} alt="" className={styles.shot} loading="lazy" />
+																</a>
+															)}
+														</div>
+													</div>
+												))}
+									</section>
+								);
+							})}
 
 							<div className={styles.footNote}>
 								找不到答案？請直接聯絡豪神，問題會被寫進這裡。

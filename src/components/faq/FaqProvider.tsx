@@ -22,7 +22,7 @@ interface FaqContextValue {
 	/** Open the 說明中心 index of every app the user can access. */
 	openIndex: () => void;
 	close: () => void;
-	/** Entries for one app + type, newest first. */
+	/** Entries for one app + type — 使用說明 oldest first, 更新紀錄 newest first. */
 	entriesFor: (appId: string, type: FaqType) => FaqEntry[];
 }
 
@@ -68,10 +68,10 @@ export default function FaqProvider({ children }: { children: React.ReactNode })
 		(appId: string, type: FaqType) =>
 			entries
 				.filter((e) => e.app_id === appId && e.type === type)
-				.sort(
-					(a, b) =>
-						a.sort_order - b.sort_order ||
-						b.updated_at.localeCompare(a.updated_at)
+				.sort((a, b) =>
+					type === "更新"
+						? b.updated_at.localeCompare(a.updated_at) // 更新紀錄：newest first
+						: a.updated_at.localeCompare(b.updated_at) // 使用說明：oldest first
 				),
 		[entries]
 	);

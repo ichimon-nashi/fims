@@ -171,6 +171,7 @@ const Dashboard = () => {
 	const quickActions = useMemo(
 		() =>
 			APP_META.filter((a) => {
+				if (a.id === "dashboard") return false; // never a self-referencing tile
 				if (a.id === "user-management" || a.id === "faq_admin") {
 					return user?.employee_id === "admin" || user?.employee_id === "51892";
 				}
