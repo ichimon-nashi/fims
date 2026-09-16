@@ -19,21 +19,26 @@ export async function GET(
 
 	const supabase = createServiceClient();
 
-	const { data: userRecord } = await supabase
-		.from("users")
-		.select("employee_id, app_permissions")
-		.eq("id", decoded.userId)
-		.single();
+	// userRecord (for the permission check) and form (the actual submission)
+	// are independent of each other — both only need inputs already in hand
+	// (decoded.userId, id) — run them concurrently instead of back to back.
+	const [{ data: userRecord }, { data: form, error: formError }] = await Promise.all([
+		supabase
+			.from("users")
+			.select("employee_id, app_permissions")
+			.eq("id", decoded.userId)
+			.single(),
+		supabase
+			.from("audit_routine_forms")
+			.select("*, audit_routine_form_attachments(id, subject_crew_name, subject_employee_id, comments, checklist_templates(id, code, name))")
+			.eq("id", id)
+			.single(),
+	]);
+
 	if (!userRecord)
 		return NextResponse.json({ error: "User not found" }, { status: 404 });
 
 	const user = { employee_id: userRecord.employee_id, app_permissions: userRecord.app_permissions } as any;
-
-	const { data: form, error: formError } = await supabase
-		.from("audit_routine_forms")
-		.select("*, audit_routine_form_attachments(id, subject_crew_name, subject_employee_id, comments, checklist_templates(id, code, name))")
-		.eq("id", id)
-		.single();
 
 	if (formError || !form)
 		return NextResponse.json({ error: "Submission not found" }, { status: 404 });
@@ -52,28 +57,30 @@ export async function GET(
 	if (itemsError)
 		return NextResponse.json({ error: itemsError.message }, { status: 500 });
 
-	const { data: mainTemplateItems } = await supabase
-		.from("checklist_template_items")
-		.select("*")
-		.eq("template_id", form.template_id)
-		.order("sort_order", { ascending: true });
-
-	let focusTemplateItems: any[] = [];
-	if (form.focus_set_id) {
-		const { data } = await supabase
-			.from("monthly_focus_items")
-			.select("*")
-			.eq("focus_set_id", form.focus_set_id)
-			.order("sort_order", { ascending: true });
-		focusTemplateItems = data ?? [];
-	}
-
 	// attachment item text comes from checklist_template_items too, keyed
 	// by whichever template each attachment instance uses
 	const attachmentTemplateIds = (form.audit_routine_form_attachments ?? []).map((a: any) => a.checklist_templates?.id).filter(Boolean);
-	const { data: attachmentTemplateItems } = attachmentTemplateIds.length
-		? await supabase.from("checklist_template_items").select("*").in("template_id", attachmentTemplateIds).order("sort_order", { ascending: true })
-		: { data: [] };
+
+	// These three all depend only on `form` (already fetched), not on each
+	// other — run them concurrently instead of one after another.
+	const [{ data: mainTemplateItems }, focusResult, { data: attachmentTemplateItems }] = await Promise.all([
+		supabase
+			.from("checklist_template_items")
+			.select("*")
+			.eq("template_id", form.template_id)
+			.order("sort_order", { ascending: true }),
+		form.focus_set_id
+			? supabase
+					.from("monthly_focus_items")
+					.select("*")
+					.eq("focus_set_id", form.focus_set_id)
+					.order("sort_order", { ascending: true })
+			: Promise.resolve({ data: [] as any[] }),
+		attachmentTemplateIds.length
+			? supabase.from("checklist_template_items").select("*").in("template_id", attachmentTemplateIds).order("sort_order", { ascending: true })
+			: Promise.resolve({ data: [] as any[] }),
+	]);
+	const focusTemplateItems: any[] = focusResult.data ?? [];
 
 	function mergeAnswers(templateItems: any[], itemType: string, attachmentId: string | null = null) {
 		return templateItems.map((ti) => {

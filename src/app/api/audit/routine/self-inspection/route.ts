@@ -49,20 +49,26 @@ export async function GET(req: NextRequest) {
 		return NextResponse.json({ error: error.message }, { status: 500 });
 
 	// submitted_by is a plain text employee_id column, not a real FK to
-	// users — PostgREST can't auto-embed it, so resolve names manually
+	// users — PostgREST can't auto-embed it, so resolve names manually.
+	// This and the flagged-count tally below both depend only on `data`
+	// (already fetched), not on each other — run them concurrently.
 	const submitterIds = [...new Set((data ?? []).map((f) => f.submitted_by))];
-	const { data: submitters } = submitterIds.length
-		? await supabase.from("users").select("employee_id, full_name").in("employee_id", submitterIds)
-		: { data: [] };
+	const formIds = (data ?? []).map((f) => f.id);
+
+	const [{ data: submitters }, { data: flaggedRows }] = await Promise.all([
+		submitterIds.length
+			? supabase.from("users").select("employee_id, full_name").in("employee_id", submitterIds)
+			: Promise.resolve({ data: [] as { employee_id: string; full_name: string }[] }),
+		// per-form flagged item count — fetched separately and tallied here
+		// rather than a GROUP BY, since the Supabase JS client doesn't do
+		// aggregate queries directly
+		formIds.length
+			? supabase.from("audit_routine_items").select("form_id").eq("flagged", true).in("form_id", formIds)
+			: Promise.resolve({ data: [] as { form_id: string }[] }),
+	]);
+
 	const nameMap = new Map((submitters ?? []).map((u) => [u.employee_id, u.full_name]));
 
-	// per-form flagged item count — fetched separately and tallied here
-	// rather than a GROUP BY, since the Supabase JS client doesn't do
-	// aggregate queries directly
-	const formIds = (data ?? []).map((f) => f.id);
-	const { data: flaggedRows } = formIds.length
-		? await supabase.from("audit_routine_items").select("form_id").eq("flagged", true).in("form_id", formIds)
-		: { data: [] };
 	const flaggedCountMap = new Map<string, number>();
 	for (const row of flaggedRows ?? []) {
 		flaggedCountMap.set(row.form_id, (flaggedCountMap.get(row.form_id) ?? 0) + 1);

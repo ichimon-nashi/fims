@@ -25,53 +25,50 @@ export async function GET(request: NextRequest) {
 		const supabase = await createClient();
 		const currentYear = new Date().getFullYear();
 
-		// 1. Get total users (excluding admin), now including the fields
-		// needed to display the remaining-users drill-down list
-		console.log("Fetching users...");
-		const { data: users, error: usersError } = await supabase
-			.from("users")
-			.select("id, employee_id, full_name, rank, base")
-			.neq("employee_id", "admin")
-			.eq("is_inactive", false);
+		// 1–3. Users, questions, and this year's FAAT results don't depend on
+		// each other's results — run them concurrently instead of stacking
+		// three sequential round trips. test_results is also trimmed from
+		// select("*") to only the columns actually read below.
+		console.log("Fetching users, questions, and test results...");
+		const [
+			{ data: users, error: usersError },
+			{ data: questions, error: questionsError },
+			{ data: testResults, error: testResultsError },
+		] = await Promise.all([
+			supabase
+				.from("users")
+				.select("id, employee_id, full_name, rank, base")
+				.neq("employee_id", "admin")
+				.eq("is_inactive", false),
+			supabase.from("questions").select("id, question_category"),
+			supabase
+				.from("test_results")
+				.select(
+					"employee_id, examiner_name, q1_id, q1_result, q2_id, q2_result, q3_id, q3_result, r1_id, r1_result, r2_id, r2_result"
+				)
+				.eq("training_type", "FAAT")
+				.gte("test_date", `${currentYear}-01-01`)
+				.lte("test_date", `${currentYear}-12-31`),
+		]);
 
 		if (usersError) {
 			console.error("Error fetching users:", usersError);
 			throw usersError;
 		}
-
 		const totalUsers = users?.length || 0;
 		console.log("Total users (excluding admin):", totalUsers);
-
-		// 2. Get total questions
-		console.log("Fetching questions...");
-		const { data: questions, error: questionsError } = await supabase
-			.from("questions")
-			.select("id, question_category");
 
 		if (questionsError) {
 			console.error("Error fetching questions:", questionsError);
 			throw questionsError;
 		}
-
 		const totalQuestions = questions?.length || 0;
 		console.log("Total questions:", totalQuestions);
-
-		// 3. Get FAAT-only test results for current year. training_type filter
-		// added here — without it, FABT/FAQT/etc. results were incorrectly
-		// counting toward "tested for this year's recurrent training".
-		console.log("Fetching FAAT test results for", currentYear);
-		const { data: testResults, error: testResultsError } = await supabase
-			.from("test_results")
-			.select("*")
-			.eq("training_type", "FAAT")
-			.gte("test_date", `${currentYear}-01-01`)
-			.lte("test_date", `${currentYear}-12-31`);
 
 		if (testResultsError) {
 			console.error("Error fetching test results:", testResultsError);
 			throw testResultsError;
 		}
-
 		console.log("FAAT test results for current year:", testResults?.length || 0);
 
 		// 4. Calculate testing progress
@@ -186,24 +183,38 @@ export async function GET(request: NextRequest) {
 			.sort(([, a], [, b]) => b - a)
 			.slice(0, 5); // Top 5
 
-		const topIncorrectQuestions = [];
+		// Get question details for top incorrect questions — one batched
+		// query instead of one .single() round trip per question.
+		const topIds = sortedIncorrectQuestions.map(([id]) => id);
+		let questionById = new Map<string, { question_number: number; question_title: string; question_category: string }>();
 
-		for (const [questionId, count] of sortedIncorrectQuestions) {
-			const { data: questionData, error: questionError } = await supabase
+		if (topIds.length > 0) {
+			const { data: questionRows, error: questionRowsError } = await supabase
 				.from("questions")
-				.select("question_number, question_title, question_category")
-				.eq("id", questionId)
-				.single();
+				.select("id, question_number, question_title, question_category")
+				.in("id", topIds);
 
-			if (!questionError && questionData) {
-				topIncorrectQuestions.push({
-					question: questionData.question_title,
-					question_number: questionData.question_number,
-					category: questionData.question_category,
-					count: count,
-				});
+			if (questionRowsError) {
+				console.error("Error fetching top question details:", questionRowsError);
+				// Non-fatal — falls through with an empty map, same as the
+				// old code silently skipping a question whose lookup failed.
+			} else {
+				questionById = new Map((questionRows || []).map((q) => [q.id, q]));
 			}
 		}
+
+		const topIncorrectQuestions = sortedIncorrectQuestions
+			.map(([questionId, count]) => {
+				const q = questionById.get(questionId);
+				if (!q) return null;
+				return {
+					question: q.question_title,
+					question_number: q.question_number,
+					category: q.question_category,
+					count,
+				};
+			})
+			.filter((q): q is NonNullable<typeof q> => q !== null);
 
 		console.log("Top incorrect questions:", topIncorrectQuestions.length);
 
