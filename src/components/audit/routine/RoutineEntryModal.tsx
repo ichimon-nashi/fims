@@ -115,17 +115,123 @@ function parseDatePasted(raw: string): ParsedDate {
 	return { iso: null, month: null, day: null };
 }
 
+// Excel cells with several numbered points often paste as one blob with
+// large whitespace/tab runs between them ("1.xxx        2.yyy") rather
+// than genuine separate rows, since the numbering was manual formatting
+// inside one cell, not real row breaks. Splits on each "N." marker (digit,
+// period, non-digit — avoids false positives like "7932" or a mid-sentence
+// "2LR") so they land as separate findings instead of one multi-line blob.
+// Splits numbered text and keeps each item's own marker number, rather than
+// just an ordered array — 記錄 and 處置 don't always have the same items
+// numbered on both sides (e.g. only findings #2 and #3 out of 4 might have
+// a corresponding 處置), so pairing has to happen by matching number, not
+// by position or requiring equal counts on both sides.
+//
+// Markers show up as "1." "2." (記錄) or "項1." or even "項2" with no
+// period at all (處置's own numbering is inconsistent in the source data).
+// Anchoring on "non-digit after the marker" broke on legitimate content
+// that itself starts with a digit (e.g. "2.3R/Z2..." where "3R" is a cabin
+// door reference, not part of the number "2"). The reliable signal here is
+// what comes BEFORE the marker: the very start of the text, a line break
+// (記錄's items can share one line with big gaps; 處置's items are often
+// one per line with just a single newline between them), or a run of 2+
+// spaces — so that's the anchor, and the trailing period is optional to
+// catch the inconsistently-formatted ones too.
+function splitNumberedByIndex(text: string): Map<number, string> | null {
+	const rawSegments = text
+		.split(/(?<=^|\n|\s{2,})(?=(?:項)?\d{1,2}\.?)/g)
+		.filter((s) => s.trim());
+
+	const map = new Map<number, string>();
+	for (const seg of rawSegments) {
+		const m = /^(?:項)?(\d{1,2})\.?\s*([\s\S]*)$/.exec(seg.trim());
+		if (!m) continue;
+		const num = Number(m[1]);
+		const content = m[2].trim();
+		if (content) map.set(num, content);
+	}
+	// only treat this as "genuinely numbered" if more than one distinct
+	// number was actually found — a single segment isn't a split at all
+	return map.size > 1 ? map : null;
+}
+
 interface ParsedPaste {
 	header: Partial<HeaderDraft>;
 	findings: FindingDraft[];
 	warnings: string[];
 }
 
+// A bare split-by-newline-then-tab breaks the instant any cell contains an
+// embedded newline (Excel wraps such a cell in double quotes when copied —
+// standard CSV/TSV escaping — specifically to say "this line break is part
+// of the cell, not a row boundary"). This is a real character-by-character
+// tokenizer that respects that quoting, unlike the previous naive split.
+function parseTsv(text: string): string[][] {
+	const rows: string[][] = [];
+	let row: string[] = [];
+	let field = "";
+	let inQuotes = false;
+	let i = 0;
+
+	while (i < text.length) {
+		const char = text[i];
+
+		if (inQuotes) {
+			if (char === '"') {
+				if (text[i + 1] === '"') {
+					field += '"'; // escaped quote within a quoted field
+					i += 2;
+					continue;
+				}
+				inQuotes = false; // closing quote
+				i++;
+				continue;
+			}
+			field += char; // includes literal newlines/tabs — that's the whole point
+			i++;
+			continue;
+		}
+
+		if (char === '"' && field === "") {
+			// only treat a quote as "start of quoted field" right at the
+			// field's beginning — matches how Excel actually emits it
+			inQuotes = true;
+			i++;
+			continue;
+		}
+		if (char === "\t") {
+			row.push(field);
+			field = "";
+			i++;
+			continue;
+		}
+		if (char === "\r") {
+			i++; // bare CR, real line break is the \n that follows
+			continue;
+		}
+		if (char === "\n") {
+			row.push(field);
+			rows.push(row);
+			row = [];
+			field = "";
+			i++;
+			continue;
+		}
+		field += char;
+		i++;
+	}
+
+	if (field !== "" || row.length > 0) {
+		row.push(field);
+		rows.push(row);
+	}
+	return rows;
+}
+
 function parseExcelPaste(text: string): ParsedPaste {
 	const warnings: string[] = [];
-	let lines = text
-		.split(/\r?\n/)
-		.map((l) => l.split("\t").map((c) => stripExcelQuote(c.trim())))
+	let lines = parseTsv(text)
+		.map((cols) => cols.map((c) => stripExcelQuote(c.trim())))
 		.filter((cols) => cols.some((c) => c !== ""));
 
 	// tolerate a copied header row (序, 日期, ...) by skipping it
@@ -152,13 +258,15 @@ function parseExcelPaste(text: string): ParsedPaste {
 				report_year = Number(parsed.iso.slice(0, 4));
 				report_month = parsed.month!;
 			} else if (parsed.month && parsed.day) {
-				// no year in the source (e.g. "2/11") — represent as "-MM-DD"
-				// so DateField shows month/day filled and year genuinely
-				// blank for the user to complete, rather than guessing a
-				// year that might be wrong
-				audit_date = `-${String(parsed.month).padStart(2, "0")}-${String(parsed.day).padStart(2, "0")}`;
+				// no year in the source (e.g. "2/11") — default to the current
+				// year rather than leaving it blank; still warn, since this
+				// guess is wrong if the pasted data is actually from a
+				// different year with no year column to signal that
+				const currentYear = new Date().getFullYear();
+				audit_date = `${currentYear}-${String(parsed.month).padStart(2, "0")}-${String(parsed.day).padStart(2, "0")}`;
+				report_year = currentYear;
 				report_month = parsed.month;
-				warnings.push(`日期「${dateRaw}」未包含年份，已填入月/日，請手動選擇年度`);
+				warnings.push(`日期「${dateRaw}」未包含年份，已預設為今年 (${currentYear})，請確認年度是否正確`);
 			} else if (dateRaw) {
 				warnings.push(`日期「${dateRaw}」格式無法辨識，請手動選擇`);
 			}
@@ -192,14 +300,41 @@ function parseExcelPaste(text: string): ParsedPaste {
 			return;
 		}
 
-		parsedFindings.push({
-			finding: findingRaw,
-			corrective_action: correctiveRaw ?? "",
-			result: "OK",
-			sam_code: resolvedSam ? samCode! : null,
-			ef_code: null, // not part of the excel template — pick manually after paste
-			is_non_flight_safety: flagRaw?.trim().toLowerCase() === "v",
-		});
+		const findingMap = splitNumberedByIndex(findingRaw);
+		const actionMap = correctiveRaw ? splitNumberedByIndex(correctiveRaw) : null;
+
+		if (findingMap) {
+			// multiple numbered findings — each looks up its own action by
+			// marker number (not position), so a finding with no matching
+			// number in 處置 correctly gets nothing instead of borrowing
+			// another finding's action or being blocked by a count mismatch
+			const findingNums = Array.from(findingMap.keys()).sort((a, b) => a - b);
+			warnings.push(`第${i + 1}列偵測到 ${findingNums.length} 項編號記錄，已自動拆分為個別項目`);
+			for (const num of findingNums) {
+				parsedFindings.push({
+					finding: findingMap.get(num)!,
+					corrective_action: actionMap?.get(num) ?? "",
+					result: "OK",
+					sam_code: resolvedSam ? samCode! : null,
+					ef_code: null, // not part of the excel template — pick manually after paste
+					// never auto-check from the pasted flag column — the historical
+					// data's blank-means-safety-related convention is too unreliable
+					// to infer an important classification from; always requires
+					// the same explicit manual confirmation as a manually-typed entry
+					is_non_flight_safety: true,
+				});
+			}
+		} else {
+			// no numbering detected — single finding, straightforward mapping
+			parsedFindings.push({
+				finding: findingRaw.trim(),
+				corrective_action: correctiveRaw?.trim() ?? "",
+				result: "OK",
+				sam_code: resolvedSam ? samCode! : null,
+				ef_code: null,
+				is_non_flight_safety: true,
+			});
+		}
 	});
 
 	if (parsedFindings.length === 0 && lines.length > 0) {
@@ -972,6 +1107,16 @@ export default function RoutineEntryModal({
 		}
 
 		setFieldErrors({});
+		// trim leading/trailing whitespace on finding/corrective_action —
+		// findingText uses white-space:pre-wrap, which preserves stray
+		// leading/trailing blank lines verbatim, making a genuinely
+		// one-line entry visually span several lines
+		const trimmedFindings = findings.map((f) => ({
+			...f,
+			finding: f.finding.trim(),
+			corrective_action: f.corrective_action.trim(),
+		}));
+		setFindings(trimmedFindings);
 		submittingRef.current = true;
 		setSaving(true);
 		setError(null);
@@ -981,7 +1126,7 @@ export default function RoutineEntryModal({
 			if (isEdit && editingEntries) {
 				const entryNo = header.entry_no ?? editingEntries[0].entry_no;
 
-				for (const f of findings) {
+				for (const f of trimmedFindings) {
 					if (f.id) {
 						// existing row — PATCH, including header fields, so header
 						// edits propagate to every finding in the group instead of
@@ -1017,7 +1162,7 @@ export default function RoutineEntryModal({
 				}
 			} else {
 				let entryNo: string | null = null;
-				for (const f of findings) {
+				for (const f of trimmedFindings) {
 					const payload: CreateEntryPayload = {
 						...header,
 						...f,
