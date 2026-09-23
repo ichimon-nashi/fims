@@ -700,3 +700,30 @@
 		padding-left: 1rem;
 	}
 }
+
+/* ── Conformity / N/A notes + open items ── */
+.ncNote {
+	border-left: 3px solid rgba(72, 187, 120, 0.45);
+	background: rgba(72, 187, 120, 0.035);
+	margin-bottom: 3px;
+}
+.ncStatusPillC {
+	color: #48bb78;
+	border-color: rgba(72, 187, 120, 0.3);
+	background: rgba(72, 187, 120, 0.1);
+}
+.ncStatusPillN {
+	color: #a0aec0;
+	border-color: rgba(160, 174, 192, 0.3);
+	background: rgba(160, 174, 192, 0.08);
+}
+.ncStatusPillOpen {
+	color: #4a9eff;
+	border-color: rgba(74, 158, 255, 0.35);
+	background: rgba(74, 158, 255, 0.1);
+}
+.pillOpen {
+	background: rgba(74, 158, 255, 0.12);
+	border: 1px solid rgba(74, 158, 255, 0.3);
+	color: #4a9eff;
+}

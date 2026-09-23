@@ -1499,3 +1499,8 @@
 	color: #4a9eff;
 	line-height: 1;
 }
+.listCommentBadge {
+	font-size: 0.7rem;
+	opacity: 0.85;
+	cursor: help;
+}

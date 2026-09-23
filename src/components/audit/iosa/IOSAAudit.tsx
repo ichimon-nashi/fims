@@ -719,6 +719,14 @@ function AuditListItem({
 						🔗
 					</span>
 				)}
+				{isarp.record?.auditor_comments?.trim() && (
+					<span
+						className={styles.listCommentBadge}
+						title={isarp.record.auditor_comments}
+					>
+						💬
+					</span>
+				)}
 				{isarp.record?.open_item && (
 					<span
 						className={styles.listOpenBadge}

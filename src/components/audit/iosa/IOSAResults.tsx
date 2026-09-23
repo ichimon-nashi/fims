@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import * as XLSX from "xlsx";
 import { useAuth } from "@/context/AuthContext";
 import styles from "./IOSAResults.module.css";
 
@@ -21,6 +20,8 @@ interface AuditRecord {
 	root_cause: string;
 	corrective_action: string;
 	doc_references: string;
+	open_item?: boolean;
+	auditor_comments?: string;
 }
 interface ISARPWithRecord {
 	isarp_code: string;
@@ -38,6 +39,8 @@ interface DiscStat {
 	observations: number;
 	findingItems: ISARPWithRecord[];
 	obsItems: ISARPWithRecord[];
+	open: number;
+	noteItems: ISARPWithRecord[]; // non-NC items with comments or open flag
 }
 
 function catOf(s: string | null) {
@@ -104,173 +107,383 @@ function fullStatus(s: string | null) {
 		.replace("N/A (Not Applicable)", "N/A — Not Applicable");
 }
 
-// ── Export ────────────────────────────────────────────────────
-function doExport(
+// ── Export (ExcelJS — SheetJS community build cannot style cells) ──
+const XL = {
+	navy: "FF0D1220",
+	navy2: "FF1B2340",
+	white: "FFFFFFFF",
+	text: "FF1F2937",
+	dim: "FF6B7280",
+	zebra: "FFF6F8FB",
+	border: "FFD9DEE7",
+	redBg: "FFFDE8E8",
+	redFg: "FFB42318",
+	amberBg: "FFFEF3E2",
+	amberFg: "FFB54708",
+	greenBg: "FFE7F6EC",
+	greenFg: "FF1E7B45",
+	blueBg: "FFE8F1FE",
+	blueFg: "FF1D5FBF",
+	greyBg: "FFF0F1F4",
+};
+const FONT = "Calibri";
+
+type XCol = { header: string; key: string; width: number; wrap?: boolean; center?: boolean };
+
+function statusColors(s: string | null) {
+	const c = catOf(s);
+	if (c === "finding") return { bg: XL.redBg, fg: XL.redFg };
+	if (c === "observation") return { bg: XL.amberBg, fg: XL.amberFg };
+	if (c === "conformity") return { bg: XL.greenBg, fg: XL.greenFg };
+	if (c === "na") return { bg: XL.greyBg, fg: XL.dim };
+	return null;
+}
+
+// Excel does not reliably auto-fit wrapped rows on open, so estimate height.
+// CJK glyphs count as ~2 Latin chars wide.
+function estLines(text: string, width: number) {
+	if (!text) return 1;
+	const perLine = Math.max(1, Math.floor(width * 1.15));
+	return String(text)
+		.split(/\r?\n/)
+		.reduce((n, para) => {
+			let w = 0;
+			for (const ch of para) w += /[\u2E80-\uFFEF]/.test(ch) ? 2 : 1;
+			return n + Math.max(1, Math.ceil(w / perLine));
+		}, 0);
+}
+
+function fill(argb: string) {
+	return { type: "pattern" as const, pattern: "solid" as const, fgColor: { argb } };
+}
+
+const thin = { style: "thin" as const, color: { argb: XL.border } };
+
+// Title band + styled table. Returns the worksheet.
+function addTableSheet(
+	wb: any,
+	name: string,
+	title: string,
+	subtitle: string,
+	cols: XCol[],
+	rows: Record<string, any>[],
+	statusKey?: string,
+	rawStatus?: (string | null)[],
+) {
+	const ws = wb.addWorksheet(name, {
+		views: [{ state: "frozen", ySplit: 4, showGridLines: false }],
+		pageSetup: {
+			orientation: "landscape",
+			paperSize: 9, // A4
+			fitToPage: true,
+			fitToWidth: 1,
+			fitToHeight: 0,
+			margins: { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 },
+		},
+	});
+	ws.pageSetup.printTitlesRow = "4:4";
+	ws.headerFooter.oddFooter = `&L${title}&RPage &P of &N`;
+	ws.columns = cols.map((c) => ({ key: c.key, width: c.width }));
+	const last = cols.length;
+
+	ws.mergeCells(1, 1, 1, last);
+	const t = ws.getCell(1, 1);
+	t.value = title;
+	t.font = { name: FONT, size: 15, bold: true, color: { argb: XL.white } };
+	t.fill = fill(XL.navy);
+	t.alignment = { vertical: "middle", indent: 1 };
+	ws.getRow(1).height = 30;
+
+	ws.mergeCells(2, 1, 2, last);
+	const st = ws.getCell(2, 1);
+	st.value = subtitle;
+	st.font = { name: FONT, size: 10, color: { argb: "FFA8B3C5" } };
+	st.fill = fill(XL.navy2);
+	st.alignment = { vertical: "middle", indent: 1 };
+	ws.getRow(2).height = 20;
+	ws.getRow(3).height = 8;
+
+	const hr = ws.getRow(4);
+	cols.forEach((c, i) => {
+		const cell = hr.getCell(i + 1);
+		cell.value = c.header;
+		cell.font = { name: FONT, size: 10, bold: true, color: { argb: XL.white } };
+		cell.fill = fill(XL.navy2);
+		cell.alignment = { vertical: "middle", horizontal: c.center ? "center" : "left", wrapText: true };
+		cell.border = { bottom: { style: "medium", color: { argb: "FF4A9EFF" } } };
+	});
+	hr.height = 24;
+
+	if (rows.length === 0) {
+		ws.mergeCells(5, 1, 5, last);
+		const e = ws.getCell(5, 1);
+		e.value = "None recorded.";
+		e.font = { name: FONT, size: 10, italic: true, color: { argb: XL.dim } };
+		e.alignment = { horizontal: "center" };
+		return ws;
+	}
+
+	rows.forEach((r, idx) => {
+		const row = ws.addRow(r);
+		row.eachCell({ includeEmpty: true }, (cell: any, colNo: number) => {
+			const c = cols[colNo - 1];
+			if (!c) return;
+			cell.font = { name: FONT, size: 10, color: { argb: XL.text } };
+			cell.alignment = {
+				vertical: "top",
+				horizontal: c.center ? "center" : "left",
+				wrapText: !!c.wrap,
+			};
+			cell.border = { bottom: thin };
+			if (idx % 2 === 1) cell.fill = fill(XL.zebra);
+		});
+		if (statusKey && rawStatus) {
+			const col = cols.findIndex((c) => c.key === statusKey) + 1;
+			const sc = statusColors(rawStatus[idx]);
+			if (col > 0 && sc) {
+				const cell = row.getCell(col);
+				cell.fill = fill(sc.bg);
+				cell.font = { name: FONT, size: 10, bold: true, color: { argb: sc.fg } };
+			}
+		}
+		const lines = Math.max(
+			1,
+			...cols.filter((c) => c.wrap).map((c) => estLines(r[c.key] ?? "", c.width)),
+		);
+		row.height = Math.min(409, lines * 13.5 + 6);
+		const codeCol = cols.findIndex((c) => c.key === "isarp") + 1;
+		if (codeCol > 0) row.getCell(codeCol).font = { name: FONT, size: 10, bold: true, color: { argb: XL.text } };
+	});
+
+	ws.autoFilter = {
+		from: { row: 4, column: 1 },
+		to: { row: 4 + rows.length, column: last },
+	};
+	return ws;
+}
+
+async function doExport(
 	cycle: ActiveCycle,
 	all: ISARPWithRecord[],
 	findings: ISARPWithRecord[],
 	obs: ISARPWithRecord[],
 	discStats: DiscStat[],
 ) {
-	const wb = XLSX.utils.book_new();
-	const ws1 = XLSX.utils.aoa_to_sheet([
-		["IOSA Audit Results"],
-		[`Cycle: ${cycle.name}`],
-		[
-			`Edition: ${cycle.ism_edition}`,
-			"",
-			`Exported: ${new Date().toLocaleDateString()}`,
-		],
-		[],
-		[
-			"Discipline",
-			"Total",
-			"Assessed",
-			"Conformities",
-			"Findings",
-			"Observations",
-		],
-		...discStats.map((d) => [
-			d.disc,
-			d.total,
-			d.assessed,
-			d.conformities,
-			d.findings,
-			d.observations,
-		]),
-		[],
-		[
-			"TOTAL",
-			discStats.reduce((s, d) => s + d.total, 0),
-			discStats.reduce((s, d) => s + d.assessed, 0),
-			discStats.reduce((s, d) => s + d.conformities, 0),
-			discStats.reduce((s, d) => s + d.findings, 0),
-			discStats.reduce((s, d) => s + d.observations, 0),
-		],
-	]);
-	ws1["!cols"] = [
-		{ wch: 14 },
-		{ wch: 8 },
-		{ wch: 10 },
-		{ wch: 14 },
-		{ wch: 10 },
-		{ wch: 14 },
+	const ExcelJS = (await import("exceljs")).default;
+	const wb = new ExcelJS.Workbook();
+	wb.creator = "FIMS";
+	wb.created = new Date();
+
+	const exported = new Date().toLocaleDateString("en-CA");
+	const sub = `${cycle.name}  ·  ${cycle.ism_edition}  ·  Exported ${exported}`;
+	const desc = (i: ISARPWithRecord) =>
+		i.standard_text?.split("\n")[0]?.slice(0, 200) ?? "";
+	const openMark = (i: ISARPWithRecord) => (i.record?.open_item ? "◷ Open" : "");
+
+	// ── Summary ──
+	const ws1 = wb.addWorksheet("Summary", {
+		views: [{ showGridLines: false }],
+		pageSetup: { orientation: "landscape", paperSize: 9, fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
+	});
+	ws1.columns = [
+		{ width: 16 }, { width: 11 }, { width: 11 }, { width: 13 },
+		{ width: 14 }, { width: 11 }, { width: 14 }, { width: 12 },
 	];
-	XLSX.utils.book_append_sheet(wb, ws1, "Summary");
-	const ws2 = XLSX.utils.aoa_to_sheet([
-		[
-			"#",
-			"Discipline",
-			"ISARP",
-			"ISARP Description",
-			"Document Reference",
-			"Status",
-			"Nonconformity",
-			"Root Cause",
-			"Corrective Action",
-		],
-		...findings.map((i, n) => [
-			n + 1,
-			i.discipline,
-			i.isarp_code,
-			i.standard_text?.split("\n")[0]?.slice(0, 200) ?? "",
-			i.record?.doc_references ?? "",
-			fullStatus(i.record?.conformance_status ?? null),
-			i.record?.nonconformity_desc ?? "",
-			i.record?.root_cause ?? "",
-			i.record?.corrective_action ?? "",
-		]),
-	]);
-	ws2["!cols"] = [
-		{ wch: 5 },
-		{ wch: 12 },
-		{ wch: 14 },
-		{ wch: 50 },
-		{ wch: 28 },
-		{ wch: 40 },
-		{ wch: 45 },
-		{ wch: 35 },
-		{ wch: 35 },
+	ws1.mergeCells("A1:H1");
+	ws1.getCell("A1").value = "IOSA Audit Results";
+	ws1.getCell("A1").font = { name: FONT, size: 18, bold: true, color: { argb: XL.white } };
+	ws1.getCell("A1").fill = fill(XL.navy);
+	ws1.getCell("A1").alignment = { vertical: "middle", indent: 1 };
+	ws1.getRow(1).height = 36;
+	ws1.mergeCells("A2:H2");
+	ws1.getCell("A2").value = sub;
+	ws1.getCell("A2").font = { name: FONT, size: 10, color: { argb: "FFA8B3C5" } };
+	ws1.getCell("A2").fill = fill(XL.navy2);
+	ws1.getCell("A2").alignment = { vertical: "middle", indent: 1 };
+	ws1.getRow(2).height = 20;
+
+	// KPI tiles (row 4 value, row 5 label)
+	const tot = (k: keyof DiscStat) =>
+		discStats.reduce((s, d) => s + (d[k] as number), 0);
+	const totalAll = tot("total");
+	const assessedAll = tot("assessed");
+	const kpis: [string, number, string][] = [
+		["Total ISARPs", totalAll, XL.text],
+		[`Assessed · ${totalAll ? Math.round((assessedAll / totalAll) * 100) : 0}%`, assessedAll, XL.blueFg],
+		["Conformities", tot("conformities"), XL.greenFg],
+		["Findings", tot("findings"), XL.redFg],
+		["Observations", tot("observations"), XL.amberFg],
+		["Open items", tot("open"), XL.blueFg],
 	];
-	XLSX.utils.book_append_sheet(wb, ws2, "Findings");
-	const ws3 = XLSX.utils.aoa_to_sheet([
-		[
-			"#",
-			"Discipline",
-			"ISARP",
-			"ISARP Description",
-			"Document Reference",
-			"Status",
-			"Observation",
-			"Root Cause",
-			"Corrective Action",
-		],
-		...obs.map((i, n) => [
-			n + 1,
-			i.discipline,
-			i.isarp_code,
-			i.standard_text?.split("\n")[0]?.slice(0, 200) ?? "",
-			i.record?.doc_references ?? "",
-			fullStatus(i.record?.conformance_status ?? null),
-			i.record?.nonconformity_desc ?? "",
-			i.record?.root_cause ?? "",
-			i.record?.corrective_action ?? "",
-		]),
-	]);
-	ws3["!cols"] = [
-		{ wch: 5 },
-		{ wch: 12 },
-		{ wch: 14 },
-		{ wch: 50 },
-		{ wch: 28 },
-		{ wch: 40 },
-		{ wch: 45 },
-		{ wch: 35 },
-		{ wch: 35 },
+	ws1.getRow(4).height = 30;
+	ws1.getRow(5).height = 18;
+	kpis.forEach(([label, val, color], i) => {
+		const col = i + 1;
+		const v = ws1.getCell(4, col);
+		v.value = val;
+		v.font = { name: FONT, size: 16, bold: true, color: { argb: color } };
+		v.alignment = { horizontal: "center", vertical: "bottom" };
+		v.fill = fill(XL.zebra);
+		const l = ws1.getCell(5, col);
+		l.value = label.toUpperCase();
+		l.font = { name: FONT, size: 8, bold: true, color: { argb: XL.dim } };
+		l.alignment = { horizontal: "center", vertical: "top" };
+		l.fill = fill(XL.zebra);
+		l.border = { bottom: thin };
+	});
+
+	// Discipline table
+	const hdr = ["Discipline", "Total", "Assessed", "% Assessed", "Conformities", "Findings", "Observations", "Open items"];
+	const h = ws1.getRow(7);
+	hdr.forEach((t, i) => {
+		const c = h.getCell(i + 1);
+		c.value = t;
+		c.font = { name: FONT, size: 10, bold: true, color: { argb: XL.white } };
+		c.fill = fill(XL.navy2);
+		c.alignment = { horizontal: i === 0 ? "left" : "center", vertical: "middle" };
+		c.border = { bottom: { style: "medium", color: { argb: "FF4A9EFF" } } };
+	});
+	h.height = 22;
+	discStats.forEach((d, idx) => {
+		const pct = d.total ? d.assessed / d.total : 0;
+		const r = ws1.getRow(8 + idx);
+		[d.disc, d.total, d.assessed, pct, d.conformities, d.findings, d.observations, d.open].forEach((v, i) => {
+			const c = r.getCell(i + 1);
+			c.value = v;
+			c.font = { name: FONT, size: 10, bold: i === 0, color: { argb: XL.text } };
+			c.alignment = { horizontal: i === 0 ? "left" : "center", vertical: "middle" };
+			c.border = { bottom: thin };
+			if (idx % 2 === 1) c.fill = fill(XL.zebra);
+		});
+		r.getCell(4).numFmt = "0%";
+		if (pct >= 1) r.getCell(4).font = { name: FONT, size: 10, bold: true, color: { argb: XL.greenFg } };
+		if (d.findings > 0) r.getCell(6).font = { name: FONT, size: 10, bold: true, color: { argb: XL.redFg } };
+		if (d.observations > 0) r.getCell(7).font = { name: FONT, size: 10, bold: true, color: { argb: XL.amberFg } };
+		if (d.open > 0) r.getCell(8).font = { name: FONT, size: 10, bold: true, color: { argb: XL.blueFg } };
+		r.height = 20;
+	});
+	const tr = ws1.getRow(8 + discStats.length);
+	["TOTAL", totalAll, assessedAll, totalAll ? assessedAll / totalAll : 0, tot("conformities"), tot("findings"), tot("observations"), tot("open")].forEach((v, i) => {
+		const c = tr.getCell(i + 1);
+		c.value = v;
+		c.font = { name: FONT, size: 10, bold: true, color: { argb: XL.text } };
+		c.alignment = { horizontal: i === 0 ? "left" : "center", vertical: "middle" };
+		c.border = { top: { style: "double", color: { argb: XL.text } } };
+		c.fill = fill(XL.greyBg);
+	});
+	tr.getCell(4).numFmt = "0%";
+	tr.height = 22;
+
+	// ── Findings / Observations ──
+	const ncCols = (label: string): XCol[] => [
+		{ header: "#", key: "n", width: 5, center: true },
+		{ header: "Discipline", key: "disc", width: 11, center: true },
+		{ header: "ISARP", key: "isarp", width: 14 },
+		{ header: "ISARP Description", key: "desc", width: 48, wrap: true },
+		{ header: "Document Reference", key: "doc", width: 26, wrap: true },
+		{ header: "Status", key: "status", width: 30, wrap: true },
+		{ header: label, key: "nc", width: 50, wrap: true },
+		{ header: "Root Cause", key: "rc", width: 34, wrap: true },
+		{ header: "Corrective Action", key: "ca", width: 34, wrap: true },
+		{ header: "Auditor Comments", key: "cm", width: 34, wrap: true },
+		{ header: "Open", key: "open", width: 9, center: true },
 	];
-	XLSX.utils.book_append_sheet(wb, ws3, "Observations");
-	// Per-discipline detail sheets for disciplines with findings/observations
+	const ncRow = (i: ISARPWithRecord, n: number) => ({
+		n: n + 1,
+		disc: i.discipline,
+		isarp: i.isarp_code,
+		desc: desc(i),
+		doc: i.record?.doc_references ?? "",
+		status: fullStatus(i.record?.conformance_status ?? null),
+		nc: i.record?.nonconformity_desc ?? "",
+		rc: i.record?.root_cause ?? "",
+		ca: i.record?.corrective_action ?? "",
+		cm: i.record?.auditor_comments ?? "",
+		open: openMark(i),
+	});
+	addTableSheet(wb, "Findings", `Findings (${findings.length})`, sub, ncCols("Nonconformity"),
+		findings.map(ncRow), "status", findings.map((i) => i.record?.conformance_status ?? null));
+	addTableSheet(wb, "Observations", `Observations (${obs.length})`, sub, ncCols("Observation"),
+		obs.map(ncRow), "status", obs.map((i) => i.record?.conformance_status ?? null));
+
+	// ── Open items + Auditor comments (any status) ──
+	const noteCols: XCol[] = [
+		{ header: "#", key: "n", width: 5, center: true },
+		{ header: "Discipline", key: "disc", width: 11, center: true },
+		{ header: "ISARP", key: "isarp", width: 14 },
+		{ header: "Status", key: "status", width: 30, wrap: true },
+		{ header: "Open", key: "open", width: 9, center: true },
+		{ header: "Auditor Comments", key: "cm", width: 60, wrap: true },
+		{ header: "Document Reference", key: "doc", width: 28, wrap: true },
+		{ header: "ISARP Description", key: "desc", width: 48, wrap: true },
+	];
+	const noteRow = (i: ISARPWithRecord, n: number) => ({
+		n: n + 1,
+		disc: i.discipline,
+		isarp: i.isarp_code,
+		status: fullStatus(i.record?.conformance_status ?? null) || "Pending",
+		open: openMark(i),
+		cm: i.record?.auditor_comments ?? "",
+		doc: i.record?.doc_references ?? "",
+		desc: desc(i),
+	});
+	const openItems = all.filter((i) => i.record?.open_item);
+	addTableSheet(wb, "Open Items", `Open items (${openItems.length})`, sub, noteCols,
+		openItems.map(noteRow), "status", openItems.map((i) => i.record?.conformance_status ?? null));
+	const commented = all.filter((i) => i.record?.auditor_comments?.trim());
+	addTableSheet(wb, "Auditor Comments", `Auditor comments — all statuses (${commented.length})`, sub, noteCols,
+		commented.map(noteRow), "status", commented.map((i) => i.record?.conformance_status ?? null));
+
+	// ── Per-discipline detail sheets (disciplines with F/O) ──
 	discStats.forEach((d) => {
 		const items = [...d.findingItems, ...d.obsItems];
 		if (!items.length) return;
-		const rows = [
+		const isF = (i: ISARPWithRecord) =>
+			i.record?.conformance_status?.startsWith("Finding") ?? false;
+		addTableSheet(
+			wb,
+			d.disc,
+			`${d.disc} — ${d.findings} finding(s), ${d.observations} observation(s)`,
+			sub,
 			[
-				"ISARP",
-				"Type",
-				"Status",
-				"Nonconformity / Observation",
-				"Root Cause",
-				"Corrective Action",
-				"Doc References",
+				{ header: "ISARP", key: "isarp", width: 14 },
+				{ header: "Type", key: "type", width: 12, center: true },
+				{ header: "Status", key: "status", width: 30, wrap: true },
+				{ header: "Nonconformity / Observation", key: "nc", width: 50, wrap: true },
+				{ header: "Root Cause", key: "rc", width: 34, wrap: true },
+				{ header: "Corrective Action", key: "ca", width: 34, wrap: true },
+				{ header: "Doc References", key: "doc", width: 26, wrap: true },
+				{ header: "Auditor Comments", key: "cm", width: 34, wrap: true },
+				{ header: "Open", key: "open", width: 9, center: true },
 			],
-			...items.map((i) => {
-				const isFinding =
-					i.record?.conformance_status?.startsWith("Finding") ??
-					false;
-				return [
-					i.isarp_code,
-					isFinding ? "Finding" : "Observation",
-					fullStatus(i.record?.conformance_status ?? null),
-					i.record?.nonconformity_desc ?? "",
-					isFinding ? (i.record?.root_cause ?? "") : "",
-					isFinding ? (i.record?.corrective_action ?? "") : "",
-					i.record?.doc_references ?? "",
-				];
-			}),
-		];
-		const ws = XLSX.utils.aoa_to_sheet(rows);
-		ws["!cols"] = [
-			{ wch: 14 },
-			{ wch: 12 },
-			{ wch: 22 },
-			{ wch: 45 },
-			{ wch: 35 },
-			{ wch: 35 },
-			{ wch: 28 },
-		];
-		XLSX.utils.book_append_sheet(wb, ws, d.disc);
+			items.map((i) => ({
+				isarp: i.isarp_code,
+				type: isF(i) ? "Finding" : "Observation",
+				status: fullStatus(i.record?.conformance_status ?? null),
+				nc: i.record?.nonconformity_desc ?? "",
+				rc: isF(i) ? (i.record?.root_cause ?? "") : "",
+				ca: isF(i) ? (i.record?.corrective_action ?? "") : "",
+				doc: i.record?.doc_references ?? "",
+				cm: i.record?.auditor_comments ?? "",
+				open: openMark(i),
+			})),
+			"status",
+			items.map((i) => i.record?.conformance_status ?? null),
+		);
 	});
-	XLSX.writeFile(wb, `IOSA_results_${new Date().getFullYear()}.xlsx`);
+
+	const buf = await wb.xlsx.writeBuffer();
+	const blob = new Blob([buf], {
+		type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+	});
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement("a");
+	a.href = url;
+	a.download = `IOSA_results_${new Date().getFullYear()}.xlsx`;
+	document.body.appendChild(a);
+	a.click();
+	a.remove();
+	setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // ── NC inline row ─────────────────────────────────────────────
@@ -286,7 +499,11 @@ function NCRow({
 	const [open, setOpen] = useState(false);
 	const r = isarp.record!;
 	const color = isFinding ? styles.ncFinding : styles.ncObs;
-	const hasBody = r.nonconformity_desc || r.root_cause || r.corrective_action;
+	const hasBody =
+		r.nonconformity_desc ||
+		r.root_cause ||
+		r.corrective_action ||
+		r.auditor_comments?.trim();
 	return (
 		<div className={`${styles.ncRow} ${color}`}>
 			<div
@@ -303,6 +520,13 @@ function NCRow({
 					{isFinding ? "F" : "O"} ·{" "}
 					{shortStatus(r.conformance_status)}
 				</span>
+				{r.open_item && (
+					<span
+						className={`${styles.ncStatusPill} ${styles.ncStatusPillOpen}`}
+					>
+						◷ Open
+					</span>
+				)}
 				{r.nonconformity_desc && !open && (
 					<span className={styles.ncPreview}>
 						{r.nonconformity_desc.slice(0, 90)}
@@ -352,6 +576,71 @@ function NCRow({
 							</div>
 						</div>
 					)}
+					{r.auditor_comments?.trim() && (
+						<div className={styles.ncField}>
+							<div className={styles.ncFL}>Auditor Comments</div>
+							<div className={styles.ncFV}>
+								{r.auditor_comments}
+							</div>
+						</div>
+					)}
+				</div>
+			)}
+		</div>
+	);
+}
+
+// ── Note row: conformity / N/A / pending items with comments or open flag ──
+function NoteRow({ isarp }: { isarp: ISARPWithRecord }) {
+	const [open, setOpen] = useState(false);
+	const r = isarp.record!;
+	const cat = catOf(r.conformance_status);
+	const comment = r.auditor_comments?.trim() ?? "";
+	const label =
+		cat === "conformity" ? "Conformity" : cat === "na" ? "N/A" : "Pending";
+	return (
+		<div className={`${styles.ncRow} ${styles.ncNote}`}>
+			<div
+				className={styles.ncRowTop}
+				onClick={() => comment && setOpen((o) => !o)}
+			>
+				<span className={styles.ncIdx}>
+					{cat === "conformity" ? "C" : cat === "na" ? "NA" : "—"}
+				</span>
+				<span className={styles.ncCode}>{isarp.isarp_code}</span>
+				<span
+					className={`${styles.ncStatusPill} ${cat === "conformity" ? styles.ncStatusPillC : styles.ncStatusPillN}`}
+				>
+					{label}
+				</span>
+				{r.open_item && (
+					<span
+						className={`${styles.ncStatusPill} ${styles.ncStatusPillOpen}`}
+					>
+						◷ Open
+					</span>
+				)}
+				{comment && !open && (
+					<span className={styles.ncPreview}>
+						{comment.slice(0, 90)}
+						{comment.length > 90 ? "…" : ""}
+					</span>
+				)}
+				{comment && (
+					<span
+						className={styles.ncChevron}
+						style={{ transform: open ? "rotate(180deg)" : "none" }}
+					>
+						▾
+					</span>
+				)}
+			</div>
+			{open && (
+				<div className={styles.ncBody}>
+					<div className={styles.ncField}>
+						<div className={styles.ncFL}>Auditor Comments</div>
+						<div className={styles.ncFV}>{comment}</div>
+					</div>
 				</div>
 			)}
 		</div>
@@ -370,6 +659,7 @@ function DiscRow({
 }) {
 	const pct = d.total > 0 ? Math.round((d.assessed / d.total) * 100) : 0;
 	const hasNC = d.findings > 0 || d.observations > 0;
+	const hasNotes = d.noteItems.length > 0;
 	return (
 		<div className={`${styles.discRow} ${hasNC ? styles.discRowNC : ""}`}>
 			{/* Main row */}
@@ -399,6 +689,11 @@ function DiscRow({
 					>
 						{d.observations} O
 					</span>
+					{d.open > 0 && (
+						<span className={`${styles.pill} ${styles.pillOpen}`}>
+							◷ {d.open}
+						</span>
+					)}
 				</div>
 				<span
 					className={styles.discPct}
@@ -408,7 +703,7 @@ function DiscRow({
 				</span>
 			</div>
 			{/* Inline NC rows */}
-			{hasNC && (
+			{(hasNC || hasNotes) && (
 				<div className={styles.discNCs}>
 					{d.findingItems.map((i, idx) => (
 						<NCRow
@@ -425,6 +720,9 @@ function DiscRow({
 							globalIdx={oStart + idx + 1}
 							isFinding={false}
 						/>
+					))}
+					{d.noteItems.map((i) => (
+						<NoteRow key={i.isarp_code} isarp={i} />
 					))}
 				</div>
 			)}
@@ -510,6 +808,16 @@ export default function IOSAResults({
 						catOf(i.record?.conformance_status ?? null) ===
 						"observation",
 				),
+				open: d.filter((i) => i.record?.open_item).length,
+				noteItems: d.filter((i) => {
+					const c = catOf(i.record?.conformance_status ?? null);
+					return (
+						c !== "finding" &&
+						c !== "observation" &&
+						(!!i.record?.auditor_comments?.trim() ||
+							!!i.record?.open_item)
+					);
+				}),
 			};
 		},
 	);
@@ -518,7 +826,13 @@ export default function IOSAResults({
 		if (!activeCycle) return;
 		setExporting(true);
 		try {
-			doExport(activeCycle, allIsarps, findings, observations, discStats);
+			await doExport(
+				activeCycle,
+				allIsarps,
+				findings,
+				observations,
+				discStats,
+			);
 		} catch (e) {
 			console.error(e);
 		} finally {
