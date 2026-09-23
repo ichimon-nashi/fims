@@ -569,6 +569,9 @@
 	border: 1px solid var(--iosa-border);
 	overflow: hidden;
 	transition: border-color 0.16s;
+	/* .discList is a scrolling flex column — without this, rows shrink to fit
+	   the viewport and overflow:hidden clips their findings. */
+	flex-shrink: 0;
 }
 
 .discRow:hover {

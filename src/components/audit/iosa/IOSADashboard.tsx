@@ -1118,6 +1118,11 @@ export default function IOSADashboard({
 				flexDirection: "column",
 				gap: 20,
 				color: "#e8e9ed",
+				// Scroll container: parent .content is overflow:hidden, so this
+				// root must own the scroll or the lower sections get clipped.
+				flex: 1,
+				minHeight: 0,
+				overflowY: "auto",
 			}}
 		>
 			{/* ── Action buttons ── */}

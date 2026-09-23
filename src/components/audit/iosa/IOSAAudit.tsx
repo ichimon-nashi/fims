@@ -26,6 +26,8 @@ interface AuditRecord {
 	nonconformity_desc: string;
 	root_cause: string;
 	corrective_action: string;
+	open_item?: boolean;
+	auditor_comments?: string;
 }
 
 interface ISARPWithRecord {
@@ -176,6 +178,7 @@ function AuditWorkspace({
 	const [corrAction, setCorrAction] = useState(
 		record?.corrective_action ?? "",
 	);
+	const [comments, setComments] = useState(record?.auditor_comments ?? "");
 	const saveTimeout = useRef<NodeJS.Timeout>();
 
 	useEffect(() => {
@@ -183,6 +186,7 @@ function AuditWorkspace({
 		setNonconfDesc(record?.nonconformity_desc ?? "");
 		setRootCause(record?.root_cause ?? "");
 		setCorrAction(record?.corrective_action ?? "");
+		setComments(record?.auditor_comments ?? "");
 	}, [isarp.isarp_code]);
 
 	const autoSave = (patch: any) => {
@@ -267,6 +271,21 @@ function AuditWorkspace({
 					)}
 				</div>
 				<div className={styles.wsHeaderRight}>
+					<button
+						className={`${styles.openItemBtn} ${record?.open_item ? styles.openItemBtnOn : ""}`}
+						onClick={() =>
+							!readOnly &&
+							onSave({
+								isarp_code: isarp.isarp_code,
+								discipline: isarp.discipline,
+								open_item: !record?.open_item,
+							})
+						}
+						disabled={readOnly}
+						title="Evidence / follow-up still outstanding"
+					>
+						◷ {record?.open_item ? "Open item" : "Mark open item"}
+					</button>
 					{readOnly && (
 						<span className={styles.readOnlyBadge}>
 							👁 View only
@@ -568,6 +587,7 @@ function AuditWorkspace({
 										value={rootCause}
 										rows={2}
 										placeholder="Root cause analysis..."
+										disabled={readOnly}
 										onChange={(e) => {
 											setRootCause(e.target.value);
 											autoSave({
@@ -587,6 +607,7 @@ function AuditWorkspace({
 										value={corrAction}
 										rows={2}
 										placeholder="Proposed corrective action..."
+										disabled={readOnly}
 										onChange={(e) => {
 											setCorrAction(e.target.value);
 											autoSave({
@@ -602,6 +623,26 @@ function AuditWorkspace({
 						)}
 					</div>
 				)}
+
+				{/* Auditor comments — any status, never cleared by status changes */}
+				<div className={styles.fieldGroup}>
+					<label className={styles.fieldLabel}>Auditor Comments</label>
+					<textarea
+						className={styles.fieldTextarea}
+						value={comments}
+						rows={2}
+						placeholder="Notes, evidence sighted, follow-up..."
+						disabled={readOnly}
+						onChange={(e) => {
+							setComments(e.target.value);
+							autoSave({
+								isarp_code: isarp.isarp_code,
+								discipline: isarp.discipline,
+								auditor_comments: e.target.value,
+							});
+						}}
+					/>
+				</div>
 			</div>
 
 			{/* Footer nav */}
@@ -632,10 +673,16 @@ function AuditListItem({
 	isarp,
 	selected,
 	onClick,
+	batchMode = false,
+	checked = false,
+	onToggleCheck,
 }: {
 	isarp: ISARPWithRecord;
 	selected: boolean;
 	onClick: () => void;
+	batchMode?: boolean;
+	checked?: boolean;
+	onToggleCheck?: () => void;
 }) {
 	const status = isarp.record?.conformance_status ?? null;
 	const category = conformanceCategory(status);
@@ -643,9 +690,16 @@ function AuditListItem({
 
 	return (
 		<div
-			className={`${styles.listRow} ${selected ? styles.listRowActive : ""}`}
-			onClick={onClick}
+			className={`${styles.listRow} ${selected ? styles.listRowActive : ""} ${batchMode && checked ? styles.listRowChecked : ""}`}
+			onClick={batchMode && onToggleCheck ? onToggleCheck : onClick}
 		>
+			{batchMode && (
+				<span
+					className={`${styles.batchCheck} ${checked ? styles.batchCheckOn : ""}`}
+				>
+					{checked && "✓"}
+				</span>
+			)}
 			<div
 				className={styles.statusDot}
 				style={
@@ -663,6 +717,14 @@ function AuditListItem({
 				{(isarp.linked_isarps?.length ?? 0) > 0 && (
 					<span className={styles.listLinkBadge} title="Interlinked">
 						🔗
+					</span>
+				)}
+				{isarp.record?.open_item && (
+					<span
+						className={styles.listOpenBadge}
+						title="Open item"
+					>
+						◷
 					</span>
 				)}
 				{isarp.record?.prep_flagged && (
@@ -704,6 +766,11 @@ export default function IOSAAudit({
 	const [filterStatus, setFilterStatus] = useState<
 		"pending" | "nonconformity" | "done"
 	>("pending");
+
+	// Batch-conform selection (Pending tab only)
+	const [batchMode, setBatchMode] = useState(false);
+	const [batchSel, setBatchSel] = useState<Set<string>>(new Set());
+	const [batchRunning, setBatchRunning] = useState(false);
 
 	// Set initial discipline
 	useEffect(() => {
@@ -795,6 +862,87 @@ export default function IOSAAudit({
 	useEffect(() => {
 		setSelectedCode(filtered[0]?.isarp_code ?? null);
 	}, [filterStatus, discipline]);
+
+	// Batch selection never survives a tab/discipline switch
+	useEffect(() => {
+		setBatchMode(false);
+		setBatchSel(new Set());
+	}, [filterStatus, discipline]);
+
+	const toggleBatch = (code: string) =>
+		setBatchSel((prev) => {
+			const next = new Set(prev);
+			if (next.has(code)) next.delete(code);
+			else next.add(code);
+			return next;
+		});
+
+	// Marks every checked, still-pending ISARP as Conformity via the existing
+	// PATCH route. Pending-only by design, so no NC detail fields need clearing.
+	const handleBatchConform = useCallback(async () => {
+		if (!token || !activeCycle || batchSel.size === 0) return;
+		const targets = allIsarps.filter(
+			(i) => batchSel.has(i.isarp_code) && !i.record?.conformance_status,
+		);
+		if (targets.length === 0) return;
+		const incompleteAA = targets.filter((i) => {
+			const n = i.auditor_actions?.length ?? 0;
+			if (n === 0) return false;
+			const done = Object.values(i.record?.aa_responses ?? {}).filter(
+				(r) => r.completed,
+			).length;
+			return done < n;
+		}).length;
+		const msg =
+			`Mark ${targets.length} ISARP(s) in ${discipline} as Conformity?` +
+			(incompleteAA > 0
+				? `\n\n⚠ ${incompleteAA} of them have Auditor Actions not marked completed.`
+				: "");
+		if (!confirm(msg)) return;
+
+		setBatchRunning(true);
+		const CONFORM = "Conformity (Documented and Implemented)";
+		let failed = 0;
+		const queue = [...targets];
+		const worker = async () => {
+			while (queue.length) {
+				const i = queue.shift()!;
+				try {
+					const res = await fetch("/api/audit/iosa/auditprep", {
+						method: "PATCH",
+						headers: {
+							Authorization: `Bearer ${token}`,
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({
+							cycle_id: activeCycle.id,
+							isarp_code: i.isarp_code,
+							discipline: i.discipline,
+							conformance_status: CONFORM,
+						}),
+					});
+					const { record } = await res.json();
+					if (!res.ok || !record) throw new Error("save failed");
+					setAllIsarps((prev) =>
+						prev.map((x) =>
+							x.isarp_code === record.isarp_code
+								? { ...x, record }
+								: x,
+						),
+					);
+				} catch (e) {
+					console.error(e);
+					failed++;
+				}
+			}
+		};
+		// 4 concurrent requests — avoids firing hundreds of PATCHes at once
+		await Promise.all(Array.from({ length: 4 }, worker));
+		setBatchRunning(false);
+		setBatchSel(new Set());
+		setBatchMode(false);
+		if (failed > 0) alert(`${failed} ISARP(s) failed to save. Please retry.`);
+	}, [token, activeCycle, batchSel, allIsarps, discipline]);
 
 	const handleReset = useCallback(
 		async (isarpCode: string, discipline: string) => {
@@ -1088,6 +1236,59 @@ export default function IOSAAudit({
 								</button>
 							)}
 						</div>
+						{filterStatus === "pending" &&
+							canEditDiscipline &&
+							filtered.length > 0 && (
+								<div className={styles.batchBar}>
+									<button
+										className={`${styles.batchBtn} ${batchMode ? styles.batchBtnOn : ""}`}
+										onClick={() => {
+											setBatchMode((m) => !m);
+											setBatchSel(new Set());
+										}}
+										disabled={batchRunning}
+									>
+										{batchMode ? "✕ Cancel" : "☐ Batch select"}
+									</button>
+									{batchMode && (
+										<>
+											<button
+												className={styles.batchBtn}
+												onClick={() =>
+													setBatchSel(
+														batchSel.size ===
+															filtered.length
+															? new Set()
+															: new Set(
+																	filtered.map(
+																		(i) =>
+																			i.isarp_code,
+																	),
+																),
+													)
+												}
+												disabled={batchRunning}
+											>
+												{batchSel.size === filtered.length
+													? "Clear"
+													: `All (${filtered.length})`}
+											</button>
+											<button
+												className={styles.batchConformBtn}
+												onClick={handleBatchConform}
+												disabled={
+													batchRunning ||
+													batchSel.size === 0
+												}
+											>
+												{batchRunning
+													? "Saving…"
+													: `✓ Conform ${batchSel.size}`}
+											</button>
+										</>
+									)}
+								</div>
+							)}
 					</div>
 					<div className={styles.listBody}>
 						{loading ? (
@@ -1108,6 +1309,11 @@ export default function IOSAAudit({
 										selected?.isarp_code
 									}
 									onClick={() => navigateTo(isarp.isarp_code)}
+									batchMode={batchMode}
+									checked={batchSel.has(isarp.isarp_code)}
+									onToggleCheck={() =>
+										toggleBatch(isarp.isarp_code)
+									}
 								/>
 							))
 						)}

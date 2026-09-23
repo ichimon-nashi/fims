@@ -80,6 +80,35 @@ export async function PATCH(req: NextRequest) {
 			);
 		}
 
+		// Server-side discipline permission — mirrors the client rule in
+		// IOSAAuditPrep (null or [] = unrestricted). Checks both the body
+		// discipline and the ISARP code prefix so neither can be spoofed alone.
+		const { data: userRow, error: userErr } = await supabase
+			.from("users")
+			.select("app_permissions")
+			.eq("id", decoded.userId)
+			.maybeSingle();
+		if (userErr) throw userErr;
+		if (!userRow)
+			return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+		const editDiscs: string[] | null =
+			(userRow.app_permissions as any)?.audit?.iosa_edit_disciplines ??
+			null;
+		if (editDiscs && editDiscs.length > 0) {
+			const targets = new Set<string>([
+				discipline || isarp_code.split(" ")[0],
+				isarp_code.split(" ")[0],
+			]);
+			for (const d of targets) {
+				if (!editDiscs.includes(d)) {
+					return NextResponse.json(
+						{ error: `No edit permission for ${d}` },
+						{ status: 403 },
+					);
+				}
+			}
+		}
+
 		// Fetch existing record first so we never overwrite fields not included in patch
 		const { data: existing } = await supabase
 			.from("audit_iosa_records")
@@ -102,6 +131,8 @@ export async function PATCH(req: NextRequest) {
 			nonconformity_desc: existing?.nonconformity_desc ?? "",
 			root_cause: existing?.root_cause ?? "",
 			corrective_action: existing?.corrective_action ?? "",
+			open_item: existing?.open_item ?? false,
+			auditor_comments: existing?.auditor_comments ?? "",
 			last_audit_date: existing?.last_audit_date ?? null,
 			last_auditor_name: existing?.last_auditor_name ?? null,
 			updated_by: decoded.userId,
@@ -119,6 +150,8 @@ export async function PATCH(req: NextRequest) {
 			"nonconformity_desc",
 			"root_cause",
 			"corrective_action",
+			"open_item",
+			"auditor_comments",
 		];
 		for (const field of patchableFields) {
 			if (field in body) merged[field] = body[field];
