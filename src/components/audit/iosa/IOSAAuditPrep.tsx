@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import styles from "./IOSAAuditPrep.module.css";
+import frame from "./IOSAWorkbench.module.css";
 
 // ── IRM definitions — loaded once from public/irm-definitions.json ──
 let IRM_CACHE: Record<string, string> | null = null;
@@ -1047,8 +1048,33 @@ function Workspace({
 		isarp.auditor_actions?.filter((aa) => aaResponses[aa.num]?.completed)
 			.length ?? 0;
 
+	// Keyboard: ←/→ = prev/next. Ignored while typing, with modifier keys,
+	// or while a reference / IRM popup is open.
+	useEffect(() => {
+		const onKey = (e: KeyboardEvent) => {
+			if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
+			if (refPopup || irmPopup) return;
+			const t = e.target as HTMLElement | null;
+			if (
+				t &&
+				(t.isContentEditable ||
+					["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName))
+			)
+				return;
+			if (e.key === "ArrowRight" && hasNext) {
+				e.preventDefault();
+				onNext();
+			} else if (e.key === "ArrowLeft" && hasPrev) {
+				e.preventDefault();
+				onPrev();
+			}
+		};
+		window.addEventListener("keydown", onKey);
+		return () => window.removeEventListener("keydown", onKey);
+	});
+
 	return (
-		<div className={styles.workspace}>
+		<div className={`${styles.workspace} ${frame.wb}`}>
 			{/* Header */}
 			<div className={styles.wsHeader}>
 				<div className={styles.wsHeaderLeft}>
@@ -1103,7 +1129,9 @@ function Workspace({
 			</div>
 
 			{/* Body */}
-			<div className={styles.wsBody}>
+			<div className={`${styles.wsBody} ${frame.wbBody}`}>
+				{/* Reference column (left on wide screens) */}
+				<div className={frame.wbRef}>
 				{/* Standard text — always full */}
 				<ISARPText
 					isarp={isarp}
@@ -1138,6 +1166,10 @@ function Workspace({
 					</div>
 				)}
 
+				</div>
+
+				{/* Prep column (right on wide screens) */}
+				<div className={frame.wbSide}>
 				{/* Doc references */}
 				<div className={styles.fieldGroup}>
 					<label className={styles.fieldLabel}>
@@ -1254,10 +1286,17 @@ function Workspace({
 						/>
 					)}
 				</div>
+				</div>
 			</div>
 
-			{/* Footer */}
-			<div className={styles.wsFooter}>
+			{/* Footer (pinned to viewport bottom ≤900px) */}
+			<div className={`${styles.wsFooter} ${frame.wbFooter}`}>
+				<div className={frame.wbFooterLeft}>
+					<span className={frame.wbKeys}>
+						<kbd>←</kbd>
+						<kbd>→</kbd> move
+					</span>
+				</div>
 				<div className={styles.navBtns}>
 					<button
 						className={styles.btnNav}
@@ -1488,6 +1527,9 @@ export default function IOSAAuditPrep({
 	const canEditCurrentDisc = (disc: string) =>
 		!editDiscs || editDiscs.length === 0 || editDiscs.includes(disc);
 
+	// List drawer (≤900px only — CSS hides the toggle above that)
+	const [listOpen, setListOpen] = useState(false);
+
 	// Discipline + section navigation
 	const [activeDiscipline, setActiveDiscipline] = useState<string>("");
 	const [activeSection, setActiveSection] = useState<number>(1);
@@ -1690,14 +1732,37 @@ export default function IOSAAuditPrep({
 					<div className={styles.spinner} />
 				</div>
 			) : (
-				<div className={styles.splitPanel}>
-					<GroupedISARPList
-						isarps={filteredIsarps}
-						selectedCode={selectedCode}
-						onSelect={(i) => setSelectedCode(i.isarp_code)}
-						searchQuery={searchQuery}
-						onSearch={setSearchQuery}
+				<>
+				{/* ≤900px: list lives in a slide-over drawer */}
+				<button
+					className={frame.listToggle}
+					onClick={() => setListOpen(true)}
+					aria-expanded={listOpen}
+				>
+					☰ ISARP 清單
+					<span className={frame.listToggleCode}>{selectedCode ?? ""}</span>
+				</button>
+				{listOpen && (
+					<div
+						className={frame.drawerBackdrop}
+						onClick={() => setListOpen(false)}
 					/>
+				)}
+				<div className={`${styles.splitPanel} ${frame.wbSplit}`}>
+					<div
+						className={`${frame.listDrawer} ${listOpen ? frame.listDrawerOpen : ""}`}
+					>
+						<GroupedISARPList
+							isarps={filteredIsarps}
+							selectedCode={selectedCode}
+							onSelect={(i) => {
+								setSelectedCode(i.isarp_code);
+								setListOpen(false);
+							}}
+							searchQuery={searchQuery}
+							onSearch={setSearchQuery}
+						/>
+					</div>
 
 					{/* Workspace */}
 					{selectedIsarp ? (
@@ -1723,6 +1788,7 @@ export default function IOSAAuditPrep({
 						</div>
 					)}
 				</div>
+				</>
 			)}
 		</div>
 	);

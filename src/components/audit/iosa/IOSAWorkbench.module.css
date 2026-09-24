@@ -1,0 +1,206 @@
+/* src/components/audit/iosa/IOSAWorkbench.module.css
+   Shared layout frame for AuditPrep and Audit (list + workspace).
+   Both pages keep their own module for content styling; this file owns
+   only the frame: reference/side split, pinned footer, list drawer.
+
+   Selectors are doubled (.x.x) on purpose: these classes sit next to each
+   page's own classes (.wsBody, .splitPanel …) and must win regardless of
+   the order Next.js loads the two CSS modules. */
+
+/* Single-column default: columns are invisible wrappers that keep the
+   parent's vertical rhythm */
+.wbRef,
+.wbSide {
+	display: flex;
+	flex-direction: column;
+	gap: inherit;
+	min-width: 0;
+}
+
+/* ── Desktop / tablet landscape: Reference | Assessment side by side ──
+   Viewport-based on purpose. A container query would be neater, but
+   container-type adds layout containment, which traps position:fixed
+   children (the pinned footer, reference popups) inside the workspace.
+   At ≥1100px, with the icon rail (64px) and list (≤300px), the workspace
+   is ~720px or more — enough for two readable columns. */
+@media (min-width: 1100px) {
+	.wbBody.wbBody {
+		display: grid;
+		grid-template-columns: minmax(0, 1.3fr) minmax(300px, 1fr);
+		gap: 0;
+		padding: 0;
+		overflow: hidden;
+	}
+	.wbRef,
+	.wbSide {
+		min-height: 0;
+		overflow-y: auto;
+		padding: 1.25rem 1.375rem 1.75rem;
+		gap: 1.125rem;
+	}
+	.wbSide {
+		border-left: 1px solid var(--iosa-border, rgba(255, 255, 255, 0.09));
+		background: rgba(0, 0, 0, 0.16);
+	}
+}
+
+/* ── Split panel: narrower list between 901 and 1279px ── */
+@media (min-width: 901px) and (max-width: 1279px) {
+	.wbSplit.wbSplit {
+		grid-template-columns: minmax(210px, 240px) minmax(0, 1fr);
+	}
+}
+
+/* ── Footer: quick actions + keyboard hint ── */
+.wbFooter.wbFooter {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	justify-content: space-between;
+}
+.wbFooterLeft {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	min-width: 0;
+	flex-wrap: wrap;
+}
+.wbQuick {
+	height: 36px;
+	padding: 0 0.875rem;
+	border-radius: var(--iosa-r-sm, 8px);
+	font-family: inherit;
+	font-size: 0.8125rem;
+	font-weight: 600;
+	cursor: pointer;
+	white-space: nowrap;
+	background: transparent;
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	color: #a8b3c5;
+	transition: all 0.15s;
+}
+.wbQuick:hover:not(:disabled) {
+	color: #e8e9ed;
+	border-color: rgba(255, 255, 255, 0.3);
+}
+.wbQuick:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+.wbQuickC.wbQuickOn {
+	background: rgba(72, 187, 120, 0.14);
+	border-color: rgba(72, 187, 120, 0.5);
+	color: #48bb78;
+}
+.wbQuickN.wbQuickOn {
+	background: rgba(160, 174, 192, 0.12);
+	border-color: rgba(160, 174, 192, 0.45);
+	color: #e8e9ed;
+}
+.wbKeys {
+	font-size: 0.6875rem;
+	color: var(--iosa-faint, #8b95a8);
+	white-space: nowrap;
+}
+.wbKeys kbd {
+	font-family: inherit;
+	font-size: 0.625rem;
+	padding: 1px 5px;
+	margin: 0 1px;
+	border-radius: 4px;
+	border: 1px solid rgba(255, 255, 255, 0.16);
+	background: rgba(255, 255, 255, 0.04);
+}
+
+/* ── List drawer (≤900px). Above that the wrapper is layout-transparent ── */
+.listDrawer {
+	display: contents;
+}
+.listToggle,
+.drawerBackdrop {
+	display: none;
+}
+
+@media (max-width: 900px) {
+	.wbSplit.wbSplit {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.listToggle {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		width: 100%;
+		min-height: 44px;
+		padding: 0 0.875rem;
+		border-radius: var(--iosa-r-md, 12px);
+		border: 1px solid var(--iosa-border, rgba(255, 255, 255, 0.09));
+		background: var(--iosa-surface-2, #161d31);
+		color: #e8e9ed;
+		font-family: inherit;
+		font-size: 0.875rem;
+		font-weight: 600;
+		cursor: pointer;
+		flex-shrink: 0;
+	}
+	.listToggleCode {
+		margin-left: auto;
+		color: var(--iosa-accent, #4a9eff);
+		font-variant-numeric: tabular-nums;
+	}
+	.listDrawer {
+		display: flex;
+		position: fixed;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		z-index: 1001;
+		width: min(340px, 86vw);
+		padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+		background: #0d1220;
+		border-right: 1px solid var(--iosa-border, rgba(255, 255, 255, 0.09));
+		transform: translateX(-105%);
+		transition: transform 0.22s ease;
+	}
+	.listDrawerOpen {
+		transform: translateX(0);
+		box-shadow: 24px 0 48px -12px rgba(0, 0, 0, 0.7);
+	}
+	.listDrawer.listDrawer > * {
+		flex: 1;
+		max-height: none;
+		height: 100%;
+		border-radius: 0;
+		border: none;
+	}
+	.drawerBackdrop {
+		display: block;
+		position: fixed;
+		inset: 0;
+		z-index: 1000;
+		background: rgba(5, 8, 15, 0.6);
+	}
+
+	/* Footer pinned to the viewport bottom — page scrolls at this width */
+	.wb.wb {
+		margin-bottom: 64px;
+	}
+	.wbFooter.wbFooter {
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 50;
+		padding: 0.5rem 1rem calc(0.5rem + env(safe-area-inset-bottom, 0px));
+		background: #10162a;
+		border-top: 1px solid var(--iosa-border, rgba(255, 255, 255, 0.09));
+	}
+	.wbKeys {
+		display: none;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.listDrawer {
+		transition: none;
+	}
+}

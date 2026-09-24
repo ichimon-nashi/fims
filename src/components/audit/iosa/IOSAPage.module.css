@@ -285,3 +285,75 @@
 		display: none;
 	}
 }
+/* ── Compact icon rail (AuditPrep / Audit, above 900px) ── */
+.subtabIcon {
+	display: none;
+}
+.railAnimated {
+	transition: flex-basis 0.2s ease, padding 0.2s ease;
+}
+
+/* Collapse / expand toggle — bottom of the rail, desktop & landscape only */
+.railToggle {
+	display: none;
+}
+@media (min-width: 901px) {
+	.railToggle {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-top: 0.5rem;
+		width: 36px;
+		height: 32px;
+		align-self: flex-end; /* expanded: tucked right; collapsed: centred below */
+		border-radius: 8px;
+		border: 1px solid var(--iosa-border);
+		background: transparent;
+		color: var(--iosa-faint);
+		font-family: inherit;
+		font-size: 0.8125rem;
+		cursor: pointer;
+		flex-shrink: 0;
+	}
+	.railToggle:hover {
+		color: var(--iosa-text);
+		border-color: var(--iosa-border-hi);
+	}
+	.railCompact .railToggle {
+		margin-top: auto; /* railFoot is hidden, so the toggle anchors the bottom */
+		align-self: center;
+	}
+}
+@media (min-width: 901px) {
+	.railCompact {
+		flex-basis: 64px;
+		padding: 0.875rem 0.5rem;
+	}
+	.railCompact .railLabel,
+	.railCompact .subtabText,
+	.railCompact .railFoot {
+		display: none;
+	}
+	.railCompact .subtab {
+		position: relative;
+		justify-content: center;
+		padding: 11px 0;
+	}
+	.railCompact .subtabMark {
+		position: absolute;
+		left: 0;
+		top: 50%;
+		transform: translateY(-50%);
+	}
+	.railCompact .subtabIcon {
+		display: flex;
+	}
+	.railCompact .subtabActive .subtabIcon {
+		color: var(--iosa-accent);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.railAnimated {
+		transition: none;
+	}
+}

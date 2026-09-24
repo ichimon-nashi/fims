@@ -22,12 +22,17 @@ interface AuditRecord {
 	doc_references: string;
 	open_item?: boolean;
 	auditor_comments?: string;
+	aa_responses?: Record<string, { completed?: boolean }>;
 }
 interface ISARPWithRecord {
 	isarp_code: string;
 	discipline: string;
 	isarp_type: string;
 	standard_text: string;
+	// Returned by the auditprep GET (select *) — used by the ISARP reference modal
+	standard_paras?: { text: string; style: string; numFmt?: string }[];
+	auditor_actions?: { num: string; text: string }[];
+	guidance?: string;
 	record: AuditRecord | null;
 }
 interface DiscStat {
@@ -486,6 +491,118 @@ async function doExport(
 	setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+// ── ISARP reference modal (original standard, guidance, auditor actions) ──
+const REF_ROMAN = ["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x", "xi", "xii", "xiii", "xiv", "xv"];
+
+function IsarpRefModal({
+	isarp,
+	onClose,
+}: {
+	isarp: ISARPWithRecord;
+	onClose: () => void;
+}) {
+	useEffect(() => {
+		const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+		window.addEventListener("keydown", onKey);
+		return () => window.removeEventListener("keydown", onKey);
+	}, [onClose]);
+
+	const r = isarp.record;
+	const paras =
+		isarp.standard_paras && isarp.standard_paras.length > 0
+			? isarp.standard_paras
+			: (isarp.standard_text ?? "")
+					.split(/\r?\n/)
+					.map((t) => ({ text: t, style: "Normal" }) as { text: string; style: string; numFmt?: string });
+	const counters: Record<string, number> = {};
+	let lastStyle = "";
+	const aaDone = Object.values(r?.aa_responses ?? {}).filter((x) => x?.completed).length;
+
+	return (
+		<div className={styles.refOverlay} onClick={onClose}>
+			<div
+				className={styles.refModal}
+				onClick={(e) => e.stopPropagation()}
+				role="dialog"
+				aria-label={`${isarp.isarp_code} reference`}
+			>
+				<div className={styles.refHeader}>
+					<div className={styles.refTitleWrap}>
+						<span className={styles.refCode}>{isarp.isarp_code}</span>
+						<span className={styles.refType}>{isarp.isarp_type}</span>
+						{r?.conformance_status && (
+							<span className={styles.refStatus}>{fullStatus(r.conformance_status)}</span>
+						)}
+					</div>
+					<button className={styles.refClose} onClick={onClose} aria-label="Close">
+						✕
+					</button>
+				</div>
+				<div className={styles.refBody}>
+					<div className={styles.refSection}>
+						<div className={styles.ncFL}>Standard</div>
+						<div className={styles.refStd}>
+							{paras.map((p, idx) => {
+								const isList = p.style === "iatalistitem";
+								if (isList && lastStyle !== "iatalistitem") counters[p.numFmt ?? "def"] = 0;
+								lastStyle = p.style;
+								let prefix = "";
+								if (isList) {
+									const fmt = p.numFmt ?? "lowerRoman";
+									const n = counters[fmt] ?? 0;
+									counters[fmt] = n + 1;
+									prefix =
+										fmt === "bullet"
+											? "•"
+											: fmt === "decimal"
+												? `${n + 1}.`
+												: fmt === "lowerLetter"
+													? `${String.fromCharCode(97 + n)}.`
+													: `${REF_ROMAN[n] ?? n + 1}.`;
+								}
+								return (
+									<div key={idx} className={isList ? styles.refStdItem : styles.refStdLine}>
+										{isList && <span className={styles.refStdPrefix}>{prefix}</span>}
+										<span>{p.text}</span>
+									</div>
+								);
+							})}
+						</div>
+					</div>
+					{isarp.guidance && (
+						<div className={styles.refSection}>
+							<div className={styles.ncFL}>Guidance</div>
+							<div className={styles.refGuidance}>{isarp.guidance}</div>
+						</div>
+					)}
+					{(isarp.auditor_actions?.length ?? 0) > 0 && (
+						<div className={styles.refSection}>
+							<div className={styles.ncFL}>
+								Auditor Actions · {aaDone}/{isarp.auditor_actions!.length} completed
+							</div>
+							{isarp.auditor_actions!.map((aa) => {
+								const done = !!r?.aa_responses?.[aa.num]?.completed;
+								return (
+									<div key={aa.num} className={`${styles.refAA} ${done ? styles.refAADone : ""}`}>
+										<span className={styles.refAABox}>{done ? "✓" : ""}</span>
+										<span>{aa.text}</span>
+									</div>
+								);
+							})}
+						</div>
+					)}
+					{r?.doc_references && (
+						<div className={styles.refSection}>
+							<div className={styles.ncFL}>Doc References</div>
+							<div className={styles.refDocs}>{r.doc_references}</div>
+						</div>
+					)}
+				</div>
+			</div>
+		</div>
+	);
+}
+
 // ── NC inline row ─────────────────────────────────────────────
 function NCRow({
 	isarp,
@@ -497,15 +614,16 @@ function NCRow({
 	isFinding: boolean;
 }) {
 	const [open, setOpen] = useState(false);
+	const [showRef, setShowRef] = useState(false);
 	const r = isarp.record!;
 	const color = isFinding ? styles.ncFinding : styles.ncObs;
+	// Description is always visible now, so the body only holds the rest
 	const hasBody =
-		r.nonconformity_desc ||
-		r.root_cause ||
-		r.corrective_action ||
+		(isFinding && (r.root_cause || r.corrective_action)) ||
+		r.doc_references ||
 		r.auditor_comments?.trim();
 	return (
-		<div className={`${styles.ncRow} ${color}`}>
+		<div className={`${styles.ncRow} ${color} ${r.open_item ? styles.ncRowOpen : ""}`}>
 			<div
 				className={styles.ncRowTop}
 				onClick={() => hasBody && setOpen((o) => !o)}
@@ -513,7 +631,16 @@ function NCRow({
 				<span className={styles.ncIdx}>
 					{String(globalIdx).padStart(2, "0")}
 				</span>
-				<span className={styles.ncCode}>{isarp.isarp_code}</span>
+				<button
+					className={`${styles.ncCode} ${styles.ncCodeBtn}`}
+					onClick={(e) => {
+						e.stopPropagation();
+						setShowRef(true);
+					}}
+					title="View original ISARP"
+				>
+					{isarp.isarp_code}
+				</button>
 				<span
 					className={`${styles.ncStatusPill} ${isFinding ? styles.ncStatusPillF : styles.ncStatusPillO}`}
 				>
@@ -524,15 +651,10 @@ function NCRow({
 					<span
 						className={`${styles.ncStatusPill} ${styles.ncStatusPillOpen}`}
 					>
-						◷ Open
+						◷ Open item
 					</span>
 				)}
-				{r.nonconformity_desc && !open && (
-					<span className={styles.ncPreview}>
-						{r.nonconformity_desc.slice(0, 90)}
-						{r.nonconformity_desc.length > 90 ? "…" : ""}
-					</span>
-				)}
+				<span className={styles.ncSpacer} />
 				{hasBody && (
 					<span
 						className={styles.ncChevron}
@@ -542,18 +664,16 @@ function NCRow({
 					</span>
 				)}
 			</div>
+			{r.nonconformity_desc && (
+				<div
+					className={styles.ncDesc}
+					onClick={() => hasBody && setOpen((o) => !o)}
+				>
+					{r.nonconformity_desc}
+				</div>
+			)}
 			{open && (
 				<div className={styles.ncBody}>
-					{r.nonconformity_desc && (
-						<div className={styles.ncField}>
-							<div className={styles.ncFL}>
-								{isFinding ? "Nonconformity" : "Observation"}
-							</div>
-							<div className={styles.ncFV}>
-								{r.nonconformity_desc}
-							</div>
-						</div>
-					)}
 					{isFinding && r.root_cause && (
 						<div className={styles.ncField}>
 							<div className={styles.ncFL}>Root Cause</div>
@@ -586,6 +706,9 @@ function NCRow({
 					)}
 				</div>
 			)}
+			{showRef && (
+				<IsarpRefModal isarp={isarp} onClose={() => setShowRef(false)} />
+			)}
 		</div>
 	);
 }
@@ -593,13 +716,14 @@ function NCRow({
 // ── Note row: conformity / N/A / pending items with comments or open flag ──
 function NoteRow({ isarp }: { isarp: ISARPWithRecord }) {
 	const [open, setOpen] = useState(false);
+	const [showRef, setShowRef] = useState(false);
 	const r = isarp.record!;
 	const cat = catOf(r.conformance_status);
 	const comment = r.auditor_comments?.trim() ?? "";
 	const label =
 		cat === "conformity" ? "Conformity" : cat === "na" ? "N/A" : "Pending";
 	return (
-		<div className={`${styles.ncRow} ${styles.ncNote}`}>
+		<div className={`${styles.ncRow} ${styles.ncNote} ${r.open_item ? styles.ncRowOpen : ""}`}>
 			<div
 				className={styles.ncRowTop}
 				onClick={() => comment && setOpen((o) => !o)}
@@ -607,9 +731,18 @@ function NoteRow({ isarp }: { isarp: ISARPWithRecord }) {
 				<span className={styles.ncIdx}>
 					{cat === "conformity" ? "C" : cat === "na" ? "NA" : "—"}
 				</span>
-				<span className={styles.ncCode}>{isarp.isarp_code}</span>
+				<button
+					className={`${styles.ncCode} ${styles.ncCodeBtn}`}
+					onClick={(e) => {
+						e.stopPropagation();
+						setShowRef(true);
+					}}
+					title="View original ISARP"
+				>
+					{isarp.isarp_code}
+				</button>
 				<span
-					className={`${styles.ncStatusPill} ${cat === "conformity" ? styles.ncStatusPillC : styles.ncStatusPillN}`}
+					className={`${styles.ncStatusPill} ${cat === "conformity" && !r.open_item ? styles.ncStatusPillC : styles.ncStatusPillN}`}
 				>
 					{label}
 				</span>
@@ -617,7 +750,7 @@ function NoteRow({ isarp }: { isarp: ISARPWithRecord }) {
 					<span
 						className={`${styles.ncStatusPill} ${styles.ncStatusPillOpen}`}
 					>
-						◷ Open
+						◷ Open item
 					</span>
 				)}
 				{comment && !open && (
@@ -642,6 +775,9 @@ function NoteRow({ isarp }: { isarp: ISARPWithRecord }) {
 						<div className={styles.ncFV}>{comment}</div>
 					</div>
 				</div>
+			)}
+			{showRef && (
+				<IsarpRefModal isarp={isarp} onClose={() => setShowRef(false)} />
 			)}
 		</div>
 	);
@@ -691,7 +827,7 @@ function DiscRow({
 					</span>
 					{d.open > 0 && (
 						<span className={`${styles.pill} ${styles.pillOpen}`}>
-							◷ {d.open}
+							◷ {d.open} open
 						</span>
 					)}
 				</div>
@@ -771,6 +907,7 @@ export default function IOSAResults({
 		(i) => catOf(i.record?.conformance_status ?? null) === "conformity",
 	);
 	const assessed = allIsarps.filter((i) => i.record?.conformance_status);
+	const openCount = allIsarps.filter((i) => i.record?.open_item).length;
 	const pct =
 		allIsarps.length > 0
 			? Math.round((assessed.length / allIsarps.length) * 100)
@@ -959,6 +1096,21 @@ export default function IOSAResults({
 								Observations
 							</span>
 						</div>
+						{openCount > 0 && (
+							<>
+								<div className={styles.stripDivider} />
+								<div
+									className={`${styles.stripBlock} ${styles.stripOpen}`}
+								>
+									<span className={styles.stripVal}>
+										{openCount}
+									</span>
+									<span className={styles.stripLbl}>
+										◷ Open items
+									</span>
+								</div>
+							</>
+						)}
 					</div>
 
 					{/* Discipline rows */}

@@ -1,10 +1,18 @@
 // src/components/audit/iosa/IOSADashboard.tsx
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, Children } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Image from "next/image";
 import styles from "./IOSADashboard.module.css";
+import { createClient } from "@supabase/supabase-js";
+
+// Anon client — used only to receive data-less broadcast pings.
+// Activity rows themselves come from the authenticated /activity route.
+const realtimeClient = createClient(
+	process.env.NEXT_PUBLIC_SUPABASE_URL!,
+	process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
 
 // ── Types ────────────────────────────────────────────────────
 interface AuditCycle {
@@ -388,6 +396,8 @@ interface CycleSelectorProps {
 	onDelete: (id: string) => void;
 	onDisciplineUpdate: (id: string, disciplines: string[]) => void;
 	isPrivileged: boolean;
+	primaryAction?: React.ReactNode; // Export CR, rendered left of the ⋯ menu
+	onImport?: () => void;
 }
 
 function CycleSelector({
@@ -400,8 +410,11 @@ function CycleSelector({
 	onDelete,
 	onDisciplineUpdate,
 	isPrivileged,
+	primaryAction,
+	onImport,
 }: CycleSelectorProps) {
 	const [historyOpen, setHistoryOpen] = useState(false);
+	const [menuOpen, setMenuOpen] = useState(false);
 	const [statusOpen, setStatusOpen] = useState(false);
 	const [editing, setEditing] = useState(false);
 	const [editName, setEditName] = useState(activeCycle.name);
@@ -457,8 +470,11 @@ function CycleSelector({
 					marginBottom: 20,
 				}}
 			>
-				{/* Left: name + status badge (clickable dropdown) + edition */}
-				<div style={{ display: "flex", flexDirection: "column", gap: 7, minWidth: 0 }}>
+				{/* Left: name + status badge (clickable dropdown) + edition.
+				    flex-basis 260px: the title block shrinks (edition badge wraps
+				    under the name) before the action buttons get pushed to a new
+				    line. Only below ~600px do the actions drop underneath. */}
+				<div style={{ display: "flex", flexDirection: "column", gap: 7, minWidth: 0, flex: "1 1 260px" }}>
 					<div style={{ display: "flex", alignItems: "center", gap: 11, flexWrap: "wrap" }}>
 						{editing ? (
 							<input
@@ -506,6 +522,86 @@ function CycleSelector({
 								<span style={{ fontSize: 12, color: "#7FA8FF" }}>✎</span>
 							</button>
 						)}
+
+						{/* Cycle switcher (was the 歷史週期 button) */}
+					{cycles.length > 1 && (
+						<div style={{ position: "relative" }}>
+							<button
+								onClick={() => setHistoryOpen((o) => !o)}
+								title={`切換查核週期 (${cycles.length})`}
+								style={{
+									padding: "4px 9px",
+									borderRadius: 8,
+									border: "1px solid #212B3C",
+									background: "#0E131D",
+									color: "#8E9AAD",
+									fontSize: 12,
+									cursor: "pointer",
+								}}
+							>
+								{cycles.length} ▾
+							</button>
+							{historyOpen && (
+								<div
+									style={{
+										position: "absolute",
+										top: 44,
+										left: 0,
+										zIndex: 40,
+										minWidth: 236,
+										padding: 5,
+										borderRadius: 12,
+										background: "#0E131D",
+										border: "1px solid #232D3F",
+										boxShadow: "0 26px 52px -20px rgba(0,0,0,.92)",
+										display: "flex",
+										flexDirection: "column",
+										gap: 2,
+										maxHeight: 320,
+										overflow: "auto",
+									}}
+								>
+									{cycles.map((c) => (
+										<button
+											key={c.id}
+											onClick={() => {
+												onSelect(c);
+												setHistoryOpen(false);
+											}}
+											style={{
+												display: "flex",
+												alignItems: "center",
+												justifyContent: "space-between",
+												gap: 12,
+												padding: "9px 11px",
+												border: "none",
+												borderRadius: 8,
+												fontSize: 12.5,
+												cursor: "pointer",
+												textAlign: "left",
+												background: c.id === activeCycle.id ? "#141B29" : "transparent",
+												color: "#C3CCDB",
+											}}
+										>
+											<span>{c.name}</span>
+											<span
+												style={{
+													fontSize: 10.5,
+													fontWeight: 600,
+													padding: "2px 7px",
+													borderRadius: 99,
+													background: STATUS_STYLE[c.status].bg,
+													color: STATUS_STYLE[c.status].fg,
+												}}
+											>
+												{STATUS_LABELS[c.status]}
+											</span>
+										</button>
+									))}
+								</div>
+							)}
+						</div>
+					)}
 
 						{/* Status — clickable badge dropdown */}
 						<div style={{ position: "relative" }}>
@@ -589,24 +685,101 @@ function CycleSelector({
 
 				{/* Right: actions */}
 				<div style={{ display: "flex", gap: 9, flexWrap: "wrap", alignItems: "center" }}>
-					{/* Edit disciplines */}
-					<div style={{ position: "relative" }}>
+					{/* Primary action + cycle-management menu.
+					    Scope / Import / New cycle / Delete are once-per-cycle tasks,
+					    so they live behind ⋯ — only Export CR stays visible. */}
+					<div style={{ position: "relative", display: "flex", gap: 9, alignItems: "center" }}>
+						{primaryAction}
 						<button
-							onClick={() => setShowDiscEdit((o) => !o)}
-							title="Edit in-scope disciplines"
+							onClick={() => {
+								setMenuOpen((o) => !o);
+								setShowDiscEdit(false);
+							}}
+							title="管理查核週期"
+							aria-label="Cycle actions"
 							style={{
-								padding: "9px 14px",
+								width: 38,
+								height: 36,
 								borderRadius: 9,
-								border: "1px solid #212B3C",
+								border: `1px solid ${menuOpen ? "#3D6EF0" : "#212B3C"}`,
 								background: "#0E131D",
 								color: "#C3CCDB",
-								fontSize: 12.5,
-								fontWeight: 500,
+								fontSize: 16,
+								lineHeight: 1,
 								cursor: "pointer",
 							}}
 						>
-							✎ Scope
+							⋯
 						</button>
+						{menuOpen && (
+							<div
+								style={{
+									position: "absolute",
+									top: 44,
+									right: 0,
+									zIndex: 40,
+									minWidth: 190,
+									padding: 5,
+									borderRadius: 12,
+									background: "#0E131D",
+									border: "1px solid #232D3F",
+									boxShadow: "0 26px 52px -20px rgba(0,0,0,.92)",
+									display: "flex",
+									flexDirection: "column",
+									gap: 2,
+								}}
+							>
+								{[
+									{ label: "✎ Edit scope", on: () => setShowDiscEdit(true), show: true },
+									{ label: "↑ Import ISARPs", on: () => onImport?.(), show: !!onImport },
+									{ label: "+ 新週期", on: onNewCycle, show: true },
+								]
+									.filter((m) => m.show)
+									.map((m) => (
+										<button
+											key={m.label}
+											onClick={() => {
+												setMenuOpen(false);
+												m.on();
+											}}
+											style={{
+												padding: "9px 11px",
+												border: "none",
+												borderRadius: 8,
+												background: "transparent",
+												color: "#C3CCDB",
+												fontSize: 12.5,
+												textAlign: "left",
+												cursor: "pointer",
+											}}
+										>
+											{m.label}
+										</button>
+									))}
+								{isPrivileged && (
+									<button
+										onClick={() => {
+											setMenuOpen(false);
+											setShowDeleteModal(true);
+										}}
+										style={{
+											marginTop: 3,
+											padding: "9px 11px",
+											border: "none",
+											borderTop: "1px solid #1A2130",
+											borderRadius: 0,
+											background: "transparent",
+											color: "#F0655C",
+											fontSize: 12.5,
+											textAlign: "left",
+											cursor: "pointer",
+										}}
+									>
+										🗑 刪除此查核週期
+									</button>
+								)}
+							</div>
+						)}
 						{showDiscEdit && (
 							<div
 								style={{
@@ -687,121 +860,6 @@ function CycleSelector({
 						)}
 					</div>
 
-					<button
-						onClick={onNewCycle}
-						style={{
-							padding: "9px 14px",
-							borderRadius: 9,
-							border: "1px solid #2A3348",
-							background: "#131A28",
-							color: "#E9EDF5",
-							fontSize: 12.5,
-							fontWeight: 600,
-							cursor: "pointer",
-						}}
-					>
-						+ 新週期
-					</button>
-
-					{/* History dropdown */}
-					{cycles.length > 1 && (
-						<div style={{ position: "relative" }}>
-							<button
-								onClick={() => setHistoryOpen((o) => !o)}
-								style={{
-									padding: "9px 14px",
-									borderRadius: 9,
-									border: "1px solid #212B3C",
-									background: "#0E131D",
-									color: "#C3CCDB",
-									fontSize: 12.5,
-									fontWeight: 500,
-									cursor: "pointer",
-								}}
-							>
-								歷史週期 ({cycles.length}) ▾
-							</button>
-							{historyOpen && (
-								<div
-									style={{
-										position: "absolute",
-										top: 44,
-										right: 0,
-										zIndex: 40,
-										minWidth: 236,
-										padding: 5,
-										borderRadius: 12,
-										background: "#0E131D",
-										border: "1px solid #232D3F",
-										boxShadow: "0 26px 52px -20px rgba(0,0,0,.92)",
-										display: "flex",
-										flexDirection: "column",
-										gap: 2,
-										maxHeight: 320,
-										overflow: "auto",
-									}}
-								>
-									{cycles.map((c) => (
-										<button
-											key={c.id}
-											onClick={() => {
-												onSelect(c);
-												setHistoryOpen(false);
-											}}
-											style={{
-												display: "flex",
-												alignItems: "center",
-												justifyContent: "space-between",
-												gap: 12,
-												padding: "9px 11px",
-												border: "none",
-												borderRadius: 8,
-												fontSize: 12.5,
-												cursor: "pointer",
-												textAlign: "left",
-												background: c.id === activeCycle.id ? "#141B29" : "transparent",
-												color: "#C3CCDB",
-											}}
-										>
-											<span>{c.name}</span>
-											<span
-												style={{
-													fontSize: 10.5,
-													fontWeight: 600,
-													padding: "2px 7px",
-													borderRadius: 99,
-													background: STATUS_STYLE[c.status].bg,
-													color: STATUS_STYLE[c.status].fg,
-												}}
-											>
-												{STATUS_LABELS[c.status]}
-											</span>
-										</button>
-									))}
-								</div>
-							)}
-						</div>
-					)}
-
-					{/* Delete — admin/51892 only */}
-					{isPrivileged && (
-						<button
-							onClick={() => setShowDeleteModal(true)}
-							title="刪除此查核週期"
-							style={{
-								width: 36,
-								height: 36,
-								borderRadius: 9,
-								border: "1px solid #2E1F24",
-								background: "#160F12",
-								color: "#F0655C",
-								fontSize: 13,
-								cursor: "pointer",
-							}}
-						>
-							🗑
-						</button>
-					)}
 				</div>
 			</div>
 
@@ -817,6 +875,334 @@ function CycleSelector({
 }
 
 // ── Main Dashboard ────────────────────────────────────────────
+// ── Balanced card grid ────────────────────────────────────────
+// Picks the fewest rows that fit, then spreads cards evenly (8 → 4 + 4).
+// Cards are always equal width — a short last row never stretches.
+// Below `compactBelow` px the grid switches to compact cards (smaller
+// min width) so tablets get 4 per row instead of 3 + 3 + 2.
+function BalancedGrid({
+	min = 196,
+	compactMin = 128,
+	compactBelow = 1000,
+	gap = 11,
+	children,
+}: {
+	min?: number;
+	compactMin?: number;
+	compactBelow?: number;
+	gap?: number;
+	children: (compact: boolean) => React.ReactNode;
+}) {
+	const ref = useRef<HTMLDivElement>(null);
+	const [width, setWidth] = useState(0);
+
+	useEffect(() => {
+		const el = ref.current;
+		if (!el) return;
+		const ro = new ResizeObserver(([entry]) =>
+			setWidth(entry.contentRect.width),
+		);
+		ro.observe(el);
+		return () => ro.disconnect();
+	}, []);
+
+	const compact = width > 0 && width < compactBelow;
+	const items = Children.toArray(children(compact));
+	const n = items.length || 1;
+	const cardMin = compact ? compactMin : min;
+	const maxCols = width
+		? Math.max(1, Math.floor((width + gap) / (cardMin + gap)))
+		: Math.min(n, 4);
+	const rows = Math.ceil(n / Math.min(maxCols, n));
+	const cols = Math.ceil(n / rows);
+
+	return (
+		<div
+			ref={ref}
+			style={{
+				display: "grid",
+				gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+				gap,
+			}}
+		>
+			{items}
+		</div>
+	);
+}
+
+// ── Live conformance stream ──────────────────────────────────
+interface ActivityRow {
+	id: number;
+	isarp_code: string;
+	discipline: string;
+	field: string;
+	old_value: string | null;
+	new_value: string | null;
+	actor_name: string | null;
+	actor_id: string;
+	created_at: string;
+	updated_at: string;
+}
+interface ActivityGroup {
+	key: string;
+	rows: ActivityRow[];
+}
+
+const STATUS_TONE = (v: string | null) =>
+	!v
+		? "#8791A3"
+		: v.startsWith("Conformity")
+			? "#48bb78"
+			: v.startsWith("Finding")
+				? "#fc8181"
+				: v.startsWith("Observation")
+					? "#f6ad55"
+					: "#a8b3c5";
+const shortStat = (v: string | null) => {
+	if (!v) return "Pending";
+	const m = v.match(/^(\w[\w/]*)/);
+	return m ? m[1] : v;
+};
+function timeAgo(iso: string, now: number) {
+	const s = Math.max(0, Math.round((now - new Date(iso).getTime()) / 1000));
+	if (s < 45) return "just now";
+	if (s < 3600) return `${Math.round(s / 60)}m ago`;
+	if (s < 86400) return `${Math.round(s / 3600)}h ago`;
+	return new Date(iso).toLocaleDateString("en-CA");
+}
+// Batch conform fires many identical events — collapse consecutive runs.
+function groupActivity(rows: ActivityRow[]): ActivityGroup[] {
+	const out: ActivityGroup[] = [];
+	for (const r of rows) {
+		const g = out[out.length - 1];
+		const head = g?.rows[0];
+		if (
+			head &&
+			(r.field === "conformance_status" || r.field === "open_item") &&
+			head.field === r.field &&
+			head.actor_id === r.actor_id &&
+			head.new_value === r.new_value &&
+			Math.abs(
+				new Date(g.rows[g.rows.length - 1].updated_at).getTime() -
+					new Date(r.updated_at).getTime(),
+			) < 120_000
+		) {
+			g.rows.push(r);
+		} else out.push({ key: String(r.id), rows: [r] });
+	}
+	return out;
+}
+function describe(r: ActivityRow): { verb: string; tone?: string; detail?: string } {
+	switch (r.field) {
+		case "conformance_status":
+			return r.new_value
+				? { verb: `marked ${shortStat(r.new_value)}`, tone: STATUS_TONE(r.new_value) }
+				: { verb: "reset to pending", tone: "#8791A3" };
+		case "open_item":
+			return r.new_value === "true"
+				? { verb: "flagged open item", tone: "#4a9eff" }
+				: { verb: "closed open item", tone: "#a8b3c5" };
+		case "auditor_comments":
+			return { verb: "commented", detail: r.new_value ?? "" };
+		case "nonconformity_desc":
+			return { verb: "edited finding text", detail: r.new_value ?? "" };
+		case "root_cause":
+			return { verb: "updated root cause" };
+		case "corrective_action":
+			return { verb: "updated corrective action" };
+		case "doc_references":
+			return { verb: "updated doc references" };
+		case "aa":
+			return { verb: `${r.new_value === "completed" ? "completed" : "unchecked"} AA ${r.old_value}` };
+		case "prep_flagged":
+			return r.new_value === "true"
+				? { verb: "flagged in prep", tone: "#fc8181" }
+				: { verb: "cleared prep flag" };
+		case "prep_status":
+			return { verb: `set prep to ${r.new_value ?? "—"}` };
+		case "prep_flag_reason":
+			return { verb: "updated flag reason" };
+		default:
+			return { verb: `changed ${r.field}` };
+	}
+}
+
+function LiveStream({
+	token,
+	cycleId,
+	cycleName,
+	canClear = false,
+}: {
+	token: string | null;
+	cycleId: string | null;
+	cycleName?: string;
+	canClear?: boolean;
+}) {
+	const [rows, setRows] = useState<ActivityRow[]>([]);
+	const [loaded, setLoaded] = useState(false);
+	const [loadErr, setLoadErr] = useState<string | null>(null);
+	const [live, setLive] = useState(false);
+	const [now, setNow] = useState(Date.now());
+	const [clearing, setClearing] = useState(false);
+	const refetchTimer = useRef<ReturnType<typeof setTimeout>>();
+
+	const load = useCallback(async () => {
+		if (!token || !cycleId) return;
+		try {
+			const res = await fetch(`/api/audit/iosa/activity?cycle_id=${cycleId}&limit=80`, {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			const json = await res.json().catch(() => ({}));
+			if (res.ok) {
+				setRows(json.activity ?? []);
+				setLoadErr(null);
+			} else {
+				setLoadErr(`${res.status} ${json.error ?? res.statusText}`);
+			}
+		} catch (e: any) {
+			console.error("[LiveStream]", e);
+			setLoadErr(e?.message ?? "Network error");
+		} finally {
+			setLoaded(true);
+		}
+	}, [token, cycleId]);
+
+	useEffect(() => {
+		setLoaded(false);
+		setRows([]);
+		load();
+	}, [load]);
+
+	// Broadcast ping → debounced refetch (batch saves send many pings)
+	useEffect(() => {
+		if (!cycleId) return;
+		const ch = realtimeClient
+			.channel(`iosa-activity-${cycleId}`)
+			.on("broadcast", { event: "activity" }, () => {
+				clearTimeout(refetchTimer.current);
+				refetchTimer.current = setTimeout(load, 700);
+			})
+			.subscribe((status) => setLive(status === "SUBSCRIBED"));
+		return () => {
+			clearTimeout(refetchTimer.current);
+			realtimeClient.removeChannel(ch);
+			setLive(false);
+		};
+	}, [cycleId, load]);
+
+	// Safety net if the socket drops silently, plus relative-time refresh
+	useEffect(() => {
+		const t = setInterval(() => {
+			setNow(Date.now());
+			if (document.visibilityState === "visible") load();
+		}, 60_000);
+		return () => clearInterval(t);
+	}, [load]);
+
+	const groups = groupActivity(rows);
+
+	// 51892/admin only — server enforces the same check
+	const clearStream = async () => {
+		if (!token || !cycleId) return;
+		if (!confirm(`Delete ALL live-stream activity for "${cycleName ?? "this cycle"}"?\n\nThis cannot be undone. Audit records are not affected.`))
+			return;
+		setClearing(true);
+		try {
+			const res = await fetch(`/api/audit/iosa/activity?cycle_id=${cycleId}`, {
+				method: "DELETE",
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			const json = await res.json().catch(() => ({}));
+			if (!res.ok) alert(`Clear failed: ${res.status} ${json.error ?? ""}`);
+			await load();
+		} finally {
+			setClearing(false);
+		}
+	};
+
+	return (
+		<div style={{ display: "flex", flexDirection: "column", borderRadius: 16, background: "#0B0F17", border: "1px solid #1A2130", overflow: "hidden", minHeight: 0 }}>
+			<div style={{ display: "flex", alignItems: "center", gap: 8, padding: "13px 16px", borderBottom: "1px solid #151C28" }}>
+				<span
+					className={live ? styles.liveDot : undefined}
+					style={{ width: 6, height: 6, borderRadius: "50%", background: live ? "#34D9C0" : "#5B6475" }}
+					title={live ? "Connected" : "Reconnecting — refreshing every minute"}
+				/>
+				<span style={{ fontSize: 12, fontWeight: 600, letterSpacing: ".04em" }}>Live conformance stream</span>
+				<span style={{ marginLeft: "auto", fontSize: 10, letterSpacing: ".12em", color: live ? "#34D9C0" : "#8791A3" }}>
+					{live ? "LIVE" : "OFFLINE"}
+				</span>
+				{canClear && rows.length > 0 && (
+					<button
+						onClick={clearStream}
+						disabled={clearing}
+						title="Delete this cycle's activity entries (admin only)"
+						style={{
+							marginLeft: 6,
+							padding: "3px 9px",
+							borderRadius: 6,
+							border: "1px solid rgba(252,129,129,0.35)",
+							background: "rgba(252,129,129,0.08)",
+							color: "#fc8181",
+							fontSize: 11,
+							fontFamily: "inherit",
+							cursor: clearing ? "not-allowed" : "pointer",
+							opacity: clearing ? 0.5 : 1,
+						}}
+					>
+						{clearing ? "Clearing…" : "🗑 Clear"}
+					</button>
+				)}
+			</div>
+			<div style={{ flex: 1, minHeight: 0, maxHeight: 300, overflowY: "auto", padding: groups.length ? "6px 0" : 24, display: "flex", flexDirection: "column", justifyContent: groups.length ? "flex-start" : "center" }}>
+				{!loaded ? (
+					<div style={{ fontSize: 12, color: "#8791A3", textAlign: "center" }}>Loading…</div>
+				) : loadErr && groups.length === 0 ? (
+					<div style={{ fontSize: 12, color: "#fc8181", textAlign: "center" }}>
+						Activity feed failed to load
+						<br />
+						<code style={{ fontSize: 11 }}>{loadErr}</code>
+					</div>
+				) : groups.length === 0 ? (
+					<div style={{ fontSize: 12, color: "#8791A3", textAlign: "center" }}>
+						No activity yet for this cycle.
+						<br />
+						<span style={{ fontSize: 11 }}>Changes made in AuditPrep and Audit appear here instantly.</span>
+					</div>
+				) : (
+					groups.map((g) => {
+						const r = g.rows[0];
+						const d = describe(r);
+						const n = g.rows.length;
+						return (
+							<div key={g.key} style={{ display: "flex", gap: 10, padding: "8px 16px", borderBottom: "1px solid #121826", alignItems: "flex-start" }}>
+								<span style={{ width: 6, height: 6, borderRadius: "50%", marginTop: 6, flexShrink: 0, background: d.tone ?? "#4a9eff" }} />
+								<div style={{ flex: 1, minWidth: 0, fontSize: 12, lineHeight: 1.5, color: "#c3cad6" }}>
+									<strong style={{ color: "#e8e9ed", fontWeight: 600 }}>{r.actor_name ?? r.actor_id}</strong>{" "}
+									<span style={{ color: d.tone ?? "#c3cad6", fontWeight: d.tone ? 600 : 400 }}>{d.verb}</span>{" "}
+									{n > 1 ? (
+										<span title={g.rows.map((x) => x.isarp_code).join(", ")} style={{ color: "#e8e9ed", fontWeight: 600, cursor: "help" }}>
+											{n} ISARPs
+										</span>
+									) : (
+										<span style={{ color: "#e8e9ed", fontWeight: 600 }}>{r.isarp_code}</span>
+									)}
+									{d.detail && (
+										<div style={{ color: "#8791A3", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+											“{d.detail}”
+										</div>
+									)}
+								</div>
+								<span style={{ fontSize: 10, color: "#8791A3", whiteSpace: "nowrap", marginTop: 2 }}>{timeAgo(r.updated_at, now)}</span>
+							</div>
+						);
+					})
+				)}
+			</div>
+		</div>
+	);
+}
+
 export default function IOSADashboard({
 	onCycleChange,
 	onImport,
@@ -1110,6 +1496,28 @@ export default function IOSADashboard({
 		return "#3D4658";
 	};
 
+	const exportButton = (
+		<button
+			onClick={handleExportCR}
+			disabled={!activeCycle || exporting}
+			style={{
+				padding: "9px 17px",
+				borderRadius: 9,
+				border: "1px solid rgba(122,164,255,.4)",
+				background: "linear-gradient(180deg,#3D6EF0,#2C55CC)",
+				color: "#fff",
+				fontSize: 12.5,
+				fontWeight: 600,
+				cursor: !activeCycle || exporting ? "default" : "pointer",
+				opacity: !activeCycle || exporting ? 0.5 : 1,
+				boxShadow: "0 8px 22px -10px rgba(61,110,240,.9)",
+				whiteSpace: "nowrap",
+			}}
+		>
+			{exporting ? "Exporting…" : "↓ Export CR"}
+		</button>
+	);
+
 	return (
 		<div
 			style={{
@@ -1125,26 +1533,10 @@ export default function IOSADashboard({
 				overflowY: "auto",
 			}}
 		>
-			{/* ── Action buttons ── */}
+			{/* ── No cycle yet: Import is the only way in (Export CR lives in the
+			    cycle header once a cycle exists) ── */}
+			{!activeCycle && (
 			<div style={{ display: "flex", gap: 9, justifyContent: "flex-end", flexWrap: "wrap" }}>
-				<button
-					onClick={handleExportCR}
-					disabled={!activeCycle || exporting}
-					style={{
-						padding: "9px 17px",
-						borderRadius: 9,
-						border: "1px solid rgba(122,164,255,.4)",
-						background: "linear-gradient(180deg,#3D6EF0,#2C55CC)",
-						color: "#fff",
-						fontSize: 12.5,
-						fontWeight: 600,
-						cursor: !activeCycle || exporting ? "default" : "pointer",
-						opacity: !activeCycle || exporting ? 0.5 : 1,
-						boxShadow: "0 8px 22px -10px rgba(61,110,240,.9)",
-					}}
-				>
-					{exporting ? "Exporting…" : "↓ Export CR"}
-				</button>
 				<button
 					onClick={onImport}
 					style={{
@@ -1161,6 +1553,7 @@ export default function IOSADashboard({
 					↑ Import ISARPs
 				</button>
 			</div>
+			)}
 			{exportError && (
 				<div
 					style={{
@@ -1188,16 +1581,17 @@ export default function IOSADashboard({
 					onDelete={handleDelete}
 					onDisciplineUpdate={handleDisciplineUpdate}
 					isPrivileged={isPrivileged}
+					primaryAction={exportButton}
+					onImport={onImport}
 				/>
 			)}
 
 			{/* ── Readiness + live stream ──
 			    Readiness ring uses the same completed/total basis as the
 			    discipline cards below, just summed across in-scope disciplines —
-			    real numbers, not a separate metric. The live-stream panel has no
-			    backing data source (no activity-log table exists), so it shows
-			    an honest empty state instead of invented entries. */}
-			<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 16 }}>
+			    real numbers, not a separate metric. The live stream reads
+			    audit_iosa_activity (written by the auditprep PATCH route). */}
+			<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(380px,1fr))", gap: 16 }}>
 				<div
 					style={{
 						position: "relative",
@@ -1216,8 +1610,8 @@ export default function IOSADashboard({
 					<div
 						style={{
 							position: "relative",
-							width: 158,
-							height: 158,
+							width: 136,
+							height: 136,
 							flexShrink: 0,
 							borderRadius: "50%",
 							background: `conic-gradient(from 180deg, #5B8CFF 0%, #7FD8FF ${readinessPct}%, #141B29 ${readinessPct}%)`,
@@ -1229,8 +1623,8 @@ export default function IOSADashboard({
 					>
 						<div
 							style={{
-								width: 126,
-								height: 126,
+								width: 108,
+								height: 108,
 								borderRadius: "50%",
 								background: "#0B1018",
 								border: "1px solid #1B2434",
@@ -1243,7 +1637,7 @@ export default function IOSADashboard({
 						>
 							<span
 								style={{
-									fontSize: 38,
+									fontSize: 33,
 									fontWeight: 600,
 									letterSpacing: "-.04em",
 									fontVariantNumeric: "tabular-nums",
@@ -1260,13 +1654,8 @@ export default function IOSADashboard({
 					</div>
 					<div style={{ flex: 1, minWidth: 196, display: "flex", flexDirection: "column", gap: 14 }}>
 						<div>
-							<div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-.01em", marginBottom: 4 }}>
+							<div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-.01em" }}>
 								{isAuditPhase ? "Audit progress" : "Audit readiness"}
-							</div>
-							<div style={{ fontSize: 12.5, lineHeight: 1.55, color: "#7E8899" }}>
-								{isAuditPhase
-									? "Conformance status recorded across all in-scope disciplines."
-									: "Documentation references and auditor-action evidence recorded across all in-scope disciplines."}
 							</div>
 						</div>
 						<div style={{ display: "flex", gap: 22, flexWrap: "wrap" }}>
@@ -1283,39 +1672,56 @@ export default function IOSADashboard({
 								</div>
 							))}
 						</div>
+						{/* Composition bar — replaces the old totals row under the
+						    discipline cards. Audit phase: C / F / O / pending.
+						    Prep phase: ready / outstanding. */}
+						{(() => {
+							const segs: [string, number, string][] = isAuditPhase
+								? [
+										["Conformity", totalConformity, "#45D483"],
+										["Findings", totalFindings, "#F0655C"],
+										["Observations", totalObservations, "#EFB25C"],
+										["Pending", outstandingCount, "#26304A"],
+									]
+								: [
+										["Prep ready", totalCompleted, "#5B8CFF"],
+										["Outstanding", outstandingCount, "#26304A"],
+									];
+							const sum = segs.reduce((a, x) => a + x[1], 0) || 1;
+							return (
+								<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+									<div style={{ display: "flex", height: 8, borderRadius: 99, overflow: "hidden", background: "#141B29" }}>
+										{segs.map(([label, n, c]) =>
+											n > 0 ? (
+												<div
+													key={label}
+													title={`${label}: ${n}`}
+													style={{ width: `${(n / sum) * 100}%`, minWidth: 4, background: c }}
+												/>
+											) : null,
+										)}
+									</div>
+									<div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+										{segs.map(([label, n, c]) => (
+											<span key={label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#8791A3" }}>
+												<span style={{ width: 8, height: 8, borderRadius: 2, background: c === "#26304A" ? "#3A4560" : c }} />
+												{label}
+												<span style={{ color: "#C3CCDB", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{n}</span>
+											</span>
+										))}
+									</div>
+								</div>
+							);
+						})()}
 					</div>
 				</div>
 
-				<div
-					style={{
-						display: "flex",
-						flexDirection: "column",
-						borderRadius: 16,
-						background: "#0B0F17",
-						border: "1px solid #1A2130",
-						overflow: "hidden",
-					}}
-				>
-					<div
-						style={{
-							display: "flex",
-							alignItems: "center",
-							gap: 8,
-							padding: "13px 16px",
-							borderBottom: "1px solid #151C28",
-						}}
-					>
-						<span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34D9C0" }} />
-						<span style={{ fontSize: 12, fontWeight: 600, letterSpacing: ".04em" }}>Live conformance stream</span>
-					</div>
-					<div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-						<div style={{ fontSize: 12, color: "#8791A3", textAlign: "center" }}>
-							No activity log yet.
-							<br />
-							<span style={{ fontSize: 11 }}>This needs a real activity/audit-log table to show anything true.</span>
-						</div>
-					</div>
-				</div>
+				<LiveStream
+					token={token}
+					cycleId={activeCycle?.id ?? null}
+					cycleName={activeCycle?.name}
+					canClear={isPrivileged}
+				/>
 			</div>
 
 			{/* ── Discipline cards ── */}
@@ -1326,8 +1732,8 @@ export default function IOSADashboard({
 					</span>
 					<span style={{ flex: 1, height: 1, background: "#151C28" }} />
 				</div>
-				<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(196px,1fr))", gap: 11 }}>
-					{disciplineCards.map(({ disc, inScope, total, completed, pct }) => {
+				<BalancedGrid min={196} gap={11}>
+					{(compact) => disciplineCards.map(({ disc, inScope, total, completed, pct }) => {
 						const shownPct = inScope ? pct : 0;
 						const full = inScope && pct === 100;
 						const active = activeDiscipline === disc;
@@ -1338,7 +1744,7 @@ export default function IOSADashboard({
 								style={{
 									position: "relative",
 									overflow: "hidden",
-									padding: 15,
+									padding: compact ? 12 : 15,
 									borderRadius: 13,
 									background: "#0B0F17",
 									border: `1px solid ${active ? "#3D6EF0" : "#1A2130"}`,
@@ -1346,7 +1752,7 @@ export default function IOSADashboard({
 									cursor: "pointer",
 									display: "flex",
 									flexDirection: "column",
-									gap: 11,
+									gap: compact ? 8 : 11,
 								}}
 							>
 								<div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -1360,7 +1766,9 @@ export default function IOSADashboard({
 									>
 										{disc}
 									</span>
-									<span
+									{/* Compact (tablet): scope badge, full name and ISARP count
+									    are dropped — the selected card's stats below show them. */}
+									{!compact && <span
 										style={{
 											fontSize: 9.5,
 											fontWeight: 600,
@@ -1376,15 +1784,17 @@ export default function IOSADashboard({
 										}}
 									>
 										{inScope ? "In scope" : "Pending"}
-									</span>
+									</span>}
 								</div>
-								<div style={{ fontSize: 11, color: "#8791A3", letterSpacing: ".02em" }}>
-									{DISCIPLINE_NAMES[disc] ?? disc}
-								</div>
+								{!compact && (
+									<div style={{ fontSize: 11, color: "#8791A3", letterSpacing: ".02em" }}>
+										{DISCIPLINE_NAMES[disc] ?? disc}
+									</div>
+								)}
 								<div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
 									<span
 										style={{
-											fontSize: 24,
+											fontSize: compact ? 21 : 24,
 											fontWeight: 600,
 											letterSpacing: "-.03em",
 											fontVariantNumeric: "tabular-nums",
@@ -1394,9 +1804,11 @@ export default function IOSADashboard({
 										{shownPct}
 										<span style={{ fontSize: 12, color: "#8791A3" }}>%</span>
 									</span>
-									<span style={{ fontSize: 11, color: "#8791A3" }}>
-										{inScope ? `${completed} / ${total}` : `0 / ${total}`} ISARPs
-									</span>
+									{!compact && (
+										<span style={{ fontSize: 11, color: "#8791A3" }}>
+											{inScope ? `${completed} / ${total}` : `0 / ${total}`} ISARPs
+										</span>
+									)}
 								</div>
 								<div style={{ height: 4, borderRadius: 99, background: "#141B29", overflow: "hidden" }}>
 									<div
@@ -1412,35 +1824,7 @@ export default function IOSADashboard({
 							</div>
 						);
 					})}
-				</div>
-			</div>
-
-			{/* ── Cycle-wide totals ── */}
-			<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 11 }}>
-				{[
-					{ label: "Total ISARPs", val: totalIsarps, color: "#E9EDF5" },
-					{ label: "Conformity", val: totalConformity, color: "#45D483" },
-					{ label: "Findings", val: totalFindings, color: "#F0655C" },
-					{ label: "Observations", val: totalObservations, color: "#EFB25C" },
-				].map(({ label, val, color }) => (
-					<div
-						key={label}
-						style={{
-							padding: 15,
-							borderRadius: 13,
-							background: "#0B0F17",
-							border: "1px solid #1A2130",
-							display: "flex",
-							flexDirection: "column",
-							gap: 6,
-						}}
-					>
-						<span style={{ fontSize: 23, fontWeight: 600, color }}>
-							{val}
-						</span>
-						<span style={{ fontSize: 10.5, letterSpacing: ".08em", color: "#8791A3" }}>{label}</span>
-					</div>
-				))}
+				</BalancedGrid>
 			</div>
 
 			{/* ── Stats strip ── */}

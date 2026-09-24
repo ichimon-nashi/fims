@@ -1317,3 +1317,15 @@
 		order: 3;
 	}
 }
+
+/* ── Live stream connection dot ── */
+.liveDot {
+	animation: liveDotPulse 2s ease-in-out infinite;
+}
+@keyframes liveDotPulse {
+	0%, 100% { box-shadow: 0 0 0 0 rgba(52, 217, 192, 0.55); }
+	50% { box-shadow: 0 0 0 5px rgba(52, 217, 192, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+	.liveDot { animation: none; }
+}

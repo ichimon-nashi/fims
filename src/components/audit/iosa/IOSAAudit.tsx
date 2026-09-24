@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { createClient } from "@supabase/supabase-js";
 import styles from "./IOSAAudit.module.css";
+import frame from "./IOSAWorkbench.module.css";
 
 const supabaseClient = createClient(
 	process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -125,6 +126,8 @@ const CONFORMANCE_OPTIONS = [
 	},
 ] as const;
 
+const NA_VALUE = "N/A (Not Applicable)";
+
 function getOptionByValue(v: string | null) {
 	return CONFORMANCE_OPTIONS.find((o) => o.value === v) ?? null;
 }
@@ -223,6 +226,35 @@ function AuditWorkspace({
 		}
 	};
 
+	// Keyboard: C = Conformity, N = N/A (set only — never toggles off),
+	// ←/→ = prev/next. Ignored while typing or with modifier keys.
+	useEffect(() => {
+		const onKey = (e: KeyboardEvent) => {
+			if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
+			const t = e.target as HTMLElement | null;
+			if (
+				t &&
+				(t.isContentEditable ||
+					["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName))
+			)
+				return;
+			const k = e.key.toLowerCase();
+			if (k === "arrowright" && hasNext) {
+				e.preventDefault();
+				onNext();
+			} else if (k === "arrowleft" && hasPrev) {
+				e.preventDefault();
+				onPrev();
+			} else if (!readOnly && k === "c" && status !== CONFORMANCE_OPTIONS[0].value) {
+				setConformance(CONFORMANCE_OPTIONS[0].value);
+			} else if (!readOnly && k === "n" && status !== NA_VALUE) {
+				setConformance(NA_VALUE);
+			}
+		};
+		window.addEventListener("keydown", onKey);
+		return () => window.removeEventListener("keydown", onKey);
+	});
+
 	const ROMAN = [
 		"i",
 		"ii",
@@ -245,7 +277,7 @@ function AuditWorkspace({
 	let lastStyle = "Normal";
 
 	return (
-		<div className={styles.workspace}>
+		<div className={`${styles.workspace} ${frame.wb}`}>
 			{/* Header */}
 			<div className={styles.wsHeader}>
 				<div className={styles.wsHeaderLeft}>
@@ -307,8 +339,18 @@ function AuditWorkspace({
 				</div>
 			</div>
 
+			{record?.open_item && (
+				<div className={styles.openBanner}>
+					<span className={styles.openBannerDot} />
+					<strong>OPEN ITEM</strong>
+					<span>Evidence or follow-up still outstanding</span>
+				</div>
+			)}
+
 			{/* Body */}
-			<div className={styles.wsBody}>
+			<div className={`${styles.wsBody} ${frame.wbBody}`}>
+				{/* Reference column (left on wide screens) */}
+				<div className={frame.wbRef}>
 				{/* Standard text */}
 				<div className={styles.stdText}>
 					{(isarp.standard_paras?.length > 0
@@ -418,6 +460,10 @@ function AuditWorkspace({
 					</div>
 				)}
 
+				</div>
+
+				{/* Assessment column (right on wide screens) */}
+				<div className={frame.wbSide}>
 				{/* Conformance status — grouped */}
 				<div className={styles.conformanceSection}>
 					<div className={styles.conformanceSectionLabel}>
@@ -643,10 +689,33 @@ function AuditWorkspace({
 						}}
 					/>
 				</div>
+				</div>
 			</div>
 
-			{/* Footer nav */}
-			<div className={styles.wsFooter}>
+			{/* Footer: quick marks + nav (pinned to viewport bottom ≤900px) */}
+			<div className={`${styles.wsFooter} ${frame.wbFooter}`}>
+				<div className={frame.wbFooterLeft}>
+					<button
+						className={`${frame.wbQuick} ${frame.wbQuickC} ${status === CONFORMANCE_OPTIONS[0].value ? frame.wbQuickOn : ""}`}
+						onClick={() => setConformance(CONFORMANCE_OPTIONS[0].value)}
+						disabled={readOnly}
+						title="Conformity (C)"
+					>
+						✓ Conformity
+					</button>
+					<button
+						className={`${frame.wbQuick} ${frame.wbQuickN} ${status === NA_VALUE ? frame.wbQuickOn : ""}`}
+						onClick={() => setConformance(NA_VALUE)}
+						disabled={readOnly}
+						title="N/A (N)"
+					>
+						N/A
+					</button>
+					<span className={frame.wbKeys}>
+						<kbd>C</kbd> <kbd>N</kbd> mark · <kbd>←</kbd>
+						<kbd>→</kbd> move
+					</span>
+				</div>
 				<div className={styles.navBtns}>
 					<button
 						className={styles.btnNav}
@@ -690,7 +759,7 @@ function AuditListItem({
 
 	return (
 		<div
-			className={`${styles.listRow} ${selected ? styles.listRowActive : ""} ${batchMode && checked ? styles.listRowChecked : ""}`}
+			className={`${styles.listRow} ${selected ? styles.listRowActive : ""} ${batchMode && checked ? styles.listRowChecked : ""} ${isarp.record?.open_item ? styles.listRowOpen : ""}`}
 			onClick={batchMode && onToggleCheck ? onToggleCheck : onClick}
 		>
 			{batchMode && (
@@ -730,9 +799,9 @@ function AuditListItem({
 				{isarp.record?.open_item && (
 					<span
 						className={styles.listOpenBadge}
-						title="Open item"
+						title="Open item — evidence / follow-up outstanding"
 					>
-						◷
+						OPEN
 					</span>
 				)}
 				{isarp.record?.prep_flagged && (
@@ -774,6 +843,9 @@ export default function IOSAAudit({
 	const [filterStatus, setFilterStatus] = useState<
 		"pending" | "nonconformity" | "done"
 	>("pending");
+
+	// List drawer (≤900px only — CSS hides the toggle above that)
+	const [listOpen, setListOpen] = useState(false);
 
 	// Batch-conform selection (Pending tab only)
 	const [batchMode, setBatchMode] = useState(false);
@@ -927,6 +999,7 @@ export default function IOSAAudit({
 							isarp_code: i.isarp_code,
 							discipline: i.discipline,
 							conformance_status: CONFORM,
+							source: "audit", // live stream logs Audit edits only
 						}),
 					});
 					const { record } = await res.json();
@@ -966,6 +1039,7 @@ export default function IOSAAudit({
 					isarp_code: isarpCode,
 					discipline,
 					conformance_status: null,
+					source: "audit",
 				}),
 			});
 			setAllIsarps((prev) =>
@@ -998,6 +1072,7 @@ export default function IOSAAudit({
 					body: JSON.stringify({
 						cycle_id: activeCycle.id,
 						...patch,
+						source: "audit",
 					}),
 				});
 				const { record } = await res.json();
@@ -1040,6 +1115,9 @@ export default function IOSAAudit({
 		},
 		[allIsarps],
 	);
+
+	// Plain derived value (not a hook) — safe below the early returns too
+	const openInDisc = allIsarps.filter((i) => i.record?.open_item);
 
 	// Stats
 	const stats = {
@@ -1134,11 +1212,52 @@ export default function IOSAAudit({
 				</div>
 			</div>
 
+			{/* ≤900px: list lives in a slide-over drawer */}
+			<button
+				className={frame.listToggle}
+				onClick={() => setListOpen(true)}
+				aria-expanded={listOpen}
+			>
+				☰ ISARP 清單
+				<span className={frame.listToggleCode}>{selectedCode ?? ""}</span>
+			</button>
+			{listOpen && (
+				<div
+					className={frame.drawerBackdrop}
+					onClick={() => setListOpen(false)}
+				/>
+			)}
+
 			{/* Split panel */}
-			<div className={styles.splitPanel}>
+			<div className={`${styles.splitPanel} ${frame.wbSplit}`}>
+				<div
+					className={`${frame.listDrawer} ${listOpen ? frame.listDrawerOpen : ""}`}
+				>
 				{/* List panel */}
 				<div className={styles.listPanel}>
 					<div className={styles.listHeader}>
+						{openInDisc.length > 0 && (
+							<button
+								className={styles.openCountBar}
+								onClick={() => {
+									const idx = openInDisc.findIndex(
+										(i) => i.isarp_code === selectedCode,
+									);
+									navigateTo(
+										openInDisc[(idx + 1) % openInDisc.length]
+											.isarp_code,
+									);
+								}}
+								title="Jump to next open item"
+							>
+								<span className={styles.openBannerDot} />
+								{openInDisc.length} open item
+								{openInDisc.length > 1 ? "s" : ""} in {discipline}
+								<span className={styles.openCountNext}>
+									Next →
+								</span>
+							</button>
+						)}
 						<input
 							className={styles.searchInput}
 							placeholder="Search…"
@@ -1154,16 +1273,19 @@ export default function IOSAAudit({
 										{
 											id: "pending",
 											label: "Pending",
+											title: "Not yet assessed",
 											color: "",
 										},
 										{
 											id: "nonconformity",
-											label: "Non-conformity",
+											label: "NC",
+											title: "Non-conformity — findings + observations",
 											color: "#fc8181",
 										},
 										{
 											id: "done",
 											label: "Done",
+											title: "Conformity or N/A",
 											color: "#48bb78",
 										},
 									] as const
@@ -1183,8 +1305,9 @@ export default function IOSAAudit({
 										onClick={() => {
 											setFilterStatus(f.id as any);
 										}}
+										title={f.title}
 									>
-										{f.label}
+										<span className={styles.filterLabel}>{f.label}</span>
 										{f.id === "nonconformity" &&
 											stats.nonconformities > 0 && (
 												<span
@@ -1316,7 +1439,10 @@ export default function IOSAAudit({
 										isarp.isarp_code ===
 										selected?.isarp_code
 									}
-									onClick={() => navigateTo(isarp.isarp_code)}
+									onClick={() => {
+										navigateTo(isarp.isarp_code);
+										setListOpen(false);
+									}}
 									batchMode={batchMode}
 									checked={batchSel.has(isarp.isarp_code)}
 									onToggleCheck={() =>
@@ -1326,6 +1452,7 @@ export default function IOSAAudit({
 							))
 						)}
 					</div>
+				</div>
 				</div>
 
 				{/* Workspace */}
