@@ -5,7 +5,7 @@ import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 
 const supabase = createClient(
 	process.env.NEXT_PUBLIC_SUPABASE_URL!,
-	process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
+	process.env.SUPABASE_SECRET_KEY!,
 );
 
 // ── Activity log (live conformance stream) ──────────────────────
@@ -99,8 +99,7 @@ async function logActivity(
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
-			apikey: process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
-			Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!}`,
+			apikey: process.env.SUPABASE_SECRET_KEY!,
 		},
 		body: JSON.stringify({
 			messages: [

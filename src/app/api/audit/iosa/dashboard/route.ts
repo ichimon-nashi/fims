@@ -5,7 +5,7 @@ import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 
 const supabase = createClient(
 	process.env.NEXT_PUBLIC_SUPABASE_URL!,
-	process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
+	process.env.SUPABASE_SECRET_KEY!,
 );
 
 const COMPLETED_STATUSES = [
