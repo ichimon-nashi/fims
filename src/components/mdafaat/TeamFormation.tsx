@@ -9,8 +9,29 @@ import { IoAirplane } from "react-icons/io5";
 import Image from "next/image";
 import Avatar from "@/components/ui/Avatar/Avatar";
 import { useAuth } from "@/context/AuthContext";
-import { createServiceClient } from "@/utils/supabase/service-client";
 import styles from "./TeamFormation.module.css";
+
+// Server-side MDAfaat data access (replaces direct service-key DB calls).
+// Never throws — returns { data, error } like the Supabase client did.
+const mdafaatData = async (
+	query: string,
+	payload?: Record<string, unknown>,
+) => {
+	try {
+		const token = localStorage.getItem("token");
+		const res = await fetch(`/api/mdafaat/data${query}`, {
+			method: payload ? "POST" : "GET",
+			headers: {
+				"Content-Type": "application/json",
+				...(token ? { Authorization: `Bearer ${token}` } : {}),
+			},
+			...(payload ? { body: JSON.stringify(payload) } : {}),
+		});
+		return await res.json();
+	} catch (error) {
+		return { data: null, error };
+	}
+};
 
 interface User {
 	id: string;
@@ -193,19 +214,13 @@ const TeamFormation: React.FC<TeamFormationProps> = ({ onStartGame, onOpenEditor
 		const loadAllUsers = async () => {
 			setLoadingUsers(true);
 			try {
-				const supabase = createServiceClient();
-				const { data, error } = await supabase
-					.from("users")
-					.select(
-						"id, employee_id, full_name, rank, base, aircraft_type_ratings",
-					)
-					.neq("rank", "admin") // Exclude admin users only
-					.eq("is_inactive", false); // Exclude retired/quit crew from selection pool
+				// Active, non-admin crew pool (server-side via API)
+				const { data, error } = await mdafaatData("?part=users");
 
 				if (error) throw error;
 
 				// Sort by rank hierarchy, then by employee_id ascending
-				const sorted = (data || []).sort((a, b) => {
+				const sorted = (data || []).sort((a: any, b: any) => {
 					const aRankOrder = getRankOrder(a.rank);
 					const bRankOrder = getRankOrder(b.rank);
 
