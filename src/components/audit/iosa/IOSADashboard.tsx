@@ -11,7 +11,7 @@ import { createClient } from "@supabase/supabase-js";
 // Activity rows themselves come from the authenticated /activity route.
 const realtimeClient = createClient(
 	process.env.NEXT_PUBLIC_SUPABASE_URL!,
-	process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+	process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
 );
 
 // ── Types ────────────────────────────────────────────────────
