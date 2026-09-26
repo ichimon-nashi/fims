@@ -4,7 +4,7 @@
 // Users added via the add-user form with those ranks will appear on next fetch.
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { createServiceClient } from "@/utils/supabase/service-client";
 import { verifyToken, extractTokenFromHeader } from "@/lib/auth";
 import { hashPassword } from "@/lib/auth";
 
@@ -46,7 +46,7 @@ async function assertAdmin(request: NextRequest, supabase: any) {
 // ── GET — fetch manageable users ─────────────────────────────────────────────
 export async function GET(request: NextRequest) {
 	try {
-		const supabase = await createClient();
+		const supabase = createServiceClient();
 		const auth = await assertAdmin(request, supabase);
 		if (auth.error) return auth.error;
 
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
 // ── POST — create a new user ──────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
 	try {
-		const supabase = await createClient();
+		const supabase = createServiceClient();
 		const auth = await assertAdmin(request, supabase);
 		if (auth.error) return auth.error;
 
