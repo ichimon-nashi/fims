@@ -1,7 +1,6 @@
 // src/hooks/useTasks.ts - UPDATED: Filter users with Task Manager permissions
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { createServiceClient } from '@/utils/supabase/service-client';
 import { Task, TaskComment, Column, AvailableUser } from '@/lib/task.types';
 import { sortInstructors } from '@/utils/taskHelpers';
 
@@ -29,21 +28,11 @@ export const useTasks = (selectedYear: number) => {
       try {
         setLoadingUsers(true);
         
-        let supabase;
-        try {
-          supabase = createServiceClient();
-        } catch (envError) {
-          console.error('Service client creation failed:', envError);
-          setAvailableUsers([]);
-          setLoadingUsers(false);
-          return;
-        }
-
-        // Fetch all users with their app permissions
-        const { data: allUsers, error } = await supabase
-          .from('users')
-          .select('id, employee_id, full_name, rank, base, email, authentication_level, app_permissions, is_inactive')
-          .order('full_name', { ascending: true });
+        // Fetch all users with their app permissions (server-side via API)
+        const res = await fetch('/api/tasks/board-data?part=users', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const { data: allUsers, error } = await res.json();
 
         if (error) {
           console.error('Error loading users:', error);
@@ -51,7 +40,7 @@ export const useTasks = (selectedYear: number) => {
         }
 
         // Filter users who have Task Manager access based ONLY on app_permissions
-        const usersWithTaskAccess = (allUsers || []).filter((u) => {
+        const usersWithTaskAccess = (allUsers || []).filter((u: any) => {
           // Exclude users with "test" or "admin" rank (case-insensitive)
           const rankLower = (u.rank || '').toLowerCase();
           if (rankLower === 'test' || rankLower === 'admin') {
@@ -86,20 +75,12 @@ export const useTasks = (selectedYear: number) => {
     try {
       setLoadingTasks(true);
       
-      let supabase;
-      try {
-        supabase = createServiceClient();
-      } catch (envError) {
-        console.error('Service client creation failed for tasks:', envError);
-        return;
-      }
-      
-      // Load tasks that span or touch the selected year
-      const { data: tasks, error } = await supabase
-        .from('tasks')
-        .select('*, sort_order')
-        .or(`year.eq.${selectedYear},and(start_date.gte.${selectedYear}-01-01,start_date.lte.${selectedYear}-12-31),and(due_date.gte.${selectedYear}-01-01,due_date.lte.${selectedYear}-12-31),and(start_date.lt.${selectedYear}-01-01,due_date.gt.${selectedYear}-01-01)`)
-        .order('created_at', { ascending: false });
+      // Load tasks that span or touch the selected year, plus their
+      // comments (server-side via API — same queries as before)
+      const res = await fetch(`/api/tasks/board-data?part=tasks&year=${selectedYear}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const { data: tasks, error, comments } = await res.json();
       
       if (error) {
         console.log('Error loading tasks:', error.message);
@@ -113,15 +94,8 @@ export const useTasks = (selectedYear: number) => {
       }
 
       if (tasks && tasks.length > 0) {
-        const taskIds = tasks.map(task => task.id);
-        const { data: comments } = await supabase
-          .from('task_comments')
-          .select('*')
-          .in('task_id', taskIds)
-          .order('created_at', { ascending: true });
-
         const commentsByTask = new Map<string, TaskComment[]>();
-        (comments || []).forEach(comment => {
+        (comments || []).forEach((comment: any) => {
           if (!commentsByTask.has(comment.task_id)) {
             commentsByTask.set(comment.task_id, []);
           }
@@ -135,7 +109,7 @@ export const useTasks = (selectedYear: number) => {
           });
         });
 
-        const transformedTasks: Task[] = tasks.map(task => ({
+        const transformedTasks: Task[] = tasks.map((task: any) => ({
           id: task.id,
           title: task.title,
           description: task.description || '',

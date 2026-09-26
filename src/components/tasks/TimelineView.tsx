@@ -4,7 +4,6 @@ import Avatar from "@/components/ui/Avatar/Avatar";
 import { Task, ZoomLevel } from "@/lib/task.types";
 import { calculateParentProgress } from "@/utils/taskHelpers";
 import { useTimeline } from "@/hooks/useTimeline";
-import { createServiceClient } from "@/utils/supabase/service-client";
 import styles from "./TimelineView.module.css";
 
 interface TimelineViewProps {

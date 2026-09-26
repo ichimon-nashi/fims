@@ -2,7 +2,7 @@ import React, { useRef } from "react";
 import TaskCard from "./TaskCard";
 import { Task, Column } from "@/lib/task.types";
 import { getSubtasks, calculateParentProgress } from "@/utils/taskHelpers";
-import { createServiceClient } from "@/utils/supabase/service-client";
+import { useAuth } from "@/context/AuthContext";
 import styles from "./TaskManager.module.css";
 
 interface BoardViewProps {
@@ -18,6 +18,7 @@ const BoardView: React.FC<BoardViewProps> = ({
 	onTaskClick,
 	onAddTask,
 }) => {
+	const { token } = useAuth();
 	const draggedTask = useRef<Task | null>(null);
 	const draggedFromColumn = useRef<string | null>(null);
 
@@ -44,12 +45,20 @@ const BoardView: React.FC<BoardViewProps> = ({
 		if (sourceColumnId === targetColumnId) return;
 
 		try {
-			const supabase = createServiceClient();
-			const { error } = await supabase
-				.from("tasks")
-				.update({ status: targetColumnId })
-				.eq("id", task.id);
-			if (error) console.error("Error updating task status:", error);
+			try {
+				const res = await fetch(`/api/tasks/${task.id}`, {
+					method: "PUT",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${token}`,
+					},
+					body: JSON.stringify({ status: targetColumnId }),
+				});
+				if (!res.ok)
+					console.error("Error updating task status:", await res.text());
+			} catch (error) {
+				console.error("Error updating task status:", error);
+			}
 
 			setColumns((prevColumns) => {
 				return prevColumns.map((column) => {
