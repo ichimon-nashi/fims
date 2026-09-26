@@ -1,0 +1,239 @@
+﻿\src\app\api\admin\users\[id]\permissions\route.ts:17: const supabase = await createClient();
+\src\app\api\admin\users\[id]\route.ts:15: const supabase = await createClient();
+\src\app\api\admin\users\route.ts:49: const supabase = await createClient();
+\src\app\api\admin\users\route.ts:80: const supabase = await createClient();
+\src\app\api\audit\firstlevel\users\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\firstlevel\users\route.ts:38: supabase: ReturnType<typeof createServiceClient>,
+\src\app\api\audit\firstlevel\users\route.ts:58: const supabase = createServiceClient();
+\src\app\api\audit\firstlevel\[id]\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\firstlevel\[id]\route.ts:17: const supabase = createServiceClient();
+\src\app\api\audit\firstlevel\[id]\route.ts:40: const supabase = createServiceClient();
+\src\app\api\audit\firstlevel\[id]\route.ts:105: const supabase = createServiceClient();
+\src\app\api\audit\firstlevel\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\firstlevel\route.ts:20: const supabase = createServiceClient();
+\src\app\api\audit\firstlevel\route.ts:73: const supabase = createServiceClient();
+\src\app\api\audit\iosa\activity\route.ts:8: const supabase = createClient(
+\src\app\api\audit\iosa\activity\route.ts:10: process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
+\src\app\api\audit\iosa\activity\route.ts:77: apikey: process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
+\src\app\api\audit\iosa\activity\route.ts:78: Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!}`,
+\src\app\api\audit\iosa\auditprep\route.ts:6: const supabase = createClient(
+\src\app\api\audit\iosa\auditprep\route.ts:8: process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
+\src\app\api\audit\iosa\auditprep\route.ts:102: apikey: process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
+\src\app\api\audit\iosa\auditprep\route.ts:103: Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!}`,
+\src\app\api\audit\iosa\cycles\[id]\route.ts:6: const supabase = createClient(
+\src\app\api\audit\iosa\cycles\[id]\route.ts:8: process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!
+\src\app\api\audit\iosa\cycles\route.ts:6: const supabase = createClient(
+\src\app\api\audit\iosa\cycles\route.ts:8: process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
+\src\app\api\audit\iosa\dashboard\route.ts:6: const supabase = createClient(
+\src\app\api\audit\iosa\dashboard\route.ts:8: process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
+\src\app\api\audit\iosa\export-cr\route.ts:10: const supabase = createClient(
+\src\app\api\audit\iosa\export-cr\route.ts:12: process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
+\src\app\api\audit\iosa\import\route.ts:7: const supabase = createClient(
+\src\app\api\audit\iosa\import\route.ts:9: process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
+\src\app\api\audit\iosa\import-ism\route.ts:9: const supabase = createClient(
+\src\app\api\audit\iosa\import-ism\route.ts:11: process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!
+\src\app\api\audit\iosa\tables\route.ts:7: const supabase = createClient(
+\src\app\api\audit\iosa\tables\route.ts:9: process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
+\src\app\api\audit\routine\checklist-template\[id]\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\routine\checklist-template\[id]\route.ts:20: const supabase = createServiceClient();
+\src\app\api\audit\routine\checklist-template\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\routine\checklist-template\route.ts:18: const supabase = createServiceClient();
+\src\app\api\audit\routine\checklist-template\route.ts:83: const supabase = createServiceClient();
+\src\app\api\audit\routine\cleanup-fatigue-uploads\route.ts:10: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\routine\cleanup-fatigue-uploads\route.ts:22: const supabase = createServiceClient();
+\src\app\api\audit\routine\crew-search\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\routine\crew-search\route.ts:26: const supabase = createServiceClient();
+\src\app\api\audit\routine\entries\next-number\route.ts:11: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\routine\entries\next-number\route.ts:32: const supabase = createServiceClient();
+\src\app\api\audit\routine\entries\[id]\classify\route.ts:8: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\routine\entries\[id]\classify\route.ts:25: const supabase = createServiceClient();
+\src\app\api\audit\routine\entries\[id]\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\routine\entries\[id]\route.ts:17: const supabase = createServiceClient();
+\src\app\api\audit\routine\entries\[id]\route.ts:83: const supabase = createServiceClient();
+\src\app\api\audit\routine\entries\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\routine\entries\route.ts:23: const supabase = createServiceClient();
+\src\app\api\audit\routine\entries\route.ts:50: const supabase = createServiceClient();
+\src\app\api\audit\routine\export\route.ts:16: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\routine\export\route.ts:78: const supabase = createServiceClient();
+\src\app\api\audit\routine\fatigue-uploads\route.ts:8: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\routine\fatigue-uploads\route.ts:17: const supabase = createServiceClient();
+\src\app\api\audit\routine\flagged-count\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\routine\flagged-count\route.ts:14: const supabase = createServiceClient();
+\src\app\api\audit\routine\import\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\routine\import\route.ts:52: const supabase = createServiceClient();
+\src\app\api\audit\routine\monthly-focus\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\routine\monthly-focus\route.ts:15: const supabase = createServiceClient();
+\src\app\api\audit\routine\monthly-focus\route.ts:114: const supabase = createServiceClient();
+\src\app\api\audit\routine\sam-codes\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\routine\sam-codes\route.ts:14: const supabase = createServiceClient();
+\src\app\api\audit\routine\self-inspection\[id]\approve\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\routine\self-inspection\[id]\approve\route.ts:20: const supabase = createServiceClient();
+\src\app\api\audit\routine\self-inspection\[id]\delete\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\routine\self-inspection\[id]\delete\route.ts:20: const supabase = createServiceClient();
+\src\app\api\audit\routine\self-inspection\[id]\export-attachment\[attachmentId]\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\routine\self-inspection\[id]\export-attachment\[attachmentId]\route.ts:414: const supabase = createServiceClient();
+\src\app\api\audit\routine\self-inspection\[id]\export-docx\route.ts:23: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\routine\self-inspection\[id]\export-docx\route.ts:227: const supabase = createServiceClient();
+\src\app\api\audit\routine\self-inspection\[id]\fatigue-upload\[uploadId]\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\routine\self-inspection\[id]\fatigue-upload\[uploadId]\route.ts:18: const supabase = createServiceClient();
+\src\app\api\audit\routine\self-inspection\[id]\fatigue-upload\[uploadId]\route.ts:69: const supabase = createServiceClient();
+\src\app\api\audit\routine\self-inspection\[id]\fatigue-upload\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\routine\self-inspection\[id]\fatigue-upload\route.ts:28: const supabase = createServiceClient();
+\src\app\api\audit\routine\self-inspection\[id]\fatigue-upload\route.ts:116: const supabase = createServiceClient();
+\src\app\api\audit\routine\self-inspection\[id]\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\routine\self-inspection\[id]\route.ts:20: const supabase = createServiceClient();
+\src\app\api\audit\routine\self-inspection\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\routine\self-inspection\route.ts:15: const supabase = createServiceClient();
+\src\app\api\audit\routine\self-inspection\route.ts:96: const supabase = createServiceClient();
+\src\app\api\audit\routine\summary\route.ts:13: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\audit\routine\summary\route.ts:33: const supabase = createServiceClient();
+\src\app\api\auth\login\route.ts:3: import { getUserByEmail, getUserByEmployeeId } from "@/lib/database";
+\src\app\api\auth\verify\route.ts:3: import { getUserById } from "@/lib/database";
+\src\app\api\cleanup\route.ts:26: const supabase = await createClient();
+\src\app\api\cleanup\route.ts:144: const supabase = await createClient();
+\src\app\api\cron\od-rotation\od-utils.ts:7: const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!;
+\src\app\api\cron\od-rotation\od-utils.ts:9: return createClient(supabaseUrl, supabaseServiceKey, {
+\src\app\api\cron\od-rotation\rr-notification-utils.ts:10: const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!;
+\src\app\api\cron\od-rotation\rr-notification-utils.ts:12: return createClient(supabaseUrl, supabaseServiceKey, {
+\src\app\api\dashboard\schedule-stats\route.ts:40: const supabase = await createClient();
+\src\app\api\dashboard\sms-reviews\route.ts:5: import { getUserById } from "@/lib/database";
+\src\app\api\dashboard\sms-reviews\route.ts:7: const supabase = createClient(
+\src\app\api\dashboard\sms-reviews\route.ts:9: process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!
+\src\app\api\dashboard\task-stats\route.ts:4: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\dashboard\task-stats\route.ts:42: const supabase = createServiceClient();
+\src\app\api\duties\route.ts:28: const supabase = await createClient();
+\src\app\api\duties\route.ts:80: const supabase = await createClient();
+\src\app\api\duties\route.ts:178: const supabase = await createClient();
+\src\app\api\duties\route.ts:285: const supabase = await createClient();
+\src\app\api\faq\upload\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\faq\upload\route.ts:20: async function requireAdmin(req: NextRequest, supabase: ReturnType<typeof createServiceClient>) {
+\src\app\api\faq\upload\route.ts:45: const supabase = createServiceClient();
+\src\app\api\faq\[id]\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\faq\[id]\route.ts:18: async function requireAdmin(req: NextRequest, supabase: ReturnType<typeof createServiceClient>) {
+\src\app\api\faq\[id]\route.ts:35: const supabase = createServiceClient();
+\src\app\api\faq\[id]\route.ts:59: const supabase = createServiceClient();
+\src\app\api\faq\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\faq\route.ts:19: async function requireAdmin(req: NextRequest, supabase: ReturnType<typeof createServiceClient>) {
+\src\app\api\faq\route.ts:49: const supabase = createServiceClient();
+\src\app\api\faq\route.ts:70: const supabase = createServiceClient();
+\src\app\api\mdafaat\pending-groups\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\mdafaat\pending-groups\route.ts:13: const supabase = createServiceClient();
+\src\app\api\mdafaat\pending-groups\route.ts:48: const supabase = createServiceClient();
+\src\app\api\mdafaat\pending-groups\route.ts:97: const supabase = createServiceClient();
+\src\app\api\mdafaat\scenarios\route.ts:5: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\mdafaat\scenarios\route.ts:33: const supabase = createServiceClient();
+\src\app\api\mdafaat\training-sessions\[id]\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\mdafaat\training-sessions\[id]\route.ts:44: const supabase = createServiceClient();
+\src\app\api\mdafaat\training-sessions\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\mdafaat\training-sessions\route.ts:13: const supabase = createServiceClient();
+\src\app\api\mdafaat\training-sessions\route.ts:67: const supabase = createServiceClient();
+\src\app\api\mdafaat\training-sessions\route.ts:95: const supabase = createServiceClient();
+\src\app\api\mdafaat\training-sessions\route.ts:156: const supabase = createServiceClient();
+\src\app\api\oral-test\dashboard\route.ts:25: const supabase = await createClient();
+\src\app\api\questions\filtered\route.ts:39: const supabase = await createClient();
+\src\app\api\questions\[id]\route.ts:93: const supabase = await createClient();
+\src\app\api\questions\[id]\route.ts:197: const supabase = await createClient();
+\src\app\api\questions\route.ts:26: const supabase = await createClient();
+\src\app\api\questions\route.ts:130: const supabase = await createClient();
+\src\app\api\roulette\employees\route.ts:3: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\roulette\employees\route.ts:18: const supabase = createServiceClient();
+\src\app\api\schedule\route.ts:6: } from "@/lib/database";
+\src\app\api\schedule\route.ts:32: const supabase = await createClient();
+\src\app\api\schedule\route.ts:122: const supabase = await createClient();
+\src\app\api\schedule\route.ts:326: const supabase = await createClient();
+\src\app\api\sms\available-years\route.ts:4: import { getUserById } from "@/lib/database";
+\src\app\api\sms\available-years\route.ts:5: import { getRRSMSEntries, createRRSMSEntry } from "@/lib/smsDatabase";
+\src\app\api\sms\crew-report-categories\[id]\route.ts:4: import { updateCrewReportCategory } from "@/lib/smsDatabase";
+\src\app\api\sms\crew-report-categories\route.ts:4: import { getCrewReportCategories } from "@/lib/smsDatabase";
+\src\app\api\sms\crew-reports\import\route.ts:5: import { getCrewReports, createCrewReport } from "@/lib/smsDatabase";
+\src\app\api\sms\crew-reports\[id]\route.ts:4: import { updateCrewReport, deleteCrewReport } from "@/lib/smsDatabase";
+\src\app\api\sms\crew-reports\route.ts:4: import { getCrewReports } from "@/lib/smsDatabase";
+\src\app\api\sms\rr-entries\[id]\route.ts:129: const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!;
+\src\app\api\sms\rr-entries\[id]\route.ts:131: const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+\src\app\api\sms\srm-entries\route.ts:4: import { getSRMTableEntries } from "@/lib/smsDatabase";
+\src\app\api\sms\trend-analysis\route.ts:31: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\app\api\sms\trend-analysis\route.ts:104: const supabase = createServiceClient();
+\src\app\api\tasks\users\route.ts:3: import { getAvailableUsers } from "@/lib/taskDatabase";
+\src\app\api\tasks\[id]\comments\route.ts:3: import { addTaskComment, getTaskComments } from "@/lib/taskDatabase";
+\src\app\api\tasks\[id]\route.ts:3: import { getTaskById, updateTask, deleteTask } from "@/lib/taskDatabase";
+\src\app\api\tasks\route.ts:3: import { getTasks, createTask } from "@/lib/taskDatabase";
+\src\app\api\test-results\route.ts:43: const supabase = await createClient();
+\src\app\api\test-results\route.ts:202: const supabase = await createClient();
+\src\app\api\users\[id]\route.ts:38: const supabase = await createClient();
+\src\app\api\users\[id]\route.ts:126: const supabase = await createClient();
+\src\app\api\users\[id]\route.ts:258: const supabase = await createClient();
+\src\app\api\users\route.ts:33: const supabase = await createClient();
+\src\app\api\users\route.ts:98: const supabase = await createClient();
+\src\components\audit\iosa\IOSAAudit.tsx:10: const supabaseClient = createClient(
+\src\components\audit\iosa\IOSAAudit.tsx:12: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+\src\components\audit\iosa\IOSADashboard.tsx:12: const realtimeClient = createClient(
+\src\components\audit\iosa\IOSADashboard.tsx:14: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+\src\components\mdafaat\ScenarioEditor.tsx:7: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\components\mdafaat\ScenarioEditor.tsx:110: const supabase = createServiceClient();
+\src\components\mdafaat\ScenarioEditor.tsx:158: const supabase = createServiceClient();
+\src\components\mdafaat\ScenarioEditor.tsx:200: const supabase = createServiceClient();
+\src\components\mdafaat\ScenarioEditor.tsx:219: const supabase = createServiceClient();
+\src\components\mdafaat\TeamFormation.tsx:12: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\components\mdafaat\TeamFormation.tsx:196: const supabase = createServiceClient();
+\src\components\tasks\AddTaskModal.tsx:5: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\components\tasks\AddTaskModal.tsx:88: const supabase = createServiceClient();
+\src\components\tasks\BoardView.tsx:5: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\components\tasks\BoardView.tsx:47: const supabase = createServiceClient();
+\src\components\tasks\TaskModal.tsx:11: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\components\tasks\TaskModal.tsx:63: const supabase = createServiceClient();
+\src\components\tasks\TaskModal.tsx:130: const supabase = createServiceClient();
+\src\components\tasks\TaskModal.tsx:186: const supabase = createServiceClient();
+\src\components\tasks\TaskModal.tsx:235: const supabase = createServiceClient();
+\src\components\tasks\TimelineView.tsx:7: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\hooks\useTasks.ts:4: import { createServiceClient } from '@/utils/supabase/service-client';
+\src\hooks\useTasks.ts:34: supabase = createServiceClient();
+\src\hooks\useTasks.ts:91: supabase = createServiceClient();
+\src\lib\database.ts:8: const supabase = await createClient();
+\src\lib\database.ts:47: const supabase = await createClient();
+\src\lib\database.ts:72: const supabase = await createClient();
+\src\lib\database.ts:97: const supabase = await createClient();
+\src\lib\database.ts:132: const supabase = await createClient();
+\src\lib\database.ts:164: const supabase = await createClient();
+\src\lib\database.ts:194: const supabase = await createClient();
+\src\lib\database.ts:226: const supabase = await createClient();
+\src\lib\database.ts:264: const supabase = await createClient();
+\src\lib\database.ts:290: const supabase = await createClient();
+\src\lib\database.ts:310: const supabase = await createClient();
+\src\lib\mdafaatPermissions.ts:6: import { getUserById } from "@/lib/database";
+\src\lib\oralTestPermissions.ts:3: import { getUserById } from "@/lib/database";
+\src\lib\smsDatabase.ts:5: import { createServiceClient } from "@/utils/supabase/service-client";
+\src\lib\smsDatabase.ts:29: const supabase = createServiceClient();
+\src\lib\smsDatabase.ts:83: const supabase = createServiceClient();
+\src\lib\smsDatabase.ts:131: const supabase = createServiceClient();
+\src\lib\smsDatabase.ts:162: const supabase = createServiceClient();
+\src\lib\smsDatabase.ts:191: const supabase = createServiceClient();
+\src\lib\smsDatabase.ts:255: const supabase = createServiceClient();
+\src\lib\smsDatabase.ts:301: const supabase = createServiceClient();
+\src\lib\smsDatabase.ts:337: const supabase = createServiceClient();
+\src\lib\smsDatabase.ts:368: const supabase = createServiceClient();
+\src\lib\smsDatabase.ts:397: const supabase = createServiceClient();
+\src\lib\smsDatabase.ts:486: const supabase = createServiceClient();
+\src\lib\smsDatabase.ts:521: const supabase = createServiceClient();
+\src\lib\smsDatabase.ts:555: const supabase = createServiceClient();
+\src\lib\smsDatabase.ts:590: const supabase = createServiceClient();
+\src\lib\smsDatabase.ts:630: const supabase = createServiceClient();
+\src\lib\smsDatabase.ts:700: const supabase = createServiceClient();
+\src\lib\smsDatabase.ts:730: const supabase = createServiceClient();
+\src\lib\smsDatabase.ts:756: const supabase = createServiceClient();
+\src\lib\smsPermissions.ts:5: import { getUserById } from "@/lib/database";
+\src\lib\taskDatabase.ts:62: const supabase = await createClient();
+\src\lib\taskDatabase.ts:97: const supabase = await createClient();
+\src\lib\taskDatabase.ts:210: const supabase = await createClient();
+\src\lib\taskDatabase.ts:302: const supabase = await createClient();
+\src\lib\taskDatabase.ts:373: const supabase = await createClient();
+\src\lib\taskDatabase.ts:402: const supabase = await createClient();
+\src\lib\taskDatabase.ts:439: const supabase = await createClient();
+\src\lib\taskDatabase.ts:465: const supabase = await createClient();
+\src\utils\supabase\client.ts:4: export function createClient() {
+\src\utils\supabase\client.ts:7: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+\src\utils\supabase\server.ts:5: export async function createClient() {
+\src\utils\supabase\server.ts:9: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+\src\utils\supabase\service-client.ts:5: const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!;
+\src\utils\supabase\service-client.ts:13: "Missing SUPABASE_SERVICE_ROLE_KEY environment variable"
+\src\utils\supabase\service-client.ts:17: export const createServiceClient = () => {
+\src\utils\supabase\service-client.ts:18: return createClient(supabaseUrl, supabaseServiceKey, {
