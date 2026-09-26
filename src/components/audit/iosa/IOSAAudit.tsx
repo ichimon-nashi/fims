@@ -876,23 +876,24 @@ export default function IOSAAudit({
 			.finally(() => setLoading(false));
 	}, [discipline, activeCycle?.id, token]);
 
-	// Realtime: subscribe to record changes for this cycle+discipline
+	// Realtime: content-free ping per saved record (sent by the auditprep
+	// PATCH route), then refetch that one ISARP through the authenticated GET
 	useEffect(() => {
-		if (!activeCycle?.id || !discipline) return;
+		if (!activeCycle?.id || !discipline || !token) return;
 
 		const channel = supabaseClient
 			.channel(`audit-records-${activeCycle.id}-${discipline}`)
-			.on(
-				"postgres_changes",
-				{
-					event: "*",
-					schema: "public",
-					table: "audit_iosa_records",
-					filter: `cycle_id=eq.${activeCycle.id}`,
-				},
-				(payload) => {
-					const record = payload.new as AuditRecord;
-					if (!record || record.discipline !== discipline) return;
+			.on("broadcast", { event: "record" }, async ({ payload }) => {
+				const code = payload?.isarp_code as string | undefined;
+				if (!code) return;
+				try {
+					const res = await fetch(
+						`/api/audit/iosa/auditprep?cycle_id=${activeCycle.id}&discipline=${discipline}&isarp_code=${encodeURIComponent(code)}`,
+						{ headers: { Authorization: `Bearer ${token}` } },
+					);
+					const { isarps } = await res.json();
+					const record = (isarps ?? [])[0]?.record as AuditRecord | null | undefined;
+					if (!record) return;
 					setAllIsarps((prev) =>
 						prev.map((i) =>
 							i.isarp_code === record.isarp_code
@@ -900,14 +901,16 @@ export default function IOSAAudit({
 								: i,
 						),
 					);
-				},
-			)
+				} catch (e) {
+					console.error("[IOSAAudit] live refetch failed", e);
+				}
+			})
 			.subscribe();
 
 		return () => {
 			supabaseClient.removeChannel(channel);
 		};
-	}, [activeCycle?.id, discipline]);
+	}, [activeCycle?.id, discipline, token]);
 
 	// Track selected by code so it persists across filter changes
 	const [selectedCode, setSelectedCode] = useState<string | null>(null);

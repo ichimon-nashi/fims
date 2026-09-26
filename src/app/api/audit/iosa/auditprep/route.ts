@@ -126,6 +126,9 @@ export async function GET(req: NextRequest) {
 		const { searchParams } = req.nextUrl;
 		const cycleId = searchParams.get("cycle_id");
 		const discipline = searchParams.get("discipline") || "CAB";
+		// Optional: live-update refetch of a single ISARP (see PATCH ping)
+		const isarpCode = searchParams.get("isarp_code");
+		const onlyCode = isarpCode ? { isarp_code: isarpCode } : {};
 		// No section filter — load all sections at once so client-side counts are accurate
 
 		if (!cycleId)
@@ -139,6 +142,7 @@ export async function GET(req: NextRequest) {
 			.select("*")
 			.eq("cycle_id", cycleId)
 			.eq("discipline", discipline)
+			.match(onlyCode)
 			.order("row_order", { ascending: true });
 		if (isarpErr) throw isarpErr;
 
@@ -146,7 +150,8 @@ export async function GET(req: NextRequest) {
 			.from("audit_iosa_records")
 			.select("*")
 			.eq("cycle_id", cycleId)
-			.eq("discipline", discipline);
+			.eq("discipline", discipline)
+			.match(onlyCode);
 		if (recErr) throw recErr;
 
 		const recordMap = new Map(
@@ -285,6 +290,30 @@ export async function PATCH(req: NextRequest) {
 			);
 		} catch (logErr) {
 			console.error("[auditprep PATCH] activity log failed", logErr);
+		}
+
+		// Content-free ping for live updates on the Audit page (every save,
+		// from any page). Clients refetch the one ISARP through the
+		// authenticated GET. Never let the ping break a save.
+		try {
+			await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/realtime/v1/api/broadcast`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					apikey: process.env.SUPABASE_SECRET_KEY!,
+				},
+				body: JSON.stringify({
+					messages: [
+						{
+							topic: `audit-records-${cycle_id}-${merged.discipline}`,
+							event: "record",
+							payload: { isarp_code },
+						},
+					],
+				}),
+			});
+		} catch (pingErr) {
+			console.error("[auditprep PATCH] record ping failed", pingErr);
 		}
 
 		return NextResponse.json({ record: data });
