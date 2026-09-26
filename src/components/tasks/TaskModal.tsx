@@ -8,9 +8,29 @@ import {
 	getPriorityLabel,
 	getSubtasks,
 } from "@/utils/taskHelpers";
-import { createServiceClient } from "@/utils/supabase/service-client";
 import { useAuth } from "@/context/AuthContext";
 import styles from "./TaskManager.module.css";
+
+// Server-side task writes (replaces direct service-key DB calls). Never
+// throws — returns { data, error } like the Supabase client did.
+const taskWrite = async (
+	token: string | null | undefined,
+	payload: Record<string, unknown>,
+) => {
+	try {
+		const res = await fetch("/api/tasks/board-data", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${token}`,
+			},
+			body: JSON.stringify(payload),
+		});
+		return await res.json();
+	} catch (error) {
+		return { data: null, error };
+	}
+};
 
 interface TaskModalProps {
 	task: Task;
@@ -31,7 +51,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
 	allTasks,
 	onClose,
 }) => {
-	const { user } = useAuth();
+	const { user, token } = useAuth();
 	const [isEditing, setIsEditing] = useState(false);
 	const [editTask, setEditTask] = useState<Task>({ ...task });
 	const [savingTask, setSavingTask] = useState(false);
@@ -60,11 +80,11 @@ const TaskModal: React.FC<TaskModalProps> = ({
 		if (!currentColumnId || currentColumnId === newColumnId) return;
 
 		try {
-			const supabase = createServiceClient();
-			const { error } = await supabase
-				.from("tasks")
-				.update({ status: newColumnId })
-				.eq("id", selectedTask.id);
+			const { error } = await taskWrite(token, {
+				action: "update_task",
+				id: selectedTask.id,
+				updates: { status: newColumnId },
+			});
 			if (error)
 				console.error("Error updating task status in database:", error);
 
@@ -127,11 +147,11 @@ const TaskModal: React.FC<TaskModalProps> = ({
 				due_date: editTask.due_date,
 			};
 
-			const supabase = createServiceClient();
-			const { error } = await supabase
-				.from("tasks")
-				.update(updates)
-				.eq("id", selectedTask.id);
+			const { error } = await taskWrite(token, {
+				action: "update_task",
+				id: selectedTask.id,
+				updates,
+			});
 			if (error) throw error;
 
 			const updatedTask = {
@@ -183,15 +203,10 @@ const TaskModal: React.FC<TaskModalProps> = ({
 		try {
 			setSavingTask(true);
 
-			const supabase = createServiceClient();
-			await supabase
-				.from("task_comments")
-				.delete()
-				.eq("task_id", selectedTask.id);
-			const { error: taskError } = await supabase
-				.from("tasks")
-				.delete()
-				.eq("id", selectedTask.id);
+			const { error: taskError } = await taskWrite(token, {
+				action: "delete_task",
+				id: selectedTask.id,
+			});
 			if (taskError) throw taskError;
 
 			setColumns((prevColumns) =>
@@ -232,12 +247,10 @@ const TaskModal: React.FC<TaskModalProps> = ({
 				author_name: user?.full_name || "Current User",
 			};
 
-			const supabase = createServiceClient();
-			const { data, error } = await supabase
-				.from("task_comments")
-				.insert([commentData])
-				.select()
-				.single();
+			const { data, error } = await taskWrite(token, {
+				action: "insert_comment",
+				comment: commentData,
+			});
 			if (error) throw error;
 
 			const comment: TaskComment = {

@@ -2,9 +2,29 @@
 import React, { useState } from "react";
 import Avatar from "@/components/ui/Avatar/Avatar";
 import { Task, Column, AvailableUser } from "@/lib/task.types";
-import { createServiceClient } from "@/utils/supabase/service-client";
 import { useAuth } from "@/context/AuthContext";
 import styles from "./TaskManager.module.css";
+
+// Server-side task writes (replaces direct service-key DB calls). Never
+// throws — returns { data, error } like the Supabase client did.
+const taskWrite = async (
+	token: string | null | undefined,
+	payload: Record<string, unknown>,
+) => {
+	try {
+		const res = await fetch("/api/tasks/board-data", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${token}`,
+			},
+			body: JSON.stringify(payload),
+		});
+		return await res.json();
+	} catch (error) {
+		return { data: null, error };
+	}
+};
 
 interface AddTaskModalProps {
 	availableUsers: AvailableUser[];
@@ -25,7 +45,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 	setColumns,
 	onClose,
 }) => {
-	const { user } = useAuth();
+	const { user, token } = useAuth();
 	const [savingTask, setSavingTask] = useState(false);
 	const [newTask, setNewTask] = useState<{
 		title: string;
@@ -85,12 +105,10 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 			let createdTask;
 
 			try {
-				const supabase = createServiceClient();
-				const { data, error } = await supabase
-					.from("tasks")
-					.insert([taskData])
-					.select()
-					.single();
+				const { data, error } = await taskWrite(token, {
+					action: "insert_task",
+					task: taskData,
+				});
 				if (error) throw error;
 				createdTask = data;
 			} catch (dbError) {

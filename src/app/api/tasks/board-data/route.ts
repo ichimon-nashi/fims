@@ -70,3 +70,115 @@ export async function GET(request: NextRequest) {
 		{ status: 400 },
 	);
 }
+
+// ── Writes used by TaskModal / AddTaskModal ──────────────────────────────────
+// Same raw operations those components used to run in the browser with the
+// service key. Field lists are whitelisted; responses keep { data, error }.
+const TASK_FIELDS = [
+	"title",
+	"description",
+	"priority",
+	"category",
+	"status",
+	"task_type",
+	"parent_id",
+	"start_date",
+	"progress",
+	"assignees",
+	"due_date",
+];
+
+const pick = (src: any, fields: string[]) => {
+	const out: Record<string, unknown> = {};
+	for (const f of fields) {
+		if (src && Object.prototype.hasOwnProperty.call(src, f)) out[f] = src[f];
+	}
+	return out;
+};
+
+export async function POST(request: NextRequest) {
+	const token = extractTokenFromHeader(request.headers.get("authorization"));
+	if (!token) {
+		return NextResponse.json(
+			{ data: null, error: { message: "No token provided" } },
+			{ status: 401 },
+		);
+	}
+	let decoded: ReturnType<typeof verifyToken>;
+	try {
+		decoded = verifyToken(token);
+	} catch {
+		return NextResponse.json(
+			{ data: null, error: { message: "Invalid token" } },
+			{ status: 401 },
+		);
+	}
+
+	const body = await request.json();
+	const supabase = createServiceClient();
+
+	// AddTaskModal: create a task, return the raw inserted row
+	if (body.action === "insert_task") {
+		const row = {
+			...pick(body.task, [...TASK_FIELDS, "year"]),
+			created_by: decoded.userId,
+		};
+		const { data, error } = await supabase
+			.from("tasks")
+			.insert([row])
+			.select()
+			.single();
+		return NextResponse.json({ data, error });
+	}
+
+	// TaskModal: status change and edit save
+	if (body.action === "update_task") {
+		const updates = pick(body.updates, TASK_FIELDS);
+		if (!body.id || Object.keys(updates).length === 0) {
+			return NextResponse.json(
+				{ data: null, error: { message: "Nothing to update" } },
+				{ status: 400 },
+			);
+		}
+		const { error } = await supabase
+			.from("tasks")
+			.update(updates)
+			.eq("id", body.id);
+		return NextResponse.json({ data: null, error });
+	}
+
+	// TaskModal: delete comments first (result ignored, as before), then task
+	if (body.action === "delete_task") {
+		if (!body.id) {
+			return NextResponse.json(
+				{ data: null, error: { message: "id required" } },
+				{ status: 400 },
+			);
+		}
+		await supabase.from("task_comments").delete().eq("task_id", body.id);
+		const { error } = await supabase.from("tasks").delete().eq("id", body.id);
+		return NextResponse.json({ data: null, error });
+	}
+
+	// TaskModal: add a comment, return the raw inserted row
+	if (body.action === "insert_comment") {
+		const c = body.comment ?? {};
+		const row = {
+			task_id: c.task_id,
+			comment_text: c.comment_text,
+			author_id: c.author_id ?? decoded.userId,
+			author_name: c.author_name,
+		};
+		const { data, error } = await supabase
+			.from("task_comments")
+			.insert([row])
+			.select()
+			.single();
+		return NextResponse.json({ data, error });
+	}
+
+	return NextResponse.json(
+		{ data: null, error: { message: "Unknown action" } },
+		{ status: 400 },
+	);
+}
